@@ -47,6 +47,31 @@ git config user.email "你的邮箱"
 make help
 ```
 
+### 一键启动（Docker）
+
+```bash
+docker compose up --build -d
+```
+
+启动后访问：
+
+- 前端：http://localhost:5173
+- 网关：http://localhost:8080
+- 系统服务健康检查：http://localhost:8081/actuator/health
+- 系统服务接口文档：http://localhost:8081/swagger-ui.html
+
+### 本地开发
+
+```bash
+# 后端：先启动数据库，再单独运行服务
+docker compose up -d postgres
+cd services/system && mvn spring-boot:run
+cd apps/gateway && mvn spring-boot:run
+
+# 前端：Vite 开发服务器（已配置 /api 代理到网关 8080）
+cd apps/web && npm install && npm run dev
+```
+
 更多内容见：
 
 - [docs/architecture.md](docs/architecture.md)：架构设计与演进路线

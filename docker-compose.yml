@@ -1,9 +1,55 @@
-# 本地开发编排：数据库、缓存、消息队列、微服务、前端。
-# 当前为空占位，后续按服务逐步添加。
+name: aetheris
+
 services:
-  # postgres:
-  #   image: postgres:16-alpine
-  #   environment:
-  #     POSTGRES_PASSWORD: postgres
-  #   ports:
-  #     - "5432:5432"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aetheris
+      POSTGRES_USER: aetheris
+      POSTGRES_PASSWORD: aetheris
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aetheris -d aetheris"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  system-service:
+    build:
+      context: ./services/system
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: aetheris
+      DB_USER: aetheris
+      DB_PASSWORD: aetheris
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+
+  gateway:
+    build:
+      context: ./apps/gateway
+    environment:
+      SYSTEM_SERVICE_HOST: system-service
+      SYSTEM_SERVICE_PORT: "8081"
+    depends_on:
+      - system-service
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./apps/web
+    depends_on:
+      - gateway
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:

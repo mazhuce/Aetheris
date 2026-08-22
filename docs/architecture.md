@@ -44,6 +44,24 @@ services/<name>/
     └── test/java/...
 ```
 
+## 技术栈与版本矩阵
+
+本阶段锁定稳定版本，并保证彼此兼容（当前本机环境：Java 21.0.7、Maven 3.9.10、Node 23、Docker 28）。
+
+| 组件 | 版本 | 说明 |
+| --- | --- | --- |
+| Java | 21 LTS | 已安装，长期支持 |
+| Spring Boot | 3.3.5 | 稳定分支 |
+| Spring Cloud | 2023.0.3 | 与 Boot 3.3 兼容，仅引入 Gateway |
+| MyBatis-Plus | 3.5.7 | `mybatis-plus-spring-boot3-starter` |
+| Flyway | 10.x | 版本由 Spring Boot BOM 管理 |
+| springdoc-openapi | 2.6.0 | 兼容 Boot 3.3 |
+| PostgreSQL | 16-alpine | 数据持久层 |
+| Vue / Vite / TypeScript | 3.5 / 6 / 5.7 | 前端 |
+| Element Plus / Axios | 2.9 / 1.7 | UI 与 HTTP 客户端 |
+
+> Nacos / 注册中心暂不引入，避免 Spring Cloud Alibaba 与 Boot 的版本矩阵在骨架阶段引入风险；Phase 2 再加入并单独锁定版本。
+
 ## 演进路线
 
 - **Phase 1**：单机 docker-compose，1 个前端 + 1~2 个核心服务。
