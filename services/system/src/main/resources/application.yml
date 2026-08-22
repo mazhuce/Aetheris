@@ -5,7 +5,7 @@ spring:
   application:
     name: system-service
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aetheris}
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:aetheris}
     username: ${DB_USER:aetheris}
     password: ${DB_PASSWORD:aetheris}
     driver-class-name: org.postgresql.Driver
