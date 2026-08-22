@@ -30,3 +30,11 @@ export function listDataSources(): Promise<DataSource[]> {
 export function createDataSource(payload: DataSourceInput): Promise<DataSource> {
   return http.post<DataSource>('/api/metadata/datasources', payload).then((res) => res.data)
 }
+
+export function updateDataSource(id: number, payload: DataSourceInput): Promise<DataSource> {
+  return http.put<DataSource>(`/api/metadata/datasources/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteDataSource(id: number): Promise<void> {
+  return http.delete(`/api/metadata/datasources/${id}`).then(() => undefined)
+}
