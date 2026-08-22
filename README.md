@@ -1,4 +1,5 @@
 # Aetheris
+<img width="1254" height="1254" alt="AETHRIS" src="https://github.com/user-attachments/assets/87b4d847-9627-4c0e-a965-d23fbe9ee8c9" />
 
 个人数据中台，目标是通过持续迭代与功能拓展，逐步演进为企业级数据平台。
 
