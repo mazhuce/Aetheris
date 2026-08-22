@@ -1,0 +1,9 @@
+# 本地开发编排：数据库、缓存、消息队列、微服务、前端。
+# 当前为空占位，后续按服务逐步添加。
+services:
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_PASSWORD: postgres
+  #   ports:
+  #     - "5432:5432"

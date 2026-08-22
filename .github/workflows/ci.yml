@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  lint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # TODO: 根据实际技术栈补充 Java/Node/Python 的依赖安装、构建与测试步骤。
+      - name: Placeholder
+        run: echo "TODO: add build and test steps"

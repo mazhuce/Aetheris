@@ -1,0 +1,72 @@
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / 编辑器
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# Java / Maven / Gradle
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Node / 前端
+node_modules/
+dist/
+out/
+.next/
+.nuxt/
+.vite/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# 环境变量与密钥（本地真实配置不提交）
+.env
+.env.*
+!.env.example
+*.local
+configs/*.local.*
+
+# 日志与临时文件
+logs/
+*.log
+*.pid
+tmp/
+temp/
+
+# 测试与覆盖率
+coverage/
+.nyc_output/
+*.lcov
+junit/
+
+# 基础设施
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# 其他
+*.bak
+*.orig
