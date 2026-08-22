@@ -27,7 +27,7 @@
 
 1. **Monorepo**：前期个人开发统一管理；后期可按领域拆分为多仓。
 2. **Java 微服务**：Spring Boot + Spring Cloud（建议 Gateway、Nacos、OpenFeign）。
-3. **前端**：Vue 3 或 React + TypeScript（待定，建议先定 Vue 3 + Vite）。
+3. **前端**：React 18 + TypeScript + Vite + Ant Design 5（企业级控制台风格）。
 4. **多语言兼容**：以 OpenAPI（REST/HTTP）与 Protobuf（gRPC）作为跨语言契约，统一放在 `packages/contracts/`。
 5. **数据库迁移**：Flyway 或 Liquibase 版本化迁移，脚本放 `database/migrations/`。
 6. **部署演进**：`docker-compose`（本地）→ Kubernetes（生产）。
@@ -57,8 +57,8 @@ services/<name>/
 | Flyway | 10.x | 版本由 Spring Boot BOM 管理 |
 | springdoc-openapi | 2.6.0 | 兼容 Boot 3.3 |
 | PostgreSQL | 16-alpine | 数据持久层 |
-| Vue / Vite / TypeScript | 3.5 / 6 / 5.7 | 前端 |
-| Element Plus / Axios | 2.9 / 1.7 | UI 与 HTTP 客户端 |
+| React / Vite / TypeScript | 18 / 6 / 5.7 | 前端 |
+| Ant Design / Axios | 5 / 1.7 | UI 与 HTTP 客户端 |
 
 > Nacos / 注册中心暂不引入，避免 Spring Cloud Alibaba 与 Boot 的版本矩阵在骨架阶段引入风险；Phase 2 再加入并单独锁定版本。
 
