@@ -59,6 +59,11 @@ docker compose up --build -d
 - 网关：http://localhost:8080
 - 系统服务健康检查：http://localhost:8081/actuator/health
 - 系统服务接口文档：http://localhost:8081/swagger-ui.html
+- 元数据服务健康检查：http://localhost:8082/actuator/health
+- 元数据服务接口文档：http://localhost:8082/swagger-ui.html
+- PostgreSQL（宿主机映射端口）：5433
+
+> 数据库口令等可通过复制 `.env.example` 为 `.env` 后自定义；默认值均为 `aetheris`，仅用于本地开发。
 
 ### 本地开发
 

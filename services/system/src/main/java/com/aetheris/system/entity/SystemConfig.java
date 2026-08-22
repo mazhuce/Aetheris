@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.OffsetDateTime;
 
-@TableName("system_config")
+@TableName(value = "system_config", schema = "system")
 public class SystemConfig {
 
     @TableId(type = IdType.AUTO)

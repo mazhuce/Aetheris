@@ -13,13 +13,15 @@ help:
 	@echo "make clean   清理构建产物"
 
 init:
-	@echo "TODO: 安装 Java/Node/Python 依赖"
+	docker compose up --build -d
 
 dev:
 	docker compose up -d
 
 test:
-	@echo "TODO: 运行测试"
+	mvn -f services/system/pom.xml -s scripts/maven-mirror-settings.xml test
+	mvn -f services/metadata/pom.xml -s scripts/maven-mirror-settings.xml test
+	mvn -f apps/gateway/pom.xml -s scripts/maven-mirror-settings.xml test
 
 build:
 	docker compose build
@@ -34,4 +36,6 @@ logs:
 	docker compose logs -f
 
 clean:
-	@echo "TODO: 清理构建产物"
+	mvn -f services/system/pom.xml -s scripts/maven-mirror-settings.xml clean
+	mvn -f services/metadata/pom.xml -s scripts/maven-mirror-settings.xml clean
+	mvn -f apps/gateway/pom.xml -s scripts/maven-mirror-settings.xml clean

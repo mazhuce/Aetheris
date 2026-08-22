@@ -3,16 +3,17 @@ name: aetheris
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: aetheris
-      POSTGRES_USER: aetheris
-      POSTGRES_PASSWORD: aetheris
+      POSTGRES_DB: ${POSTGRES_DB:-aetheris}
+      POSTGRES_USER: ${POSTGRES_USER:-aetheris}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aetheris}
     ports:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aetheris -d aetheris"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aetheris} -d ${POSTGRES_DB:-aetheris}"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -21,12 +22,13 @@ services:
     build:
       context: .
       dockerfile: services/system/Dockerfile
+    restart: unless-stopped
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_NAME: aetheris
-      DB_USER: aetheris
-      DB_PASSWORD: aetheris
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,12 +39,13 @@ services:
     build:
       context: .
       dockerfile: services/metadata/Dockerfile
+    restart: unless-stopped
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_NAME: aetheris
-      DB_USER: aetheris
-      DB_PASSWORD: aetheris
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +56,7 @@ services:
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
+    restart: unless-stopped
     environment:
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -60,12 +64,14 @@ services:
       METADATA_SERVICE_PORT: "8082"
     depends_on:
       - system-service
+      - metadata-service
     ports:
       - "8080:8080"
 
   web:
     build:
       context: ./apps/web
+    restart: unless-stopped
     depends_on:
       - gateway
     ports:

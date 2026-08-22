@@ -31,6 +31,7 @@
 4. **多语言兼容**：以 OpenAPI（REST/HTTP）与 Protobuf（gRPC）作为跨语言契约，统一放在 `packages/contracts/`。
 5. **数据库迁移**：Flyway 或 Liquibase 版本化迁移，脚本放 `database/migrations/`。
 6. **部署演进**：`docker-compose`（本地）→ Kubernetes（生产）。
+7. **数据库隔离**：每个微服务使用独立 schema（`system` / `metadata`），Flyway 按各自 schema 管理迁移，互不干扰。
 
 ## 单个 Java 微服务目录建议
 
@@ -64,7 +65,13 @@ services/<name>/
 
 ## 演进路线
 
-- **Phase 1**：单机 docker-compose，1 个前端 + 1~2 个核心服务。
+- **Phase 1（已完成）**：单机 docker-compose，前端 + 网关 + system/metadata 两个服务 + PostgreSQL，端到端闭环可用。
 - **Phase 2**：按领域拆分服务，接入网关与注册中心。
 - **Phase 3**：引入 Python 数据/AI 等多语言服务，通过契约互联。
 - **Phase 4**：Kubernetes + 可观测性 + 完整数据治理能力。
+
+## 当前进度
+
+- Monorepo 目录结构、Git 规范、版本矩阵、企业级前端设计规范已建立。
+- 已实现并跑通：前端（React + Ant Design）、网关、`system` 服务、`metadata` 服务（数据源管理）、PostgreSQL。
+- Docker 一键构建与启动已打通，并使用国内镜像源。

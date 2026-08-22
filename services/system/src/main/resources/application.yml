@@ -12,6 +12,9 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    schemas: system
+    default-schema: system
+    create-schemas: true
   jackson:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai

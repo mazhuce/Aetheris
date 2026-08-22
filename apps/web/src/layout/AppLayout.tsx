@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Layout, Menu, Tag, Typography } from 'antd'
+import { lazy, Suspense, useState } from 'react'
+import { Layout, Menu, Spin, Tag, Typography } from 'antd'
 import {
   DashboardOutlined,
   ApiOutlined,
@@ -9,8 +9,8 @@ import {
   ShareAltOutlined,
   RobotOutlined
 } from '@ant-design/icons'
-import Dashboard from '../pages/Dashboard'
-import DataSourcePage from '../pages/DataSourcePage'
+const Dashboard = lazy(() => import('../pages/Dashboard'))
+const DataSourcePage = lazy(() => import('../pages/DataSourcePage'))
 
 const { Sider, Header, Content } = Layout
 
@@ -73,13 +73,21 @@ export default function AppLayout() {
         </Header>
 
         <Content style={{ padding: 24 }}>
-          {active === 'overview' ? (
-            <Dashboard />
-          ) : active === 'metadata' ? (
-            <DataSourcePage />
-          ) : (
-            <div className="placeholder">该模块尚未开放，正在按阶段建设中。</div>
-          )}
+          <Suspense
+            fallback={
+              <div style={{ padding: 40, textAlign: 'center' }}>
+                <Spin />
+              </div>
+            }
+          >
+            {active === 'overview' ? (
+              <Dashboard />
+            ) : active === 'metadata' ? (
+              <DataSourcePage />
+            ) : (
+              <div className="placeholder">该模块尚未开放，正在按阶段建设中。</div>
+            )}
+          </Suspense>
         </Content>
       </Layout>
     </Layout>

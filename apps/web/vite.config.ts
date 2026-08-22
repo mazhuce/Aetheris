@@ -22,5 +22,15 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          antd: ['antd', '@ant-design/icons'],
+          vendor: ['axios']
+        }
+      }
+    }
   }
 })

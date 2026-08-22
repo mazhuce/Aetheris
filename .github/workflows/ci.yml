@@ -6,12 +6,41 @@ on:
   pull_request:
 
 jobs:
-  lint-test:
+  backend:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # TODO: 根据实际技术栈补充 Java/Node/Python 的依赖安装、构建与测试步骤。
-      - name: Placeholder
-        run: echo "TODO: add build and test steps"
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build backend services
+        run: |
+          mvn -f services/system/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
+          mvn -f services/metadata/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
+          mvn -f apps/gateway/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install and build frontend
+        working-directory: apps/web
+        run: |
+          npm ci --registry=https://registry.npmmirror.com
+          npm run type-check
+          npm run build
