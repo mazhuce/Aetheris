@@ -10,6 +10,7 @@ import {
   RobotOutlined
 } from '@ant-design/icons'
 import Dashboard from '../pages/Dashboard'
+import DataSourcePage from '../pages/DataSourcePage'
 
 const { Sider, Header, Content } = Layout
 
@@ -74,6 +75,8 @@ export default function AppLayout() {
         <Content style={{ padding: 24 }}>
           {active === 'overview' ? (
             <Dashboard />
+          ) : active === 'metadata' ? (
+            <DataSourcePage />
           ) : (
             <div className="placeholder">该模块尚未开放，正在按阶段建设中。</div>
           )}
