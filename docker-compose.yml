@@ -19,7 +19,8 @@ services:
 
   system-service:
     build:
-      context: ./services/system
+      context: .
+      dockerfile: services/system/Dockerfile
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
@@ -34,7 +35,8 @@ services:
 
   gateway:
     build:
-      context: ./apps/gateway
+      context: .
+      dockerfile: apps/gateway/Dockerfile
     environment:
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
