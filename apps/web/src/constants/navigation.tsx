@@ -67,7 +67,7 @@ export const navGroups: NavGroup[] = [
     key: 'ai',
     label: 'AI 平台',
     items: [
-      { key: 'ai-agent', label: '智能助手', icon: <RobotOutlined />, path: '/ai' }
+      { key: 'ai-agent', label: '智能助手', icon: <RobotOutlined />, path: '/ai/chat' }
     ]
   },
   {

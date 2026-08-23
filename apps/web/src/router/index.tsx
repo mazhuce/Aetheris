@@ -7,6 +7,7 @@ import GovernancePage from '@/pages/governance'
 import MetadataTablePage from '@/pages/metadata/tables'
 import LineagePage from '@/pages/metadata/lineage'
 import QualityRulePage from '@/pages/quality/rules'
+import ChatPage from '@/pages/ai/chat'
 import SystemConfigPage from '@/pages/system/config'
 import UserPage from '@/pages/system/users'
 import Placeholder from '@/pages/placeholder'
@@ -24,6 +25,7 @@ export const router = createBrowserRouter([
       { path: 'quality/rules', element: <QualityRulePage /> },
       { path: 'ingestion/tasks', element: <IngestionPage /> },
       { path: 'governance/policies', element: <GovernancePage /> },
+      { path: 'ai/chat', element: <ChatPage /> },
       { path: 'system/users', element: <UserPage /> },
       { path: 'system/config', element: <SystemConfigPage /> },
       { path: '*', element: <Placeholder /> }

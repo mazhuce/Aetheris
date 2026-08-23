@@ -103,6 +103,18 @@ services:
     ports:
       - "8085:8085"
 
+  ai-agent:
+    build:
+      context: .
+      dockerfile: services/ai-agent/Dockerfile
+    restart: unless-stopped
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    ports:
+      - "8086:8086"
+
   gateway:
     build:
       context: .
@@ -119,12 +131,15 @@ services:
       INGESTION_SERVICE_PORT: "8084"
       GOVERNANCE_SERVICE_HOST: governance-service
       GOVERNANCE_SERVICE_PORT: "8085"
+      AI_AGENT_HOST: ai-agent
+      AI_AGENT_PORT: "8086"
     depends_on:
       - system-service
       - metadata-service
       - quality-service
       - ingestion-service
       - governance-service
+      - ai-agent
     ports:
       - "8080:8080"
 
