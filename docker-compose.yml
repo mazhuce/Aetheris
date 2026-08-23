@@ -69,6 +69,40 @@ services:
     ports:
       - "8083:8083"
 
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: services/ingestion/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+
+  governance-service:
+    build:
+      context: .
+      dockerfile: services/governance/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8085:8085"
+
   gateway:
     build:
       context: .
@@ -81,10 +115,16 @@ services:
       METADATA_SERVICE_PORT: "8082"
       QUALITY_SERVICE_HOST: quality-service
       QUALITY_SERVICE_PORT: "8083"
+      INGESTION_SERVICE_HOST: ingestion-service
+      INGESTION_SERVICE_PORT: "8084"
+      GOVERNANCE_SERVICE_HOST: governance-service
+      GOVERNANCE_SERVICE_PORT: "8085"
     depends_on:
       - system-service
       - metadata-service
       - quality-service
+      - ingestion-service
+      - governance-service
     ports:
       - "8080:8080"
 

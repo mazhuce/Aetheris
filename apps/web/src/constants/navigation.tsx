@@ -41,7 +41,7 @@ export const navGroups: NavGroup[] = [
     label: '数据资产',
     items: [
       { key: 'datasource', label: '数据源管理', icon: <DatabaseOutlined />, path: '/metadata/datasource' },
-      { key: 'catalog', label: '元数据目录', icon: <FolderOutlined />, path: '/metadata/catalog' },
+      { key: 'catalog', label: '元数据目录', icon: <FolderOutlined />, path: '/metadata/tables' },
       { key: 'lineage', label: '数据血缘', icon: <ApartmentOutlined />, path: '/metadata/lineage' }
     ]
   },
@@ -49,9 +49,9 @@ export const navGroups: NavGroup[] = [
     key: 'data-dev',
     label: '数据开发',
     items: [
-      { key: 'ingestion', label: '数据接入', icon: <ApiOutlined />, path: '/ingestion' },
+      { key: 'ingestion', label: '接入任务', icon: <ApiOutlined />, path: '/ingestion/tasks' },
       { key: 'quality-rules', label: '质量规则', icon: <CheckCircleOutlined />, path: '/quality/rules' },
-      { key: 'governance', label: '数据治理', icon: <SafetyCertificateOutlined />, path: '/governance' },
+      { key: 'governance', label: '治理策略', icon: <SafetyCertificateOutlined />, path: '/governance/policies' },
       { key: 'workflow', label: '任务编排', icon: <DeploymentUnitOutlined />, path: '/workflow' }
     ]
   },

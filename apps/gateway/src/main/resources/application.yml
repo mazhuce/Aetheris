@@ -19,6 +19,14 @@ spring:
           uri: http://${QUALITY_SERVICE_HOST:localhost}:${QUALITY_SERVICE_PORT:8083}
           predicates:
             - Path=/api/quality/**
+        - id: ingestion-service
+          uri: http://${INGESTION_SERVICE_HOST:localhost}:${INGESTION_SERVICE_PORT:8084}
+          predicates:
+            - Path=/api/ingestion/**
+        - id: governance-service
+          uri: http://${GOVERNANCE_SERVICE_HOST:localhost}:${GOVERNANCE_SERVICE_PORT:8085}
+          predicates:
+            - Path=/api/governance/**
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
 
