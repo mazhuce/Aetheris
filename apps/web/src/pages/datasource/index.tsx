@@ -5,6 +5,7 @@ import {
   Card,
   DatePicker,
   Input,
+  Modal,
   Popconfirm,
   Select,
   Space,
@@ -19,9 +20,12 @@ import {
   createDataSource,
   deleteDataSource,
   listDataSources,
+  queryDataSource,
+  testDataSource,
   updateDataSource,
   type DataSource,
-  type DataSourceInput
+  type DataSourceInput,
+  type QueryResult
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import DataSourceForm from './components/DataSourceForm'
@@ -44,6 +48,11 @@ export default function DataSourcePage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DataSource | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [queryOpen, setQueryOpen] = useState(false)
+  const [queryRecord, setQueryRecord] = useState<DataSource | null>(null)
+  const [querySql, setQuerySql] = useState('')
+  const [queryLoading, setQueryLoading] = useState(false)
+  const [queryResult, setQueryResult] = useState<QueryResult | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -108,6 +117,41 @@ export default function DataSourcePage() {
     }
   }
 
+  const handleTest = async (record: DataSource) => {
+    const hide = message.loading('正在测试连接...', 0)
+    try {
+      const result = await testDataSource(record.id)
+      if (result.success) {
+        message.success(`连接成功，耗时 ${result.latencyMs ?? '—'} ms`)
+      } else {
+        message.error(result.message)
+      }
+    } catch {
+      message.error('测试失败')
+    } finally {
+      hide()
+    }
+  }
+
+  const openQuery = (record: DataSource) => {
+    setQueryRecord(record)
+    setQuerySql('')
+    setQueryResult(null)
+    setQueryOpen(true)
+  }
+
+  const runQuery = async () => {
+    if (!queryRecord || !querySql.trim()) return
+    setQueryLoading(true)
+    try {
+      setQueryResult(await queryDataSource(queryRecord.id, querySql))
+    } catch {
+      message.error('查询失败')
+    } finally {
+      setQueryLoading(false)
+    }
+  }
+
   const columns: TableColumnsType<DataSource> = [
     { title: '名称', dataIndex: 'name', key: 'name', width: 160 },
     { title: '类型', dataIndex: 'type', key: 'type', width: 110, render: (value: string) => <Tag>{value}</Tag> },
@@ -130,12 +174,15 @@ export default function DataSourcePage() {
     {
       title: '操作',
       key: 'action',
-      width: 200,
+      width: 240,
       fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
-          <Button type="link" size="small" onClick={() => message.success('连接测试成功（演示）')}>
+          <Button type="link" size="small" onClick={() => void handleTest(record)}>
             测试连接
+          </Button>
+          <Button type="link" size="small" onClick={() => openQuery(record)}>
+            查询
           </Button>
           <Button
             type="link"
@@ -279,6 +326,47 @@ export default function DataSourcePage() {
         }}
         onSubmit={(values) => void handleSubmit(values)}
       />
+
+      <Modal
+        title={`SQL 查询 · ${queryRecord?.name ?? ''}`}
+        open={queryOpen}
+        onCancel={() => setQueryOpen(false)}
+        footer={null}
+        width={820}
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+          <Input.TextArea
+            value={querySql}
+            onChange={(event) => setQuerySql(event.target.value)}
+            placeholder="输入 SELECT / SHOW / EXPLAIN 语句"
+            autoSize={{ minRows: 3, maxRows: 8 }}
+          />
+          <Button type="primary" loading={queryLoading} onClick={() => void runQuery()}>
+            执行
+          </Button>
+          {queryResult && (
+            <Table
+              size="small"
+              bordered
+              scroll={{ x: 'max-content' }}
+              pagination={false}
+              columns={queryResult.columns.map((column) => ({
+                title: column,
+                dataIndex: column,
+                key: column,
+                ellipsis: true
+              }))}
+              dataSource={queryResult.rows.map((row, rowIndex) => {
+                const record: Record<string, unknown> = { key: rowIndex }
+                queryResult.columns.forEach((column, columnIndex) => {
+                  record[column] = row[columnIndex]
+                })
+                return record
+              })}
+            />
+          )}
+        </Space>
+      </Modal>
     </>
   )
 }

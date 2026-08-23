@@ -52,7 +52,8 @@ export default function DataSourceForm({
               <Select
                 options={[
                   { value: 'postgresql', label: 'PostgreSQL' },
-                  { value: 'mysql', label: 'MySQL' }
+                  { value: 'mysql', label: 'MySQL' },
+                  { value: 'hive2', label: 'Spark Thrift / Hive2' }
                 ]}
               />
             </Form.Item>
@@ -75,6 +76,11 @@ export default function DataSourceForm({
           <Col span={12}>
             <Form.Item name="username" label="用户名">
               <Input placeholder="可选" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item name="password" label="密码">
+              <Input.Password placeholder="可选" />
             </Form.Item>
           </Col>
           <Col span={12}>

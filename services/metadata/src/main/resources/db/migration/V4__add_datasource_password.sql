@@ -1,0 +1,1 @@
+ALTER TABLE data_source ADD COLUMN IF NOT EXISTS password VARCHAR(128);

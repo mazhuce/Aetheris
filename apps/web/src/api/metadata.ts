@@ -8,6 +8,7 @@ export interface DataSource {
   port?: number
   databaseName?: string
   username?: string
+  password?: string
   status?: string
   createdAt?: string
   updatedAt?: string
@@ -20,6 +21,7 @@ export interface DataSourceInput {
   port?: number
   databaseName?: string
   username?: string
+  password?: string
   status?: string
 }
 
@@ -37,6 +39,27 @@ export function updateDataSource(id: number, payload: DataSourceInput): Promise<
 
 export function deleteDataSource(id: number): Promise<void> {
   return http.delete(`/api/metadata/datasources/${id}`).then(() => undefined)
+}
+
+export interface TestResult {
+  success: boolean
+  message: string
+  latencyMs?: number
+}
+
+export interface QueryResult {
+  columns: string[]
+  rows: unknown[][]
+  rowCount: number
+  truncated: boolean
+}
+
+export function testDataSource(id: number): Promise<TestResult> {
+  return http.post<TestResult>(`/api/metadata/datasources/${id}/test`).then((res) => res.data)
+}
+
+export function queryDataSource(id: number, sql: string): Promise<QueryResult> {
+  return http.post<QueryResult>(`/api/metadata/datasources/${id}/query`, { sql }).then((res) => res.data)
 }
 
 export interface MetadataTable {
