@@ -31,6 +31,10 @@ spring:
           uri: http://${AI_AGENT_HOST:localhost}:${AI_AGENT_PORT:8086}
           predicates:
             - Path=/api/ai/**
+        - id: auth-service
+          uri: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+          predicates:
+            - Path=/api/auth/**
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
 
@@ -46,3 +50,6 @@ management:
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+
+jwt:
+  secret: ${JWT_SECRET:}

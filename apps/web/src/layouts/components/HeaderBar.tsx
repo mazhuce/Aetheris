@@ -16,8 +16,9 @@ import {
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { findNav } from '@/constants/navigation'
+import { TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 
 interface HeaderBarProps {
   collapsed: boolean
@@ -26,7 +27,15 @@ interface HeaderBarProps {
 
 export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
   const location = useLocation()
+  const navigate = useNavigate()
   const { group, item } = findNav(location.pathname)
+  const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
+
+  const handleLogout = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USERNAME_KEY)
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div
@@ -79,12 +88,15 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
             items: [
               { key: 'profile', label: '个人中心' },
               { key: 'logout', label: '退出登录' }
-            ]
+            ],
+            onClick: ({ key }) => {
+              if (key === 'logout') handleLogout()
+            }
           }}
         >
           <Space style={{ cursor: 'pointer' }}>
             <Avatar size={28} icon={<UserOutlined />} style={{ background: '#1677ff' }} />
-            <span style={{ fontSize: 13 }}>admin</span>
+            <span style={{ fontSize: 13 }}>{username}</span>
           </Space>
         </Dropdown>
       </Space>

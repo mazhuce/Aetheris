@@ -1,5 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import BasicLayout from '@/layouts/BasicLayout'
+import RequireAuth from '@/components/RequireAuth'
+import LoginPage from '@/pages/login'
 import Dashboard from '@/pages/dashboard'
 import DataSourcePage from '@/pages/datasource'
 import IngestionPage from '@/pages/ingestion'
@@ -13,9 +15,14 @@ import UserPage from '@/pages/system/users'
 import Placeholder from '@/pages/placeholder'
 
 export const router = createBrowserRouter([
+  { path: '/login', element: <LoginPage /> },
   {
     path: '/',
-    element: <BasicLayout />,
+    element: (
+      <RequireAuth>
+        <BasicLayout />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
