@@ -14,7 +14,7 @@ export default function BasicLayout() {
       <Sider theme="dark" width={200} collapsible collapsed={collapsed} trigger={null}>
         <div className="app-logo">
           <img src="/AETHRIS.png" alt="Aetheris" className="logo-img" />
-          {!collapsed && <span>数据平台</span>}
+          {!collapsed && <span>Aetheris</span>}
         </div>
         <SideMenu />
       </Sider>
