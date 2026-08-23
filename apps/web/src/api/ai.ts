@@ -9,8 +9,32 @@ export interface ChatResult {
   role: string
   content: string
   model?: string
+  conversationId?: number
 }
 
-export function sendChat(messages: ChatMessage[]): Promise<ChatResult> {
-  return http.post<ChatResult>('/api/ai/chat', { messages }).then((res) => res.data)
+export interface ChatConversation {
+  id: number
+  title: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function listConversations(): Promise<ChatConversation[]> {
+  return http.get<ChatConversation[]>('/api/ai/conversations').then((res) => res.data)
+}
+
+export function createConversation(): Promise<ChatConversation> {
+  return http.post<ChatConversation>('/api/ai/conversations').then((res) => res.data)
+}
+
+export function deleteConversation(id: number): Promise<void> {
+  return http.delete(`/api/ai/conversations/${id}`).then(() => undefined)
+}
+
+export function listMessages(conversationId: number): Promise<ChatMessage[]> {
+  return http.get<ChatMessage[]>(`/api/ai/conversations/${conversationId}/messages`).then((res) => res.data)
+}
+
+export function sendChat(conversationId: number, messages: ChatMessage[]): Promise<ChatResult> {
+  return http.post<ChatResult>('/api/ai/chat', { conversationId, messages }).then((res) => res.data)
 }

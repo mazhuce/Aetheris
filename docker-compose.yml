@@ -109,9 +109,17 @@ services:
       dockerfile: services/ai-agent/Dockerfile
     restart: unless-stopped
     environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8086:8086"
 
