@@ -44,7 +44,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <img src="/AETHRIS.png" alt="Aetheris" style={{ height: 44 }} />
           <Typography.Title level={4} style={{ marginTop: 12, marginBottom: 0 }}>
-            Aetheris 数据平台
+            Aetheris
           </Typography.Title>
           <Typography.Text type="secondary">登录以继续</Typography.Text>
         </div>
