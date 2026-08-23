@@ -9,9 +9,12 @@ import com.aetheris.aiagent.service.ChatMessageService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,15 +28,23 @@ import org.springframework.web.client.RestClientException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/api/ai")
 public class ChatController {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
+    private static final int MAX_REQUESTS_PER_MINUTE = 20;
+    private static final int MAX_MESSAGES = 50;
+    private static final int MAX_TOTAL_CHARS = 20000;
+
     private final RestClient restClient;
     private final String model;
     private final ChatConversationService conversationService;
     private final ChatMessageService messageService;
+    private final AtomicInteger requestCounter = new AtomicInteger();
+    private volatile long windowStart = System.currentTimeMillis();
 
     public ChatController(
             RestClient.Builder builder,
@@ -45,7 +56,11 @@ public class ChatController {
         this.model = model;
         this.conversationService = conversationService;
         this.messageService = messageService;
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(5000);
+        requestFactory.setReadTimeout(60000);
         this.restClient = builder
+                .requestFactory(requestFactory)
                 .baseUrl(baseUrl)
                 .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
@@ -95,7 +110,24 @@ public class ChatController {
                     .body(Map.of("role", "assistant", "content", "会话不存在，请刷新后重试"));
         }
 
+        if (!allowRequest()) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("role", "assistant", "content", "请求过于频繁，请稍后再试"));
+        }
+
         List<ChatMessageDto> messages = request.messages();
+        if (messages.size() > MAX_MESSAGES) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("role", "assistant", "content", "单次消息条数过多"));
+        }
+        int totalChars = messages.stream()
+                .mapToInt(message -> message.content() == null ? 0 : message.content().length())
+                .sum();
+        if (totalChars > MAX_TOTAL_CHARS) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("role", "assistant", "content", "单次内容过长"));
+        }
+
         ChatMessageDto lastUser = messages.get(messages.size() - 1);
         saveMessage(request.conversationId(), "user", lastUser.content());
 
@@ -126,13 +158,23 @@ public class ChatController {
                     "conversationId", request.conversationId()
             ));
         } catch (RestClientException | NullPointerException e) {
+            log.warn("DeepSeek call failed", e);
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                     .body(Map.of(
                             "role", "assistant",
-                            "content", "AI 服务暂时不可用：" + e.getMessage(),
+                            "content", "AI 服务暂时不可用，请稍后重试",
                             "conversationId", request.conversationId()
                     ));
         }
+    }
+
+    private boolean allowRequest() {
+        long now = System.currentTimeMillis();
+        if (now - windowStart > 60_000L) {
+            windowStart = now;
+            requestCounter.set(0);
+        }
+        return requestCounter.incrementAndGet() <= MAX_REQUESTS_PER_MINUTE;
     }
 
     private void saveMessage(Long conversationId, String role, String content) {

@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -20,6 +22,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/metadata/datasources")
 public class DataSourceController {
+
+    private static final Logger log = LoggerFactory.getLogger(DataSourceController.class);
 
     private final DataSourceService dataSourceService;
     private final JdbcService jdbcService;
@@ -87,7 +91,8 @@ public class DataSourceController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            log.warn("Datasource query failed", e);
+            return ResponseEntity.status(500).body(Map.of("message", "查询失败，请检查 SQL 与数据源配置"));
         }
     }
 }

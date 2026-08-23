@@ -2,6 +2,8 @@ package com.aetheris.metadata.service;
 
 import com.aetheris.metadata.entity.DataSource;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,10 +13,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
 public class JdbcService {
+
+    private static final Logger log = LoggerFactory.getLogger(JdbcService.class);
 
     public Map<String, Object> test(DataSource dataSource) {
         long start = System.currentTimeMillis();
@@ -37,15 +42,32 @@ public class JdbcService {
     }
 
     public Map<String, Object> query(DataSource dataSource, String sql) {
-        String trimmed = sql == null ? "" : sql.trim().toLowerCase();
-        if (!(trimmed.startsWith("select") || trimmed.startsWith("show") || trimmed.startsWith("explain"))) {
+        String cleaned = sql == null ? "" : sql.trim();
+        if (cleaned.isEmpty()) {
+            throw new IllegalArgumentException("SQL 不能为空");
+        }
+        String upper = cleaned.toUpperCase(Locale.ROOT);
+        if (cleaned.contains(";")) {
+            throw new IllegalArgumentException("仅支持单条查询语句");
+        }
+        if (!(upper.startsWith("SELECT") || upper.startsWith("SHOW")
+                || upper.startsWith("EXPLAIN") || upper.startsWith("WITH"))) {
             throw new IllegalArgumentException("仅支持 SELECT / SHOW / EXPLAIN 查询");
+        }
+        String[] forbidden = {
+                "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE",
+                "GRANT", "REVOKE", "CALL", "MERGE", "COPY", "VACUUM", "ATTACH", "DETACH"
+        };
+        for (String word : forbidden) {
+            if (upper.matches(".*\\b" + word + "\\b.*")) {
+                throw new IllegalArgumentException("查询中包含不允许的关键字：" + word);
+            }
         }
 
         DriverManager.setLoginTimeout(5);
         try (Connection connection = connect(dataSource);
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
+             ResultSet resultSet = statement.executeQuery(cleaned)) {
 
             ResultSetMetaData meta = resultSet.getMetaData();
             int columnCount = meta.getColumnCount();
@@ -76,7 +98,8 @@ public class JdbcService {
                     "truncated", truncated
             );
         } catch (SQLException e) {
-            throw new IllegalStateException("查询失败：" + e.getMessage());
+            log.warn("SQL query failed", e);
+            throw new IllegalStateException("查询失败");
         }
     }
 

@@ -14,8 +14,8 @@ public class CorsConfig {
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        // 本地开发放开；生产环境应收敛为具体域名白名单。
-        config.setAllowedOriginPatterns(List.of("*"));
+        // 仅允许本地前端开发地址；生产环境需进一步收敛。
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
