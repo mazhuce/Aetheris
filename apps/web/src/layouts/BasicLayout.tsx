@@ -11,10 +11,10 @@ export default function BasicLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark" width={220} collapsible collapsed={collapsed} trigger={null}>
+      <Sider theme="dark" width={200} collapsible collapsed={collapsed} trigger={null}>
         <div className="app-logo">
           <img src="/AETHRIS.png" alt="Aetheris" className="logo-img" />
-          {!collapsed && <span>Aetheris</span>}
+          {!collapsed && <span>数据平台</span>}
         </div>
         <SideMenu />
       </Sider>
