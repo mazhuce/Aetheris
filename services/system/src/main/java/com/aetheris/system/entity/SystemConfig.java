@@ -3,6 +3,7 @@ package com.aetheris.system.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.OffsetDateTime;
 
@@ -12,8 +13,10 @@ public class SystemConfig {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    @NotBlank
     private String configKey;
 
+    @NotBlank
     private String configValue;
 
     private String description;

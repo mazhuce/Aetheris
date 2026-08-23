@@ -50,7 +50,7 @@ export const navGroups: NavGroup[] = [
     label: '数据开发',
     items: [
       { key: 'ingestion', label: '数据接入', icon: <ApiOutlined />, path: '/ingestion' },
-      { key: 'quality', label: '数据质量', icon: <CheckCircleOutlined />, path: '/quality' },
+      { key: 'quality-rules', label: '质量规则', icon: <CheckCircleOutlined />, path: '/quality/rules' },
       { key: 'governance', label: '数据治理', icon: <SafetyCertificateOutlined />, path: '/governance' },
       { key: 'workflow', label: '任务编排', icon: <DeploymentUnitOutlined />, path: '/workflow' }
     ]

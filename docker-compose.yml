@@ -52,6 +52,23 @@ services:
     ports:
       - "8082:8082"
 
+  quality-service:
+    build:
+      context: .
+      dockerfile: services/quality/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+
   gateway:
     build:
       context: .
@@ -62,9 +79,12 @@ services:
       SYSTEM_SERVICE_PORT: "8081"
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      QUALITY_SERVICE_HOST: quality-service
+      QUALITY_SERVICE_PORT: "8083"
     depends_on:
       - system-service
       - metadata-service
+      - quality-service
     ports:
       - "8080:8080"
 
