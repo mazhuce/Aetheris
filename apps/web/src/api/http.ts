@@ -2,6 +2,7 @@ import axios from 'axios'
 
 export const TOKEN_KEY = 'aetheris_token'
 export const USERNAME_KEY = 'aetheris_username'
+export const ROLE_KEY = 'aetheris_role'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
@@ -22,6 +23,7 @@ http.interceptors.response.use(
     if (error.response?.status === 401 && !window.location.pathname.startsWith('/login')) {
       localStorage.removeItem(TOKEN_KEY)
       localStorage.removeItem(USERNAME_KEY)
+      localStorage.removeItem(ROLE_KEY)
       window.location.href = '/login'
     }
     return Promise.reject(error)

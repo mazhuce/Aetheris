@@ -18,7 +18,7 @@ import {
 } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { findNav } from '@/constants/navigation'
-import { TOKEN_KEY, USERNAME_KEY } from '@/api/http'
+import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 
 interface HeaderBarProps {
   collapsed: boolean
@@ -34,6 +34,7 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USERNAME_KEY)
+    localStorage.removeItem(ROLE_KEY)
     navigate('/login', { replace: true })
   }
 

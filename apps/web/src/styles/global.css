@@ -40,6 +40,14 @@ body {
   color: #1f2329;
 }
 
+.page-eyebrow {
+  margin-bottom: 4px;
+  color: #1677ff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
 .page-desc {
   margin: 2px 0 0;
   font-size: 13px;
@@ -75,6 +83,72 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.datasource-overview {
+  margin-bottom: 16px;
+}
+
+.datasource-overview .ant-card {
+  overflow: hidden;
+  border: 0;
+  box-shadow: 0 6px 20px rgba(30, 64, 175, 0.07);
+}
+
+.datasource-overview .ant-statistic-content-prefix {
+  margin-right: 10px;
+  color: #1677ff;
+}
+
+.datasource-preset-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 100%);
+}
+
+.datasource-type-hint {
+  margin: -4px 0 18px;
+}
+
+.datasource-advanced {
+  margin: -4px -12px 0;
+  border-top: 1px solid #f0f0f0;
+}
+
+.datasource-browser-summary {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f7f9fc;
+}
+
+.datasource-browser-selectors {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(300px, 2fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.datasource-browser-selectors > div {
+  display: grid;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .datasource-preset-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .datasource-browser-selectors {
+    grid-template-columns: 1fr;
+  }
 }
 
 .chat-scroll {

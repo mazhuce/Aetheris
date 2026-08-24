@@ -4,9 +4,9 @@ FROM docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY scripts/maven-mirror-settings.xml ./settings.xml
 COPY services/metadata/pom.xml ./pom.xml
-RUN mvn -s settings.xml -q -DskipTests dependency:go-offline
+RUN --mount=type=cache,target=/root/.m2 mvn -s settings.xml -q -DskipTests dependency:go-offline
 COPY services/metadata/src ./src
-RUN mvn -s settings.xml -q -DskipTests package
+RUN --mount=type=cache,target=/root/.m2 mvn -s settings.xml -q -DskipTests package
 
 # runtime stage
 FROM docker.1panel.live/library/eclipse-temurin:21-jre

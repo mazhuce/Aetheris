@@ -13,6 +13,9 @@ public class AuthUser {
     private String username;
     private String passwordHash;
     private String nickname;
+    private String email;
+    private String phone;
+    private String role;
     private String status;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -25,6 +28,12 @@ public class AuthUser {
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

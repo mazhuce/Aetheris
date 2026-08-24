@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -38,6 +39,7 @@ public class ChatController {
     private static final int MAX_REQUESTS_PER_MINUTE = 20;
     private static final int MAX_MESSAGES = 50;
     private static final int MAX_TOTAL_CHARS = 20000;
+    private static final String USER_HEADER = "X-User-Name";
 
     private final RestClient restClient;
     private final String model;
@@ -68,22 +70,27 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
-    public List<ChatConversation> listConversations() {
+    public List<ChatConversation> listConversations(@RequestHeader(USER_HEADER) String username) {
         return conversationService.list(
-                new LambdaQueryWrapper<ChatConversation>().orderByDesc(ChatConversation::getUpdatedAt));
+                new LambdaQueryWrapper<ChatConversation>()
+                        .eq(ChatConversation::getOwnerUsername, username)
+                        .orderByDesc(ChatConversation::getUpdatedAt));
     }
 
     @PostMapping("/conversations")
-    public ChatConversation createConversation() {
+    public ChatConversation createConversation(@RequestHeader(USER_HEADER) String username) {
         ChatConversation conversation = new ChatConversation();
+        conversation.setOwnerUsername(username);
         conversation.setTitle("新对话");
         conversationService.save(conversation);
         return conversation;
     }
 
     @GetMapping("/conversations/{id}/messages")
-    public ResponseEntity<List<ChatMessage>> listMessages(@PathVariable Long id) {
-        if (conversationService.getById(id) == null) {
+    public ResponseEntity<List<ChatMessage>> listMessages(
+            @PathVariable Long id,
+            @RequestHeader(USER_HEADER) String username) {
+        if (findOwnedConversation(id, username) == null) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(messageService.list(
@@ -93,7 +100,12 @@ public class ChatController {
     }
 
     @DeleteMapping("/conversations/{id}")
-    public ResponseEntity<Void> deleteConversation(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteConversation(
+            @PathVariable Long id,
+            @RequestHeader(USER_HEADER) String username) {
+        if (findOwnedConversation(id, username) == null) {
+            return ResponseEntity.notFound().build();
+        }
         boolean removed = conversationService.removeById(id);
         if (removed) {
             messageService.remove(
@@ -103,8 +115,10 @@ public class ChatController {
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<Map<String, Object>> chat(@Valid @RequestBody ChatRequest request) {
-        ChatConversation conversation = conversationService.getById(request.conversationId());
+    public ResponseEntity<Map<String, Object>> chat(
+            @RequestHeader(USER_HEADER) String username,
+            @Valid @RequestBody ChatRequest request) {
+        ChatConversation conversation = findOwnedConversation(request.conversationId(), username);
         if (conversation == null) {
             return ResponseEntity.badRequest()
                     .body(Map.of("role", "assistant", "content", "会话不存在，请刷新后重试"));
@@ -175,6 +189,13 @@ public class ChatController {
             requestCounter.set(0);
         }
         return requestCounter.incrementAndGet() <= MAX_REQUESTS_PER_MINUTE;
+    }
+
+    private ChatConversation findOwnedConversation(Long id, String username) {
+        return conversationService.getOne(
+                new LambdaQueryWrapper<ChatConversation>()
+                        .eq(ChatConversation::getId, id)
+                        .eq(ChatConversation::getOwnerUsername, username));
     }
 
     private void saveMessage(Long conversationId, String role, String content) {

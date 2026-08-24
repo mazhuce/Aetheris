@@ -61,17 +61,21 @@ services/<name>/
 | React / Vite / TypeScript | 18 / 6 / 5.7 | 前端 |
 | Ant Design / Axios | 5 / 1.7 | UI 与 HTTP 客户端 |
 
-> Nacos / 注册中心暂不引入，避免 Spring Cloud Alibaba 与 Boot 的版本矩阵在骨架阶段引入风险；Phase 2 再加入并单独锁定版本。
+> Nacos / 注册中心暂不引入，避免在执行引擎尚未稳定时扩大运维复杂度；计划在 Phase 3 单独锁定版本后接入。
 
 ## 演进路线
 
-- **Phase 1（已完成）**：单机 docker-compose，前端 + 网关 + system/metadata 两个服务 + PostgreSQL，端到端闭环可用。
-- **Phase 2**：按领域拆分服务，接入网关与注册中心。
-- **Phase 3**：引入 Python 数据/AI 等多语言服务，通过契约互联。
-- **Phase 4**：Kubernetes + 可观测性 + 完整数据治理能力。
+- **Phase 1（已完成）**：单机 Docker Compose、前端、网关、领域服务、PostgreSQL 与 JWT 登录闭环。
+- **Phase 2（进行中）**：实现数据接入、质量和治理执行引擎，补齐 RBAC、审计、测试与可观测性。
+- **Phase 3**：引入注册/配置中心与 Python 数据服务，通过契约互联。
+- **Phase 4**：Kubernetes + 完整数据治理与服务开放能力。
 
 ## 当前进度
 
 - Monorepo 目录结构、Git 规范、版本矩阵、企业级前端设计规范已建立。
-- 已实现并跑通：前端（React + Ant Design）、网关、`system` 服务、`metadata` 服务（数据源管理）、PostgreSQL。
+- 已实现：前端、网关、`auth`、`system`、`metadata`、`quality`、`ingestion`、`governance`、`ai-agent` 与 PostgreSQL 编排。
+- 已形成真实执行闭环：登录鉴权、数据源连接测试/只读查询、DeepSeek 对话与按用户隔离的会话持久化。
+- 已建立最小 RBAC：认证账号由 `auth` 服务统一管理，JWT 携带 `admin` / `viewer` 角色，网关负责写操作授权。
+- `system.sys_user` 作为旧版资料目录暂时保留，后续在确认无外部调用后再通过独立迁移退役。
+- 仍属于管理能力：接入任务、质量规则、治理策略；对应执行引擎尚未完成。
 - Docker 一键构建与启动已打通，并使用国内镜像源。

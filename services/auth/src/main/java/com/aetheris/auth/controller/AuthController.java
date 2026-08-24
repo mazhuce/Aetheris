@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
@@ -40,12 +41,16 @@ public class AuthController {
         if (!"active".equals(user.getStatus())) {
             return ResponseEntity.status(403).body(Map.of("message", "账号已禁用"));
         }
-        String token = jwtService.generateToken(user.getUsername());
-        return ResponseEntity.ok(Map.of(
-                "token", token,
-                "username", user.getUsername(),
-                "nickname", user.getNickname(),
-                "expiresIn", jwtService.getExpirationMs()
-        ));
+        String role = user.getRole() == null ? "viewer" : user.getRole();
+        String token = jwtService.generateToken(user.getUsername(), role);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("token", token);
+        response.put("username", user.getUsername());
+        response.put("role", role);
+        if (user.getNickname() != null) {
+            response.put("nickname", user.getNickname());
+        }
+        response.put("expiresIn", jwtService.getExpirationMs());
+        return ResponseEntity.ok(response);
     }
 }

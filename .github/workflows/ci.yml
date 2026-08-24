@@ -20,10 +20,7 @@ jobs:
           cache: maven
 
       - name: Build backend services
-        run: |
-          mvn -f services/system/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
-          mvn -f services/metadata/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
-          mvn -f apps/gateway/pom.xml -s scripts/maven-mirror-settings.xml -DskipTests package
+        run: mvn -f pom.xml -s scripts/maven-mirror-settings.xml verify
 
   frontend:
     runs-on: ubuntu-latest

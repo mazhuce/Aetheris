@@ -1,6 +1,7 @@
 package com.aetheris.gateway.config;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
@@ -25,11 +27,22 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/auth/login",
             "/actuator"
     );
+    private static final Set<String> ADMIN_MUTATION_PREFIXES = Set.of(
+            "/api/system/",
+            "/api/metadata/",
+            "/api/quality/",
+            "/api/ingestion/",
+            "/api/governance/"
+    );
 
     private final SecretKey key;
 
     public JwtAuthFilter(@Value("${jwt.secret}") String secret) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
+        }
+        this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
     @Override
@@ -47,16 +60,27 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         try {
-            String username = Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(authorization.substring(7))
-                    .getPayload()
-                    .getSubject();
+                    .getPayload();
+            String username = claims.getSubject();
+            String role = claims.get("role", String.class);
+            if (role == null) {
+                role = "viewer";
+            }
+            if (requiresAdmin(path, method) && !"admin".equals(role)) {
+                return forbidden(exchange);
+            }
 
+            String authenticatedRole = role;
             ServerHttpRequest mutated = exchange.getRequest()
                     .mutate()
-                    .header("X-User-Name", username)
+                    .headers(headers -> {
+                        headers.set("X-User-Name", username);
+                        headers.set("X-User-Role", authenticatedRole);
+                    })
                     .build();
             return chain.filter(exchange.mutate().request(mutated).build());
         } catch (Exception e) {
@@ -68,8 +92,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         return PUBLIC_PREFIXES.stream().anyMatch(path::startsWith);
     }
 
+    private boolean requiresAdmin(String path, HttpMethod method) {
+        if (path.startsWith("/api/auth/users") || path.startsWith("/api/system/audit-logs")) {
+            return true;
+        }
+        if (method == HttpMethod.GET || method == HttpMethod.HEAD) {
+            return false;
+        }
+        return ADMIN_MUTATION_PREFIXES.stream().anyMatch(path::startsWith);
+    }
+
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        return exchange.getResponse().setComplete();
+    }
+
+    private Mono<Void> forbidden(ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         return exchange.getResponse().setComplete();
     }
 

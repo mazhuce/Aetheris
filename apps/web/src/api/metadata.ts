@@ -9,6 +9,10 @@ export interface DataSource {
   databaseName?: string
   username?: string
   password?: string
+  managed?: boolean
+  jdbcUrl?: string
+  connectionParams?: string
+  description?: string
   status?: string
   createdAt?: string
   updatedAt?: string
@@ -22,6 +26,9 @@ export interface DataSourceInput {
   databaseName?: string
   username?: string
   password?: string
+  jdbcUrl?: string
+  connectionParams?: string
+  description?: string
   status?: string
 }
 
@@ -45,6 +52,10 @@ export interface TestResult {
   success: boolean
   message: string
   latencyMs?: number
+  databaseProduct?: string
+  databaseVersion?: string
+  driverName?: string
+  driverVersion?: string
 }
 
 export interface QueryResult {
@@ -56,6 +67,45 @@ export interface QueryResult {
 
 export function testDataSource(id: number): Promise<TestResult> {
   return http.post<TestResult>(`/api/metadata/datasources/${id}/test`).then((res) => res.data)
+}
+
+export function testDataSourceConfig(payload: DataSourceInput): Promise<TestResult> {
+  return http.post<TestResult>('/api/metadata/datasources/test', payload).then((res) => res.data)
+}
+
+export interface DataSourceSchema {
+  name: string
+}
+
+export interface DataSourceTable {
+  name: string
+  type?: string
+  remarks?: string
+}
+
+export interface DataSourceColumn {
+  name: string
+  type: string
+  size?: number
+  nullable?: boolean
+  ordinal?: number
+  remarks?: string
+}
+
+export function listDataSourceSchemas(id: number): Promise<DataSourceSchema[]> {
+  return http.get<DataSourceSchema[]>(`/api/metadata/datasources/${id}/schemas`).then((res) => res.data)
+}
+
+export function listDataSourceTables(id: number, schema: string): Promise<DataSourceTable[]> {
+  return http.get<DataSourceTable[]>(`/api/metadata/datasources/${id}/tables`, { params: { schema } }).then((res) => res.data)
+}
+
+export function listDataSourceColumns(id: number, schema: string, table: string): Promise<DataSourceColumn[]> {
+  return http.get<DataSourceColumn[]>(`/api/metadata/datasources/${id}/columns`, { params: { schema, table } }).then((res) => res.data)
+}
+
+export function previewDataSourceTable(id: number, schema: string, table: string): Promise<QueryResult> {
+  return http.post<QueryResult>(`/api/metadata/datasources/${id}/preview`, { schema, table }).then((res) => res.data)
 }
 
 export function queryDataSource(id: number, sql: string): Promise<QueryResult> {

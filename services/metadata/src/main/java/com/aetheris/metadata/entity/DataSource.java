@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 import java.time.OffsetDateTime;
 
@@ -18,6 +19,7 @@ public class DataSource {
     private String name;
 
     @NotBlank
+    @Pattern(regexp = "postgresql|greenplum|opengauss|cockroachdb|yugabytedb|mysql|mariadb|tidb|oceanbase|doris|starrocks|hive2|spark")
     private String type;
 
     @NotBlank
@@ -31,6 +33,15 @@ public class DataSource {
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Boolean managed;
+
+    private String jdbcUrl;
+
+    private String connectionParams;
+
+    private String description;
 
     private String status;
 
@@ -101,6 +112,15 @@ public class DataSource {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public Boolean getManaged() { return managed; }
+    public void setManaged(Boolean managed) { this.managed = managed; }
+    public String getJdbcUrl() { return jdbcUrl; }
+    public void setJdbcUrl(String jdbcUrl) { this.jdbcUrl = jdbcUrl; }
+    public String getConnectionParams() { return connectionParams; }
+    public void setConnectionParams(String connectionParams) { this.connectionParams = connectionParams; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public String getStatus() {
         return status;

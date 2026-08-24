@@ -20,6 +20,7 @@ export interface NavItem {
   label: string
   icon: ReactNode
   path: string
+  requiredRole?: 'admin'
 }
 
 export interface NavGroup {
@@ -74,9 +75,9 @@ export const navGroups: NavGroup[] = [
     key: 'system',
     label: '系统管理',
     items: [
-      { key: 'users', label: '用户权限', icon: <UserOutlined />, path: '/system/users' },
+      { key: 'users', label: '用户权限', icon: <UserOutlined />, path: '/system/users', requiredRole: 'admin' },
       { key: 'config', label: '系统配置', icon: <SettingOutlined />, path: '/system/config' },
-      { key: 'audit', label: '审计日志', icon: <FileSearchOutlined />, path: '/system/audit' }
+      { key: 'audit', label: '审计日志', icon: <FileSearchOutlined />, path: '/system/audit', requiredRole: 'admin' }
     ]
   }
 ]

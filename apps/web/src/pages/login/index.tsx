@@ -3,7 +3,7 @@ import { App, Button, Card, Form, Input, Typography } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { login } from '@/api/auth'
-import { TOKEN_KEY, USERNAME_KEY } from '@/api/http'
+import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 
 interface LoginForm {
   username: string
@@ -21,6 +21,7 @@ export default function LoginPage() {
       const result = await login(values.username, values.password)
       localStorage.setItem(TOKEN_KEY, result.token)
       localStorage.setItem(USERNAME_KEY, result.username)
+      localStorage.setItem(ROLE_KEY, result.role)
       message.success('登录成功')
       navigate('/dashboard', { replace: true })
     } catch {

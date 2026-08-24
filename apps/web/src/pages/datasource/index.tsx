@@ -3,18 +3,30 @@ import {
   App,
   Button,
   Card,
+  Col,
   DatePicker,
   Input,
   Modal,
   Popconfirm,
+  Row,
   Select,
   Space,
+  Statistic,
   Table,
-  Tag
+  Tag,
+  Tooltip
 } from 'antd'
 import type { TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
-import { ExportOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import {
+  ApiOutlined,
+  CheckCircleOutlined,
+  ClusterOutlined,
+  DatabaseOutlined,
+  ExportOutlined,
+  PlusOutlined,
+  ReloadOutlined
+} from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import {
   createDataSource,
@@ -29,6 +41,8 @@ import {
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import DataSourceForm from './components/DataSourceForm'
+import DataSourceBrowser from './components/DataSourceBrowser'
+import { dataSourceOptions, getDataSourceDefinition } from './sourceCatalog'
 
 const statusMeta: Record<string, { color: string; text: string }> = {
   active: { color: 'success', text: '启用' },
@@ -53,6 +67,8 @@ export default function DataSourcePage() {
   const [querySql, setQuerySql] = useState('')
   const [queryLoading, setQueryLoading] = useState(false)
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null)
+  const [browserOpen, setBrowserOpen] = useState(false)
+  const [browserRecord, setBrowserRecord] = useState<DataSource | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -86,6 +102,13 @@ export default function DataSourcePage() {
     () => filtered.slice((page - 1) * pageSize, page * pageSize),
     [filtered, page, pageSize]
   )
+
+  const overview = useMemo(() => ({
+    total: allData.length,
+    active: allData.filter((item) => item.status === 'active').length,
+    lakehouse: allData.filter((item) => item.type === 'hive2' || item.type === 'spark').length,
+    types: new Set(allData.map((item) => item.type)).size
+  }), [allData])
 
   const handleSubmit = async (values: DataSourceInput) => {
     setSubmitting(true)
@@ -122,7 +145,7 @@ export default function DataSourcePage() {
     try {
       const result = await testDataSource(record.id)
       if (result.success) {
-        message.success(`连接成功，耗时 ${result.latencyMs ?? '—'} ms`)
+        message.success(`连接成功 · ${result.databaseProduct ?? record.type} · ${result.latencyMs ?? '—'} ms`)
       } else {
         message.error(result.message)
       }
@@ -153,8 +176,28 @@ export default function DataSourcePage() {
   }
 
   const columns: TableColumnsType<DataSource> = [
-    { title: '名称', dataIndex: 'name', key: 'name', width: 160 },
-    { title: '类型', dataIndex: 'type', key: 'type', width: 110, render: (value: string) => <Tag>{value}</Tag> },
+    {
+      title: '名称',
+      dataIndex: 'name',
+      key: 'name',
+      width: 190,
+      render: (value: string, record) => (
+        <Space size={6}>
+          <span style={{ fontWeight: 600 }}>{value}</span>
+          {record.managed && <Tooltip title="由系统自动维护配置"><Tag color="blue">系统</Tag></Tooltip>}
+        </Space>
+      )
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      width: 145,
+      render: (value: string) => {
+        const definition = getDataSourceDefinition(value)
+        return <Tag color={definition.color}>{definition.label}</Tag>
+      }
+    },
     { title: '主机地址', dataIndex: 'host', key: 'host', width: 140 },
     { title: '端口', dataIndex: 'port', key: 'port', width: 80, render: (value?: number) => value ?? '—' },
     { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 120, render: (value?: string) => value || '—' },
@@ -174,7 +217,7 @@ export default function DataSourcePage() {
     {
       title: '操作',
       key: 'action',
-      width: 240,
+      width: 290,
       fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
@@ -184,9 +227,13 @@ export default function DataSourcePage() {
           <Button type="link" size="small" onClick={() => openQuery(record)}>
             查询
           </Button>
+          <Button type="link" size="small" onClick={() => { setBrowserRecord(record); setBrowserOpen(true) }}>
+            浏览库表
+          </Button>
           <Button
             type="link"
             size="small"
+            disabled={record.managed}
             onClick={() => {
               setEditing(record)
               setOpen(true)
@@ -194,8 +241,8 @@ export default function DataSourcePage() {
           >
             编辑
           </Button>
-          <Popconfirm title="确定删除该数据源？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>
+          <Popconfirm title="确定删除该数据源？" disabled={record.managed} onConfirm={() => void handleDelete(record.id)}>
+            <Button type="link" size="small" danger disabled={record.managed}>
               删除
             </Button>
           </Popconfirm>
@@ -207,8 +254,9 @@ export default function DataSourcePage() {
   return (
     <>
       <PageHeader
+        eyebrow="DATA CONNECTIONS"
         title="数据源管理"
-        description="统一管理平台接入的各类数据源，支持 PostgreSQL、MySQL 等常见数据库。"
+        description="通过真实 JDBC 连接统一管理关系型数据库、分布式数据库与 Hive 数仓。"
         extra={
           <Space>
             <Button icon={<ExportOutlined />} onClick={() => message.info('导出功能规划中')}>
@@ -227,6 +275,13 @@ export default function DataSourcePage() {
           </Space>
         }
       />
+
+      <Row gutter={[16, 16]} className="datasource-overview">
+        <Col xs={12} lg={6}><Card><Statistic title="已接入数据源" value={overview.total} prefix={<DatabaseOutlined />} /></Card></Col>
+        <Col xs={12} lg={6}><Card><Statistic title="启用连接" value={overview.active} prefix={<CheckCircleOutlined />} /></Card></Col>
+        <Col xs={12} lg={6}><Card><Statistic title="Hive / 湖仓" value={overview.lakehouse} prefix={<ClusterOutlined />} /></Card></Col>
+        <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix="/ 13" prefix={<ApiOutlined />} /></Card></Col>
+      </Row>
 
       <Card size="small" style={{ marginBottom: 16 }}>
         <div className="filter-bar">
@@ -247,11 +302,8 @@ export default function DataSourcePage() {
               onChange={setType}
               allowClear
               placeholder="全部"
-              style={{ width: 130 }}
-              options={[
-                { value: 'postgresql', label: 'PostgreSQL' },
-                { value: 'mysql', label: 'MySQL' }
-              ]}
+              style={{ width: 160 }}
+              options={dataSourceOptions}
             />
           </div>
           <div className="filter-item">
@@ -295,12 +347,11 @@ export default function DataSourcePage() {
       <Card size="small">
         <Table<DataSource>
           size="small"
-          bordered
           rowKey="id"
           columns={columns}
           dataSource={paged}
           loading={loading}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1380 }}
           pagination={{
             current: page,
             pageSize,
@@ -325,6 +376,15 @@ export default function DataSourcePage() {
           setEditing(null)
         }}
         onSubmit={(values) => void handleSubmit(values)}
+      />
+
+      <DataSourceBrowser
+        open={browserOpen}
+        dataSource={browserRecord}
+        onClose={() => {
+          setBrowserOpen(false)
+          setBrowserRecord(null)
+        }}
       />
 
       <Modal

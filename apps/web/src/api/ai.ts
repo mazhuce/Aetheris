@@ -14,6 +14,7 @@ export interface ChatResult {
 
 export interface ChatConversation {
   id: number
+  ownerUsername?: string
   title: string
   createdAt?: string
   updatedAt?: string

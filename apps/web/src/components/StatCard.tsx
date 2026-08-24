@@ -7,9 +7,12 @@ interface StatCardProps {
   icon: ReactNode
   trend?: number
   footer?: string
+  tone?: 'blue' | 'green' | 'orange' | 'purple'
 }
 
-export default function StatCard({ title, value, icon, trend, footer }: StatCardProps) {
+const toneColors = { blue: '#1677ff', green: '#16a34a', orange: '#ea580c', purple: '#7c3aed' }
+
+export default function StatCard({ title, value, icon, trend, footer, tone = 'blue' }: StatCardProps) {
   const isUp = (trend ?? 0) >= 0
 
   return (
@@ -24,7 +27,7 @@ export default function StatCard({ title, value, icon, trend, footer }: StatCard
             </div>
           )}
         </div>
-        <div style={{ color: '#1677ff', fontSize: 20 }}>{icon}</div>
+        <div style={{ color: toneColors[tone], fontSize: 20 }}>{icon}</div>
       </div>
       {footer && <div className="stat-footer">{footer}</div>}
     </Card>

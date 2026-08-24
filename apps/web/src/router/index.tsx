@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import BasicLayout from '@/layouts/BasicLayout'
 import RequireAuth from '@/components/RequireAuth'
+import RequireRole from '@/components/RequireRole'
 import LoginPage from '@/pages/login'
 import Dashboard from '@/pages/dashboard'
 import DataSourcePage from '@/pages/datasource'
@@ -12,6 +13,7 @@ import QualityRulePage from '@/pages/quality/rules'
 import ChatPage from '@/pages/ai/chat'
 import SystemConfigPage from '@/pages/system/config'
 import UserPage from '@/pages/system/users'
+import AuditLogPage from '@/pages/system/audit'
 import Placeholder from '@/pages/placeholder'
 
 export const router = createBrowserRouter([
@@ -33,8 +35,23 @@ export const router = createBrowserRouter([
       { path: 'ingestion/tasks', element: <IngestionPage /> },
       { path: 'governance/policies', element: <GovernancePage /> },
       { path: 'ai/chat', element: <ChatPage /> },
-      { path: 'system/users', element: <UserPage /> },
+      {
+        path: 'system/users',
+        element: (
+          <RequireRole role="admin">
+            <UserPage />
+          </RequireRole>
+        )
+      },
       { path: 'system/config', element: <SystemConfigPage /> },
+      {
+        path: 'system/audit',
+        element: (
+          <RequireRole role="admin">
+            <AuditLogPage />
+          </RequireRole>
+        )
+      },
       { path: '*', element: <Placeholder /> }
     ]
   }

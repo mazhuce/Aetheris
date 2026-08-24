@@ -31,6 +31,12 @@ jwt:
   secret: ${JWT_SECRET:}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
+aetheris:
+  bootstrap-admin:
+    username: ${INITIAL_ADMIN_USERNAME:admin}
+    password: ${INITIAL_ADMIN_PASSWORD:}
+    nickname: ${INITIAL_ADMIN_NICKNAME:系统管理员}
+
 management:
   endpoints:
     web:

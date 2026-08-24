@@ -20,23 +20,22 @@ export interface SystemConfigInput {
   description?: string
 }
 
-export interface SysUser {
+export interface AuditLog {
   id: number
   username: string
-  nickname?: string
-  email?: string
-  phone?: string
-  status?: string
+  userRole: string
+  method: string
+  path: string
+  statusCode: number
+  durationMs: number
+  clientIp?: string
   createdAt?: string
-  updatedAt?: string
 }
 
-export interface SysUserInput {
-  username: string
-  nickname?: string
-  email?: string
-  phone?: string
-  status?: string
+export interface AuditLogQuery {
+  username?: string
+  method?: string
+  success?: boolean
 }
 
 export function pingSystem(): Promise<PingResult> {
@@ -59,18 +58,6 @@ export function deleteConfig(id: number): Promise<void> {
   return http.delete(`/api/system/configs/${id}`).then(() => undefined)
 }
 
-export function listUsers(): Promise<SysUser[]> {
-  return http.get<SysUser[]>('/api/system/users').then((res) => res.data)
-}
-
-export function createUser(payload: SysUserInput): Promise<SysUser> {
-  return http.post<SysUser>('/api/system/users', payload).then((res) => res.data)
-}
-
-export function updateUser(id: number, payload: SysUserInput): Promise<SysUser> {
-  return http.put<SysUser>(`/api/system/users/${id}`, payload).then((res) => res.data)
-}
-
-export function deleteUser(id: number): Promise<void> {
-  return http.delete(`/api/system/users/${id}`).then(() => undefined)
+export function listAuditLogs(params: AuditLogQuery = {}): Promise<AuditLog[]> {
+  return http.get<AuditLog[]>('/api/system/audit-logs', { params }).then((res) => res.data)
 }

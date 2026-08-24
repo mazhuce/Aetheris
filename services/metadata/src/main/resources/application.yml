@@ -45,3 +45,7 @@ springdoc:
 info:
   app:
     version: 0.1.0
+
+aetheris:
+  managed-datasource:
+    enabled: ${REGISTER_INTERNAL_DATASOURCE:true}

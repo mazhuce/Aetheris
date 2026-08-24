@@ -53,3 +53,6 @@ logging:
 
 jwt:
   secret: ${JWT_SECRET:}
+
+audit:
+  base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}
