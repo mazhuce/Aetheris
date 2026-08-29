@@ -1,0 +1,64 @@
+server:
+  port: 8088
+
+spring:
+  application:
+    name: workflow-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:aetheris}
+    username: ${DB_USER:aetheris}
+    password: ${DB_PASSWORD:aetheris}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: workflow
+    default-schema: workflow
+    create-schemas: true
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+  quartz:
+    # JDBC 存储而非内存：服务重启不丢调度，多实例由 QRTZ_LOCKS 行锁保证同一触发只执行一次。
+    job-store-type: jdbc
+    jdbc:
+      # 表结构由 Flyway 的 V1 管理，Quartz 自身不要再建表，
+      # 否则两套 DDL 会在升级时互相覆盖。
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceName: AetherisScheduler
+      # AUTO 让每个实例自动取唯一 id，是多实例部署的前提。
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.tablePrefix: workflow.QRTZ_
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 20000
+      # 超过该时长未更新状态的触发视为 misfire；数仓任务跑得久，给 5 分钟余量。
+      org.quartz.jobStore.misfireThreshold: 300000
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      # 线程数不宜过多：每个线程可能持有一个长时间的 JDBC 连接执行加工语句。
+      org.quartz.threadPool.threadCount: 5
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+
+aetheris:
+  metadata:
+    # SQL 执行下沉到 metadata 服务，因为凭据与驱动都在那边；走 /internal 路径，网关不暴露。
+    base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+    connect-timeout: PT10S
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
