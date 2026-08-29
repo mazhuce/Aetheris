@@ -93,6 +93,26 @@ services:
       postgres:
         condition: service_healthy
 
+  workflow-service:
+    build:
+      context: .
+      dockerfile: services/workflow/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      # 任务执行通过 metadata 的 /internal 端点，凭据与驱动都在那边，workflow 不直连数据源。
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      metadata-service:
+        condition: service_started
+
   ai-agent:
     build:
       context: .
@@ -107,9 +127,16 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      # agent 的元数据检索与只读查询下沉到 metadata 服务；
+      # 缺少这两个变量会让 base-url 回落到 localhost 而指向 ai-agent 自身，
+      # 表现为工具调用全部返回空、模型误以为仓库里没有任何表。
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
     depends_on:
       postgres:
         condition: service_healthy
+      metadata-service:
+        condition: service_started
 
   auth-service:
     build:
@@ -150,6 +177,8 @@ services:
       GOVERNANCE_SERVICE_PORT: "8085"
       AI_AGENT_HOST: ai-agent
       AI_AGENT_PORT: "8086"
+      WORKFLOW_SERVICE_HOST: workflow-service
+      WORKFLOW_SERVICE_PORT: "8088"
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
     depends_on:
@@ -159,6 +188,7 @@ services:
       - ingestion-service
       - governance-service
       - ai-agent
+      - workflow-service
       - auth-service
     ports:
       - "8080:8080"

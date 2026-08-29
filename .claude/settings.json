@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn -f services/metadata/pom.xml -s scripts/maven-mirror-settings.xml -o -q compile)"
+    ]
+  }
+}

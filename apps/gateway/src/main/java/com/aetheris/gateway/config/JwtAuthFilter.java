@@ -23,9 +23,14 @@ import java.util.Set;
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
 
+    /** 已认证身份，供审计等更早的过滤器读取；请求头可被客户端伪造，不能作为审计来源。 */
+    public static final String AUTHENTICATED_USER_ATTRIBUTE = "aetheris.auth.username";
+    public static final String AUTHENTICATED_ROLE_ATTRIBUTE = "aetheris.auth.role";
+
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/api/auth/login",
-            "/actuator"
+            "/actuator/health",
+            "/actuator/info"
     );
     private static final Set<String> ADMIN_MUTATION_PREFIXES = Set.of(
             "/api/system/",
@@ -70,11 +75,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             if (role == null) {
                 role = "viewer";
             }
+            String authenticatedRole = role;
+            exchange.getAttributes().put(AUTHENTICATED_USER_ATTRIBUTE, username);
+            exchange.getAttributes().put(AUTHENTICATED_ROLE_ATTRIBUTE, authenticatedRole);
             if (requiresAdmin(path, method) && !"admin".equals(role)) {
                 return forbidden(exchange);
             }
 
-            String authenticatedRole = role;
             ServerHttpRequest mutated = exchange.getRequest()
                     .mutate()
                     .headers(headers -> {

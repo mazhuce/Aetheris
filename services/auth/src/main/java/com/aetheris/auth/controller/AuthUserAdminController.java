@@ -6,6 +6,7 @@ import com.aetheris.auth.dto.UpdateAuthUserRequest;
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AuthUserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -97,7 +98,12 @@ public class AuthUserAdminController {
         user.setRole(nextRole);
         user.setStatus(nextStatus);
         user.setUpdatedAt(OffsetDateTime.now());
-        authUserService.updateById(user);
+        // updateById 会跳过 null 字段，导致昵称/邮箱/手机号无法清空，故显式置空。
+        authUserService.update(user, new LambdaUpdateWrapper<AuthUser>()
+                .eq(AuthUser::getId, id)
+                .set(request.nickname() == null, AuthUser::getNickname, null)
+                .set(request.email() == null, AuthUser::getEmail, null)
+                .set(request.phone() == null, AuthUser::getPhone, null));
         return ResponseEntity.ok(AuthUserResponse.from(user));
     }
 

@@ -8,6 +8,7 @@ import {
   DeploymentUnitOutlined,
   FileSearchOutlined,
   FolderOutlined,
+  PartitionOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
@@ -43,6 +44,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { key: 'datasource', label: '数据源管理', icon: <DatabaseOutlined />, path: '/metadata/datasource' },
       { key: 'catalog', label: '元数据目录', icon: <FolderOutlined />, path: '/metadata/tables' },
+      { key: 'warehouse', label: '数仓地图', icon: <PartitionOutlined />, path: '/metadata/warehouse' },
       { key: 'lineage', label: '数据血缘', icon: <ApartmentOutlined />, path: '/metadata/lineage' }
     ]
   },

@@ -6,7 +6,7 @@ export const ROLE_KEY = 'aetheris_role'
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 8000
+  timeout: 15000
 })
 
 http.interceptors.request.use((config) => {

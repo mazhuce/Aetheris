@@ -95,6 +95,31 @@ class JwtAuthFilterTest {
         assertEquals("admin", forwarded.get().getRequest().getHeaders().getFirst("X-User-Role"));
     }
 
+    @Test
+    void requiresTokenForNonHealthActuatorEndpoints() {
+        JwtAuthFilter filter = new JwtAuthFilter(SECRET);
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/actuator/gateway/routes").build());
+
+        filter.filter(exchange, ignored -> {
+            throw new AssertionError("filter chain must not run");
+        }).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void exposesAuthenticatedIdentityAsExchangeAttributes() {
+        MockServerWebExchange exchange = exchange("GET", "/api/quality/rules", token("alice", "viewer"));
+
+        new JwtAuthFilter(SECRET).filter(
+                exchange,
+                filteredExchange -> filteredExchange.getResponse().setComplete()).block();
+
+        assertEquals("alice", exchange.getAttribute(JwtAuthFilter.AUTHENTICATED_USER_ATTRIBUTE));
+        assertEquals("viewer", exchange.getAttribute(JwtAuthFilter.AUTHENTICATED_ROLE_ATTRIBUTE));
+    }
+
     private MockServerWebExchange exchange(String method, String path, String token) {
         return MockServerWebExchange.from(
                 MockServerHttpRequest.method(org.springframework.http.HttpMethod.valueOf(method), path)

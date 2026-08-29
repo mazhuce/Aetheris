@@ -4,6 +4,7 @@ import com.aetheris.auth.dto.LoginRequest;
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AuthUserService;
 import com.aetheris.auth.service.JwtService;
+import com.aetheris.auth.service.LoginAttemptService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,12 +35,30 @@ class AuthControllerTest {
         when(jwtService.generateToken("alice", "viewer")).thenReturn("token");
         when(jwtService.getExpirationMs()).thenReturn(60_000L);
 
-        ResponseEntity<Map<String, Object>> response = new AuthController(userService, encoder, jwtService)
-                .login(new LoginRequest("alice", "password"));
+        ResponseEntity<Map<String, Object>> response =
+                new AuthController(userService, encoder, jwtService, new LoginAttemptService())
+                        .login(new LoginRequest("alice", "password"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("token", response.getBody().get("token"));
         assertEquals("viewer", response.getBody().get("role"));
         assertFalse(response.getBody().containsKey("nickname"));
+    }
+
+    @Test
+    void locksAccountAfterRepeatedFailures() {
+        AuthUserService userService = mock(AuthUserService.class);
+        PasswordEncoder encoder = mock(PasswordEncoder.class);
+        JwtService jwtService = mock(JwtService.class);
+        when(userService.findByUsername("alice")).thenReturn(Optional.empty());
+        AuthController controller =
+                new AuthController(userService, encoder, jwtService, new LoginAttemptService());
+        LoginRequest request = new LoginRequest("alice", "wrong");
+
+        for (int attempt = 0; attempt < 5; attempt++) {
+            assertEquals(HttpStatus.UNAUTHORIZED, controller.login(request).getStatusCode());
+        }
+
+        assertEquals(HttpStatus.TOO_MANY_REQUESTS, controller.login(request).getStatusCode());
     }
 }

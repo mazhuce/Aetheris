@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Avatar, Button, Card, Empty, Input, List, Popconfirm, Space } from 'antd'
+import { Avatar, Button, Card, Empty, Input, List, Popconfirm, Space, Switch } from 'antd'
 import { DeleteOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -21,6 +21,9 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  // 数据模式：启用后 AI 可检索元数据并执行只读查询。默认关闭，
+  // 因为工具调用会多花几轮模型请求，普通咨询不需要付这个代价。
+  const [dataMode, setDataMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -103,7 +106,7 @@ export default function ChatPage() {
         conversationId = conversation.id
         setCurrentId(conversationId)
       }
-      const result = await sendChat(conversationId, next)
+      const result = await sendChat(conversationId, next, dataMode)
       setMessages([...next, { role: 'assistant', content: result.content }])
       await refreshConversations()
     } catch {
@@ -209,11 +212,36 @@ export default function ChatPage() {
               })}
             </div>
 
-            <Space.Compact style={{ width: '100%', marginTop: 12 }}>
+            <div
+              style={{
+                marginTop: 12,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                flexWrap: 'wrap'
+              }}
+            >
+              <Switch
+                size="small"
+                checked={dataMode}
+                onChange={setDataMode}
+                checkedChildren="数据"
+                unCheckedChildren="对话"
+              />
+              <span style={{ fontSize: 12, color: '#8c8c8c' }}>
+                {dataMode
+                  ? '数据模式：AI 会检索数仓元数据并执行只读查询，响应较慢但能给出真实数字'
+                  : '对话模式：仅基于模型知识回答，不查询数据'}
+              </span>
+            </div>
+
+            <Space.Compact style={{ width: '100%', marginTop: 8 }}>
               <Input.TextArea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
-                placeholder="输入你的问题，Enter 发送，Shift+Enter 换行"
+                placeholder={dataMode
+                  ? '例如：2026年8月销售额最高的品类是哪个？'
+                  : '输入你的问题，Enter 发送，Shift+Enter 换行'}
                 autoSize={{ minRows: 2, maxRows: 6 }}
                 onPressEnter={(event) => {
                   if (!event.shiftKey) {

@@ -4,6 +4,95 @@
 
 ## [Unreleased]
 
+### Eighth iteration
+
+- DataAgent 打通：AI 助手新增「数据模式」，可自主检索数仓元数据、确认表结构、执行只读查询并给出带真实数字的回答。
+- 新增三个 agent 工具（`searchTables` / `describeTable` / `query`），工具描述里写明数仓分层语义与分区要求，引导模型优先用 ADS/DWS 层而非含脏数据的 ODS 层。
+- 工具调用循环由 Spring AI 的 `ChatClient` 内建驱动，不自行实现多轮循环。
+- 工具端点下沉到 metadata 的 `/internal/agent/**`：凭据、JDBC 驱动与 `validateReadOnlySql` 守卫都在那边，与 workflow 的取舍一致。网关只路由 `/api/**`，实测该路径返回 404。
+- agent 查询与人工查询受同一套只读守卫约束，未放宽任何限制；agent 使用只读账号，即便守卫被绕过也无写权限。
+- 工具失败时返回带 error 字段的结构化结果而非抛异常，让模型看到原因后自行改写重试；检索无结果时附带改写建议，避免模型凭空编造表名。
+- 系统提示固化四条纪律：必须先检索再看结构再查询、统计优先用 ADS/DWS、查询必须带 dt 分区条件、以字段注释为口径依据。
+- 修复 ai-agent 缺少 `METADATA_SERVICE_HOST` 环境变量：base-url 回落到 localhost 指向自身，表现为工具调用全部返回空、模型误判「仓库里没有任何表」。workflow 侧本已正确配置，故阶段 2 未暴露此问题。
+- 任务保存时即校验 SQL 白名单（新增 metadata 的 `/internal/sql/validate-write`），修复「保存成功、点运行才失败」的问题；校验与执行共用同一份 `SqlWriteGuard`，不在 workflow 复制规则以免漂移。
+- 前端 AI 对话页新增数据模式开关，两种模式的超时与提示文案分别设置。
+- 显式声明 `dayjs` 依赖：此前它只是 antd 的传递依赖，直接引用会在 antd 变更时断裂。
+
+### 关于 pgvector
+
+原计划引入 pgvector 做元数据向量检索，核实后**暂缓**：当前 `metadata_table` 仅 20 张表，
+全部表名与注释可直接放入上下文，关键词检索已足够；而切换镜像需从 Alpine(musl) 跨到
+Debian(glibc)，`en_US.utf8` collation 行为不同会影响文本索引。表数量增长到数百张后再引入，
+届时用 dump/restore 迁移成本相同。
+
+### Seventh iteration
+
+- 新增 `workflow` 服务（原为空目录），实现任务编排与调度：任务定义、Quartz 定时、运行实例、日志、重跑与依赖拓扑。
+- Quartz 用 JDBC JobStore 且 `isClustered=true`：调度落库，服务重启不丢；多实例由 `QRTZ_LOCKS` 行锁保证同一次触发只被一个实例执行。
+- Quartz 表结构从 2.5.0 发行包提取后脚本转换生成迁移（移除 DROP、加 IF NOT EXISTS），而非手工抄写；已比对 2.3.2（运行时版本）与 2.5.0 的列定义，确认零差异。
+- 执行幂等：`(task_id, biz_date)` 唯一，重跑复用同一实例行并累加 attempt，实例列表不因反复重跑膨胀，也排除了同一业务日期被并发写入。
+- SQL 执行下沉到 metadata 的 `/internal/datasources/{id}/execute`：凭据、JDBC 驱动、URL 协议校验与危险参数黑名单都已在 metadata，复制到 workflow 等于复制一份安全边界。网关只路由 `/api/**`，该端点外部不可达（实测返回 404）。
+- 新增 `SqlWriteGuard`：写入路径用白名单只放行 `INSERT INTO/OVERWRITE` 与 `CREATE ... AS SELECT`，仍拒绝 `DROP`/`TRUNCATE`/`ALTER`/`GRANT` 与可读服务器文件的函数；只读查询路径的 `validateReadOnlySql` 不变。
+- 修复守卫的检查顺序缺陷：白名单与分号检查原先用原始文本，导致以注释开头的真实加工脚本被误拒、注释里的分号被误判为多语句；改为先剥离注释与字符串字面量再检查（由测试发现）。
+- 动态分区参数（`hive.exec.dynamic.partition`）由服务端注入而非让用户写在 SQL 里——守卫只放行单条语句，用户无法自带 `SET`。
+- 依赖未就绪标记 `skipped` 而非 `failed`，避免告警噪声掩盖真正的故障；登记依赖时检测环形与自依赖并拒绝。
+- 任务 SQL 支持 `${bizDate}` 占位符，同一份定义可跑任意业务日期，补数据无需改任务。
+- 定时触发的业务日期取「昨天」，misfire 策略为 `DoNothing`：停机期间错过的触发不补跑，避免用错误的业务日期执行；补数据走手动触发显式指定日期。
+- 端到端验收通过：任务写入 Hive 的 `order_cnt=5067 / gmv=6102169.27 / user_cnt=5067` 与独立计算完全一致，且与阶段 0 的 `ads_order_stats` 交叉印证。
+- 新增写入专用数据源，任务用 HDFS 仓库属主身份连接；只读查询与 AI 助手仍走 `aetheris` 账号，读写分离保留（这是阶段 3 agent 只读保证的前提）。
+
+### Sixth iteration
+
+- 全部 8 个后端模块升级到 Spring Boot 3.4.7、Spring Cloud 2024.0.1、springdoc 2.8.6，零代码改动通过全量测试。
+- `ai-agent` 引入 Spring AI 1.0.0，DeepSeek 调用改走 `spring-ai-starter-model-deepseek`，替代手写 RestClient；重试与超时由自动配置管理，429 不在服务端重试以免放大配额消耗。
+- 新增 `LlmClient` 端口与 `SpringAiLlmClient` 适配器，业务逻辑不再绑定模型厂商；随依赖引入的 `spring-ai-autoconfigure-model-tool` 为后续工具调用打好基础。
+- 模型失败按 NOT_CONFIGURED / RATE_LIMITED / UNAVAILABLE / UNKNOWN 分类，分别映射 503 / 429 / 502；未配置密钥时提前失败而不是打到 provider 拿 401。
+- provider 原始报文不再外泄给调用方（可能含请求内容或密钥片段），只记日志。
+- 回复携带 provider 实际使用的模型标识，实测请求 `deepseek-chat` 会被路由到 `deepseek-v4-flash`。
+- 修复限流器内存泄漏：原实现用 `ConcurrentHashMap` 累积每个用户的窗口且从不清理；现在按需淘汰过期条目并设容量上限。
+- 修复限流器并发缺陷：原用 CAS 重置窗口，并发下多线程可能各自新建窗口而放大配额；改用 `compute` 保证同一 key 原子创建，并加并发测试锁定。
+- `ChatController` 只保留协议转换，会话编排下沉到新的 `ChatService`，模型调用走端口，三者均可单测。
+- 用户提问先落库再调模型，模型失败时提问仍保留，刷新后不会凭空消失。
+- `ai-agent` 测试从 2 个增加到 20 个（controller 9 + LLM 适配器 7 + 限流器 4）。
+
+### Fifth iteration
+
+- 元数据支持数仓分层：`metadata_table` 新增 `layer` / `domain` / `layer_source`，采集时按库名（推断不出时退回表名前缀）自动判定 ods/dwd/dws/ads/dim。
+- 层级推断要求层级名后跟分隔符，避免 `adsense_log`、`odyssey_events` 之类的名字被前缀误判；匹配不上归入 `other` 由人工修正。
+- 人工指定过的层级（`layer_source=manual`）不会被重复采集覆盖，与 `source` 区分手工/自动的取舍逻辑一致。
+- 新增「数仓地图」页与 `/api/metadata/tables/warehouse-map` 接口，按数据流向展示分层结构；空层级也返回，避免前端分层图错位。
+- 元数据目录页新增分层、业务域筛选与分层标签列。
+- 修复 Hive/Spark 数据源采集不到表注释：`SHOW TABLES` 与 JDBC `getTables()` 都不返回 REMARKS，改为逐表 `DESCRIBE FORMATTED` 读取 Comment 行。表注释是 NL2SQL 命中率的关键信息。
+- 新增 SQL 血缘解析：`/api/metadata/lineages/parse` 从加工 SQL 提取表级血缘。实测 JSqlParser 4.9 无法解析 Hive 的 `INSERT OVERWRITE TABLE ... PARTITION`，故改用面向 Hive 方言的提取器，覆盖 `INSERT OVERWRITE/INTO`、`LATERAL VIEW`、`DISTRIBUTE BY`、`CREATE TABLE AS SELECT`。
+- 血缘解析排除 CTE 名称、`range()` 等表值函数与自引用，避免产生不存在的表节点；同一目标表重复解析时替换其既有解析边，人工登记的关系不受影响。
+- 删除骨架期的示例血缘种子数据（`ods_orders → dwd_orders` 等，表名为复数，真实数仓中不存在）。
+- `lineage_relation` 新增 `source` 字段区分人工登记与 SQL 解析，并对 (上游, 下游) 建唯一索引。
+
+### Fourth iteration
+
+- 新增数仓分层建库与造数脚本，建立 `ods` / `dwd` / `dws` / `ads` / `dim` 五层库与 16 张表（电商域）。
+- ODS 层刻意保留 11 类脏数据（空值、重复行、非法枚举、超范围值、格式不一致、负价格等），DWD 逐条清洗，为质量规则与 DataAgent 提供真实作用对象。
+- 事实表按 `dt` 分区，订单区间从当天倒推，使「上个月」「近 7 天」这类问题始终有对应分区。
+- 全部字段带中文注释，并固化 GMV / 客单价 / 有效订单口径，作为后续语义层指标定义的唯一来源。
+- 造数支持 `tiny` / `wsl` / `cluster` 三档规模与按步骤重跑；`wsl` 档约 130 万订单、320 万明细、180 个分区。
+- 修复 Spark Thrift Server driver 堆内存不足：`local[N]` 下 driver 兼作 executor，原 1g 在写百万级订单时抛 `OutOfMemoryError` 并导致进程退出，现默认 3g 且可配置。
+- 写动态分区的语句补充 `DISTRIBUTE BY dt`，避免单个 task 同时持有全部分区的 Parquet writer 而耗尽堆内存。
+- 修复 `wsl-hive-test-server.sh restart` 的竞态：`stop` 异步发送 SIGTERM，紧随的 `start` 会因端口仍在监听而误判服务健在并跳过启动，导致 HDFS 未拉起；现在 `stop` 等待端口释放后才返回。
+- `.gitignore` 补充 Hive/Derby 在仓库根产生的 `metastore_db/`、`derby.log` 与未展开变量的字面量目录。
+
+### Third iteration
+
+- 元数据支持从数据源自动采集库表信息，手工登记的记录不会被采集覆盖。
+- 采集失败时不再把既有表误标为已删除；目标库中消失的表标记为 stale 而非物理删除。
+- 网关不再公开 `/actuator` 全部端点，`gateway` 路由端点不再暴露内部服务地址。
+- 审计日志改为早于鉴权执行，覆盖失败登录与越权尝试；身份只取自已验签的令牌。
+- 只读查询补充危险函数黑名单，JDBC 连接参数与自定义 URL 拒绝可读取本机文件的驱动配置。
+- 数据源错误信息不再回显驱动原文。
+- 登录失败超过 5 次锁定 15 分钟。
+- AI 限流改为按用户计量，消息角色与末条消息来源纳入校验，删除会话补充事务。
+- 修复用户昵称、邮箱、手机号无法清空的问题。
+- 前端超时与后端对齐，AI 对话不再出现「前端报错但回复已入库」。
+
 ### First iteration
 
 - 新增根 Maven 聚合工程，统一构建全部八个后端模块。

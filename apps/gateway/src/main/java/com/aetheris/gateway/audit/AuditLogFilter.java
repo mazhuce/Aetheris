@@ -1,5 +1,6 @@
 package com.aetheris.gateway.audit;
 
+import com.aetheris.gateway.config.JwtAuthFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -30,8 +31,8 @@ public class AuditLogFilter implements GlobalFilter, Ordered {
         return chain.filter(exchange).then(Mono.defer(() -> {
             HttpStatusCode status = exchange.getResponse().getStatusCode();
             AuditEvent event = new AuditEvent(
-                    header(exchange, "X-User-Name", "anonymous"),
-                    header(exchange, "X-User-Role", "anonymous"),
+                    attribute(exchange, JwtAuthFilter.AUTHENTICATED_USER_ATTRIBUTE),
+                    attribute(exchange, JwtAuthFilter.AUTHENTICATED_ROLE_ATTRIBUTE),
                     method.name(),
                     path,
                     status == null ? 200 : status.value(),
@@ -42,15 +43,20 @@ public class AuditLogFilter implements GlobalFilter, Ordered {
     }
 
     private boolean shouldAudit(HttpMethod method, String path) {
-        return path.startsWith("/api/")
-                && method != HttpMethod.GET
-                && method != HttpMethod.HEAD
-                && method != HttpMethod.OPTIONS;
+        if (!path.startsWith("/api/") || method == HttpMethod.OPTIONS) {
+            return false;
+        }
+        // 登录必须审计，否则爆破与失败登录无痕迹。
+        if (path.startsWith("/api/auth/login")) {
+            return true;
+        }
+        return method != HttpMethod.GET && method != HttpMethod.HEAD;
     }
 
-    private String header(ServerWebExchange exchange, String name, String fallback) {
-        String value = exchange.getRequest().getHeaders().getFirst(name);
-        return value == null || value.isBlank() ? fallback : value;
+    /** 只信任 JwtAuthFilter 写入的属性；请求头可被客户端伪造。 */
+    private String attribute(ServerWebExchange exchange, String name) {
+        Object value = exchange.getAttribute(name);
+        return value instanceof String text && !text.isBlank() ? text : "anonymous";
     }
 
     private String clientIp(ServerWebExchange exchange) {
@@ -62,6 +68,7 @@ public class AuditLogFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -90;
+        // 必须早于 JwtAuthFilter(-100)，否则 401/403 被短路后审计拿不到事件。
+        return -110;
     }
 }

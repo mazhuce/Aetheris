@@ -8,7 +8,9 @@ import DataSourcePage from '@/pages/datasource'
 import IngestionPage from '@/pages/ingestion'
 import GovernancePage from '@/pages/governance'
 import MetadataTablePage from '@/pages/metadata/tables'
+import WarehouseMapPage from '@/pages/metadata/warehouse'
 import LineagePage from '@/pages/metadata/lineage'
+import WorkflowPage from '@/pages/workflow'
 import QualityRulePage from '@/pages/quality/rules'
 import ChatPage from '@/pages/ai/chat'
 import SystemConfigPage from '@/pages/system/config'
@@ -30,9 +32,11 @@ export const router = createBrowserRouter([
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'metadata/datasource', element: <DataSourcePage /> },
       { path: 'metadata/tables', element: <MetadataTablePage /> },
+      { path: 'metadata/warehouse', element: <WarehouseMapPage /> },
       { path: 'metadata/lineage', element: <LineagePage /> },
       { path: 'quality/rules', element: <QualityRulePage /> },
       { path: 'ingestion/tasks', element: <IngestionPage /> },
+      { path: 'workflow', element: <WorkflowPage /> },
       { path: 'governance/policies', element: <GovernancePage /> },
       { path: 'ai/chat', element: <ChatPage /> },
       {
