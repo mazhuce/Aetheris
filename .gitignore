@@ -67,6 +67,15 @@ junit/
 *.tfstate.*
 *.tfvars
 
+# Claude Code：本地个人配置不提交，团队共享配置（settings.json）正常跟踪
+.claude/settings.local.json
+
+# Hive / Derby 本地运行产物（在仓库根执行 beeline 或 Hive 客户端时生成）
+metastore_db/
+derby.log
+# Hive 未展开 log4j 变量时会按字面量创建这个目录
+${system:java.io.tmpdir}/
+
 # 其他
 *.bak
 *.orig
