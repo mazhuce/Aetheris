@@ -18,6 +18,7 @@
         <module>services/quality</module>
         <module>services/ingestion</module>
         <module>services/governance</module>
+        <module>services/workflow</module>
         <module>services/ai-agent</module>
     </modules>
 </project>

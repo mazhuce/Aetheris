@@ -19,10 +19,33 @@ spring:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
 
-deepseek:
-  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
-  api-key: ${DEEPSEEK_API_KEY:}
-  model: ${DEEPSEEK_MODEL:deepseek-chat}
+  ai:
+    deepseek:
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        options:
+          model: ${DEEPSEEK_MODEL:deepseek-chat}
+          temperature: 0.7
+    retry:
+      # provider 偶发 5xx 时重试；限流(429)由下面的 exclude-on-http-codes 交给调用方处理，
+      # 避免在服务端反复重试放大配额消耗。
+      max-attempts: 2
+      backoff:
+        initial-interval: 1s
+        multiplier: 2
+      exclude-on-http-codes: [429]
+
+aetheris:
+  metadata:
+    # agent 的元数据检索与只读查询都下沉到 metadata 服务：凭据、JDBC 驱动与
+    # validateReadOnlySql 守卫都在那边，复制过来等于复制一份安全边界。
+    base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+  ai:
+    rate-limit:
+      # 按用户计量的固定窗口；与 Spring AI 的重试无关，这是平台侧配额。
+      max-requests: 20
+      window: PT1M
 
 mybatis-plus:
   configuration:
