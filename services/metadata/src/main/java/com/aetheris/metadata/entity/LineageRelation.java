@@ -15,6 +15,8 @@ public class LineageRelation {
     @NotBlank private String targetTable;
     private String relationType;
     private String description;
+    /** manual=人工登记，parsed=从任务 SQL 解析；解析只覆盖 parsed 记录。 */
+    private String source;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -28,6 +30,8 @@ public class LineageRelation {
     public void setRelationType(String relationType) { this.relationType = relationType; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

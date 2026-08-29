@@ -32,6 +32,30 @@ public class JdbcService {
     private static final int MAX_QUERY_ROWS = 100;
     private static final int MAX_PREVIEW_ROWS = 50;
     private static final int QUERY_TIMEOUT_SECONDS = 30;
+    /** 写入类任务默认上限，远高于交互式查询；可由调用方按任务覆盖。 */
+    private static final int WRITE_TIMEOUT_SECONDS = 1800;
+
+    /**
+     * Hive / Spark 上执行动态分区写入所需的会话参数。
+     *
+     * <p>由服务端注入而非让用户写在 SQL 里：{@link SqlWriteGuard} 只放行单条
+     * INSERT / CREATE 语句，用户无法自行携带 {@code SET} 语句；而缺少这两个参数时
+     * {@code INSERT OVERWRITE ... PARTITION (dt)} 会直接报错。
+     */
+    private static final List<String> HIVE_WRITE_SESSION_SETTINGS = List.of(
+            "SET hive.exec.dynamic.partition = true",
+            "SET hive.exec.dynamic.partition.mode = nonstrict");
+
+    /** 已去除下划线并转大写后用于比对，覆盖 allow_load_local_infile 等写法。 */
+    private static final List<String> DANGEROUS_PARAM_KEYS = List.of(
+            "ALLOWLOADLOCALINFILE", "ALLOWURLINLOCALINFILE", "ALLOWMULTIQUERIES",
+            "AUTODESERIALIZE", "QUERYINTERCEPTORS", "STATEMENTINTERCEPTORS",
+            "PROPERTIESTRANSFORM", "SERVERCONFIGCACHEFACTORY", "SOCKETFACTORY",
+            "DETECTCUSTOMCOLLATIONS", "USELOCALINFILE", "LOCALINFILEINPUTSTREAM",
+            "SOCKSPROXYHOST", "AUTHENTICATIONPLUGINS", "DEFAULTAUTHENTICATIONPLUGIN",
+            "INITSQL", "SESSIONVARIABLES", "CONNECTIONATTRIBUTES",
+            "SSLFACTORY", "SSLHOSTNAMEVERIFIER", "SSLPASSWORDCALLBACK",
+            "LOGGERLEVEL", "LOGGERFILE", "LOGUNCLOSEDCONNECTIONS");
 
     public Map<String, Object> test(DataSource dataSource) {
         long startedAt = System.currentTimeMillis();
@@ -70,6 +94,64 @@ public class JdbcService {
         } catch (SQLException error) {
             log.warn("SQL query failed: type={}, host={}", dataSource.getType(), dataSource.getHost(), error);
             throw new IllegalStateException(friendlyMessage(error));
+        }
+    }
+
+    /**
+     * 执行一条写入语句（数仓加工任务用）。
+     *
+     * <p>与 {@link #query} 走两条独立路径：查询用 {@code validateReadOnlySql} 拒绝一切写入，
+     * 这里用 {@link SqlWriteGuard} 只放行 INSERT / CREATE 白名单。两条路径都不允许多语句。
+     *
+     * <p>不开启事务：Hive / Spark 不支持事务性 DDL/DML，而 PostgreSQL 上单条语句本身即原子。
+     * 任务级的重跑幂等由 {@code INSERT OVERWRITE} 覆盖分区保证，不依赖回滚。
+     *
+     * @param timeoutSeconds 语句超时；传 null 用默认的写入超时
+     * @return 受影响行数（driver 不支持时为 -1）与耗时
+     */
+    public Map<String, Object> execute(DataSource dataSource, String sql, Integer timeoutSeconds) {
+        String statement = SqlWriteGuard.validate(sql);
+        int timeout = timeoutSeconds == null || timeoutSeconds <= 0
+                ? WRITE_TIMEOUT_SECONDS
+                : timeoutSeconds;
+        long startedAt = System.currentTimeMillis();
+
+        try (Connection connection = connect(dataSource)) {
+            if (isHiveLike(dataSource)) {
+                applyHiveWriteSettings(connection);
+            }
+            try (Statement jdbcStatement = connection.createStatement()) {
+                try {
+                    jdbcStatement.setQueryTimeout(timeout);
+                } catch (SQLFeatureNotSupportedException ignored) {
+                    log.debug("JDBC driver does not support query timeout");
+                }
+                // Hive 的 INSERT 经 execute 返回 false 且 getUpdateCount 为 -1，
+                // 这是驱动行为而非失败，因此 -1 只表示「行数未知」。
+                jdbcStatement.execute(statement);
+                int affected = jdbcStatement.getUpdateCount();
+
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("success", true);
+                result.put("affectedRows", affected);
+                result.put("durationMs", System.currentTimeMillis() - startedAt);
+                return result;
+            }
+        } catch (SQLException error) {
+            log.warn("SQL execution failed: type={}, host={}", dataSource.getType(), dataSource.getHost(), error);
+            // 与其他路径一致：不回显驱动原文，避免泄露连接串或库内结构细节。
+            throw new IllegalStateException(friendlyMessage(error));
+        }
+    }
+
+    /** 逐条应用动态分区参数；个别引擎不认某个参数时跳过，不影响主语句执行。 */
+    private void applyHiveWriteSettings(Connection connection) {
+        for (String setting : HIVE_WRITE_SESSION_SETTINGS) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute(setting);
+            } catch (SQLException error) {
+                log.debug("Hive session setting rejected: {}", setting, error);
+            }
         }
     }
 
@@ -253,16 +335,41 @@ public class JdbcService {
     }
 
     private List<DataSourceTableDto> hiveTables(Connection connection, String schema) throws SQLException {
-        List<DataSourceTableDto> tables = new ArrayList<>();
+        List<String> names = new ArrayList<>();
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("SHOW TABLES IN `" + schema + "`")) {
             ResultSetMetaData metadata = resultSet.getMetaData();
             int nameColumn = metadata.getColumnCount() >= 2 ? 2 : 1;
             while (resultSet.next()) {
-                tables.add(new DataSourceTableDto(resultSet.getString(nameColumn), "TABLE", null));
+                names.add(resultSet.getString(nameColumn));
             }
         }
+        // SHOW TABLES 不返回表注释，Spark/Iceberg 的 JDBC getTables() 也把 REMARKS 置空，
+        // 只能逐表 DESCRIBE FORMATTED 取。表注释是 NL2SQL 命中率的关键信息，值得这一轮额外查询；
+        // 单表失败不影响其余表。
+        List<DataSourceTableDto> tables = new ArrayList<>(names.size());
+        for (String name : names) {
+            tables.add(new DataSourceTableDto(name, "TABLE", hiveTableComment(connection, schema, name)));
+        }
         return tables;
+    }
+
+    /** 从 DESCRIBE FORMATTED 的 Comment 行取表注释；取不到时返回 null，不向上抛。 */
+    String hiveTableComment(Connection connection, String schema, String table) {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(
+                     "DESCRIBE FORMATTED `" + schema + "`.`" + table + "`")) {
+            while (resultSet.next()) {
+                String key = resultSet.getString(1);
+                if (key != null && "comment".equals(key.trim().toLowerCase(Locale.ROOT))) {
+                    String value = resultSet.getString(2);
+                    return StringUtils.hasText(value) ? value.trim() : null;
+                }
+            }
+        } catch (SQLException error) {
+            log.debug("Table comment unavailable for {}.{}", schema, table, error);
+        }
+        return null;
     }
 
     private List<DataSourceColumnDto> hiveColumns(Connection connection, String schema, String table) throws SQLException {
@@ -299,7 +406,12 @@ public class JdbcService {
         }
         String[] forbidden = {
                 "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE",
-                "GRANT", "REVOKE", "CALL", "MERGE", "COPY", "VACUUM", "ATTACH", "DETACH"
+                "GRANT", "REVOKE", "CALL", "MERGE", "COPY", "VACUUM", "ATTACH", "DETACH",
+                // 只读但危险：可读服务器文件、探测本地端口或阻塞连接。
+                "PG_READ_FILE", "PG_READ_BINARY_FILE", "PG_LS_DIR", "PG_STAT_FILE",
+                "PG_SLEEP", "PG_TERMINATE_BACKEND", "PG_CANCEL_BACKEND",
+                "LO_IMPORT", "LO_EXPORT", "DBLINK", "LOAD_FILE", "BENCHMARK", "SLEEP",
+                "REFLECT", "JAVA_METHOD"
         };
         for (String word : forbidden) {
             if (upper.matches(".*\\b" + word + "\\b.*")) {
@@ -317,10 +429,24 @@ public class JdbcService {
         if (cleaned.length() > 1000 || cleaned.contains("\n") || cleaned.contains("\r")) {
             throw new IllegalArgumentException("连接参数格式不正确");
         }
+        rejectDangerousParams(cleaned);
         if (isHiveLike(type)) {
             return url + ";" + cleaned;
         }
         return url + (url.contains("?") ? "&" : "?") + cleaned.replace(';', '&');
+    }
+
+    /**
+     * 拒绝可被恶意数据库服务端利用来读取本机文件或执行代码的驱动参数。
+     * 采用黑名单以免影响 auth=noSasl 等正常连接参数。
+     */
+    private void rejectDangerousParams(String parameters) {
+        String upper = parameters.toUpperCase(Locale.ROOT).replace("_", "");
+        for (String key : DANGEROUS_PARAM_KEYS) {
+            if (upper.contains(key)) {
+                throw new IllegalArgumentException("连接参数包含不被允许的配置项：" + key);
+            }
+        }
     }
 
     private void validateJdbcUrl(String type, String url) {
@@ -330,6 +456,8 @@ public class JdbcService {
         if (!url.toLowerCase(Locale.ROOT).startsWith(expectedPrefix)) {
             throw new IllegalArgumentException("自定义 JDBC URL 与所选数据源类型不匹配");
         }
+        // 自定义 URL 自带的参数同样需要校验，否则可绕过 connectionParams 的限制。
+        rejectDangerousParams(url);
     }
 
     private String requireIdentifier(String value, String field) {
@@ -355,10 +483,27 @@ public class JdbcService {
         if (message.contains("No suitable driver")) {
             return "缺少对应 JDBC 驱动或 JDBC URL 不正确";
         }
-        if (message.toLowerCase(Locale.ROOT).contains("connection refused")) {
+        String lower = message.toLowerCase(Locale.ROOT);
+        if (lower.contains("connection refused")) {
             return "目标端口拒绝连接，请确认数据库服务已启动并监听外部地址";
         }
-        return message;
+        if (lower.contains("password") || lower.contains("authentication")) {
+            return "认证失败，请检查用户名与密码";
+        }
+        if (lower.contains("timeout") || lower.contains("timed out")) {
+            return "连接超时，请检查网络连通性与防火墙策略";
+        }
+        if (lower.contains("unknown host") || lower.contains("unknownhost")) {
+            return "无法解析目标主机地址";
+        }
+        if (lower.contains("does not exist") || lower.contains("unknown database")) {
+            return "目标库或表不存在";
+        }
+        if (lower.contains("permission denied") || lower.contains("access denied")) {
+            return "目标库拒绝访问，请确认账号权限";
+        }
+        // 不回显驱动原文，避免泄露内网主机名、库名与驱动细节。
+        return "操作失败，请检查数据源配置与目标库状态";
     }
 
     private String normalizedType(DataSource dataSource) {

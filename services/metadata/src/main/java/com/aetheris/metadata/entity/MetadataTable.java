@@ -18,6 +18,18 @@ public class MetadataTable {
     private String owner;
     private Long rowCount;
     private String status;
+    private Long datasourceId;
+    private String tableType;
+    private Integer columnCount;
+    /** manual=手工登记，auto=自动采集；采集只覆盖 auto 记录。 */
+    private String source;
+    /** 数仓层级：ods/dwd/dws/ads/dim/other，采集时按库名推断。 */
+    private String layer;
+    /** 业务域，例如 electronic_commerce；当前由人工维护。 */
+    private String domain;
+    /** layer 的来源：auto=按库名推断，manual=人工指定；人工指定后采集不覆盖。 */
+    private String layerSource;
+    private OffsetDateTime syncedAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -37,6 +49,22 @@ public class MetadataTable {
     public void setRowCount(Long rowCount) { this.rowCount = rowCount; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public Long getDatasourceId() { return datasourceId; }
+    public void setDatasourceId(Long datasourceId) { this.datasourceId = datasourceId; }
+    public String getTableType() { return tableType; }
+    public void setTableType(String tableType) { this.tableType = tableType; }
+    public Integer getColumnCount() { return columnCount; }
+    public void setColumnCount(Integer columnCount) { this.columnCount = columnCount; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+    public String getLayer() { return layer; }
+    public void setLayer(String layer) { this.layer = layer; }
+    public String getDomain() { return domain; }
+    public void setDomain(String domain) { this.domain = domain; }
+    public String getLayerSource() { return layerSource; }
+    public void setLayerSource(String layerSource) { this.layerSource = layerSource; }
+    public OffsetDateTime getSyncedAt() { return syncedAt; }
+    public void setSyncedAt(OffsetDateTime syncedAt) { this.syncedAt = syncedAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

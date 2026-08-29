@@ -1,6 +1,9 @@
 package com.aetheris.metadata.controller;
 
+import com.aetheris.metadata.dto.LineageParseRequest;
+import com.aetheris.metadata.dto.LineageParseResult;
 import com.aetheris.metadata.entity.LineageRelation;
+import com.aetheris.metadata.service.LineageParseService;
 import com.aetheris.metadata.service.LineageRelationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -20,9 +23,19 @@ import java.util.List;
 public class LineageRelationController {
 
     private final LineageRelationService service;
+    private final LineageParseService parseService;
 
-    public LineageRelationController(LineageRelationService service) {
+    public LineageRelationController(
+            LineageRelationService service,
+            LineageParseService parseService) {
         this.service = service;
+        this.parseService = parseService;
+    }
+
+    /** 从 SQL 解析表级血缘并入库；同一目标表重复解析时替换其既有解析边。 */
+    @PostMapping("/parse")
+    public LineageParseResult parse(@Valid @RequestBody LineageParseRequest request) {
+        return parseService.parseAndSave(request.sql(), request.relationType());
     }
 
     @GetMapping
@@ -36,6 +49,8 @@ public class LineageRelationController {
 
     @PostMapping
     public LineageRelation create(@Valid @RequestBody LineageRelation relation) {
+        // 标记为人工登记，避免后续 SQL 解析把它当作过期的解析结果删除。
+        relation.setSource("manual");
         service.save(relation);
         return relation;
     }

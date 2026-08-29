@@ -66,11 +66,11 @@ export interface QueryResult {
 }
 
 export function testDataSource(id: number): Promise<TestResult> {
-  return http.post<TestResult>(`/api/metadata/datasources/${id}/test`).then((res) => res.data)
+  return http.post<TestResult>(`/api/metadata/datasources/${id}/test`, undefined, { timeout: 40000 }).then((res) => res.data)
 }
 
 export function testDataSourceConfig(payload: DataSourceInput): Promise<TestResult> {
-  return http.post<TestResult>('/api/metadata/datasources/test', payload).then((res) => res.data)
+  return http.post<TestResult>('/api/metadata/datasources/test', payload, { timeout: 40000 }).then((res) => res.data)
 }
 
 export interface DataSourceSchema {
@@ -105,24 +105,96 @@ export function listDataSourceColumns(id: number, schema: string, table: string)
 }
 
 export function previewDataSourceTable(id: number, schema: string, table: string): Promise<QueryResult> {
-  return http.post<QueryResult>(`/api/metadata/datasources/${id}/preview`, { schema, table }).then((res) => res.data)
+  return http.post<QueryResult>(`/api/metadata/datasources/${id}/preview`, { schema, table }, { timeout: 45000 }).then((res) => res.data)
 }
 
 export function queryDataSource(id: number, sql: string): Promise<QueryResult> {
-  return http.post<QueryResult>(`/api/metadata/datasources/${id}/query`, { sql }).then((res) => res.data)
+  return http.post<QueryResult>(`/api/metadata/datasources/${id}/query`, { sql }, { timeout: 45000 }).then((res) => res.data)
 }
+
+export type WarehouseLayer = 'ods' | 'dwd' | 'dws' | 'ads' | 'dim' | 'other'
 
 export interface MetadataTable {
   id: number
+  datasourceId?: number
   datasourceName: string
   schemaName?: string
   tableName: string
   tableComment?: string
+  tableType?: string
+  columnCount?: number
   owner?: string
   rowCount?: number
+  source?: 'manual' | 'auto'
+  layer?: WarehouseLayer
+  domain?: string
+  layerSource?: 'manual' | 'auto'
   status?: string
+  syncedAt?: string
   createdAt?: string
   updatedAt?: string
+}
+
+/** 层级中文名与展示顺序，顺序即数据流向；与后端 WarehouseMapService 保持一致。 */
+export const WAREHOUSE_LAYERS: { value: WarehouseLayer; label: string }[] = [
+  { value: 'ods', label: '贴源层' },
+  { value: 'dwd', label: '明细层' },
+  { value: 'dws', label: '汇总层' },
+  { value: 'ads', label: '应用层' },
+  { value: 'dim', label: '维度层' },
+  { value: 'other', label: '未分层' }
+]
+
+export function warehouseLayerLabel(layer?: string): string {
+  return WAREHOUSE_LAYERS.find((item) => item.value === layer)?.label ?? '未分层'
+}
+
+export interface WarehouseTableBrief {
+  id: number
+  schemaName?: string
+  tableName: string
+  tableComment?: string
+  columnCount?: number
+  status?: string
+}
+
+export interface WarehouseLayerSummary {
+  layer: WarehouseLayer
+  label: string
+  tableCount: number
+  schemas: string[]
+  tables: WarehouseTableBrief[]
+}
+
+export interface WarehouseMap {
+  layers: WarehouseLayerSummary[]
+  total: number
+}
+
+export function getWarehouseMap(datasourceName?: string, includeStale = false): Promise<WarehouseMap> {
+  return http
+    .get<WarehouseMap>('/api/metadata/tables/warehouse-map', {
+      params: { datasourceName: datasourceName || undefined, includeStale }
+    })
+    .then((res) => res.data)
+}
+
+export interface MetadataSyncResult {
+  datasourceName: string
+  schemas: string[]
+  scanned: number
+  created: number
+  updated: number
+  removed: number
+  skipped: number
+  failures: string[]
+}
+
+export function syncMetadataTables(datasourceId: number, schemaName?: string): Promise<MetadataSyncResult> {
+  // 采集需遍历目标库全部表，耗时明显高于普通接口。
+  return http
+    .post<MetadataSyncResult>('/api/metadata/tables/sync', { datasourceId, schemaName }, { timeout: 120000 })
+    .then((res) => res.data)
 }
 
 export interface MetadataTableInput {
@@ -141,8 +213,25 @@ export interface LineageRelation {
   targetTable: string
   relationType?: string
   description?: string
+  /** manual=人工登记，parsed=从任务 SQL 解析；解析只覆盖 parsed 记录。 */
+  source?: 'manual' | 'parsed'
   createdAt?: string
   updatedAt?: string
+}
+
+export interface LineageParseResult {
+  statements: number
+  created: number
+  replaced: number
+  skipped: number
+  edges: string[]
+}
+
+export function parseLineage(sql: string, relationType?: string): Promise<LineageParseResult> {
+  // 解析可能包含整套加工脚本，比普通接口耗时长。
+  return http
+    .post<LineageParseResult>('/api/metadata/lineages/parse', { sql, relationType }, { timeout: 90000 })
+    .then((res) => res.data)
 }
 
 export interface LineageRelationInput {
