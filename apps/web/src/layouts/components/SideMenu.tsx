@@ -1,33 +1,35 @@
-import { Menu } from 'antd'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { navGroups } from '@/constants/navigation'
 import { ROLE_KEY } from '@/api/http'
+import BrandMark from '@/components/BrandMark'
 
-export default function SideMenu() {
-  const location = useLocation()
-  const navigate = useNavigate()
+interface SideMenuProps { onNavigate?: () => void }
+
+export default function SideMenu({ onNavigate }: SideMenuProps) {
   const role = localStorage.getItem(ROLE_KEY)
 
-  const items = navGroups.map((group) => ({
-    type: 'group' as const,
-    label: group.label,
-    children: group.items
-      .filter((item) => !item.requiredRole || item.requiredRole === role)
-      .map((item) => ({
-        key: item.path,
-        icon: item.icon,
-        label: item.label
-      }))
-  })).filter((group) => group.children.length > 0)
-
   return (
-    <Menu
-      mode="inline"
-      className="side-menu"
-      items={items}
-      selectedKeys={[location.pathname]}
-      onClick={({ key }) => navigate(key)}
-      style={{ borderInlineEnd: 'none' }}
-    />
+    <div className="rail-inner">
+      <div className="rail-brand"><BrandMark /><span className="rail-label brand-name">Aetheris</span></div>
+      <nav className="rail-navigation">
+        {navGroups.map((group) => {
+          const items = group.items.filter((item) => !item.requiredRole || item.requiredRole === role)
+          if (!items.length) return null
+          return (
+            <div className="rail-group" key={group.key}>
+              <div className="rail-group-title"><span className="rail-label">{group.label}</span></div>
+              {items.map((item) => (
+                <NavLink key={item.key} to={item.path} onClick={(event) => { onNavigate?.(); event.currentTarget.blur() }} className={({ isActive }) => `rail-item${isActive ? ' active' : ''}`} title={item.label}>
+                  <span className="rail-icon">{item.icon}</span>
+                  <span className="rail-label">{item.label}</span>
+                  <span className="rail-arrow">›</span>
+                </NavLink>
+              ))}
+            </div>
+          )
+        })}
+      </nav>
+      <div className="rail-status"><span className="status-dot" /><span className="rail-label">系统运行正常</span></div>
+    </div>
   )
 }

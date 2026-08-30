@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title">
+  <title id="title">Aetheris</title>
+  <rect width="32" height="32" rx="8" fill="#fff"/>
+  <path fill="#0a0a0b" fill-rule="evenodd" d="M16 6.25c.74 0 1.4.44 1.7 1.12L25.05 24h-4.18l-1.54-3.72h-6.66L11.13 24H6.95L14.3 7.37A1.86 1.86 0 0 1 16 6.25Zm0 6.05-1.98 4.75h3.96L16 12.3Z" clip-rule="evenodd"/>
+  <rect x="7" y="25.5" width="18" height="1.5" rx=".75" fill="#0a0a0b"/>
+</svg>

@@ -9,20 +9,13 @@ interface PageHeaderProps {
 
 export default function PageHeader({ eyebrow, title, description, extra }: PageHeaderProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16
-      }}
-    >
-      <div>
+    <header className="page-header-shell">
+      <div className="page-header-copy">
         {eyebrow && <div className="page-eyebrow">{eyebrow}</div>}
         <h2 className="page-title">{title}</h2>
         {description && <p className="page-desc">{description}</p>}
       </div>
-      {extra && <div>{extra}</div>}
-    </div>
+      {extra && <div className="page-header-actions">{extra}</div>}
+    </header>
   )
 }

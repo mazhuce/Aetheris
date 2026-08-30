@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  AlertOutlined,
   ApiOutlined,
-  CheckCircleOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
-  HddOutlined
+  ReloadOutlined
 } from '@ant-design/icons'
-import { Card, Col, Progress, Row, Space, Table, Tag, Typography } from 'antd'
+import { Button, Progress, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
-import StatCard from '@/components/StatCard'
 import { listConfigs, pingSystem } from '@/api/system'
 import { listDataSources, type DataSource } from '@/api/metadata'
 import { formatDateTime, formatNumber } from '@/utils/format'
@@ -23,19 +20,6 @@ interface ServiceRow {
   version: string
   port: number
 }
-
-const serviceColumns: TableColumnsType<ServiceRow> = [
-  { title: '服务', dataIndex: 'name', key: 'name' },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    render: (status: ServiceState) =>
-      status === 'ok' ? <Tag color="success">运行中</Tag> : <Tag color="error">异常</Tag>
-  },
-  { title: '版本', dataIndex: 'version', key: 'version' },
-  { title: '端口', dataIndex: 'port', key: 'port' }
-]
 
 const activityColumns: TableColumnsType<Record<string, string>> = [
   { title: '时间', dataIndex: 'time', key: 'time', width: 170 },
@@ -121,109 +105,62 @@ export default function Dashboard() {
     { title: '建议尽快接入 Nacos 注册中心', type: '待办', time: '计划中' }
   ]
 
+  const metrics = [
+    { label: '数据源', value: String(dataSources.length), detail: '已接入', icon: <DatabaseOutlined /> },
+    { label: '今日任务', value: '128', detail: '较昨日 +12.5%', icon: <CloudServerOutlined /> },
+    { label: 'API 调用', value: formatNumber(12480), detail: '最近 24 小时', icon: <ApiOutlined /> },
+    { label: '存储占用', value: '38%', detail: '500 GB 配额', icon: <DatabaseOutlined /> }
+  ]
+
   return (
-    <Space direction="vertical" size={16} style={{ display: 'flex' }}>
-      <Row gutter={[16, 16]}>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="数据源总数" value={String(dataSources.length)} icon={<DatabaseOutlined />} footer="已接入的数据源" />
-        </Col>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="运行中服务" value={`${runningCount}/4`} icon={<CloudServerOutlined />} trend={runningCount === 4 ? 0 : -25} footer="核心服务健康度" />
-        </Col>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="今日任务" value="128" icon={<CheckCircleOutlined />} trend={12.5} footer="累计执行任务" />
-        </Col>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="API 调用" value={formatNumber(12480)} icon={<ApiOutlined />} trend={8.3} footer="近 24 小时" />
-        </Col>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="存储用量" value="38%" icon={<HddOutlined />} trend={-2.1} footer="共 500GB" />
-        </Col>
-        <Col xs={12} sm={8} xl={4}>
-          <StatCard title="待处理告警" value="3" icon={<AlertOutlined />} trend={1} footer="其中 1 条为高优先级" />
-        </Col>
-      </Row>
+    <div className="dashboard-v2">
+      <section className="dashboard-intro">
+        <div><span className="section-kicker">OVERVIEW</span><h1>数据控制中心</h1><p>服务、资源与数据资产的实时运行视图。</p></div>
+        <div className="dashboard-intro-actions"><span>最后检测 {lastCheck}</span><Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新状态</Button></div>
+      </section>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card
-            size="small"
-            title="服务健康"
-            extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>最后检测 {lastCheck}</Typography.Text>}
-          >
-            <Table size="small" columns={serviceColumns} dataSource={serviceRows} pagination={false} />
-          </Card>
-        </Col>
-        <Col xs={24} xl={8}>
-          <Card size="small" title="资源使用">
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <div>
-                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Typography.Text>CPU 使用率</Typography.Text>
-                  <Typography.Text type="secondary">42%</Typography.Text>
-                </Space>
-                <Progress percent={42} showInfo={false} strokeColor="#071a3d" size="small" />
-              </div>
-              <div>
-                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Typography.Text>内存使用率</Typography.Text>
-                  <Typography.Text type="secondary">67%</Typography.Text>
-                </Space>
-                <Progress percent={67} showInfo={false} strokeColor="#071a3d" size="small" />
-              </div>
-              <div>
-                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Typography.Text>磁盘使用率</Typography.Text>
-                  <Typography.Text type="secondary">38%</Typography.Text>
-                </Space>
-                <Progress percent={38} showInfo={false} strokeColor="#071a3d" size="small" />
-              </div>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+      <section className="system-pulse">
+        <div className="pulse-content">
+          <div className="pulse-status"><span className={`pulse-dot ${runningCount === 4 ? 'online' : ''}`} /> {runningCount === 4 ? '核心链路运行正常' : '部分服务需要关注'}</div>
+          <div className="pulse-score">{runningCount}<span>/ 4</span></div>
+          <p>Gateway、System、Metadata 与 PostgreSQL 的综合健康状态。</p>
+        </div>
+        <div className="pulse-visual" aria-hidden="true"><span /><span /><span /><div className="pulse-core">A</div></div>
+      </section>
 
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={12}>
-          <Card size="small" title="数据源类型分布">
-            {Object.keys(typeCounts).length === 0 ? (
-              <Typography.Text type="secondary">暂无数据源</Typography.Text>
-            ) : (
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                {Object.entries(typeCounts).map(([type, count]) => (
-                  <div key={type}>
-                    <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                      <Tag>{type}</Tag>
-                      <Typography.Text type="secondary">{count} 个</Typography.Text>
-                    </Space>
-                    <Progress percent={Math.round((count / typeTotal) * 100)} showInfo={false} strokeColor="#071a3d" size="small" />
-                  </div>
-                ))}
-              </Space>
-            )}
-          </Card>
-        </Col>
-        <Col xs={24} xl={12}>
-          <Card size="small" title="最近动态">
-            <Table size="small" columns={activityColumns} dataSource={activities} pagination={false} />
-          </Card>
-        </Col>
-      </Row>
+      <section className="metric-strip">
+        {metrics.map((metric) => <div className="metric-item" key={metric.label}><div className="metric-icon">{metric.icon}</div><div><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.detail}</small></div></div>)}
+      </section>
 
-      <Card size="small" title="公告与待办">
-        {notices.map((notice) => (
-          <div
-            key={notice.title}
-            style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}
-          >
-            <Space>
-              <Tag color={notice.type === '版本' ? 'blue' : notice.type === '待办' ? 'orange' : 'default'}>{notice.type}</Tag>
-              <Typography.Text>{notice.title}</Typography.Text>
-            </Space>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>{notice.time}</Typography.Text>
+      <section className="dashboard-grid">
+        <article className="dashboard-panel services-panel">
+          <div className="panel-heading"><div><span>Infrastructure</span><h2>服务运行状态</h2></div><span className="panel-count">{runningCount} / 4 online</span></div>
+          <div className="service-list">
+            {serviceRows.map((service) => <div className="service-row" key={service.key}><span className={`service-state ${service.status}`} /><div className="service-identity"><strong>{service.name}</strong><small>:{service.port}</small></div><span className="service-version">v{service.version}</span><span className="service-label">{service.status === 'ok' ? 'Operational' : 'Unavailable'}</span></div>)}
           </div>
-        ))}
-      </Card>
-    </Space>
+        </article>
+
+        <article className="dashboard-panel resources-panel">
+          <div className="panel-heading"><div><span>Capacity</span><h2>资源使用</h2></div></div>
+          {[['CPU', 42], ['Memory', 67], ['Storage', 38]].map(([label, value]) => <div className="resource-row" key={String(label)}><div><span>{label}</span><strong>{value}%</strong></div><Progress percent={Number(value)} showInfo={false} strokeColor="#071a3d" /></div>)}
+          <div className="resource-note">资源指标每 60 秒自动采样</div>
+        </article>
+
+        <article className="dashboard-panel activity-panel">
+          <div className="panel-heading"><div><span>Activity</span><h2>最近动态</h2></div></div>
+          <Table className="quiet-table" size="small" columns={activityColumns} dataSource={activities} pagination={false} />
+        </article>
+
+        <article className="dashboard-panel sources-panel">
+          <div className="panel-heading"><div><span>Catalog</span><h2>数据源分布</h2></div></div>
+          {Object.keys(typeCounts).length === 0 ? <div className="panel-empty">暂无数据源</div> : Object.entries(typeCounts).map(([type, count]) => <div className="source-row" key={type}><div><Tag>{type}</Tag><span>{count} 个</span></div><Progress percent={Math.round((count / typeTotal) * 100)} showInfo={false} strokeColor="#071a3d" size="small" /></div>)}
+        </article>
+
+        <article className="dashboard-panel notices-panel">
+          <div className="panel-heading"><div><span>Updates</span><h2>公告与待办</h2></div></div>
+          {notices.map((notice) => <div className="notice-row" key={notice.title}><Tag>{notice.type}</Tag><span>{notice.title}</span><time>{notice.time}</time></div>)}
+        </article>
+      </section>
+    </div>
   )
 }

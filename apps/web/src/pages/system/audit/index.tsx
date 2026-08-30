@@ -88,7 +88,7 @@ export default function AuditLogPage() {
         <Col xs={12} lg={6}><StatCard title="活跃操作者" value={String(metrics.users)} icon={<UserOutlined />} footer="去重账号数量" tone="purple" /></Col>
       </Row>
 
-      <Card className="surface-card" bordered={false}>
+      <Card className="surface-card" variant="borderless">
         <div className="filter-bar">
           <div className="filter-item"><span>操作者</span><Input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="输入用户名" allowClear style={{ width: 180 }} /></div>
           <div className="filter-item"><span>请求方法</span><Select value={method} onChange={setMethod} placeholder="全部" allowClear style={{ width: 120 }} options={['POST', 'PUT', 'DELETE'].map((value) => ({ value, label: value }))} /></div>
@@ -97,7 +97,7 @@ export default function AuditLogPage() {
         </div>
       </Card>
 
-      <Card className="surface-card" bordered={false} title="操作明细">
+      <Card className="surface-card" variant="borderless" title="操作明细">
         <Table<AuditLog>
           rowKey="id"
           columns={columns}

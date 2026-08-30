@@ -4,6 +4,7 @@ import { ArrowRightOutlined, CheckCircleFilled, LockOutlined, UserOutlined } fro
 import { useNavigate } from 'react-router-dom'
 import { login } from '@/api/auth'
 import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
+import BrandMark from '@/components/BrandMark'
 
 interface LoginForm {
   username: string
@@ -60,7 +61,7 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-story">
-        <div className="login-brand"><span className="brand-mark">A</span><span>Aetheris</span></div>
+        <div className="login-brand"><BrandMark /><span>Aetheris</span></div>
         <div className="login-copy">
           <h1>把复杂的数据工作，<br />变成清晰的流动。</h1>
           <p>连接、治理、编排与洞察，在一个安静而高效的工作空间里完成。</p>
@@ -73,7 +74,7 @@ export default function LoginPage() {
         <div className="login-legal">© 2026 Aetheris · Built for modern data teams</div>
       </section>
       <section className="login-panel">
-        <Card className="login-card" bordered={false}>
+        <Card className="login-card" variant="borderless">
           <div className="login-card-head">
             <Typography.Title level={2}>欢迎回来</Typography.Title>
             <Typography.Text type="secondary">登录你的工作空间以继续</Typography.Text>

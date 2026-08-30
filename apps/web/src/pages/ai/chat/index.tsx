@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Avatar, Button, Card, Empty, Input, List, Popconfirm, Space, Switch } from 'antd'
+import { Avatar, Button, Empty, Input, List, Popconfirm, Switch } from 'antd'
 import { DeleteOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -128,9 +128,9 @@ export default function ChatPage() {
         }
       />
 
-      <Card size="small">
-        <div style={{ display: 'flex', gap: 16 }}>
-          <div style={{ width: 240, flexShrink: 0, borderRight: '1px solid #f0f0f0', paddingRight: 12 }}>
+      <div className="assistant-shell">
+        <aside className="conversation-sidebar">
+            <div className="conversation-heading"><span>对话记录</span><small>{conversations.length}</small></div>
             <List
               size="small"
               dataSource={conversations}
@@ -138,12 +138,7 @@ export default function ChatPage() {
               renderItem={(conversation) => (
                 <List.Item
                   onClick={() => void openConversation(conversation.id)}
-                  style={{
-                    cursor: 'pointer',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    background: currentId === conversation.id ? '#eeeeef' : 'transparent'
-                  }}
+                  className={`conversation-item${currentId === conversation.id ? ' active' : ''}`}
                   actions={[
                     <Popconfirm
                       key="delete"
@@ -160,27 +155,32 @@ export default function ChatPage() {
                   ]}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div className="conversation-title">
                       {conversation.title}
                     </div>
-                    <div style={{ fontSize: 12, color: '#8a9099' }}>{formatDateTime(conversation.updatedAt)}</div>
+                    <div className="conversation-time">{formatDateTime(conversation.updatedAt)}</div>
                   </div>
                 </List.Item>
               )}
             />
-          </div>
+        </aside>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div ref={scrollRef} className="chat-scroll" style={{ height: 480 }}>
+        <section className="assistant-main">
+            <div className="assistant-toolbar">
+              <div className="assistant-identity"><span className="assistant-mark"><RobotOutlined /></span><div><strong>Aetheris AI</strong><small>Powered by DeepSeek</small></div></div>
+              <label className="assistant-mode">
+                <div><strong>{dataMode ? '数据模式' : '对话模式'}</strong><small>{dataMode ? '检索元数据并执行只读查询' : '仅使用模型知识，不查询数据'}</small></div>
+                <Switch size="small" checked={dataMode} onChange={setDataMode} />
+              </label>
+            </div>
+
+            <div ref={scrollRef} className="chat-scroll assistant-messages">
               {messages.length === 0 && !loading && (
-                <div className="chat-msg">
-                  <Avatar size={32} icon={<RobotOutlined />} style={{ background: '#071a3d', flexShrink: 0 }} />
-                  <div style={{ maxWidth: '80%' }}>
-                    <div className="chat-meta">DeepSeek 助手</div>
-                    <div className="chat-bubble">
-                      你好，我是 Aetheris 的智能助手，基于 DeepSeek。可以咨询数据接入、元数据、数据质量、数据治理等相关问题。
-                    </div>
-                  </div>
+                <div className="assistant-empty">
+                  <span className="assistant-empty-mark"><RobotOutlined /></span>
+                  <h2>有什么可以帮你？</h2>
+                  <p>询问数据接入、元数据、数据质量或治理策略。</p>
+                  <div className="assistant-suggestions"><button onClick={() => setInput('如何设计一条数据质量规则？')}>设计质量规则</button><button onClick={() => setInput('解释一下当前数仓分层结构')}>理解数仓分层</button><button onClick={() => setInput('如何排查数据接入失败？')}>排查接入问题</button></div>
                 </div>
               )}
 
@@ -212,31 +212,9 @@ export default function ChatPage() {
               })}
             </div>
 
-            <div
-              style={{
-                marginTop: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                flexWrap: 'wrap'
-              }}
-            >
-              <Switch
-                size="small"
-                checked={dataMode}
-                onChange={setDataMode}
-                checkedChildren="数据"
-                unCheckedChildren="对话"
-              />
-              <span style={{ fontSize: 12, color: '#8c8c8c' }}>
-                {dataMode
-                  ? '数据模式：AI 会检索数仓元数据并执行只读查询，响应较慢但能给出真实数字'
-                  : '对话模式：仅基于模型知识回答，不查询数据'}
-              </span>
-            </div>
-
-            <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+            <div className="assistant-composer">
               <Input.TextArea
+                className="assistant-input"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder={dataMode
@@ -251,18 +229,18 @@ export default function ChatPage() {
                 }}
               />
               <Button
+                className="assistant-send"
                 type="primary"
                 icon={<SendOutlined />}
                 loading={sending}
                 onClick={() => void handleSend()}
-                style={{ height: 'auto' }}
               >
-                发送
+                <span>发送</span>
               </Button>
-            </Space.Compact>
-          </div>
-        </div>
-      </Card>
+              <div className="composer-hint">Enter 发送 · Shift + Enter 换行</div>
+            </div>
+        </section>
+      </div>
     </>
   )
 }

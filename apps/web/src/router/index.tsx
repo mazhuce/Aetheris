@@ -16,6 +16,7 @@ import ChatPage from '@/pages/ai/chat'
 import SystemConfigPage from '@/pages/system/config'
 import UserPage from '@/pages/system/users'
 import AuditLogPage from '@/pages/system/audit'
+import AccountPage from '@/pages/account'
 import Placeholder from '@/pages/placeholder'
 
 export const router = createBrowserRouter([
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: 'workflow', element: <WorkflowPage /> },
       { path: 'governance/policies', element: <GovernancePage /> },
       { path: 'ai/chat', element: <ChatPage /> },
+      { path: 'account', element: <AccountPage /> },
       {
         path: 'system/users',
         element: (

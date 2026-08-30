@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { App, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CloudSyncOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { useLocation } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
 import {
   createTable,
@@ -31,6 +32,7 @@ const LAYER_COLORS: Record<string, string> = {
 
 export default function MetadataTablePage() {
   const { message, modal } = App.useApp()
+  const location = useLocation()
   const [allData, setAllData] = useState<MetadataTable[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -52,6 +54,12 @@ export default function MetadataTablePage() {
 
   useEffect(() => { void refresh() }, [refresh])
   useEffect(() => { if (open) { if (editing) form.setFieldsValue(editing); else form.resetFields() } }, [open, editing, form])
+
+  // 从全局搜索跳转过来时，把命中的表名预填到筛选框，让结果直接落到具体表上。
+  useEffect(() => {
+    const searchKeyword = (location.state as { searchKeyword?: string } | null)?.searchKeyword
+    if (searchKeyword) setKeyword(searchKeyword)
+  }, [location.state])
 
   const openSync = async () => {
     setSyncOpen(true)

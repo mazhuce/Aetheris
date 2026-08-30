@@ -245,6 +245,13 @@ export function listTables(): Promise<MetadataTable[]> {
   return http.get<MetadataTable[]>('/api/metadata/tables').then((res) => res.data)
 }
 
+/** 全局搜索：匹配表名/表注释/业务域，供控制台顶部搜索框使用。 */
+export function searchTables(keyword: string, limit = 10): Promise<MetadataTable[]> {
+  return http
+    .get<MetadataTable[]>('/api/metadata/tables/search', { params: { keyword, limit } })
+    .then((res) => res.data)
+}
+
 export function createTable(payload: MetadataTableInput): Promise<MetadataTable> {
   return http.post<MetadataTable>('/api/metadata/tables', payload).then((res) => res.data)
 }

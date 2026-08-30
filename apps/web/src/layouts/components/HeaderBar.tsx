@@ -1,18 +1,11 @@
-import { Avatar, Breadcrumb, Button, Dropdown, Input, Select, Space, Tooltip } from 'antd'
-import {
-  BellOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  SearchOutlined,
-  UserOutlined
-} from '@ant-design/icons'
+import { Avatar, Breadcrumb, Button, Dropdown, Space } from 'antd'
+import { PlusOutlined, UserOutlined } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { findNav } from '@/constants/navigation'
 import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
+import GlobalSearch from '@/components/GlobalSearch'
 
-interface HeaderBarProps { collapsed: boolean; onToggle: () => void }
-
-export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
+export default function HeaderBar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { group, item } = findNav(location.pathname)
@@ -29,12 +22,9 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
   return (
     <header className="topbar">
       <Space size={10} className="topbar-context">
-        <Tooltip title={collapsed ? '展开菜单' : '收起菜单'}>
-          <Button className="icon-button" type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={onToggle} />
-        </Tooltip>
-        <span className="topbar-divider" />
         <Breadcrumb
           items={[
+            { title: 'Workspace' },
             ...(group ? [{ title: group.label }] : []),
             ...(item ? [{ title: item.label }] : [])
           ]}
@@ -42,23 +32,10 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
       </Space>
 
       <div className="topbar-actions">
-        <Input
-          className="command-search"
-          prefix={<SearchOutlined />}
-          placeholder="搜索…"
-          suffix={<kbd>⌘ K</kbd>}
-          allowClear
-        />
-        <Select
-          className="environment-select"
-          value="production"
-          options={[
-            { value: 'production', label: 'Production' },
-            { value: 'preview', label: 'Preview' },
-            { value: 'development', label: 'Development' }
-          ]}
-        />
-        <Tooltip title="通知"><Button className="icon-button" type="text" icon={<BellOutlined />} /></Tooltip>
+        <GlobalSearch />
+        <Dropdown menu={{ items: [{ key: 'source', label: '新建数据源' }, { key: 'task', label: '新建任务' }, { key: 'rule', label: '新建规则' }], onClick: ({ key }) => { if (key === 'source') navigate('/metadata/datasource'); if (key === 'task') navigate('/workflow'); if (key === 'rule') navigate('/quality/rules') } }}>
+          <Button className="create-button" type="primary" icon={<PlusOutlined />}>新建</Button>
+        </Dropdown>
         <Dropdown
           menu={{
             items: [
@@ -68,6 +45,7 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
               { key: 'logout', label: '退出登录', danger: true }
             ],
             onClick: ({ key }) => {
+              if (key === 'profile') navigate('/account')
               if (key === 'logout') handleLogout()
             }
           }}

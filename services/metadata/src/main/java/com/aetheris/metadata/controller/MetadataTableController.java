@@ -63,6 +63,24 @@ public class MetadataTableController {
         return warehouseMapService.build(datasourceName, includeStale);
     }
 
+    /**
+     * 按关键词检索表，供控制台顶部的全局搜索使用。
+     *
+     * <p>映射必须声明在 {@code /{id}} 之前，否则 "search" 会被当作 id 解析而返回 400。
+     *
+     * <p>同时匹配表名、表注释与业务域：用户搜「订单」时，表名含 order 的与注释含「订单」的
+     * 都应命中，只匹配表名会漏掉大量中文场景。
+     *
+     * @param keyword 关键词；为空时返回空列表而非全表，避免搜索框空输入时拉回全部数据
+     * @param limit   返回条数上限，防止一次拉回过多结果拖慢下拉面板
+     */
+    @GetMapping("/search")
+    public List<MetadataTable> search(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "10") int limit) {
+        return service.search(keyword, limit);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<MetadataTable> getById(@PathVariable Long id) {
         MetadataTable table = service.getById(id);
