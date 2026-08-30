@@ -22,8 +22,8 @@ export default function SideMenu() {
 
   return (
     <Menu
-      theme="dark"
       mode="inline"
+      className="side-menu"
       items={items}
       selectedKeys={[location.pathname]}
       onClick={({ key }) => navigate(key)}

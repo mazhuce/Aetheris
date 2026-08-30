@@ -73,7 +73,7 @@ export default function MetadataTablePage() {
             <div>采集范围：{result.schemas.join('、') || '—'}</div>
             <div>发现表 {result.scanned} 张：新增 {result.created}、更新 {result.updated}、标记消失 {result.removed}、跳过手工登记 {result.skipped}</div>
             {result.failures.length > 0 && (
-              <div style={{ marginTop: 8, color: '#d4380d' }}>部分库采集失败：{result.failures.join('；')}</div>
+              <div style={{ marginTop: 8, color: '#071a3d' }}>部分库采集失败：{result.failures.join('；')}</div>
             )}
           </div>
         )

@@ -10,19 +10,18 @@ export default function BasicLayout() {
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark" width={200} collapsible collapsed={collapsed} trigger={null}>
+    <Layout className="app-shell">
+      <Sider className="app-sidebar" width={232} collapsedWidth={72} collapsed={collapsed} trigger={null}>
         <div className="app-logo">
-          <img src="/AETHRIS.png" alt="Aetheris" className="logo-img" />
-          {!collapsed && <span>Aetheris</span>}
+          <span className="brand-mark">A</span>
+          {!collapsed && <span className="brand-name">Aetheris</span>}
         </div>
         <SideMenu />
+        {!collapsed && <div className="sidebar-footer"><span className="status-dot" /> All systems operational</div>}
       </Sider>
-      <Layout>
+      <Layout className="app-workspace">
         <HeaderBar collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
-        <Content style={{ padding: 16 }}>
-          <Outlet />
-        </Content>
+        <Content className="app-content"><div className="content-frame"><Outlet /></div></Content>
       </Layout>
     </Layout>
   )

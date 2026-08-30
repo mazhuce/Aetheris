@@ -111,7 +111,7 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
           </Descriptions.Item>
           {result.errorMessage && (
             <Descriptions.Item label="原因">
-              <span style={{ color: result.status === 'skipped' ? '#d46b08' : '#cf1322' }}>
+              <span style={{ color: '#071a3d' }}>
                 {result.errorMessage}
               </span>
             </Descriptions.Item>

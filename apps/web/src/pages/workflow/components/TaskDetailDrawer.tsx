@@ -185,9 +185,9 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       dataIndex: 'errorMessage',
       key: 'errorMessage',
       ellipsis: true,
-      render: (v?: string, record?: TaskInstance) =>
+      render: (v?: string) =>
         v
-          ? <span style={{ color: record?.status === 'skipped' ? '#d46b08' : '#cf1322' }}>{v}</span>
+          ? <span style={{ color: '#071a3d' }}>{v}</span>
           : '—'
     },
     {

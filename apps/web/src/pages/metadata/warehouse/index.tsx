@@ -192,7 +192,7 @@ function LayerCard({ layer, active, showArrow, onClick }: LayerCardProps) {
           style={{
             flex: 1,
             cursor: 'pointer',
-            borderColor: active ? '#1677ff' : undefined,
+            borderColor: active ? '#071a3d' : undefined,
             borderWidth: active ? 2 : 1
           }}
           styles={{ body: { padding: '12px 14px' } }}

@@ -1,18 +1,8 @@
-import {
-  Avatar,
-  Badge,
-  Breadcrumb,
-  Button,
-  Dropdown,
-  Input,
-  Select,
-  Space
-} from 'antd'
+import { Avatar, Breadcrumb, Button, Dropdown, Input, Select, Space, Tooltip } from 'antd'
 import {
   BellOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  QuestionCircleOutlined,
   SearchOutlined,
   UserOutlined
 } from '@ant-design/icons'
@@ -20,16 +10,14 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { findNav } from '@/constants/navigation'
 import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 
-interface HeaderBarProps {
-  collapsed: boolean
-  onToggle: () => void
-}
+interface HeaderBarProps { collapsed: boolean; onToggle: () => void }
 
 export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { group, item } = findNav(location.pathname)
   const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
+  const role = localStorage.getItem(ROLE_KEY) ?? 'viewer'
 
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY)
@@ -39,68 +27,54 @@ export default function HeaderBar({ collapsed, onToggle }: HeaderBarProps) {
   }
 
   return (
-    <div
-      style={{
-        height: 56,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingInline: 16,
-        background: '#fff',
-        borderBottom: '1px solid #e5e6eb'
-      }}
-    >
-      <Space size={12}>
-        <Button
-          type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={onToggle}
-        />
+    <header className="topbar">
+      <Space size={10} className="topbar-context">
+        <Tooltip title={collapsed ? '展开菜单' : '收起菜单'}>
+          <Button className="icon-button" type="text" icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={onToggle} />
+        </Tooltip>
+        <span className="topbar-divider" />
         <Breadcrumb
           items={[
-            { title: 'Aetheris' },
             ...(group ? [{ title: group.label }] : []),
             ...(item ? [{ title: item.label }] : [])
           ]}
         />
       </Space>
 
-      <Space size={16}>
+      <div className="topbar-actions">
         <Input
+          className="command-search"
           prefix={<SearchOutlined />}
-          placeholder="搜索产品、资源、文档"
-          style={{ width: 240 }}
+          placeholder="搜索…"
+          suffix={<kbd>⌘ K</kbd>}
           allowClear
         />
         <Select
-          value="cn-east-2"
-          style={{ width: 140 }}
+          className="environment-select"
+          value="production"
           options={[
-            { value: 'cn-east-2', label: '华东2（上海）' },
-            { value: 'cn-north-1', label: '华北1（青岛）' }
+            { value: 'production', label: 'Production' },
+            { value: 'preview', label: 'Preview' },
+            { value: 'development', label: 'Development' }
           ]}
         />
-        <Badge count={3} size="small">
-          <Button type="text" icon={<BellOutlined />} />
-        </Badge>
-        <Button type="text" icon={<QuestionCircleOutlined />} />
+        <Tooltip title="通知"><Button className="icon-button" type="text" icon={<BellOutlined />} /></Tooltip>
         <Dropdown
           menu={{
             items: [
-              { key: 'profile', label: '个人中心' },
-              { key: 'logout', label: '退出登录' }
+              { key: 'identity', label: `${username} · ${role}`, disabled: true },
+              { type: 'divider' },
+              { key: 'profile', label: '账户设置' },
+              { key: 'logout', label: '退出登录', danger: true }
             ],
             onClick: ({ key }) => {
               if (key === 'logout') handleLogout()
             }
           }}
         >
-          <Space style={{ cursor: 'pointer' }}>
-            <Avatar size={28} icon={<UserOutlined />} style={{ background: '#1677ff' }} />
-            <span style={{ fontSize: 13 }}>{username}</span>
-          </Space>
+          <button className="account-button"><Avatar size={26} icon={<UserOutlined />} /><span>{username}</span></button>
         </Dropdown>
-      </Space>
-    </div>
+      </div>
+    </header>
   )
 }

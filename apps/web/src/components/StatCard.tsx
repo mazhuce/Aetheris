@@ -10,7 +10,7 @@ interface StatCardProps {
   tone?: 'blue' | 'green' | 'orange' | 'purple'
 }
 
-const toneColors = { blue: '#1677ff', green: '#16a34a', orange: '#ea580c', purple: '#7c3aed' }
+const toneColors = { blue: '#071a3d', green: '#071a3d', orange: '#071a3d', purple: '#071a3d' }
 
 export default function StatCard({ title, value, icon, trend, footer, tone = 'blue' }: StatCardProps) {
   const isUp = (trend ?? 0) >= 0
@@ -22,7 +22,7 @@ export default function StatCard({ title, value, icon, trend, footer, tone = 'bl
           <div className="stat-label">{title}</div>
           <div className="stat-value">{value}</div>
           {typeof trend === 'number' && (
-            <div style={{ marginTop: 4, fontSize: 12, color: isUp ? '#52c41a' : '#ff4d4f' }}>
+            <div style={{ marginTop: 4, fontSize: 12, color: '#071a3d' }}>
               {isUp ? '▲' : '▼'} {Math.abs(trend)}% 较昨日
             </div>
           )}

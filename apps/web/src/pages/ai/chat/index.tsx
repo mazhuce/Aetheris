@@ -142,7 +142,7 @@ export default function ChatPage() {
                     cursor: 'pointer',
                     padding: '8px 10px',
                     borderRadius: 6,
-                    background: currentId === conversation.id ? '#e6f4ff' : 'transparent'
+                    background: currentId === conversation.id ? '#eeeeef' : 'transparent'
                   }}
                   actions={[
                     <Popconfirm
@@ -174,7 +174,7 @@ export default function ChatPage() {
             <div ref={scrollRef} className="chat-scroll" style={{ height: 480 }}>
               {messages.length === 0 && !loading && (
                 <div className="chat-msg">
-                  <Avatar size={32} icon={<RobotOutlined />} style={{ background: '#10b981', flexShrink: 0 }} />
+                  <Avatar size={32} icon={<RobotOutlined />} style={{ background: '#071a3d', flexShrink: 0 }} />
                   <div style={{ maxWidth: '80%' }}>
                     <div className="chat-meta">DeepSeek 助手</div>
                     <div className="chat-bubble">
@@ -191,7 +191,7 @@ export default function ChatPage() {
                     <Avatar
                       size={32}
                       icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-                      style={{ background: isUser ? '#1677ff' : '#10b981', flexShrink: 0 }}
+                      style={{ background: '#071a3d', flexShrink: 0 }}
                     />
                     <div style={{ maxWidth: '80%' }}>
                       <div className="chat-meta" style={{ textAlign: isUser ? 'right' : 'left' }}>

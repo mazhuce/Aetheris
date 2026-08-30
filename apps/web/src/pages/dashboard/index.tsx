@@ -162,21 +162,21 @@ export default function Dashboard() {
                   <Typography.Text>CPU 使用率</Typography.Text>
                   <Typography.Text type="secondary">42%</Typography.Text>
                 </Space>
-                <Progress percent={42} showInfo={false} strokeColor="#1677ff" size="small" />
+                <Progress percent={42} showInfo={false} strokeColor="#071a3d" size="small" />
               </div>
               <div>
                 <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Typography.Text>内存使用率</Typography.Text>
                   <Typography.Text type="secondary">67%</Typography.Text>
                 </Space>
-                <Progress percent={67} showInfo={false} strokeColor="#52c41a" size="small" />
+                <Progress percent={67} showInfo={false} strokeColor="#071a3d" size="small" />
               </div>
               <div>
                 <Space style={{ width: '100%', justifyContent: 'space-between' }}>
                   <Typography.Text>磁盘使用率</Typography.Text>
                   <Typography.Text type="secondary">38%</Typography.Text>
                 </Space>
-                <Progress percent={38} showInfo={false} strokeColor="#faad14" size="small" />
+                <Progress percent={38} showInfo={false} strokeColor="#071a3d" size="small" />
               </div>
             </Space>
           </Card>
@@ -196,7 +196,7 @@ export default function Dashboard() {
                       <Tag>{type}</Tag>
                       <Typography.Text type="secondary">{count} 个</Typography.Text>
                     </Space>
-                    <Progress percent={Math.round((count / typeTotal) * 100)} showInfo={false} strokeColor="#1677ff" size="small" />
+                    <Progress percent={Math.round((count / typeTotal) * 100)} showInfo={false} strokeColor="#071a3d" size="small" />
                   </div>
                 ))}
               </Space>
