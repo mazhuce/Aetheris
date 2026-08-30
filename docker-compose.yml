@@ -9,7 +9,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-aetheris}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aetheris}
     ports:
-      - "5433:5432"
+      # 宿主端口可用 POSTGRES_PORT 覆盖，原因同 web：5433 可能落入
+      # Windows 的 Hyper-V 保留端口区间而无法绑定。容器间通信始终用 5432，不受影响。
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -200,7 +202,10 @@ services:
     depends_on:
       - gateway
     ports:
-      - "5173:80"
+      # 宿主端口可用 WEB_PORT 覆盖：Windows 上 Hyper-V 会随机保留端口区间，
+      # 5173 若落入保留区间则无法绑定（报 ports are not available）。
+      # 排查方法见 docs/datasource-connectivity.md。
+      - "${WEB_PORT:-5173}:80"
 
 volumes:
   pgdata:

@@ -6,6 +6,8 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      # 跨域不在此处配置：globalcors 的 YAML 属性实测未生效（带任意 Origin 的请求
+      # 一律 403），改用 CorsConfig 里的 CorsWebFilter Bean。
       routes:
         - id: system-service
           uri: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}
