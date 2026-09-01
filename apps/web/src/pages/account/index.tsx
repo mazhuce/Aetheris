@@ -7,11 +7,11 @@ import {
   Descriptions,
   Form,
   Input,
-  Row,
-  Tag
+  Row
 } from 'antd'
 import { SaveOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import StatusBadge from '@/components/StatusBadge'
 import {
   changeMyPassword,
   getMyProfile,
@@ -23,14 +23,14 @@ import { TOKEN_KEY, USERNAME_KEY, ROLE_KEY } from '@/api/http'
 import { useNavigate } from 'react-router-dom'
 import { formatDateTime } from '@/utils/format'
 
-const roleMeta: Record<string, { color: string; text: string }> = {
-  admin: { color: 'purple', text: '管理员' },
-  viewer: { color: 'default', text: '只读用户' }
+const roleMeta: Record<string, { text: string }> = {
+  admin: { text: '管理员' },
+  viewer: { text: '只读用户' }
 }
 
-const statusMeta: Record<string, { color: string; text: string }> = {
-  active: { color: 'success', text: '启用' },
-  disabled: { color: 'default', text: '禁用' }
+const statusMeta: Record<string, { text: string }> = {
+  active: { text: '启用' },
+  disabled: { text: '禁用' }
 }
 
 interface ProfileFormValues {
@@ -117,20 +117,19 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader
-        title="账户设置"
-        description="维护你的个人资料与登录密码。用户名、角色与状态由管理员统一管理。"
+        description="维护个人资料与登录密码；用户名、角色与状态由管理员统一管理。"
       />
 
-      <Row gutter={16}>
+      <Row gutter={16} className="account-grid">
         <Col xs={24} lg={12}>
-          <Card size="small" title="个人资料" loading={loading}>
-            <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
+          <Card size="small" className="account-card" title="个人资料" loading={loading}>
+            <Descriptions className="account-summary" column={1} size="small">
               <Descriptions.Item label="用户名">{profile?.username ?? '—'}</Descriptions.Item>
               <Descriptions.Item label="角色">
-                {profile ? <Tag color={roleMeta[profile.role]?.color}>{roleMeta[profile.role]?.text ?? profile.role}</Tag> : '—'}
+                {profile ? <StatusBadge tone={profile.role === 'admin' ? 'info' : 'neutral'}>{roleMeta[profile.role]?.text ?? profile.role}</StatusBadge> : '—'}
               </Descriptions.Item>
               <Descriptions.Item label="状态">
-                {profile ? <Tag color={statusMeta[profile.status]?.color}>{statusMeta[profile.status]?.text ?? profile.status}</Tag> : '—'}
+                {profile ? <StatusBadge tone={profile.status === 'active' ? 'success' : 'neutral'}>{statusMeta[profile.status]?.text ?? profile.status}</StatusBadge> : '—'}
               </Descriptions.Item>
               <Descriptions.Item label="创建时间">{formatDateTime(profile?.createdAt)}</Descriptions.Item>
             </Descriptions>
@@ -153,7 +152,7 @@ export default function AccountPage() {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card size="small" title="修改密码">
+          <Card size="small" className="account-card account-security-card" title="修改密码">
             <Form form={passwordForm} layout="vertical" onFinish={(values) => void handleChangePassword(values)}>
               <Form.Item name="currentPassword" label="当前密码" rules={[{ required: true, message: '请输入当前密码' }]}>
                 <Input.Password autoComplete="current-password" />

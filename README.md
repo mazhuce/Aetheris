@@ -71,6 +71,27 @@ make help
 docker compose up --build -d
 ```
 
+### 前端热更新（本地开发）
+
+后端仍使用 Compose 服务，前端切换为容器内 Vite。`src`、`public`、`index.html` 与 Vite 配置已挂载，保存页面代码后浏览器会自动 HMR，无需重新构建镜像：
+
+```bash
+make dev
+
+# 没有 make 时使用：
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --no-deps web
+```
+
+首次启动需要构建开发镜像；之后只有 `package.json` 或 `package-lock.json` 变化时才需要重新执行构建命令。普通页面、样式和静态资源修改会直接热更新。
+
+切回或单独同步 Nginx 生产版前端：
+
+```bash
+docker compose up -d --build --no-deps web
+docker compose ps web
+curl http://localhost:5173/healthz
+```
+
 启动后访问：
 
 - 前端：http://localhost:5173

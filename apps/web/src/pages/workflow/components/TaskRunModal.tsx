@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Alert, App, DatePicker, Descriptions, Form, Modal, Tag } from 'antd'
+import { Alert, App, DatePicker, Descriptions, Form, Modal } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { runTask, INSTANCE_STATUS_META, type TaskInstance, type TaskView } from '@/api/workflow'
+import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
 
 interface Props {
   target: TaskView | null
@@ -57,6 +58,14 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
     }
   }
 
+  const resultTone = (status: TaskInstance['status']): StatusTone => {
+    if (status === 'success') return 'success'
+    if (status === 'failed') return 'danger'
+    if (status === 'skipped') return 'warning'
+    if (status === 'running') return 'info'
+    return 'neutral'
+  }
+
   return (
     <Modal
       title={`运行任务：${target?.task.name ?? ''}`}
@@ -66,12 +75,12 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
       confirmLoading={running}
       okText={running ? '执行中…' : '开始执行'}
       width={560}
-      destroyOnClose
+      destroyOnHidden
     >
       <Alert
+        className="modal-notice"
         type="info"
         showIcon
-        style={{ marginBottom: 16 }}
         message="重跑会覆盖目标分区"
         description="同一业务日期重复执行会复用同一实例并覆盖该分区的数据，不会产生重复记录。"
       />
@@ -84,7 +93,7 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
           extra="即目标表的分区日期（dt），不是执行时刻。默认为昨天。"
         >
           <DatePicker
-            style={{ width: '100%' }}
+            className="full-width-control"
             // 不允许选未来日期：那些分区的源数据还不存在，执行只会得到空结果。
             disabledDate={(current) => current && current > dayjs().endOf('day')}
           />
@@ -92,11 +101,11 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
       </Form>
 
       {result && (
-        <Descriptions size="small" bordered column={1} style={{ marginTop: 8 }}>
+        <Descriptions className="task-run-result" size="small" column={1}>
           <Descriptions.Item label="执行结果">
-            <Tag color={INSTANCE_STATUS_META[result.status]?.color}>
+            <StatusBadge tone={resultTone(result.status)}>
               {INSTANCE_STATUS_META[result.status]?.label ?? result.status}
-            </Tag>
+            </StatusBadge>
           </Descriptions.Item>
           <Descriptions.Item label="业务日期">{result.bizDate}</Descriptions.Item>
           <Descriptions.Item label="尝试次数">{result.attempt ?? '—'}</Descriptions.Item>
@@ -111,9 +120,7 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
           </Descriptions.Item>
           {result.errorMessage && (
             <Descriptions.Item label="原因">
-              <span style={{ color: '#071a3d' }}>
-                {result.errorMessage}
-              </span>
+              <span className="result-error">{result.errorMessage}</span>
             </Descriptions.Item>
           )}
         </Descriptions>

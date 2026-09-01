@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { App, Button, Form, Input, Modal, Select, Space, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { NodeIndexOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import RowActions from '@/components/RowActions'
 import {
   createLineage,
   deleteLineage,
@@ -13,9 +16,11 @@ import {
   type LineageRelationInput
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 
 export default function LineagePage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [allData, setAllData] = useState<LineageRelation[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -84,46 +89,56 @@ export default function LineagePage() {
       width: 100,
       filters: [{ text: 'SQL 解析', value: 'parsed' }, { text: '人工登记', value: 'manual' }],
       onFilter: (value, record) => (record.source ?? 'manual') === value,
-      render: (v?: string) => v === 'parsed' ? <Tag color="blue">SQL 解析</Tag> : <Tag>人工登记</Tag>
+      render: (v?: string) => v === 'parsed' ? <Tag>SQL 解析</Tag> : <Tag>人工登记</Tag>
     },
     { title: '说明', dataIndex: 'description', key: 'description', render: (v?: string) => v || '—' },
-    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (v?: string) => formatDateTime(v) },
-    {
+    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (v?: string) => formatDateTime(v) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 56,
+      align: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm title="确定删除该关系？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions items={[
+          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: () => modal.confirm({
+              title: `删除血缘“${record.sourceTable} → ${record.targetTable}”？`,
+              content: '删除后该上下游关系将不再出现在平台血缘记录中。',
+              okText: '确认删除',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id)
+            })
+          }
+        ]} />
       )
-    }
-  ]
+    })
 
   return (
     <>
       <PageHeader
-        title="数据血缘"
-        description="从加工 SQL 解析表级血缘，也支持人工登记；人工登记的关系不会被解析覆盖。"
-        extra={
+        description="基于加工 SQL 解析表级血缘，同时支持人工登记；人工登记的关系不会被解析结果覆盖。"
+        extra={canManage ? (
           <Space>
             <Button icon={<NodeIndexOutlined />} onClick={() => setParseOpen(true)}>解析 SQL</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新增关系</Button>
           </Space>
-        }
+        ) : <Tag>只读访问</Tag>}
       />
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
-          <div className="filter-item"><span>上游/下游表</span><Input placeholder="搜索表名" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear style={{ width: 200 }} /></div>
+          <div className="filter-item"><span>上游/下游表</span><Input placeholder="搜索表名" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear className="filter-control-3xl" /></div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
-      <Card size="small">
-        <Table<LineageRelation> size="small" bordered rowKey="id" columns={columns} dataSource={filtered} loading={loading} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无血缘关系' }} />
-      </Card>
+      </PageToolbar>
+      <DataSurface label="数据血缘列表">
+        <Table<LineageRelation> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无血缘关系' }} />
+      </DataSurface>
       <Modal title={editing ? '编辑血缘关系' : '新增血缘关系'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting}>
         <Form form={form} layout="vertical" onFinish={(v) => void handleSubmit(v)}>
           <Form.Item name="sourceTable" label="上游表" rules={[{ required: true, message: '请输入上游表' }]}><Input /></Form.Item>
@@ -151,7 +166,7 @@ export default function LineagePage() {
             <Input.TextArea
               rows={12}
               placeholder={'INSERT OVERWRITE TABLE dwd.dwd_order PARTITION (dt)\nSELECT ... FROM ods.ods_order ...'}
-              style={{ fontFamily: 'monospace', fontSize: 12 }}
+              className="code-input"
             />
           </Form.Item>
           <Form.Item name="relationType" label="关系类型" extra="留空按 etl 记录">

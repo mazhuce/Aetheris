@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CloudSyncOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useLocation } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
 import {
   createTable,
   deleteTable,
@@ -19,19 +23,11 @@ import {
   type WarehouseLayer
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
-
-/** 分层配色：按数据流向由浅入深，与数仓地图页保持一致。 */
-const LAYER_COLORS: Record<string, string> = {
-  ods: 'cyan',
-  dwd: 'blue',
-  dws: 'geekblue',
-  ads: 'purple',
-  dim: 'orange',
-  other: 'default'
-}
+import { canManagePlatform } from '@/utils/access'
 
 export default function MetadataTablePage() {
   const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const location = useLocation()
   const [allData, setAllData] = useState<MetadataTable[]>([])
   const [loading, setLoading] = useState(false)
@@ -81,7 +77,7 @@ export default function MetadataTablePage() {
             <div>采集范围：{result.schemas.join('、') || '—'}</div>
             <div>发现表 {result.scanned} 张：新增 {result.created}、更新 {result.updated}、标记消失 {result.removed}、跳过手工登记 {result.skipped}</div>
             {result.failures.length > 0 && (
-              <div style={{ marginTop: 8, color: '#071a3d' }}>部分库采集失败：{result.failures.join('；')}</div>
+              <div className="sync-warning">部分库采集失败：{result.failures.join('；')}</div>
             )}
           </div>
         )
@@ -133,10 +129,9 @@ export default function MetadataTablePage() {
       width: 100,
       render: (v?: string, record?: MetadataTable) => {
         const layer = v ?? 'other'
-        const color = LAYER_COLORS[layer] ?? 'default'
         // 人工指定过的层级加下划线提示，避免误以为是采集推断的结果。
         return (
-          <Tag color={color} style={record?.layerSource === 'manual' ? { borderStyle: 'dashed' } : undefined}>
+          <Tag className={record?.layerSource === 'manual' ? 'is-manual' : undefined}>
             {warehouseLayerLabel(layer)}
           </Tag>
         )
@@ -154,7 +149,7 @@ export default function MetadataTablePage() {
       width: 100,
       filters: [{ text: '自动采集', value: 'auto' }, { text: '手工登记', value: 'manual' }],
       onFilter: (value, record) => (record.source ?? 'manual') === value,
-      render: (v?: string) => v === 'auto' ? <Tag color="blue">自动采集</Tag> : <Tag>手工登记</Tag>
+      render: (v?: string) => v === 'auto' ? <Tag>自动采集</Tag> : <Tag>手工登记</Tag>
     },
     { title: '负责人', dataIndex: 'owner', key: 'owner', width: 100, render: (v?: string) => v || '—' },
     {
@@ -163,42 +158,52 @@ export default function MetadataTablePage() {
       key: 'status',
       width: 90,
       render: (v?: string) => {
-        if (v === 'active') return <Tag color="success">正常</Tag>
-        if (v === 'stale') return <Tag color="warning">已消失</Tag>
-        return <Tag>停用</Tag>
+        if (v === 'active') return <StatusBadge tone="success">正常</StatusBadge>
+        if (v === 'stale') return <StatusBadge tone="warning">已消失</StatusBadge>
+        return <StatusBadge tone="neutral">停用</StatusBadge>
       }
     },
-    { title: '采集时间', dataIndex: 'syncedAt', key: 'syncedAt', width: 170, render: (v?: string) => formatDateTime(v) },
-    {
+    { title: '采集时间', dataIndex: 'syncedAt', key: 'syncedAt', width: 170, render: (v?: string) => formatDateTime(v) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 56,
+      align: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm title="确定删除该表信息？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions items={[
+          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: () => modal.confirm({
+              title: `删除表“${record.tableName}”？`,
+              content: '这只会删除平台中的元数据登记，不会删除源数据库中的物理表。',
+              okText: '确认删除',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id)
+            })
+          }
+        ]} />
       )
-    }
-  ]
+    })
 
   return (
     <>
       <PageHeader
-        title="元数据目录"
-        description="从数据源自动采集库表元数据，也支持手工登记；手工登记的记录不会被采集覆盖。"
-        extra={
+        description="从数据源自动采集库表元数据，同时支持手工登记；手工登记的记录不会被采集结果覆盖。"
+        extra={canManage ? (
           <Space>
             <Button icon={<CloudSyncOutlined />} onClick={() => void openSync()}>采集元数据</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>登记表</Button>
           </Space>
-        }
+        ) : <Tag>只读访问</Tag>}
       />
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
-          <div className="filter-item"><span>数据源/表名</span><Input placeholder="搜索数据源或表名" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear style={{ width: 200 }} /></div>
+          <div className="filter-item"><span>数据源/表名</span><Input placeholder="搜索数据源或表名" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear className="filter-control-3xl" /></div>
           <div className="filter-item">
             <span>分层</span>
             <Select
@@ -206,7 +211,7 @@ export default function MetadataTablePage() {
               value={layerFilter}
               onChange={setLayerFilter}
               allowClear
-              style={{ width: 130 }}
+              className="filter-control-md"
               options={WAREHOUSE_LAYERS.map((l) => ({ value: l.value, label: l.label }))}
             />
           </div>
@@ -217,17 +222,17 @@ export default function MetadataTablePage() {
               value={domainFilter}
               onChange={setDomainFilter}
               allowClear
-              style={{ width: 150 }}
+              className="filter-control-lg"
               options={domainOptions}
               notFoundContent="暂无业务域"
             />
           </div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
-      <Card size="small">
-        <Table<MetadataTable> size="small" bordered rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1280 }} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无元数据' }} />
-      </Card>
+      </PageToolbar>
+      <DataSurface label="元数据表列表">
+        <Table<MetadataTable> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1220 }} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无元数据' }} />
+      </DataSurface>
       <Modal title={editing ? '编辑表信息' : '登记表'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={560}>
         <Form form={form} layout="vertical" initialValues={{ status: 'active' }} onFinish={(v) => void handleSubmit(v)}>
           <Form.Item name="datasourceName" label="数据源" rules={[{ required: true, message: '请输入数据源' }]}><Input /></Form.Item>
@@ -235,7 +240,7 @@ export default function MetadataTablePage() {
           <Form.Item name="tableName" label="表名" rules={[{ required: true, message: '请输入表名' }]}><Input /></Form.Item>
           <Form.Item name="tableComment" label="说明"><Input /></Form.Item>
           <Form.Item name="owner" label="负责人"><Input /></Form.Item>
-          <Form.Item name="rowCount" label="行数"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="rowCount" label="行数"><InputNumber min={0} className="full-width-control" /></Form.Item>
           <Form.Item name="status" label="状态">
             <Select options={[{ value: 'active', label: '正常' }, { value: 'inactive', label: '停用' }, { value: 'stale', label: '已消失' }]} />
           </Form.Item>

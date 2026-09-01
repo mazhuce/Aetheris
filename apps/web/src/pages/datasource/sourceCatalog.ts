@@ -7,23 +7,22 @@ export interface DataSourceDefinition {
   defaultPort: number
   defaultDatabase: string
   description: string
-  color: string
 }
 
 export const dataSourceCatalog: DataSourceDefinition[] = [
-  { value: 'postgresql', label: 'PostgreSQL', category: '关系型数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: '开源企业级关系型数据库', color: 'blue' },
-  { value: 'mysql', label: 'MySQL', category: '关系型数据库', defaultPort: 3306, defaultDatabase: 'mysql', description: '广泛使用的关系型数据库', color: 'cyan' },
-  { value: 'mariadb', label: 'MariaDB', category: '关系型数据库', defaultPort: 3306, defaultDatabase: 'mysql', description: '兼容 MySQL 协议', color: 'geekblue' },
-  { value: 'greenplum', label: 'Greenplum', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 协议分布式数仓', color: 'green' },
-  { value: 'opengauss', label: 'openGauss', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 协议企业数据库', color: 'purple' },
-  { value: 'cockroachdb', label: 'CockroachDB', category: '分布式数据库', defaultPort: 26257, defaultDatabase: 'defaultdb', description: 'PostgreSQL 协议云原生数据库', color: 'volcano' },
-  { value: 'yugabytedb', label: 'YugabyteDB', category: '分布式数据库', defaultPort: 5433, defaultDatabase: 'yugabyte', description: 'PostgreSQL 协议分布式数据库', color: 'magenta' },
-  { value: 'tidb', label: 'TiDB', category: '分布式数据库', defaultPort: 4000, defaultDatabase: 'test', description: 'MySQL 协议分布式数据库', color: 'orange' },
-  { value: 'oceanbase', label: 'OceanBase', category: '分布式数据库', defaultPort: 2881, defaultDatabase: 'test', description: 'MySQL 模式分布式数据库', color: 'gold' },
-  { value: 'doris', label: 'Apache Doris', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数仓', color: 'lime' },
-  { value: 'starrocks', label: 'StarRocks', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数据库', color: 'gold' },
-  { value: 'hive2', label: 'Apache Hive', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '通过 HiveServer2 JDBC 接入', color: 'orange' },
-  { value: 'spark', label: 'Spark Thrift Server', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '兼容 Hive2 JDBC 协议', color: 'purple' }
+  { value: 'postgresql', label: 'PostgreSQL', category: '关系型数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: '开源企业级关系型数据库' },
+  { value: 'mysql', label: 'MySQL', category: '关系型数据库', defaultPort: 3306, defaultDatabase: 'mysql', description: '广泛使用的关系型数据库' },
+  { value: 'mariadb', label: 'MariaDB', category: '关系型数据库', defaultPort: 3306, defaultDatabase: 'mysql', description: '兼容 MySQL 协议' },
+  { value: 'greenplum', label: 'Greenplum', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 协议分布式数仓' },
+  { value: 'opengauss', label: 'openGauss', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 协议企业数据库' },
+  { value: 'cockroachdb', label: 'CockroachDB', category: '分布式数据库', defaultPort: 26257, defaultDatabase: 'defaultdb', description: 'PostgreSQL 协议云原生数据库' },
+  { value: 'yugabytedb', label: 'YugabyteDB', category: '分布式数据库', defaultPort: 5433, defaultDatabase: 'yugabyte', description: 'PostgreSQL 协议分布式数据库' },
+  { value: 'tidb', label: 'TiDB', category: '分布式数据库', defaultPort: 4000, defaultDatabase: 'test', description: 'MySQL 协议分布式数据库' },
+  { value: 'oceanbase', label: 'OceanBase', category: '分布式数据库', defaultPort: 2881, defaultDatabase: 'test', description: 'MySQL 模式分布式数据库' },
+  { value: 'doris', label: 'Apache Doris', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数仓' },
+  { value: 'starrocks', label: 'StarRocks', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数据库' },
+  { value: 'hive2', label: 'Apache Hive', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '通过 HiveServer2 JDBC 接入' },
+  { value: 'spark', label: 'Spark Thrift Server', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '兼容 Hive2 JDBC 协议' }
 ]
 
 export const dataSourceGroups = (['关系型数据库', '分布式数据库', '数仓与湖仓'] as const).map((category) => ({

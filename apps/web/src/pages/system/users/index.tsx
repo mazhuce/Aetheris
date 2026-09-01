@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   App,
   Button,
-  Card,
   Form,
   Input,
   Modal,
-  Popconfirm,
   Select,
   Space,
   Table,
@@ -15,6 +13,10 @@ import {
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
 import {
   createAuthUser,
   deleteAuthUser,
@@ -35,7 +37,7 @@ const statusMeta = {
 type UserFormInput = CreateAuthUserInput
 
 export default function UserPage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const currentUsername = localStorage.getItem(USERNAME_KEY)
   const [allData, setAllData] = useState<AuthUser[]>([])
   const [loading, setLoading] = useState(false)
@@ -124,7 +126,7 @@ export default function UserPage() {
       render: (value: string) => (
         <Space>
           <span>{value}</span>
-          {value === currentUsername && <Tag color="blue">当前账号</Tag>}
+          {value === currentUsername && <Tag>当前账号</Tag>}
         </Space>
       )
     },
@@ -136,32 +138,39 @@ export default function UserPage() {
       dataIndex: 'role',
       key: 'role',
       width: 100,
-      render: (value: string) => <Tag color={value === 'admin' ? 'purple' : 'default'}>{value === 'admin' ? '管理员' : '只读用户'}</Tag>
+      render: (value: string) => <Tag>{value === 'admin' ? '管理员' : '只读用户'}</Tag>
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 90,
-      render: (value: AuthUser['status']) => <Tag color={statusMeta[value].color}>{statusMeta[value].text}</Tag>
+      render: (value: AuthUser['status']) => <StatusBadge tone={value === 'active' ? 'success' : 'neutral'}>{statusMeta[value].text}</StatusBadge>
     },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 56,
+      align: 'right',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm
-            title="确定删除该登录账号？"
-            disabled={record.username === currentUsername}
-            onConfirm={() => void handleDelete(record.id)}
-          >
-            <Button type="link" size="small" danger disabled={record.username === currentUsername}>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions items={[
+          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            disabled: record.username === currentUsername,
+            onClick: () => modal.confirm({
+              title: `删除账号“${record.username}”？`,
+              content: '删除后该账号将无法登录平台，此操作不可恢复。',
+              okText: '确认删除',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id)
+            })
+          }
+        ]} />
       )
     }
   ]
@@ -169,8 +178,7 @@ export default function UserPage() {
   return (
     <>
       <PageHeader
-        title="登录账号与权限"
-        description="认证账号由 Auth 服务统一管理；管理员可维护账号，只读用户不能修改平台资源。"
+        description="统一管理登录账号；管理员可维护账号，只读用户无权修改平台资源。"
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>
             新增登录账号
@@ -178,25 +186,24 @@ export default function UserPage() {
         }
       />
 
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
           <div className="filter-item">
             <span>用户名/昵称</span>
-            <Input placeholder="搜索用户名或昵称" value={keyword} onChange={(event) => setKeyword(event.target.value)} allowClear style={{ width: 180 }} />
+            <Input placeholder="搜索用户名或昵称" value={keyword} onChange={(event) => setKeyword(event.target.value)} allowClear className="filter-control-2xl" />
           </div>
           <div className="filter-item">
             <span>状态</span>
-            <Select value={status} onChange={setStatus} allowClear placeholder="全部" style={{ width: 110 }}
+            <Select value={status} onChange={setStatus} allowClear placeholder="全部" className="filter-control-xs"
               options={[{ value: 'active', label: '启用' }, { value: 'disabled', label: '禁用' }]} />
           </div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
+      </PageToolbar>
 
-      <Card size="small">
+      <DataSurface label="登录账号列表">
         <Table<AuthUser>
           size="small"
-          bordered
           rowKey="id"
           columns={columns}
           dataSource={filtered}
@@ -205,7 +212,7 @@ export default function UserPage() {
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无登录账号' }}
         />
-      </Card>
+      </DataSurface>
 
       <Modal
         title={editing ? '编辑登录账号' : '新增登录账号'}

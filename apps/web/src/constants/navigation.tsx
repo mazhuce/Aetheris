@@ -1,95 +1,227 @@
 import type { ReactNode } from 'react'
 import {
-  ApartmentOutlined,
   ApiOutlined,
-  CheckCircleOutlined,
+  BarChartOutlined,
+  CloudServerOutlined,
+  CodeOutlined,
   DashboardOutlined,
   DatabaseOutlined,
-  DeploymentUnitOutlined,
-  FileSearchOutlined,
-  FolderOutlined,
+  FolderOpenOutlined,
   PartitionOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
-  SettingOutlined,
-  ShareAltOutlined,
-  UserOutlined
+  SettingOutlined
 } from '@ant-design/icons'
 
-export interface NavItem {
+/**
+ * 一级能力域 + 二级菜单的统一导航配置（数据驱动）。
+ *
+ * 企业级智能数据中台按数据生命周期组织：数据接入 → 开发 → 建模 → 治理 → 资产 → 服务 →
+ * 分析 → 智能中心，并由运维中心与系统管理提供平台级支撑。
+ *
+ * - status: 'available' 表示已有真实页面；'comingSoon' 为规范占位页。
+ * - requiredRole: 仅 admin 可见的入口，与 <RequireRole> 路由门禁保持一致。
+ * - description: 占位页的能力说明文案，正式产品感，避免开发者化措辞。
+ */
+
+export type NavStatus = 'available' | 'comingSoon'
+
+export interface NavChild {
+  key: string
+  label: string
+  path: string
+  status: NavStatus
+  requiredRole?: 'admin'
+  description?: string
+}
+
+export interface NavModule {
   key: string
   label: string
   icon: ReactNode
-  path: string
-  requiredRole?: 'admin'
+  children: NavChild[]
 }
 
-export interface NavGroup {
-  key: string
-  label: string
-  items: NavItem[]
-}
-
-export const navGroups: NavGroup[] = [
+export const navModules: NavModule[] = [
   {
-    key: 'overview',
-    label: '总览',
-    items: [
-      { key: 'dashboard', label: '工作台', icon: <DashboardOutlined />, path: '/dashboard' }
+    key: 'workbench',
+    label: '工作台',
+    icon: <DashboardOutlined />,
+    children: [
+      { key: 'overview', label: '数据概览', path: '/workbench', status: 'available' },
+      { key: 'operations', label: '运行概览', path: '/workbench/operations', status: 'comingSoon', description: '集中展示数据接入、开发与调度任务的实时运行状态。' },
+      { key: 'todos', label: '我的待办', path: '/workbench/todos', status: 'comingSoon', description: '汇总与当前账号相关的审批、告警与待处理事项。' },
+      { key: 'recent', label: '最近访问', path: '/workbench/recent', status: 'comingSoon', description: '记录最近访问的数据表、资产与功能入口，便于快速定位。' }
     ]
   },
   {
-    key: 'data-asset',
-    label: '数据资产',
-    items: [
-      { key: 'datasource', label: '数据源管理', icon: <DatabaseOutlined />, path: '/metadata/datasource' },
-      { key: 'catalog', label: '元数据目录', icon: <FolderOutlined />, path: '/metadata/tables' },
-      { key: 'warehouse', label: '数仓地图', icon: <PartitionOutlined />, path: '/metadata/warehouse' },
-      { key: 'lineage', label: '数据血缘', icon: <ApartmentOutlined />, path: '/metadata/lineage' }
+    key: 'integration',
+    label: '数据接入',
+    icon: <DatabaseOutlined />,
+    children: [
+      { key: 'sources', label: '数据源管理', path: '/integration/sources', status: 'available' },
+      { key: 'sync', label: '数据同步', path: '/integration/sync', status: 'comingSoon', description: '配置数据库、文件与 API 之间的批量数据同步任务。' },
+      { key: 'realtime', label: '实时采集', path: '/integration/realtime', status: 'comingSoon', description: '基于实时数据源的流式采集与增量接入。' },
+      { key: 'tasks', label: '接入任务', path: '/integration/tasks', status: 'available' }
     ]
   },
   {
-    key: 'data-dev',
+    key: 'development',
     label: '数据开发',
-    items: [
-      { key: 'ingestion', label: '接入任务', icon: <ApiOutlined />, path: '/ingestion/tasks' },
-      { key: 'quality-rules', label: '质量规则', icon: <CheckCircleOutlined />, path: '/quality/rules' },
-      { key: 'governance', label: '治理策略', icon: <SafetyCertificateOutlined />, path: '/governance/policies' },
-      { key: 'workflow', label: '任务编排', icon: <DeploymentUnitOutlined />, path: '/workflow' }
+    icon: <CodeOutlined />,
+    children: [
+      { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'comingSoon', description: '提供 SQL 编写、调试与执行环境，支撑数据加工开发。' },
+      { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'comingSoon', description: '提交与管理 Spark 作业，支持大数据量离线计算。' },
+      { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'comingSoon', description: '以可视化方式编排任务依赖，构建端到端数据加工流水线。' },
+      { key: 'scheduling', label: '任务调度', path: '/development/scheduling', status: 'available' },
+      { key: 'releases', label: '发布管理', path: '/development/releases', status: 'comingSoon', description: '管理数据开发产物的发布、审批与版本上线。' }
     ]
   },
   {
-    key: 'data-service',
+    key: 'modeling',
+    label: '数据建模',
+    icon: <PartitionOutlined />,
+    children: [
+      { key: 'domains', label: '主题域', path: '/modeling/domains', status: 'comingSoon', description: '按业务主题划分数据域，统一数仓的领域边界。' },
+      { key: 'dimensions', label: '维度管理', path: '/modeling/dimensions', status: 'comingSoon', description: '维护公共维度与维度属性，统一分析口径。' },
+      { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'comingSoon', description: '定义业务指标的计算口径、归属与版本。' },
+      { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'comingSoon', description: '面向业务的概念与逻辑模型设计。' },
+      { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' }
+    ]
+  },
+  {
+    key: 'governance',
+    label: '数据治理',
+    icon: <SafetyCertificateOutlined />,
+    children: [
+      { key: 'metadata', label: '元数据管理', path: '/governance/metadata', status: 'available' },
+      { key: 'standards', label: '数据标准', path: '/governance/standards', status: 'comingSoon', description: '维护字段命名、编码与取值标准，统一数据规范。' },
+      { key: 'quality', label: '数据质量', path: '/governance/quality', status: 'available' },
+      { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
+      { key: 'classification', label: '分类分级', path: '/governance/classification', status: 'available' },
+      { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'comingSoon', description: '集中跟踪与闭环处理数据治理中发现的问题。' }
+    ]
+  },
+  {
+    key: 'assets',
+    label: '数据资产',
+    icon: <FolderOpenOutlined />,
+    children: [
+      { key: 'catalog', label: '资产目录', path: '/assets/catalog', status: 'comingSoon', description: '按主题与层级浏览企业数据资产全景。' },
+      { key: 'tables', label: '数据表', path: '/assets/tables', status: 'comingSoon', description: '浏览与理解平台中的表结构、字段及样例数据。' },
+      { key: 'datasets', label: '数据集', path: '/assets/datasets', status: 'available', description: '管理面向分析场景的、可复用的数据集。' },
+      { key: 'metrics', label: '指标资产', path: '/assets/metrics', status: 'comingSoon', description: '统一沉淀与共享企业指标资产。' },
+      { key: 'tags', label: '标签资产', path: '/assets/tags', status: 'comingSoon', description: '管理用户与实体的标签体系及标签资产。' },
+      { key: 'apis', label: 'API资产', path: '/assets/apis', status: 'comingSoon', description: '集中登记与展示可复用的数据 API 资产。' },
+      { key: 'products', label: '数据产品', path: '/assets/products', status: 'comingSoon', description: '管理面向业务交付的数据产品及其生命周期。' }
+    ]
+  },
+  {
+    key: 'services',
     label: '数据服务',
-    items: [
-      { key: 'serving', label: '数据服务', icon: <ShareAltOutlined />, path: '/serving' },
-      { key: 'api', label: 'API 管理', icon: <ApiOutlined />, path: '/serving/api' }
+    icon: <ApiOutlined />,
+    children: [
+      { key: 'apis', label: 'API管理', path: '/services/apis', status: 'comingSoon', description: '统一管理数据 API 的注册、发布与版本。' },
+      { key: 'development', label: 'API开发', path: '/services/development', status: 'comingSoon', description: '将数据表、SQL 或指标编排为数据服务 API。' },
+      { key: 'subscriptions', label: '数据订阅', path: '/services/subscriptions', status: 'comingSoon', description: '管理数据订阅需求与下发配置。' },
+      { key: 'authorization', label: '服务授权', path: '/services/authorization', status: 'comingSoon', description: '配置数据服务的使用授权与访问范围。' },
+      { key: 'monitoring', label: '服务监控', path: '/services/monitoring', status: 'comingSoon', description: '监控数据服务的调用、耗时与异常。' }
+    ]
+  },
+  {
+    key: 'analytics',
+    label: '数据分析',
+    icon: <BarChartOutlined />,
+    children: [
+      { key: 'query', label: '即席查询', path: '/analytics/query', status: 'comingSoon', description: '面向分析人员的自助式 SQL 即席查询。' },
+      { key: 'visualization', label: '可视化分析', path: '/analytics/visualization', status: 'comingSoon', description: '以拖拽方式编排图表，完成数据可视化探索。' },
+      { key: 'dashboards', label: '数据看板', path: '/analytics/dashboards', status: 'available', description: '编排与发布面向业务的运营看板。' },
+      { key: 'history', label: '查询历史', path: '/analytics/history', status: 'comingSoon', description: '查看与复用历史查询记录。' }
     ]
   },
   {
     key: 'ai',
-    label: 'AI 平台',
-    items: [
-      { key: 'ai-agent', label: '智能助手', icon: <RobotOutlined />, path: '/ai/chat' }
+    label: '智能中心',
+    icon: <RobotOutlined />,
+    children: [
+      { key: 'assistant', label: '数据助手', path: '/ai/assistant', status: 'available' },
+      { key: 'chatbi', label: '智能问数', path: '/ai/chatbi', status: 'comingSoon', description: '以自然语言提问，自动生成查询并返回结果。' },
+      { key: 'sql', label: 'SQL助手', path: '/ai/sql', status: 'comingSoon', description: '辅助编写、解释与优化 SQL。' },
+      { key: 'governance', label: '治理助手', path: '/ai/governance', status: 'comingSoon', description: '辅助完成数据标准、质量与血缘等治理任务。' },
+      { key: 'agents', label: 'Agent中心', path: '/ai/agents', status: 'comingSoon', description: '管理可编排的智能体与自动化流程。' }
     ]
   },
   {
-    key: 'system',
+    key: 'operations',
+    label: '运维中心',
+    icon: <CloudServerOutlined />,
+    children: [
+      { key: 'tasks', label: '任务监控', path: '/operations/tasks', status: 'comingSoon', description: '监控调度任务的运行状态、成功率与耗时。' },
+      { key: 'services', label: '服务监控', path: '/operations/services', status: 'comingSoon', description: '监控各微服务的健康与可用性。' },
+      { key: 'resources', label: '资源监控', path: '/operations/resources', status: 'comingSoon', description: '监控计算与存储资源的用量与水位。' },
+      { key: 'alerts', label: '告警中心', path: '/operations/alerts', status: 'comingSoon', description: '统一管理告警规则与告警事件。' },
+      { key: 'logs', label: '日志中心', path: '/operations/logs', status: 'comingSoon', description: '集中检索与查看平台运行日志。' },
+      { key: 'audit', label: '审计日志', path: '/operations/audit', status: 'available', requiredRole: 'admin' }
+    ]
+  },
+  {
+    key: 'admin',
     label: '系统管理',
-    items: [
-      { key: 'users', label: '用户权限', icon: <UserOutlined />, path: '/system/users', requiredRole: 'admin' },
-      { key: 'config', label: '系统配置', icon: <SettingOutlined />, path: '/system/config' },
-      { key: 'audit', label: '审计日志', icon: <FileSearchOutlined />, path: '/system/audit', requiredRole: 'admin' }
+    icon: <SettingOutlined />,
+    children: [
+      { key: 'users', label: '用户管理', path: '/admin/users', status: 'available', requiredRole: 'admin' },
+      { key: 'roles', label: '角色管理', path: '/admin/roles', status: 'comingSoon', description: '维护角色及其权限集合。' },
+      { key: 'organizations', label: '组织管理', path: '/admin/organizations', status: 'comingSoon', description: '维护组织与部门结构。' },
+      { key: 'permissions', label: '权限管理', path: '/admin/permissions', status: 'comingSoon', description: '配置功能与数据的访问权限。' },
+      { key: 'workspaces', label: '项目空间', path: '/admin/workspaces', status: 'comingSoon', description: '按项目或团队划分隔离的工作空间。' },
+      { key: 'settings', label: '系统配置', path: '/admin/settings', status: 'available' }
     ]
   }
 ]
 
-export function findNav(pathname: string): { group?: NavGroup; item?: NavItem } {
-  for (const group of navGroups) {
-    const item = group.items.find((entry) => entry.path === pathname)
-    if (item) {
-      return { group, item }
+/** 按路径首段匹配一级模块。 */
+export function findModule(pathname: string): NavModule | undefined {
+  const first = pathname.split('/')[1]
+  return navModules.find((module) => module.key === first)
+}
+
+/** 按最长路径前缀匹配二级项（/governance/quality → 数据质量）。 */
+export function findChild(pathname: string): { module: NavModule; child: NavChild } | undefined {
+  const module = findModule(pathname)
+  if (!module) return undefined
+  let best: NavChild | undefined
+  for (const child of module.children) {
+    if (pathname === child.path || pathname.startsWith(child.path + '/')) {
+      if (!best || child.path.length > best.path.length) best = child
     }
   }
-  return {}
+  return best ? { module, child: best } : undefined
+}
+
+/** 当前模块下首个可访问的真实功能（无 available 时回退到首项）。 */
+export function firstAvailablePath(module: NavModule, role?: 'admin' | 'viewer'): string {
+  const visible = module.children.filter((child) => !child.requiredRole || child.requiredRole === role)
+  const available = visible.find((child) => child.status === 'available')
+  return (available ?? visible[0])?.path ?? '/'
+}
+
+export interface FlatNavItem {
+  key: string
+  label: string
+  path: string
+  moduleLabel: string
+  requiredRole?: 'admin'
+}
+
+/** 展平为一级/二级合并列表，供全局搜索使用。 */
+export function flattenNavItems(): FlatNavItem[] {
+  return navModules.flatMap((module) =>
+    module.children.map((child) => ({
+      key: `${module.key}-${child.key}`,
+      label: child.label,
+      path: child.path,
+      moduleLabel: module.label,
+      requiredRole: child.requiredRole
+    }))
+  )
 }

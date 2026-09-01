@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Avatar, Button, Empty, Input, List, Popconfirm, Switch } from 'antd'
-import { DeleteOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
+import { Avatar, Button, Drawer, Empty, Input, List, Popconfirm, Switch, Tooltip } from 'antd'
+import { DeleteOutlined, HistoryOutlined, PlusOutlined, RobotOutlined, SendOutlined, UserOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import PageHeader from '@/components/PageHeader'
+import { ErrorState, LoadingState } from '@/components/FeedbackState'
 import {
   createConversation,
   deleteConversation,
@@ -25,6 +26,8 @@ export default function ChatPage() {
   // 因为工具调用会多花几轮模型请求，普通咨询不需要付这个代价。
   const [dataMode, setDataMode] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const refreshConversations = useCallback(async () => {
@@ -45,7 +48,7 @@ export default function ChatPage() {
           setMessages(await listMessages(list[0].id))
         }
       } catch {
-        /* ignore */
+        setLoadError('对话列表暂时无法加载，请稍后重试。')
       }
     })()
   }, [])
@@ -58,11 +61,14 @@ export default function ChatPage() {
 
   const openConversation = async (id: number) => {
     setCurrentId(id)
+    setHistoryOpen(false)
     setLoading(true)
+    setLoadError(null)
     try {
       setMessages(await listMessages(id))
     } catch {
       setMessages([])
+      setLoadError('对话内容暂时无法加载，请稍后重试。')
     } finally {
       setLoading(false)
     }
@@ -74,6 +80,7 @@ export default function ChatPage() {
       setConversations((prev) => [conversation, ...prev])
       setCurrentId(conversation.id)
       setMessages([])
+      setLoadError(null)
     } catch {
       /* ignore */
     }
@@ -116,11 +123,50 @@ export default function ChatPage() {
     }
   }
 
+  const conversationList = (
+    <>
+      <div className="conversation-heading"><span>对话记录</span><small>{conversations.length}</small></div>
+      <List
+        size="small"
+        dataSource={conversations}
+        locale={{ emptyText: <Empty description="暂无对话" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+        renderItem={(conversation) => (
+          <List.Item
+            onClick={() => void openConversation(conversation.id)}
+            className={`conversation-item${currentId === conversation.id ? ' active' : ''}`}
+            actions={[
+              <Popconfirm
+                key="delete"
+                title={`删除对话“${conversation.title}”？`}
+                description="删除后将无法恢复该对话记录。"
+                onConfirm={() => void handleDelete(conversation.id)}
+              >
+                <Tooltip title="删除对话">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    aria-label={`删除对话 ${conversation.title}`}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </Tooltip>
+              </Popconfirm>
+            ]}
+          >
+            <div className="conversation-copy">
+              <div className="conversation-title">{conversation.title}</div>
+              <div className="conversation-time">{formatDateTime(conversation.updatedAt)}</div>
+            </div>
+          </List.Item>
+        )}
+      />
+    </>
+  )
+
   return (
     <>
       <PageHeader
-        title="智能助手"
-        description="基于 DeepSeek 的数据平台智能助手，对话记录自动保存，支持 Markdown 回复。"
+        description="提供基于大语言模型的数据问答能力，对话记录自动保存，回复支持 Markdown 格式。"
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => void handleNew()}>
             新建对话
@@ -130,44 +176,17 @@ export default function ChatPage() {
 
       <div className="assistant-shell">
         <aside className="conversation-sidebar">
-            <div className="conversation-heading"><span>对话记录</span><small>{conversations.length}</small></div>
-            <List
-              size="small"
-              dataSource={conversations}
-              locale={{ emptyText: <Empty description="暂无对话" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-              renderItem={(conversation) => (
-                <List.Item
-                  onClick={() => void openConversation(conversation.id)}
-                  className={`conversation-item${currentId === conversation.id ? ' active' : ''}`}
-                  actions={[
-                    <Popconfirm
-                      key="delete"
-                      title="删除该对话？"
-                      onConfirm={() => void handleDelete(conversation.id)}
-                    >
-                      <Button
-                        type="text"
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={(event) => event.stopPropagation()}
-                      />
-                    </Popconfirm>
-                  ]}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <div className="conversation-title">
-                      {conversation.title}
-                    </div>
-                    <div className="conversation-time">{formatDateTime(conversation.updatedAt)}</div>
-                  </div>
-                </List.Item>
-              )}
-            />
+          {conversationList}
         </aside>
 
         <section className="assistant-main">
             <div className="assistant-toolbar">
-              <div className="assistant-identity"><span className="assistant-mark"><RobotOutlined /></span><div><strong>Aetheris AI</strong><small>Powered by DeepSeek</small></div></div>
+              <div className="assistant-identity">
+                <Tooltip title="打开对话记录">
+                  <Button className="assistant-mobile-history" type="text" size="small" icon={<HistoryOutlined />} aria-label="打开对话记录" onClick={() => setHistoryOpen(true)} />
+                </Tooltip>
+                <span className="assistant-mark"><RobotOutlined /></span><div><strong>Aetheris AI</strong><small>数据平台助手</small></div>
+              </div>
               <label className="assistant-mode">
                 <div><strong>{dataMode ? '数据模式' : '对话模式'}</strong><small>{dataMode ? '检索元数据并执行只读查询' : '仅使用模型知识，不查询数据'}</small></div>
                 <Switch size="small" checked={dataMode} onChange={setDataMode} />
@@ -175,7 +194,11 @@ export default function ChatPage() {
             </div>
 
             <div ref={scrollRef} className="chat-scroll assistant-messages">
-              {messages.length === 0 && !loading && (
+              {loading && <LoadingState rows={4} />}
+              {!loading && loadError && (
+                <ErrorState description={loadError} onRetry={currentId == null ? undefined : () => void openConversation(currentId)} />
+              )}
+              {messages.length === 0 && !loading && !loadError && (
                 <div className="assistant-empty">
                   <span className="assistant-empty-mark"><RobotOutlined /></span>
                   <h2>有什么可以帮你？</h2>
@@ -184,18 +207,18 @@ export default function ChatPage() {
                 </div>
               )}
 
-              {messages.map((message, index) => {
+              {!loading && !loadError && messages.map((message, index) => {
                 const isUser = message.role === 'user'
                 return (
                   <div key={index} className={`chat-msg ${isUser ? 'user' : ''}`}>
                     <Avatar
-                      size={32}
+                      size={26}
                       icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-                      style={{ background: '#071a3d', flexShrink: 0 }}
+                      className={`chat-avatar ${isUser ? 'is-user' : 'is-assistant'}`}
                     />
-                    <div style={{ maxWidth: '80%' }}>
-                      <div className="chat-meta" style={{ textAlign: isUser ? 'right' : 'left' }}>
-                        {isUser ? '我' : 'DeepSeek 助手'}
+                    <div className="chat-message-content">
+                      <div className="chat-meta">
+                        {isUser ? '我' : 'Aetheris AI'}
                       </div>
                       <div className="chat-bubble">
                         {isUser ? (
@@ -241,6 +264,17 @@ export default function ChatPage() {
             </div>
         </section>
       </div>
+
+      <Drawer
+        title="对话记录"
+        placement="left"
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        width={280}
+        className="assistant-history-drawer"
+      >
+        <div className="conversation-drawer-list">{conversationList}</div>
+      </Drawer>
     </>
   )
 }

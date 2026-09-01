@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Col, Empty, Row, Select, Space, Spin, Table, Tag, Tooltip } from 'antd'
+import { App, Button, Card, Col, Row, Select, Spin, Table, Tag, Tooltip } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { ArrowRightOutlined, PartitionOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import { EmptyState } from '@/components/FeedbackState'
 import {
   getWarehouseMap,
   listDataSources,
@@ -11,16 +15,6 @@ import {
   type WarehouseMap,
   type WarehouseTableBrief
 } from '@/api/metadata'
-
-/** 分层配色：按数据流向由浅入深，与元数据目录页保持一致。 */
-const LAYER_COLORS: Record<string, string> = {
-  ods: 'cyan',
-  dwd: 'blue',
-  dws: 'geekblue',
-  ads: 'purple',
-  dim: 'orange',
-  other: 'default'
-}
 
 /** 各层职责说明，鼠标悬停时展示，帮助不熟悉数仓分层的人理解。 */
 const LAYER_HINTS: Record<string, string> = {
@@ -85,49 +79,40 @@ export default function WarehouseMapPage() {
       key: 'status',
       width: 90,
       render: (v?: string) =>
-        v === 'stale' ? <Tag color="warning">已消失</Tag> : <Tag color="success">正常</Tag>
+        v === 'stale' ? <StatusBadge tone="warning">已消失</StatusBadge> : <StatusBadge tone="success">正常</StatusBadge>
     }
   ]
 
   return (
     <>
       <PageHeader
-        title="数仓地图"
-        description="按 ODS → DWD → DWS → ADS 的数据流向展示分层结构，点击层级查看该层表清单。层级由采集时按库名推断，可在元数据目录中人工修正。"
-        extra={
-          <Space>
+        description="按 ODS → DWD → DWS → ADS 分层结构展示数据流向，选择层级查看对应表清单。层级由采集时按库名推断，可在元数据目录中人工修正。"
+      />
+
+      <PageToolbar actions={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>}>
+        <div className="filter-bar">
+          <div className="filter-item">
+            <span>数据源</span>
             <Select
               placeholder="全部数据源"
               value={datasourceName}
               onChange={(v) => { setDatasourceName(v); setSelectedLayer(undefined) }}
               allowClear
-              style={{ width: 220 }}
+              className="filter-control-wide"
               options={dataSources.map((d) => ({ value: d.name, label: d.name }))}
             />
-            <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
-          </Space>
-        }
-      />
+          </div>
+        </div>
+      </PageToolbar>
 
       <Spin spinning={loading}>
         {activeLayers.length === 0 ? (
-          <Card size="small">
-            <Empty
-              description={
-                <div>
-                  <div>暂无分层元数据</div>
-                  <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
-                    请先在「元数据目录」执行采集，采集时会按库名自动推断层级。
-                  </div>
-                </div>
-              }
-            />
-          </Card>
+          <EmptyState title="暂无分层元数据" description="请先在元数据管理中执行采集，平台会在采集时按库名自动推断层级。" />
         ) : (
           <>
-            <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+            <Row gutter={[12, 12]} className="warehouse-flow">
               {activeLayers.map((layer, index) => (
-                <Col key={layer.layer} flex="1 1 0" style={{ minWidth: 190 }}>
+                <Col key={layer.layer} flex="1 1 0" className="warehouse-layer-column">
                   <LayerCard
                     layer={layer}
                     active={selectedLayer === layer.layer}
@@ -140,8 +125,7 @@ export default function WarehouseMapPage() {
               ))}
             </Row>
 
-            <Card
-              size="small"
+            <DataSurface
               title={
                 selected
                   ? `${selected.label}（${selected.layer}）· ${selected.tableCount} 张表`
@@ -157,14 +141,13 @@ export default function WarehouseMapPage() {
             >
               <Table<WarehouseTableBrief>
                 size="small"
-                bordered
                 rowKey="id"
                 columns={columns}
                 dataSource={selected ? selected.tables : activeLayers.flatMap((l) => l.tables)}
                 pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
                 locale={{ emptyText: '该层暂无表' }}
               />
-            </Card>
+            </DataSurface>
           </>
         )}
       </Spin>
@@ -180,47 +163,41 @@ interface LayerCardProps {
 }
 
 function LayerCard({ layer, active, showArrow, onClick }: LayerCardProps) {
-  const color = LAYER_COLORS[layer.layer] ?? 'default'
-
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div className="warehouse-layer-step">
       <Tooltip title={LAYER_HINTS[layer.layer]}>
         <Card
           size="small"
           hoverable
+          className={`warehouse-layer-card${active ? ' is-active' : ''}`}
+          role="button"
+          tabIndex={0}
+          aria-pressed={active}
           onClick={onClick}
-          style={{
-            flex: 1,
-            cursor: 'pointer',
-            borderColor: active ? '#071a3d' : undefined,
-            borderWidth: active ? 2 : 1
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onClick()
+            }
           }}
-          styles={{ body: { padding: '12px 14px' } }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Tag color={color} style={{ marginInlineEnd: 0 }}>{layer.label}</Tag>
-            <PartitionOutlined style={{ color: '#bfbfbf' }} />
+          <div className="warehouse-layer-heading">
+            <Tag>{layer.label}</Tag>
+            <PartitionOutlined className="warehouse-layer-icon" />
           </div>
-          <div style={{ marginTop: 10, fontSize: 24, fontWeight: 600, lineHeight: 1.2 }}>
+          <div className="warehouse-layer-count">
             {layer.tableCount}
           </div>
-          <div style={{ marginTop: 2, fontSize: 12, color: '#8c8c8c' }}>张表</div>
+          <div className="warehouse-layer-unit">张表</div>
           <div
-            style={{
-              marginTop: 8,
-              fontSize: 12,
-              color: '#8c8c8c',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
+            className="warehouse-layer-schemas"
             title={layer.schemas.join('、')}
           >
             {layer.schemas.length > 0 ? layer.schemas.join('、') : '—'}
           </div>
         </Card>
       </Tooltip>
-      {showArrow && <ArrowRightOutlined style={{ color: '#d9d9d9', flexShrink: 0 }} />}
+      {showArrow && <ArrowRightOutlined className="warehouse-flow-arrow" />}
     </div>
   )
 }

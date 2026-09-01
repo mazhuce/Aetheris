@@ -1,0 +1,17 @@
+# 前端开发镜像：依赖固化在镜像中，源码由 Compose 挂载并由 Vite HMR 更新。
+ARG NODE_IMAGE=docker.1panel.live/library/node:22-alpine
+FROM ${NODE_IMAGE}
+
+WORKDIR /app
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund --registry="${NPM_REGISTRY}"
+
+COPY index.html tsconfig.json vite.config.ts ./
+COPY public ./public
+COPY src ./src
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

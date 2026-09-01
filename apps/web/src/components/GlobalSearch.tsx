@@ -7,8 +7,9 @@ import {
   SearchOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { navGroups } from '@/constants/navigation'
+import { flattenNavItems } from '@/constants/navigation'
 import { searchTables, warehouseLayerLabel, type MetadataTable } from '@/api/metadata'
+import { getCurrentRole } from '@/utils/access'
 
 interface NavResult {
   kind: 'nav'
@@ -37,6 +38,7 @@ type Result = NavResult | TableResult
  */
 export default function GlobalSearch() {
   const navigate = useNavigate()
+  const role = getCurrentRole()
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [tables, setTables] = useState<MetadataTable[]>([])
@@ -44,12 +46,14 @@ export default function GlobalSearch() {
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<InputRef>(null)
 
-  // ⌘K / Ctrl+K 唤起，与顶部触发按钮上标注的快捷键一致。
+  // 保留 ⌘K / Ctrl+K 快捷操作，但不在紧凑的顶部栏里占用额外空间。
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
         setOpen(true)
+      } else if (event.key === 'Escape') {
+        setOpen(false)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -92,21 +96,20 @@ export default function GlobalSearch() {
   const navResults = useMemo<NavResult[]>(() => {
     const trimmed = keyword.trim().toLowerCase()
     const matches: NavResult[] = []
-    for (const group of navGroups) {
-      for (const item of group.items) {
-        if (!trimmed || item.label.toLowerCase().includes(trimmed) || group.label.toLowerCase().includes(trimmed)) {
-          matches.push({
-            kind: 'nav',
-            key: `nav-${item.key}`,
-            title: item.label,
-            subtitle: group.label,
-            path: item.path
-          })
-        }
+    for (const item of flattenNavItems()) {
+      if (item.requiredRole && item.requiredRole !== role) continue
+      if (!trimmed || item.label.toLowerCase().includes(trimmed) || item.moduleLabel.toLowerCase().includes(trimmed)) {
+        matches.push({
+          kind: 'nav',
+          key: `nav-${item.key}`,
+          title: item.label,
+          subtitle: item.moduleLabel,
+          path: item.path
+        })
       }
     }
     return matches
-  }, [keyword])
+  }, [keyword, role])
 
   const results = useMemo<Result[]>(() => {
     const tableResults: TableResult[] = tables.map((table) => ({
@@ -114,7 +117,7 @@ export default function GlobalSearch() {
       key: `table-${table.id}`,
       title: table.tableName,
       subtitle: table.tableComment || table.schemaName || table.datasourceName,
-      path: '/metadata/tables',
+      path: '/governance/metadata',
       table
     }))
     return [...navResults, ...tableResults]
@@ -138,7 +141,10 @@ export default function GlobalSearch() {
   )
 
   const onKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'ArrowDown') {
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      setOpen(false)
+    } else if (event.key === 'ArrowDown') {
       event.preventDefault()
       setActiveIndex((index) => Math.min(index + 1, results.length - 1))
     } else if (event.key === 'ArrowUp') {
@@ -155,10 +161,9 @@ export default function GlobalSearch() {
 
   return (
     <>
-      <button className="command-trigger" onClick={() => setOpen(true)}>
+      <button className="command-trigger" onClick={() => setOpen(true)} aria-label="打开全局搜索">
         <SearchOutlined />
         <span>搜索或跳转</span>
-        <kbd>⌘ K</kbd>
       </button>
       <Modal
         open={open}
@@ -167,13 +172,13 @@ export default function GlobalSearch() {
         closable={false}
         width={620}
         className="global-search-modal"
-        destroyOnClose
+        destroyOnHidden
       >
         <div className="global-search">
           <Input
             ref={inputRef}
             size="large"
-            prefix={<SearchOutlined style={{ color: '#707075' }} />}
+            prefix={<SearchOutlined />}
             placeholder="搜索导航或元数据表…"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
@@ -183,18 +188,20 @@ export default function GlobalSearch() {
           />
           <div className="global-search-results">
             {results.length === 0 && !tableLoading && (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={keyword.trim() ? '未找到匹配结果' : '输入关键词开始搜索'} style={{ margin: '32px 0' }} />
+              <Empty className="global-search-empty" image={Empty.PRESENTED_IMAGE_SIMPLE} description={keyword.trim() ? '未找到匹配结果' : '输入关键词开始搜索'} />
             )}
             {tableLoading && results.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 32 }}><Spin size="small" /></div>
+              <div className="global-search-loading"><Spin size="small" /></div>
             )}
-            <ul className="global-search-list">
+            <ul className="global-search-list" role="listbox" aria-label="搜索结果">
               {results.map((result, index) => (
                 <li
                   key={result.key}
                   className={`global-search-item${index === activeIndex ? ' is-active' : ''}`}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => goTo(result)}
+                  role="option"
+                  aria-selected={index === activeIndex}
                 >
                   <span className="global-search-item-icon">{iconOf(result)}</span>
                   <span className="global-search-item-text">
@@ -204,7 +211,7 @@ export default function GlobalSearch() {
                   {result.kind === 'nav' ? (
                     <Tag>导航</Tag>
                   ) : (
-                    <Tag color="blue">{warehouseLayerLabel(result.table.layer)}</Tag>
+                    <Tag>{warehouseLayerLabel(result.table.layer)}</Tag>
                   )}
                 </li>
               ))}

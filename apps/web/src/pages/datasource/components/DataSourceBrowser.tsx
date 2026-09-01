@@ -94,7 +94,7 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
   const columnDefinitions: TableColumnsType<DataSourceColumn> = [
     { title: '#', dataIndex: 'ordinal', width: 56 },
     { title: '字段名', dataIndex: 'name', width: 180 },
-    { title: '类型', dataIndex: 'type', width: 160, render: (value: string) => <Tag color="blue">{value}</Tag> },
+    { title: '类型', dataIndex: 'type', width: 160, render: (value: string) => <Tag>{value}</Tag> },
     { title: '长度', dataIndex: 'size', width: 90, render: (value?: number) => value || '—' },
     { title: '可空', dataIndex: 'nullable', width: 80, render: (value?: boolean) => value === false ? '否' : '是' },
     { title: '说明', dataIndex: 'remarks', ellipsis: true, render: (value?: string) => value || '—' }
@@ -115,14 +115,14 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
       title="库表浏览"
       open={open}
       onClose={onClose}
-      width={1000}
-      destroyOnClose
+      width="min(100vw, 1000px)"
+      destroyOnHidden
     >
       {dataSource && (
         <>
           <Descriptions size="small" column={4} className="datasource-browser-summary">
             <Descriptions.Item label="数据源">{dataSource.name}</Descriptions.Item>
-            <Descriptions.Item label="类型"><Tag color={definition.color}>{definition.label}</Tag></Descriptions.Item>
+            <Descriptions.Item label="类型"><Tag>{definition.label}</Tag></Descriptions.Item>
             <Descriptions.Item label="地址">{dataSource.host}:{dataSource.port ?? definition.defaultPort}</Descriptions.Item>
             <Descriptions.Item label="默认库">{dataSource.databaseName || '—'}</Descriptions.Item>
           </Descriptions>
@@ -136,7 +136,7 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
                 loading={loadingSchemas}
                 placeholder="选择库"
                 onChange={handleSchemaChange}
-                style={{ width: '100%' }}
+                className="full-width-control"
               />
             </div>
             <div>
@@ -149,7 +149,7 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
                 showSearch
                 placeholder={tables.length ? '选择数据表' : '当前库暂无数据表'}
                 onChange={(value) => void handleTableChange(value)}
-                style={{ width: '100%' }}
+                className="full-width-control"
               />
             </div>
           </div>
@@ -169,11 +169,10 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
                     key: 'preview',
                     label: `数据预览 ${preview ? `(${preview.rowCount})` : ''}`,
                     children: preview ? (
-                      <Space direction="vertical" style={{ width: '100%' }}>
+                      <Space direction="vertical" className="full-width-stack">
                         {preview.truncated && <Alert type="info" showIcon message="结果已限制为前 50 行" />}
                         <Table
                           size="small"
-                          bordered
                           pagination={false}
                           dataSource={previewRows}
                           columns={preview.columns.map((column) => ({ title: column, dataIndex: column, key: column, ellipsis: true, width: 160 }))}

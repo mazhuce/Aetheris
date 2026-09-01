@@ -77,7 +77,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
       onOk={() => form.submit()}
       confirmLoading={submitting}
       width={760}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={(v) => void handleSubmit(v)}>
         <Form.Item
@@ -114,7 +114,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           <Input.TextArea
             rows={8}
             placeholder={"INSERT OVERWRITE TABLE dwd.dwd_order PARTITION (dt='${bizDate}')\nSELECT ... FROM ods.ods_order WHERE dt = '${bizDate}'"}
-            style={{ fontFamily: 'monospace', fontSize: 12 }}
+            className="code-input"
           />
         </Form.Item>
 
@@ -150,7 +150,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           label="超时时间（秒）"
           rules={[{ required: true, message: '请输入超时时间' }]}
         >
-          <InputNumber min={1} max={86400} style={{ width: '100%' }} />
+          <InputNumber min={1} max={86400} className="full-width-control" />
         </Form.Item>
 
         <Form.Item
@@ -159,7 +159,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           rules={[{ required: true, message: '请输入重试次数' }]}
           extra="0 表示不重试。重试仍复用同一实例，只累加尝试次数。"
         >
-          <InputNumber min={0} max={10} style={{ width: '100%' }} />
+          <InputNumber min={0} max={10} className="full-width-control" />
         </Form.Item>
 
         <Form.Item name="status" label="状态">

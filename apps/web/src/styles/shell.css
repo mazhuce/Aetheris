@@ -1,0 +1,302 @@
+.app-shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+.app-ambient {
+  display: none;
+}
+
+.topnav {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+  height: var(--topnav-height);
+  flex: 0 0 var(--topnav-height);
+  padding: 0 var(--space-5);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-nav);
+}
+
+.topnav-brand,
+.topnav-logo {
+  display: flex;
+  align-items: center;
+}
+
+.topnav-brand {
+  flex: 0 0 auto;
+}
+
+.topnav-logo {
+  gap: 11px;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.topnav-wordmark {
+  display: grid;
+  line-height: 1;
+}
+
+.topnav-wordmark strong {
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+}
+
+.brand-mark,
+.topnav-logo .brand-mark {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+}
+
+.topnav-modules {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  min-width: 0;
+  height: 100%;
+  flex: 1 1 auto;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+}
+
+.topnav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-tertiary);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 520;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.topnav-item::after {
+  content: "";
+  position: absolute;
+  right: var(--space-3);
+  bottom: -1px;
+  left: var(--space-3);
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+}
+
+.topnav-item:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.topnav-item.active {
+  color: var(--text-primary);
+  font-weight: 580;
+}
+
+.topnav-item.active::after {
+  background: var(--accent);
+}
+
+.topnav-item-icon {
+  display: inline-grid;
+  place-items: center;
+  color: currentColor;
+  font-size: 15px;
+}
+
+.topnav-more-icon {
+  font-size: 8px;
+  opacity: 0.72;
+}
+
+.topnav-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+}
+
+.command-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 164px;
+  height: var(--control-sm);
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  font-size: var(--font-table);
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--motion-fast) ease, border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.command-trigger:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.command-trigger > span:nth-child(2) {
+  overflow: hidden;
+  flex: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.create-button.ant-btn {
+  height: var(--control-sm);
+  padding-inline: var(--space-3);
+}
+
+.account-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: var(--control-lg);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.account-button:hover {
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
+}
+
+.account-button .ant-avatar {
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+}
+
+.account-copy {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  text-align: left;
+}
+
+.account-copy strong {
+  max-width: 96px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--font-meta);
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subnav {
+  position: relative;
+  z-index: 30;
+  display: flex;
+  width: 100%;
+  height: var(--subnav-height);
+  flex: 0 0 var(--subnav-height);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-app);
+}
+
+.subnav-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--space-6);
+}
+
+.subnav-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 100%;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.subnav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.subnav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.subnav-item:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.subnav-item.active {
+  color: var(--text-primary);
+  background: var(--bg-selected);
+  font-weight: 620;
+}
+
+.subnav-badge {
+  color: var(--text-disabled);
+  font-size: 10px;
+}
+
+.app-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+  background: var(--bg-app);
+}
+
+.content-frame {
+  width: 100%;
+  min-height: 100%;
+}
+
+.route-stage {
+  width: 100%;
+  min-height: 100%;
+  padding: var(--space-6) var(--space-7) var(--space-8);
+}

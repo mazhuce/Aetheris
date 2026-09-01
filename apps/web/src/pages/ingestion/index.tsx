@@ -1,13 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { App, Button, Form, Input, Modal, Select, Table, Tag, Tooltip } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { PlayCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
 import { createTask, deleteTask, listTasks, runTask, updateTask, type IngestionTask, type IngestionTaskInput } from '@/api/ingestion'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 
 export default function IngestionPage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [allData, setAllData] = useState<IngestionTask[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -50,37 +56,54 @@ export default function IngestionPage() {
     { title: '来源类型', dataIndex: 'sourceType', key: 'sourceType', width: 110, render: (v: string) => <Tag>{v}</Tag> },
     { title: '目标表', dataIndex: 'targetTable', key: 'targetTable', width: 150 },
     { title: '调度', dataIndex: 'scheduleCron', key: 'scheduleCron', width: 120, render: (v?: string) => v || '手动' },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 90, render: (v?: string) => v === 'enabled' ? <Tag color="success">启用</Tag> : <Tag>停用</Tag> },
-    { title: '上次结果', dataIndex: 'lastRunStatus', key: 'lastRunStatus', width: 100, render: (v?: string) => v ? <Tag color={v === 'success' ? 'success' : 'error'}>{v}</Tag> : '—' },
-    { title: '上次运行', dataIndex: 'lastRunAt', key: 'lastRunAt', width: 170, render: (v?: string) => formatDateTime(v) },
-    {
+    { title: '状态', dataIndex: 'status', key: 'status', width: 90, render: (v?: string) => <StatusBadge tone={v === 'enabled' ? 'success' : 'neutral'}>{v === 'enabled' ? '启用' : '停用'}</StatusBadge> },
+    { title: '上次结果', dataIndex: 'lastRunStatus', key: 'lastRunStatus', width: 100, render: (v?: string) => v ? <StatusBadge tone={v === 'success' ? 'success' : 'danger'}>{v === 'success' ? '成功' : '失败'}</StatusBadge> : '—' },
+    { title: '上次运行', dataIndex: 'lastRunAt', key: 'lastRunAt', width: 170, render: (v?: string) => formatDateTime(v) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 96,
+      align: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={() => void handleRun(record.id)}>运行</Button>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm title="确定删除该任务？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions
+          primary={(
+            <Tooltip title="立即运行">
+              <Button type="text" size="small" icon={<PlayCircleOutlined />} aria-label={`运行任务 ${record.name}`} onClick={() => void handleRun(record.id)} />
+            </Tooltip>
+          )}
+          items={[
+            { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+            {
+              key: 'delete',
+              label: '删除',
+              danger: true,
+              onClick: () => modal.confirm({
+                title: `删除任务“${record.name}”？`,
+                content: '删除后该接入任务将无法继续运行，此操作不可恢复。',
+                okText: '确认删除',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id)
+              })
+            }
+          ]}
+        />
       )
-    }
-  ]
+    })
 
   return (
     <>
-      <PageHeader title="接入任务" description="配置数据接入任务，支持数据库、API、文件等多种来源。" extra={<Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新增任务</Button>} />
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageHeader description="配置数据接入任务，覆盖数据库、API 与文件等多种数据来源。" extra={canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新增任务</Button> : <Tag>只读访问</Tag>} />
+      <PageToolbar>
         <div className="filter-bar">
-          <div className="filter-item"><span>名称/目标表</span><Input placeholder="搜索名称或目标表" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear style={{ width: 200 }} /></div>
+          <div className="filter-item"><span>名称/目标表</span><Input placeholder="搜索名称或目标表" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear className="filter-control-3xl" /></div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
-      <Card size="small">
-        <Table<IngestionTask> size="small" bordered rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1100 }} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无接入任务' }} />
-      </Card>
+      </PageToolbar>
+      <DataSurface label="接入任务列表">
+        <Table<IngestionTask> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1000 }} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无接入任务' }} />
+      </DataSurface>
       <Modal title={editing ? '编辑任务' : '新增任务'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={560}>
         <Form form={form} layout="vertical" initialValues={{ sourceType: 'mysql', status: 'enabled' }} onFinish={(v) => void handleSubmit(v)}>
           <Form.Item name="name" label="任务名称" rules={[{ required: true, message: '请输入名称' }]}><Input /></Form.Item>

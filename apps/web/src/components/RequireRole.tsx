@@ -11,7 +11,7 @@ export default function RequireRole({
   role: UserRole
 }) {
   if (localStorage.getItem(ROLE_KEY) !== role) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/workbench" replace />
   }
   return children
 }

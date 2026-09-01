@@ -50,6 +50,25 @@ services:
       postgres:
         condition: service_healthy
 
+  serving-service:
+    build:
+      context: .
+      dockerfile: services/serving/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      metadata-service:
+        condition: service_started
+
   quality-service:
     build:
       context: .
@@ -183,6 +202,8 @@ services:
       WORKFLOW_SERVICE_PORT: "8088"
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
+      SERVING_SERVICE_HOST: serving-service
+      SERVING_SERVICE_PORT: "8089"
     depends_on:
       - system-service
       - metadata-service
@@ -192,12 +213,17 @@ services:
       - ai-agent
       - workflow-service
       - auth-service
+      - serving-service
     ports:
       - "8080:8080"
 
   web:
+    image: aetheris-web-prod:latest
     build:
       context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     restart: unless-stopped
     depends_on:
       - gateway

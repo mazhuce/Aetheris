@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { App, Button, Card, Form, Input, Typography } from 'antd'
-import { ArrowRightOutlined, CheckCircleFilled, LockOutlined, UserOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { login } from '@/api/auth'
 import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
@@ -24,7 +24,7 @@ export default function LoginPage() {
       localStorage.setItem(USERNAME_KEY, result.username)
       localStorage.setItem(ROLE_KEY, result.role)
       message.success('登录成功')
-      navigate('/dashboard', { replace: true })
+      navigate('/workbench', { replace: true })
     } catch (error) {
       // 原实现把所有异常都报成「用户名或密码错误」，导致网络故障、服务未启动、
       // 账号被锁定等情况全部显示为凭据错误，排查时被误导。这里按实际状态码区分。
@@ -61,23 +61,25 @@ export default function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-story">
-        <div className="login-brand"><BrandMark /><span>Aetheris</span></div>
+        <div className="login-brand">
+          <BrandMark />
+          <strong>Aetheris</strong>
+        </div>
         <div className="login-copy">
-          <h1>把复杂的数据工作，<br />变成清晰的流动。</h1>
-          <p>连接、治理、编排与洞察，在一个安静而高效的工作空间里完成。</p>
+          <h1>让数据有序流动，<br /><em>让价值清晰发生。</em></h1>
+          <p>连接数据、沉淀标准、编排任务、发布服务，在统一工作空间里完成从数据到决策的闭环。</p>
           <div className="login-proof">
-            <span><CheckCircleFilled /> 统一数据资产</span>
-            <span><CheckCircleFilled /> 实时任务状态</span>
-            <span><CheckCircleFilled /> 企业级权限</span>
+            <span><small>01</small><strong>统一数据资产</strong><em>多源汇聚，一处掌握</em></span>
+            <span><small>02</small><strong>可信开发治理</strong><em>标准贯穿，全程可溯</em></span>
+            <span><small>03</small><strong>敏捷分析服务</strong><em>快速交付，持续更新</em></span>
           </div>
         </div>
-        <div className="login-legal">© 2026 Aetheris · Built for modern data teams</div>
+        <div className="login-legal"><span>© 2026 Aetheris</span><span>Secure workspace · v0.2</span></div>
       </section>
       <section className="login-panel">
         <Card className="login-card" variant="borderless">
           <div className="login-card-head">
             <Typography.Title level={2}>欢迎回来</Typography.Title>
-            <Typography.Text type="secondary">登录你的工作空间以继续</Typography.Text>
           </div>
           <Form layout="vertical" requiredMark={false} onFinish={(values) => void handleSubmit(values as LoginForm)}>
             <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
@@ -87,7 +89,7 @@ export default function LoginPage() {
               <Input.Password prefix={<LockOutlined />} placeholder="输入密码" size="large" autoComplete="current-password" />
             </Form.Item>
             <Button className="login-submit" type="primary" htmlType="submit" block size="large" loading={loading}>
-              登录 <ArrowRightOutlined />
+              进入工作空间 <ArrowRightOutlined />
             </Button>
           </Form>
           <div className="login-help">无法登录？请联系你的系统管理员</div>

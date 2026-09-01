@@ -32,6 +32,7 @@ import {
   type TaskView
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
+import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
 
 interface Props {
   taskId: number | null
@@ -41,7 +42,7 @@ interface Props {
 
 /** 日志级别配色，与实例状态的语义保持一致。 */
 const LOG_LEVEL_COLOR: Record<string, string> = {
-  info: 'blue',
+  info: 'default',
   warn: 'orange',
   error: 'red'
 }
@@ -133,6 +134,14 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
     }
   }
 
+  const instanceTone = (status: TaskInstance['status']): StatusTone => {
+    if (status === 'success') return 'success'
+    if (status === 'failed') return 'danger'
+    if (status === 'skipped') return 'warning'
+    if (status === 'running') return 'info'
+    return 'neutral'
+  }
+
   const instanceColumns: TableColumnsType<TaskInstance> = [
     { title: '业务日期', dataIndex: 'bizDate', key: 'bizDate', width: 110 },
     {
@@ -141,9 +150,9 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       key: 'status',
       width: 90,
       render: (v: TaskInstance['status']) => (
-        <Tag color={INSTANCE_STATUS_META[v]?.color}>
+        <StatusBadge tone={instanceTone(v)}>
           {INSTANCE_STATUS_META[v]?.label ?? v}
-        </Tag>
+        </StatusBadge>
       )
     },
     {
@@ -187,7 +196,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       ellipsis: true,
       render: (v?: string) =>
         v
-          ? <span style={{ color: '#071a3d' }}>{v}</span>
+          ? <span className="result-error">{v}</span>
           : '—'
     },
     {
@@ -210,7 +219,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       title={view?.task.name ?? '任务详情'}
       open={taskId !== null}
       onClose={onClose}
-      width={960}
+      width="min(100vw, 960px)"
       extra={
         <Button icon={<ReloadOutlined />} size="small" onClick={() => void refresh()}>
           刷新
@@ -227,7 +236,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                 label: '概览',
                 children: (
                   <>
-                    <Descriptions size="small" bordered column={2}>
+                    <Descriptions className="detail-descriptions" size="small" column={2}>
                       <Descriptions.Item label="任务名称" span={2}>
                         {view.task.name}
                       </Descriptions.Item>
@@ -239,12 +248,12 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                       </Descriptions.Item>
                       <Descriptions.Item label="状态">
                         {view.task.status === 'enabled'
-                          ? <Tag color="success">启用</Tag>
-                          : <Tag>停用</Tag>}
+                          ? <StatusBadge tone="success">启用</StatusBadge>
+                          : <StatusBadge tone="neutral">停用</StatusBadge>}
                       </Descriptions.Item>
                       <Descriptions.Item label="调度">
                         {view.task.cronExpression
-                          ? <Tag color="blue">{view.task.cronExpression}</Tag>
+                          ? <Tag>{view.task.cronExpression}</Tag>
                           : <Tag>仅手动</Tag>}
                       </Descriptions.Item>
                       <Descriptions.Item label="下次触发">
@@ -263,15 +272,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                         {view.task.description || '—'}
                       </Descriptions.Item>
                       <Descriptions.Item label="加工 SQL" span={2}>
-                        <pre
-                          style={{
-                            margin: 0,
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-all',
-                            fontFamily: 'monospace',
-                            fontSize: 12
-                          }}
-                        >
+                        <pre className="code-panel">
                           {view.task.taskSql}
                         </pre>
                       </Descriptions.Item>
@@ -286,7 +287,6 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                   <>
                     <Table<TaskInstance>
                       size="small"
-                      bordered
                       rowKey="id"
                       columns={instanceColumns}
                       dataSource={instances}
@@ -294,8 +294,8 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                       locale={{ emptyText: '暂无运行记录' }}
                     />
                     {selectedInstance !== null && (
-                      <div style={{ marginTop: 16 }}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                      <div className="log-panel">
+                        <div className="log-panel-title">
                           实例 #{selectedInstance} 执行日志
                         </div>
                         {logs.length === 0 ? (
@@ -308,11 +308,11 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                                 <div>
                                   <Space size={8}>
                                     <Tag color={LOG_LEVEL_COLOR[entry.level]}>{entry.level}</Tag>
-                                    <span style={{ color: '#8c8c8c', fontSize: 12 }}>
+                                    <span className="log-time">
                                       {formatDateTime(entry.createdAt)}
                                     </span>
                                   </Space>
-                                  <div style={{ marginTop: 4 }}>{entry.message}</div>
+                                  <div className="log-message">{entry.message}</div>
                                 </div>
                               )
                             }))}
@@ -328,10 +328,10 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                 label: `上游依赖（${dependencies.length}）`,
                 children: (
                   <>
-                    <Space style={{ marginBottom: 16 }}>
+                    <Space className="dependency-toolbar">
                       <Select
                         placeholder="选择上游任务"
-                        style={{ width: 280 }}
+                        className="dependency-select"
                         value={upstreamToAdd}
                         onChange={setUpstreamToAdd}
                         onDropdownVisibleChange={(open) => { if (open) void loadCandidates() }}
@@ -354,7 +354,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                         description={
                           <div>
                             <div>无上游依赖</div>
-                            <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 4 }}>
+                            <div className="empty-detail-copy">
                               添加依赖后，上游任务在同一业务日期成功前，本任务会被标记为「已跳过」而非失败。
                             </div>
                           </div>
@@ -363,7 +363,6 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                     ) : (
                       <Table<TaskDependency>
                         size="small"
-                        bordered
                         rowKey="id"
                         pagination={false}
                         dataSource={dependencies}

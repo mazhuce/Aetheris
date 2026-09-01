@@ -86,7 +86,7 @@ export default function DataSourceForm({
       open={open}
       onCancel={onCancel}
       width={780}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <Space>
           <Button onClick={onCancel}>取消</Button>
@@ -103,7 +103,7 @@ export default function DataSourceForm({
         <div className="datasource-preset-panel">
           <div>
             <Typography.Text strong>快速接入 Hive 测试环境</Typography.Text>
-            <Typography.Paragraph type="secondary" style={{ margin: '2px 0 0' }}>
+            <Typography.Paragraph type="secondary" className="helper-paragraph">
               预设只负责填写地址，点击“测试连接”后才会向真实服务发起 JDBC 请求。
             </Typography.Paragraph>
           </div>
@@ -139,7 +139,7 @@ export default function DataSourceForm({
                 className="datasource-type-hint"
                 type="info"
                 showIcon
-                message={<Space><Tag color={definition.color}>{definition.label}</Tag><span>{definition.description}</span></Space>}
+                message={<Space><Tag>{definition.label}</Tag><span>{definition.description}</span></Space>}
               />
             )
           }}
@@ -153,7 +153,7 @@ export default function DataSourceForm({
           </Col>
           <Col span={8}>
             <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口' }]}>
-              <InputNumber min={1} max={65535} style={{ width: '100%' }} />
+              <InputNumber min={1} max={65535} className="full-width-control" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -203,7 +203,7 @@ export default function DataSourceForm({
 
       {testResult && (
         <Alert
-          style={{ marginTop: 12 }}
+          className="form-section-space"
           type={testResult.success ? 'success' : 'error'}
           showIcon
           icon={testResult.success ? <CheckCircleOutlined /> : undefined}

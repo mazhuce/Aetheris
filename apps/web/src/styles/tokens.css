@@ -1,0 +1,90 @@
+:root {
+  color-scheme: dark;
+
+  /* Semantic colour system */
+  --bg-app: #101114;
+  --bg-nav: #131417;
+  --bg-surface: #16171b;
+  --bg-subtle: #1a1b20;
+  --bg-raised: #1e1f24;
+  --bg-hover: #202126;
+  --bg-selected: rgba(255, 255, 255, 0.08);
+
+  --text-primary: #eeeef1;
+  --text-secondary: #a8abb3;
+  --text-tertiary: #777b85;
+  --text-disabled: #565a63;
+
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-subtle: rgba(255, 255, 255, 0.065);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --accent: #f0f0f2;
+  --accent-hover: #ffffff;
+  --accent-subtle: rgba(255, 255, 255, 0.08);
+  --accent-border: rgba(255, 255, 255, 0.22);
+  --action-primary-bg: #f0f0f2;
+  --action-primary-hover: #ffffff;
+  --action-primary-active: #d9dade;
+  --action-primary-text: #101114;
+
+  --success: #65b98f;
+  --success-subtle: rgba(101, 185, 143, 0.11);
+  --warning: #d6a85f;
+  --warning-subtle: rgba(214, 168, 95, 0.11);
+  --danger: #d96b72;
+  --danger-subtle: rgba(217, 107, 114, 0.11);
+  --info: #c9cbd1;
+  --info-subtle: rgba(255, 255, 255, 0.07);
+
+  /* Typography */
+  --font-sans: "DM Sans Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display: "Host Grotesk Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --font-page: 18px;
+  --font-section: 14px;
+  --font-body: 13px;
+  --font-table: 12px;
+  --font-meta: 11px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 12px;
+  --space-5: 16px;
+  --space-6: 20px;
+  --space-7: 24px;
+  --space-8: 32px;
+
+  /* Geometry and motion */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --control-sm: 28px;
+  --control-md: 32px;
+  --control-lg: 36px;
+  --shadow-float: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --shadow-dialog: 0 18px 48px rgba(0, 0, 0, 0.38);
+  --motion-fast: 140ms;
+  --motion-base: 180ms;
+  --topnav-height: 48px;
+  --subnav-height: 40px;
+
+  /* Compatibility aliases for existing product components */
+  --canvas: var(--bg-app);
+  --surface-1: var(--bg-surface);
+  --surface-2: var(--bg-subtle);
+  --surface-3: var(--bg-raised);
+  --surface-hover: var(--bg-hover);
+  --line: var(--border-default);
+  --line-strong: var(--border-strong);
+  --text: var(--text-primary);
+  --text-soft: var(--text-secondary);
+  --muted: var(--text-tertiary);
+  --muted-2: var(--text-disabled);
+  --accent-strong: var(--accent-hover);
+  --accent-soft: var(--accent-subtle);
+
+  font-synthesis: none;
+}

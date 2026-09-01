@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Input, Select, Space, Table, Tag, Tooltip } from 'antd'
+import { App, Button, Input, Select, Space, Table, Tag, Tooltip } from 'antd'
 import type { TableColumnsType } from 'antd'
 import {
   DeploymentUnitOutlined,
@@ -8,6 +8,11 @@ import {
   ReloadOutlined
 } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
+import { EmptyState } from '@/components/FeedbackState'
 import {
   deleteTask,
   listTasks,
@@ -79,13 +84,21 @@ export default function WorkflowPage() {
     })
   }
 
+  const statusTone = (status: TaskInstanceStatus): StatusTone => {
+    if (status === 'success') return 'success'
+    if (status === 'failed') return 'danger'
+    if (status === 'skipped') return 'warning'
+    if (status === 'running') return 'info'
+    return 'neutral'
+  }
+
   const columns: TableColumnsType<TaskView> = [
     {
       title: '任务名称',
       key: 'name',
       width: 200,
       render: (_, view) => (
-        <Button type="link" style={{ padding: 0 }} onClick={() => setDetailId(view.task.id)}>
+        <Button type="link" className="compact-link" onClick={() => setDetailId(view.task.id)}>
           {view.task.name}
         </Button>
       )
@@ -109,7 +122,7 @@ export default function WorkflowPage() {
       render: (_, view) =>
         view.task.cronExpression
           ? <Tooltip title={`下次触发：${formatDateTime(view.nextFireTime)}`}>
-              <Tag color="blue">{view.task.cronExpression}</Tag>
+              <Tag>{view.task.cronExpression}</Tag>
             </Tooltip>
           : <Tag>仅手动</Tag>
     },
@@ -119,8 +132,8 @@ export default function WorkflowPage() {
       width: 90,
       render: (_, view) =>
         view.task.status === 'enabled'
-          ? <Tag color="success">启用</Tag>
-          : <Tag>停用</Tag>
+          ? <StatusBadge tone="success">启用</StatusBadge>
+          : <StatusBadge tone="neutral">停用</StatusBadge>
     },
     {
       title: '最近结果',
@@ -131,7 +144,7 @@ export default function WorkflowPage() {
         const meta = INSTANCE_STATUS_META[view.lastStatus as TaskInstanceStatus]
         return (
           <Tooltip title={`业务日期 ${view.lastBizDate ?? '—'}`}>
-            <Tag color={meta?.color}>{meta?.label ?? view.lastStatus}</Tag>
+            <StatusBadge tone={statusTone(view.lastStatus as TaskInstanceStatus)}>{meta?.label ?? view.lastStatus}</StatusBadge>
           </Tooltip>
         )
       }
@@ -152,25 +165,21 @@ export default function WorkflowPage() {
     {
       title: '操作',
       key: 'action',
-      width: 190,
+      width: 96,
+      align: 'right',
       fixed: 'right',
       render: (_, view) => (
-        <Space size={0}>
-          <Button
-            type="link"
-            size="small"
-            icon={<PlayCircleOutlined />}
-            onClick={() => setRunTarget(view)}
-          >
-            运行
-          </Button>
-          <Button type="link" size="small" onClick={() => { setEditing(view); setFormOpen(true) }}>
-            编辑
-          </Button>
-          <Button type="link" size="small" danger onClick={() => handleDelete(view)}>
-            删除
-          </Button>
-        </Space>
+        <RowActions
+          primary={(
+            <Tooltip title="运行任务">
+              <Button type="text" size="small" icon={<PlayCircleOutlined />} aria-label={`运行任务 ${view.task.name}`} onClick={() => setRunTarget(view)} />
+            </Tooltip>
+          )}
+          items={[
+            { key: 'edit', label: '编辑', onClick: () => { setEditing(view); setFormOpen(true) } },
+            { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(view) }
+          ]}
+        />
       )
     }
   ]
@@ -178,8 +187,7 @@ export default function WorkflowPage() {
   return (
     <>
       <PageHeader
-        title="任务编排"
-        description="定义数仓加工任务并按 cron 调度执行。同一任务同一业务日期只保留一个实例，重跑会覆盖目标分区而非追加数据。"
+        description="定义数据加工任务并按计划周期调度执行；同一任务在同一业务日期仅保留一个实例，重跑将覆盖目标分区数据。"
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
@@ -194,7 +202,7 @@ export default function WorkflowPage() {
         }
       />
 
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
           <div className="filter-item">
             <span>任务/目标表</span>
@@ -203,7 +211,7 @@ export default function WorkflowPage() {
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               allowClear
-              style={{ width: 220 }}
+              className="filter-control-wide"
             />
           </div>
           <div className="filter-item">
@@ -213,7 +221,7 @@ export default function WorkflowPage() {
               value={statusFilter}
               onChange={setStatusFilter}
               allowClear
-              style={{ width: 120 }}
+              className="filter-control-sm"
               options={[
                 { value: 'enabled', label: '启用' },
                 { value: 'disabled', label: '停用' }
@@ -221,12 +229,11 @@ export default function WorkflowPage() {
             />
           </div>
         </div>
-      </Card>
+      </PageToolbar>
 
-      <Card size="small">
+      <DataSurface label="调度任务列表">
         <Table<TaskView>
           size="small"
-          bordered
           rowKey={(view) => view.task.id}
           columns={columns}
           dataSource={filtered}
@@ -235,17 +242,16 @@ export default function WorkflowPage() {
           pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
           locale={{
             emptyText: (
-              <div style={{ padding: '24px 0', color: '#8c8c8c' }}>
-                <DeploymentUnitOutlined style={{ fontSize: 28, marginBottom: 8 }} />
-                <div>暂无任务</div>
-                <div style={{ fontSize: 12, marginTop: 4 }}>
-                  新建任务时可用 <code>{'${bizDate}'}</code> 引用业务日期，无需为补数据修改 SQL。
-                </div>
-              </div>
+              <EmptyState
+                compact
+                icon={<DeploymentUnitOutlined />}
+                title="暂无任务"
+                description="新建任务时可用 ${bizDate} 引用业务日期，无需为补数据修改 SQL。"
+              />
             )
           }}
         />
-      </Card>
+      </DataSurface>
 
       <TaskFormModal
         open={formOpen}

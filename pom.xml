@@ -20,5 +20,6 @@
         <module>services/governance</module>
         <module>services/workflow</module>
         <module>services/ai-agent</module>
+        <module>services/serving</module>
     </modules>
 </project>

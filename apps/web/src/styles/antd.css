@@ -1,0 +1,412 @@
+/* Ant Design is the interaction foundation; these rules make it feel like one
+   restrained product instead of a collection of default demo components. */
+
+.ant-card {
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: none;
+}
+
+.ant-card-hoverable {
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.ant-card-hoverable:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+  box-shadow: none;
+}
+
+.ant-card .ant-card-head {
+  min-height: 42px;
+  padding-inline: var(--space-5);
+  border-bottom-color: var(--border-subtle);
+}
+
+.ant-card .ant-card-head-title {
+  color: var(--text-secondary);
+  font-size: var(--font-table);
+  font-weight: 600;
+}
+
+.ant-card .ant-card-body {
+  padding: var(--space-5);
+}
+
+.ant-btn {
+  border-radius: var(--radius-md);
+  font-weight: 520;
+  box-shadow: none;
+  transition: color var(--motion-fast) ease, border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.ant-btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.ant-btn-primary {
+  color: var(--action-primary-text);
+  border-color: var(--action-primary-bg);
+  background: var(--action-primary-bg);
+}
+
+.ant-btn-primary:not(:disabled):hover {
+  color: var(--action-primary-text);
+  border-color: var(--action-primary-hover);
+  background: var(--action-primary-hover);
+}
+
+.ant-btn-primary:not(:disabled):active {
+  color: var(--action-primary-text);
+  border-color: var(--action-primary-active);
+  background: var(--action-primary-active);
+}
+
+.ant-btn-primary.ant-btn-dangerous,
+.ant-btn-primary.ant-btn-dangerous:not(:disabled):hover,
+.ant-btn-primary.ant-btn-dangerous:not(:disabled):active {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+.ant-btn-link {
+  height: var(--control-sm);
+  padding-inline: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.ant-btn-link:not(:disabled):hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.ant-btn-text {
+  color: var(--text-tertiary);
+}
+
+.ant-btn-text:not(:disabled):hover {
+  color: var(--text-primary);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-input-number,
+.ant-select-selector,
+.ant-picker,
+.ant-auto-complete .ant-select-selector {
+  border-color: var(--border-default);
+  background: var(--bg-subtle);
+}
+
+.ant-input:hover,
+.ant-input-affix-wrapper:hover,
+.ant-input-number:hover,
+.ant-select-selector:hover,
+.ant-picker:hover {
+  border-color: var(--border-strong);
+}
+
+.ant-input::placeholder,
+.ant-input input::placeholder,
+.ant-select-selection-placeholder,
+.ant-picker-input input::placeholder {
+  color: var(--text-disabled);
+}
+
+.ant-input-textarea textarea {
+  line-height: 1.6;
+}
+
+.ant-form-item {
+  margin-bottom: var(--space-5);
+}
+
+.ant-form-item-label {
+  padding-bottom: var(--space-1);
+}
+
+.ant-form-item-label > label {
+  color: var(--text-secondary);
+  font-size: var(--font-table);
+  font-weight: 540;
+}
+
+.ant-form-item-extra,
+.ant-form-item-explain {
+  margin-top: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+  line-height: 1.5;
+}
+
+.ant-table-wrapper .ant-table {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.ant-table-wrapper .ant-table-container,
+.ant-table-wrapper .ant-table-content > table {
+  border: 0;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th {
+  height: 34px;
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  font-size: var(--font-meta);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  height: 38px;
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-table);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:hover > td,
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td {
+  background: var(--bg-hover);
+}
+
+.ant-table-wrapper .ant-table-cell-fix-left,
+.ant-table-wrapper .ant-table-cell-fix-right {
+  background: var(--bg-surface);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr:hover .ant-table-cell-fix-left,
+.ant-table-wrapper .ant-table-tbody > tr:hover .ant-table-cell-fix-right {
+  background: var(--bg-hover);
+}
+
+.ant-table-wrapper .ant-table-bordered .ant-table-cell {
+  border-inline-end-color: transparent;
+}
+
+.ant-table-wrapper .ant-table-pagination.ant-pagination {
+  margin: var(--space-4) var(--space-4) var(--space-4);
+}
+
+.ant-pagination {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+}
+
+.ant-pagination .ant-pagination-item {
+  border-color: transparent;
+  background: transparent;
+}
+
+.ant-pagination .ant-pagination-item-active {
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+}
+
+.ant-pagination .ant-pagination-item-active a {
+  color: var(--text-primary);
+}
+
+.ant-tag {
+  margin-inline-end: var(--space-1);
+  padding-inline: var(--space-2);
+  border-color: var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  font-size: var(--font-meta);
+  line-height: 20px;
+}
+
+.ant-tag.is-manual {
+  border-style: dashed;
+}
+
+.ant-tag-success {
+  color: var(--success);
+  border-color: rgba(101, 185, 143, 0.24);
+  background: var(--success-subtle);
+}
+
+.ant-tag-warning,
+.ant-tag-orange,
+.ant-tag-gold {
+  color: var(--warning);
+  border-color: rgba(214, 168, 95, 0.24);
+  background: var(--warning-subtle);
+}
+
+.ant-tag-error,
+.ant-tag-red {
+  color: var(--danger);
+  border-color: rgba(217, 107, 114, 0.24);
+  background: var(--danger-subtle);
+}
+
+.ant-tag-processing,
+.ant-tag-blue,
+.ant-tag-geekblue,
+.ant-tag-purple,
+.ant-tag-cyan {
+  color: var(--text-secondary);
+  border-color: var(--accent-border);
+  background: var(--accent-subtle);
+}
+
+.ant-switch.ant-switch-checked .ant-switch-handle::before {
+  background: var(--action-primary-text);
+}
+
+.ant-checkbox-checked .ant-checkbox-inner::after {
+  border-color: var(--action-primary-text);
+}
+
+.ant-radio-checked .ant-radio-inner::after {
+  background: var(--action-primary-text);
+}
+
+.ant-modal .ant-modal-content,
+.ant-drawer .ant-drawer-content {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-dialog);
+}
+
+.ant-modal .ant-modal-content {
+  display: flex;
+  max-height: calc(100dvh - 64px);
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-6);
+}
+
+.ant-modal {
+  top: 32px;
+  padding-bottom: 32px;
+}
+
+.ant-modal .ant-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ant-modal .ant-modal-header,
+.ant-drawer .ant-drawer-header {
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+}
+
+.ant-drawer .ant-drawer-header {
+  padding: var(--space-4) var(--space-5);
+}
+
+.ant-modal .ant-modal-title,
+.ant-drawer .ant-drawer-title {
+  color: var(--text-primary);
+  font-size: var(--font-section);
+  font-weight: 620;
+}
+
+.ant-modal .ant-modal-footer {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ant-drawer .ant-drawer-body {
+  padding: var(--space-5);
+}
+
+.ant-dropdown .ant-dropdown-menu,
+.ant-select-dropdown,
+.ant-picker-dropdown .ant-picker-panel-container,
+.ant-popover .ant-popover-inner {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-float);
+}
+
+.ant-dropdown .ant-dropdown-menu {
+  padding: var(--space-1);
+}
+
+.ant-dropdown .ant-dropdown-menu-item,
+.ant-select-dropdown .ant-select-item {
+  min-height: 30px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-table);
+}
+
+.ant-dropdown .ant-dropdown-menu-item:hover,
+.ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: var(--bg-hover);
+}
+
+.ant-tabs .ant-tabs-nav {
+  margin-bottom: var(--space-5);
+}
+
+.ant-tabs .ant-tabs-nav::before {
+  border-bottom-color: var(--border-subtle);
+}
+
+.ant-tabs .ant-tabs-tab {
+  padding-block: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+}
+
+.ant-descriptions-bordered .ant-descriptions-view,
+.ant-descriptions-bordered .ant-descriptions-row,
+.ant-descriptions-bordered .ant-descriptions-item-label,
+.ant-descriptions-bordered .ant-descriptions-item-content {
+  border-color: var(--border-subtle);
+}
+
+.ant-descriptions-bordered .ant-descriptions-item-label {
+  width: 124px;
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+}
+
+.ant-empty-description,
+.ant-typography-secondary {
+  color: var(--text-tertiary);
+}
+
+.ant-alert {
+  border-color: var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.ant-collapse {
+  border-color: var(--border-default);
+  background: transparent;
+}
+
+.ant-collapse > .ant-collapse-item {
+  border-bottom-color: var(--border-subtle);
+}
+
+.ant-progress .ant-progress-inner {
+  background: var(--bg-raised);
+}
+
+.ant-skeleton .ant-skeleton-input,
+.ant-skeleton .ant-skeleton-title,
+.ant-skeleton .ant-skeleton-paragraph > li {
+  background: var(--bg-raised);
+}

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd'
+import { App, Button, Form, Input, InputNumber, Modal, Select, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
 import {
   createRule,
   deleteRule,
@@ -12,6 +16,7 @@ import {
   type QualityRuleInput
 } from '@/api/quality'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 
 const severityMeta: Record<string, { color: string; text: string }> = {
   low: { color: 'default', text: '低' },
@@ -20,7 +25,8 @@ const severityMeta: Record<string, { color: string; text: string }> = {
 }
 
 export default function QualityRulePage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [allData, setAllData] = useState<QualityRule[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -105,7 +111,8 @@ export default function QualityRulePage() {
       width: 100,
       render: (value?: string) => {
         const meta = severityMeta[value ?? ''] ?? { color: 'default', text: value ?? '—' }
-        return <Tag color={meta.color}>{meta.text}</Tag>
+        const tone: StatusTone = value === 'high' ? 'danger' : value === 'medium' ? 'warning' : 'neutral'
+        return <StatusBadge tone={tone}>{meta.text}</StatusBadge>
       }
     },
     {
@@ -113,61 +120,70 @@ export default function QualityRulePage() {
       dataIndex: 'status',
       key: 'status',
       width: 90,
-      render: (value?: string) => (value === 'enabled' ? <Tag color="success">启用</Tag> : <Tag>禁用</Tag>)
+      render: (value?: string) => <StatusBadge tone={value === 'enabled' ? 'success' : 'neutral'}>{value === 'enabled' ? '启用' : '禁用'}</StatusBadge>
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
-    {
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 56,
+      align: 'right',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm title="确定删除该规则？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions items={[
+          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: () => modal.confirm({
+              title: `删除规则“${record.name}”？`,
+              content: '删除后该质量校验将不再执行，此操作不可恢复。',
+              okText: '确认删除',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id)
+            })
+          }
+        ]} />
       )
-    }
-  ]
+    })
 
   return (
     <>
       <PageHeader
-        title="质量规则"
-        description="定义数据质量校验规则，覆盖空值、重复、自定义 SQL 等场景。"
-        extra={
+        description="配置数据质量校验规则，覆盖空值、重复与自定义 SQL 等校验场景。"
+        extra={canManage ? (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>
             新增规则
           </Button>
-        }
+        ) : <Tag>只读访问</Tag>}
       />
 
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
           <div className="filter-item">
             <span>规则/表</span>
-            <Input placeholder="搜索规则名或目标表" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear style={{ width: 180 }} />
+            <Input placeholder="搜索规则名或目标表" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear className="filter-control-2xl" />
           </div>
           <div className="filter-item">
             <span>类型</span>
-            <Select value={ruleType} onChange={setRuleType} allowClear placeholder="全部" style={{ width: 130 }}
+            <Select value={ruleType} onChange={setRuleType} allowClear placeholder="全部" className="filter-control-md"
               options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'sql', label: '自定义 SQL' }]} />
           </div>
           <div className="filter-item">
             <span>状态</span>
-            <Select value={status} onChange={setStatus} allowClear placeholder="全部" style={{ width: 110 }}
+            <Select value={status} onChange={setStatus} allowClear placeholder="全部" className="filter-control-xs"
               options={[{ value: 'enabled', label: '启用' }, { value: 'disabled', label: '禁用' }]} />
           </div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
+      </PageToolbar>
 
-      <Card size="small">
+      <DataSurface label="质量规则列表">
         <Table<QualityRule>
           size="small"
-          bordered
           rowKey="id"
           columns={columns}
           dataSource={filtered}
@@ -176,7 +192,7 @@ export default function QualityRulePage() {
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无质量规则' }}
         />
-      </Card>
+      </DataSurface>
 
       <Modal
         title={editing ? '编辑规则' : '新增规则'}
@@ -200,7 +216,7 @@ export default function QualityRulePage() {
             <Input.TextArea rows={3} placeholder="例如：order_id IS NOT NULL" />
           </Form.Item>
           <Form.Item name="threshold" label="阈值">
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="可选" />
+            <InputNumber min={0} className="full-width-control" placeholder="可选" />
           </Form.Item>
           <Form.Item name="severity" label="严重程度">
             <Select options={[{ value: 'low', label: '低' }, { value: 'medium', label: '中' }, { value: 'high', label: '高' }]} />

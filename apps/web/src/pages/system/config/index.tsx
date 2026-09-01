@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Form, Input, Modal, Popconfirm, Space, Table, Typography } from 'antd'
+import { App, Button, Form, Input, Modal, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import RowActions from '@/components/RowActions'
 import {
   createConfig,
   deleteConfig,
@@ -12,9 +15,11 @@ import {
   type SystemConfigInput
 } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 
 export default function SystemConfigPage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [allData, setAllData] = useState<SystemConfig[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -83,48 +88,57 @@ export default function SystemConfigPage() {
     { title: 'Key', dataIndex: 'configKey', key: 'configKey', width: 200, render: (value: string) => <Typography.Text code>{value}</Typography.Text> },
     { title: 'Value', dataIndex: 'configValue', key: 'configValue' },
     { title: '说明', dataIndex: 'description', key: 'description', width: 240, render: (value?: string) => value || '—' },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
-    {
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 56,
+      align: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => { setEditing(record); setOpen(true) }}>编辑</Button>
-          <Popconfirm title="确定删除该配置？" onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger>删除</Button>
-          </Popconfirm>
-        </Space>
+        <RowActions items={[
+          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: () => modal.confirm({
+              title: `删除配置“${record.configKey}”？`,
+              content: '删除可能影响依赖该配置的服务，请确认该配置已不再使用。',
+              okText: '确认删除',
+              okButtonProps: { danger: true },
+              onOk: () => handleDelete(record.id)
+            })
+          }
+        ]} />
       )
-    }
-  ]
+    })
 
   return (
     <>
       <PageHeader
-        title="系统配置"
         description="维护平台运行所需的全局配置项。"
-        extra={
+        extra={canManage ? (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>
             新增配置
           </Button>
-        }
+        ) : <Tag>只读访问</Tag>}
       />
 
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
           <div className="filter-item">
             <span>Key/Value</span>
-            <Input placeholder="搜索 Key 或 Value" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear style={{ width: 200 }} />
+            <Input placeholder="搜索 Key 或 Value" value={keyword} onChange={(e) => setKeyword(e.target.value)} allowClear className="filter-control-3xl" />
           </div>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
-      </Card>
+      </PageToolbar>
 
-      <Card size="small">
+      <DataSurface label="系统配置列表">
         <Table<SystemConfig>
           size="small"
-          bordered
           rowKey="id"
           columns={columns}
           dataSource={filtered}
@@ -132,7 +146,7 @@ export default function SystemConfigPage() {
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无配置' }}
         />
-      </Card>
+      </DataSurface>
 
       <Modal
         title={editing ? '编辑配置' : '新增配置'}

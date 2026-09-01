@@ -7,7 +7,6 @@ import {
   DatePicker,
   Input,
   Modal,
-  Popconfirm,
   Row,
   Select,
   Space,
@@ -23,11 +22,15 @@ import {
   CheckCircleOutlined,
   ClusterOutlined,
   DatabaseOutlined,
-  ExportOutlined,
   PlusOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  ThunderboltOutlined
 } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
+import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
 import {
   createDataSource,
   deleteDataSource,
@@ -40,6 +43,7 @@ import {
   type QueryResult
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 import DataSourceForm from './components/DataSourceForm'
 import DataSourceBrowser from './components/DataSourceBrowser'
 import { dataSourceOptions, getDataSourceDefinition } from './sourceCatalog'
@@ -50,7 +54,8 @@ const statusMeta: Record<string, { color: string; text: string }> = {
 }
 
 export default function DataSourcePage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [allData, setAllData] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -183,8 +188,8 @@ export default function DataSourcePage() {
       width: 190,
       render: (value: string, record) => (
         <Space size={6}>
-          <span style={{ fontWeight: 600 }}>{value}</span>
-          {record.managed && <Tooltip title="由系统自动维护配置"><Tag color="blue">系统</Tag></Tooltip>}
+          <span className="entity-name" title={value}>{value}</span>
+          {record.managed && <Tooltip title="由系统自动维护配置"><Tag>系统</Tag></Tooltip>}
         </Space>
       )
     },
@@ -195,7 +200,7 @@ export default function DataSourcePage() {
       width: 145,
       render: (value: string) => {
         const definition = getDataSourceDefinition(value)
-        return <Tag color={definition.color}>{definition.label}</Tag>
+        return <Tag>{definition.label}</Tag>
       }
     },
     { title: '主机地址', dataIndex: 'host', key: 'host', width: 140 },
@@ -209,59 +214,54 @@ export default function DataSourcePage() {
       width: 80,
       render: (value?: string) => {
         const meta = statusMeta[value ?? ''] ?? { color: 'default', text: value ?? '—' }
-        return <Tag color={meta.color}>{meta.text}</Tag>
+        return <StatusBadge tone={value === 'active' ? 'success' : 'neutral'}>{meta.text}</StatusBadge>
       }
     },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
-    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (value?: string) => formatDateTime(value) },
-    {
+    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (value?: string) => formatDateTime(value) }
+  ]
+
+  if (canManage) columns.push({
       title: '操作',
       key: 'action',
-      width: 290,
+      width: 96,
+      align: 'right',
       fixed: 'right',
       render: (_, record) => (
-        <Space size={0}>
-          <Button type="link" size="small" onClick={() => void handleTest(record)}>
-            测试连接
-          </Button>
-          <Button type="link" size="small" onClick={() => openQuery(record)}>
-            查询
-          </Button>
-          <Button type="link" size="small" onClick={() => { setBrowserRecord(record); setBrowserOpen(true) }}>
-            浏览库表
-          </Button>
-          <Button
-            type="link"
-            size="small"
-            disabled={record.managed}
-            onClick={() => {
-              setEditing(record)
-              setOpen(true)
-            }}
-          >
-            编辑
-          </Button>
-          <Popconfirm title="确定删除该数据源？" disabled={record.managed} onConfirm={() => void handleDelete(record.id)}>
-            <Button type="link" size="small" danger disabled={record.managed}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
+        <RowActions
+          primary={(
+            <Tooltip title="测试连接">
+              <Button type="text" size="small" icon={<ThunderboltOutlined />} aria-label={`测试数据源 ${record.name}`} onClick={() => void handleTest(record)} />
+            </Tooltip>
+          )}
+          items={[
+            { key: 'query', label: 'SQL 查询', onClick: () => openQuery(record) },
+            { key: 'browse', label: '浏览库表', onClick: () => { setBrowserRecord(record); setBrowserOpen(true) } },
+            { key: 'edit', label: '编辑', disabled: record.managed, onClick: () => { setEditing(record); setOpen(true) } },
+            {
+              key: 'delete',
+              label: '删除',
+              danger: true,
+              disabled: record.managed,
+              onClick: () => modal.confirm({
+                title: `删除数据源“${record.name}”？`,
+                content: '删除后平台将无法继续访问该连接，此操作不可恢复。',
+                okText: '确认删除',
+                okButtonProps: { danger: true },
+                onOk: () => handleDelete(record.id)
+              })
+            }
+          ]}
+        />
       )
-    }
-  ]
+    })
 
   return (
     <>
       <PageHeader
-        eyebrow="DATA CONNECTIONS"
-        title="数据源管理"
-        description="通过真实 JDBC 连接统一管理关系型数据库、分布式数据库与 Hive 数仓。"
-        extra={
+        description="统一管理关系型数据库、分布式数据库与 Hive 数仓的 JDBC 连接。"
+        extra={canManage ? (
           <Space>
-            <Button icon={<ExportOutlined />} onClick={() => message.info('导出功能规划中')}>
-              导出
-            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -273,7 +273,7 @@ export default function DataSourcePage() {
               新增数据源
             </Button>
           </Space>
-        }
+        ) : <Tag>只读访问</Tag>}
       />
 
       <Row gutter={[16, 16]} className="datasource-overview">
@@ -283,7 +283,7 @@ export default function DataSourcePage() {
         <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix="/ 13" prefix={<ApiOutlined />} /></Card></Col>
       </Row>
 
-      <Card size="small" style={{ marginBottom: 16 }}>
+      <PageToolbar>
         <div className="filter-bar">
           <div className="filter-item">
             <span>名称/主机</span>
@@ -292,7 +292,7 @@ export default function DataSourcePage() {
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               allowClear
-              style={{ width: 180 }}
+              className="filter-control-2xl"
             />
           </div>
           <div className="filter-item">
@@ -302,7 +302,7 @@ export default function DataSourcePage() {
               onChange={setType}
               allowClear
               placeholder="全部"
-              style={{ width: 160 }}
+              className="filter-control-xl"
               options={dataSourceOptions}
             />
           </div>
@@ -313,7 +313,7 @@ export default function DataSourcePage() {
               onChange={setStatus}
               allowClear
               placeholder="全部"
-              style={{ width: 110 }}
+              className="filter-control-xs"
               options={[
                 { value: 'active', label: '启用' },
                 { value: 'inactive', label: '停用' }
@@ -342,9 +342,9 @@ export default function DataSourcePage() {
             刷新
           </Button>
         </div>
-      </Card>
+      </PageToolbar>
 
-      <Card size="small">
+      <DataSurface label="数据源列表">
         <Table<DataSource>
           size="small"
           rowKey="id"
@@ -363,9 +363,9 @@ export default function DataSourcePage() {
               setPageSize(nextSize)
             }
           }}
-          locale={{ emptyText: '暂无数据源，点击右上角「新增数据源」开始。' }}
+          locale={{ emptyText: canManage ? '暂无数据源，点击右上角「新增数据源」开始。' : '暂无可查看的数据源。' }}
         />
-      </Card>
+      </DataSurface>
 
       <DataSourceForm
         open={open}
@@ -394,8 +394,9 @@ export default function DataSourcePage() {
         footer={null}
         width={820}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size={12}>
+        <Space direction="vertical" className="full-width-stack" size={12}>
           <Input.TextArea
+            className="code-input"
             value={querySql}
             onChange={(event) => setQuerySql(event.target.value)}
             placeholder="输入 SELECT / SHOW / EXPLAIN 语句"
@@ -407,7 +408,6 @@ export default function DataSourcePage() {
           {queryResult && (
             <Table
               size="small"
-              bordered
               scroll={{ x: 'max-content' }}
               pagination={false}
               columns={queryResult.columns.map((column) => ({
