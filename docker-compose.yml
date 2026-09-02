@@ -21,6 +21,7 @@ services:
       retries: 12
 
   system-service:
+    image: ghcr.io/mazhuce/aetheris-system:latest
     build:
       context: .
       dockerfile: services/system/Dockerfile
@@ -51,6 +52,7 @@ services:
         condition: service_healthy
 
   serving-service:
+    image: ghcr.io/mazhuce/aetheris-serving:latest
     build:
       context: .
       dockerfile: services/serving/Dockerfile
@@ -85,6 +87,7 @@ services:
         condition: service_healthy
 
   ingestion-service:
+    image: ghcr.io/mazhuce/aetheris-ingestion:latest
     build:
       context: .
       dockerfile: services/ingestion/Dockerfile
@@ -95,9 +98,13 @@ services:
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
     depends_on:
       postgres:
         condition: service_healthy
+      metadata-service:
+        condition: service_started
 
   governance-service:
     build:
@@ -115,6 +122,7 @@ services:
         condition: service_healthy
 
   workflow-service:
+    image: ghcr.io/mazhuce/aetheris-workflow:latest
     build:
       context: .
       dockerfile: services/workflow/Dockerfile
@@ -135,6 +143,7 @@ services:
         condition: service_started
 
   ai-agent:
+    image: ghcr.io/mazhuce/aetheris-ai-agent:latest
     build:
       context: .
       dockerfile: services/ai-agent/Dockerfile
@@ -160,6 +169,7 @@ services:
         condition: service_started
 
   auth-service:
+    image: ghcr.io/mazhuce/aetheris-auth:latest
     build:
       context: .
       dockerfile: services/auth/Dockerfile
@@ -180,6 +190,7 @@ services:
         condition: service_healthy
 
   gateway:
+    image: ghcr.io/mazhuce/aetheris-gateway:latest
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
@@ -218,7 +229,7 @@ services:
       - "8080:8080"
 
   web:
-    image: aetheris-web-prod:latest
+    image: ghcr.io/mazhuce/aetheris-web:latest
     build:
       context: ./apps/web
       dockerfile: Dockerfile

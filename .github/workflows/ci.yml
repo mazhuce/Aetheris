@@ -35,9 +35,10 @@ jobs:
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
-      - name: Install and build frontend
+      - name: Install, test and build frontend
         working-directory: apps/web
         run: |
           npm ci --registry=https://registry.npmmirror.com
           npm run type-check
+          npm test
           npm run build
