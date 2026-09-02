@@ -2,8 +2,10 @@ package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.dto.AdhocQueryRequest;
 import com.aetheris.metadata.entity.DataSource;
+import com.aetheris.metadata.entity.QueryHistory;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
+import com.aetheris.metadata.service.QueryHistoryService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,10 +34,13 @@ public class AdhocQueryController {
 
     private final DataSourceService dataSourceService;
     private final JdbcService jdbcService;
+    private final QueryHistoryService queryHistoryService;
 
-    public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService) {
+    public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService,
+                                QueryHistoryService queryHistoryService) {
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
+        this.queryHistoryService = queryHistoryService;
     }
 
     @PostMapping
@@ -51,13 +56,42 @@ public class AdhocQueryController {
         try {
             Map<String, Object> result = jdbcService.query(dataSource, request.sql());
             result.put("durationMs", System.currentTimeMillis() - startedAt);
+            recordHistory(username, dataSource, request.sql(), "success",
+                    asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
             // 语句被只读守卫拒绝：原因可安全回显。
+            recordHistory(username, dataSource, request.sql(), "failed",
+                    null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
         } catch (IllegalStateException error) {
             log.warn("Adhoc query by {} on datasource {} failed", username, request.datasourceId(), error);
+            recordHistory(username, dataSource, request.sql(), "failed",
+                    null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    private static Long asLong(Object value) {
+        return value instanceof Number number ? number.longValue() : null;
+    }
+
+    /** 历史记录是旁路能力：落库失败只记日志，不影响查询本身。 */
+    private void recordHistory(String username, DataSource dataSource, String sql, String status,
+                               Long rowCount, Long durationMs, String errorMessage) {
+        try {
+            QueryHistory history = new QueryHistory();
+            history.setUsername(username);
+            history.setDatasourceId(dataSource.getId());
+            history.setDatasourceName(dataSource.getName());
+            history.setSqlText(sql);
+            history.setStatus(status);
+            history.setRowCount(rowCount);
+            history.setDurationMs(durationMs);
+            history.setErrorMessage(errorMessage);
+            queryHistoryService.record(history);
+        } catch (Exception error) {
+            log.warn("Failed to persist query history for {}: {}", username, error.getMessage());
         }
     }
 }

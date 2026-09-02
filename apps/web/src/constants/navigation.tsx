@@ -49,7 +49,7 @@ export const navModules: NavModule[] = [
     icon: <DashboardOutlined />,
     children: [
       { key: 'overview', label: '数据概览', path: '/workbench', status: 'available' },
-      { key: 'operations', label: '运行概览', path: '/workbench/operations', status: 'comingSoon', description: '集中展示数据接入、开发与调度任务的实时运行状态。' },
+      { key: 'operations', label: '运行概览', path: '/workbench/operations', status: 'available' },
       { key: 'todos', label: '我的待办', path: '/workbench/todos', status: 'available' },
       { key: 'recent', label: '最近访问', path: '/workbench/recent', status: 'comingSoon', description: '记录最近访问的数据表、资产与功能入口，便于快速定位。' }
     ]
@@ -109,7 +109,7 @@ export const navModules: NavModule[] = [
     icon: <FolderOpenOutlined />,
     children: [
       { key: 'catalog', label: '资产目录', path: '/assets/catalog', status: 'comingSoon', description: '按主题与层级浏览企业数据资产全景。' },
-      { key: 'tables', label: '数据表', path: '/assets/tables', status: 'comingSoon', description: '浏览与理解平台中的表结构、字段及样例数据。' },
+      { key: 'tables', label: '数据表', path: '/assets/tables', status: 'available' },
       { key: 'datasets', label: '数据集', path: '/assets/datasets', status: 'available', description: '管理面向分析场景的、可复用的数据集。' },
       { key: 'metrics', label: '指标资产', path: '/assets/metrics', status: 'comingSoon', description: '统一沉淀与共享企业指标资产。' },
       { key: 'tags', label: '标签资产', path: '/assets/tags', status: 'comingSoon', description: '管理用户与实体的标签体系及标签资产。' },
@@ -137,7 +137,7 @@ export const navModules: NavModule[] = [
       { key: 'query', label: '即席查询', path: '/analytics/query', status: 'available' },
       { key: 'visualization', label: '可视化分析', path: '/analytics/visualization', status: 'comingSoon', description: '以拖拽方式编排图表，完成数据可视化探索。' },
       { key: 'dashboards', label: '数据看板', path: '/analytics/dashboards', status: 'available', description: '编排与发布面向业务的运营看板。' },
-      { key: 'history', label: '查询历史', path: '/analytics/history', status: 'comingSoon', description: '查看与复用历史查询记录。' }
+      { key: 'history', label: '查询历史', path: '/analytics/history', status: 'available' }
     ]
   },
   {
@@ -158,9 +158,9 @@ export const navModules: NavModule[] = [
     icon: <CloudServerOutlined />,
     children: [
       { key: 'tasks', label: '任务监控', path: '/operations/tasks', status: 'available' },
-      { key: 'services', label: '服务监控', path: '/operations/services', status: 'comingSoon', description: '监控各微服务的健康与可用性。' },
+      { key: 'services', label: '服务监控', path: '/operations/services', status: 'available' },
       { key: 'resources', label: '资源监控', path: '/operations/resources', status: 'comingSoon', description: '监控计算与存储资源的用量与水位。' },
-      { key: 'alerts', label: '告警中心', path: '/operations/alerts', status: 'comingSoon', description: '统一管理告警规则与告警事件。' },
+      { key: 'alerts', label: '告警中心', path: '/operations/alerts', status: 'available' },
       { key: 'logs', label: '日志中心', path: '/operations/logs', status: 'comingSoon', description: '集中检索与查看平台运行日志。' },
       { key: 'audit', label: '审计日志', path: '/operations/audit', status: 'available', requiredRole: 'admin' }
     ]

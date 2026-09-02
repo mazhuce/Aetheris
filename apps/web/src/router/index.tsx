@@ -27,6 +27,11 @@ const AccountPage = lazy(() => import('@/pages/account'))
 const AnalyticsDatasetPage = lazy(() => import('@/pages/analytics/datasets'))
 const AdhocQueryPage = lazy(() => import('@/pages/analytics/query'))
 const TaskMonitorPage = lazy(() => import('@/pages/operations/tasks'))
+const AlertCenterPage = lazy(() => import('@/pages/operations/alerts'))
+const ServiceMonitorPage = lazy(() => import('@/pages/operations/services'))
+const QueryHistoryPage = lazy(() => import('@/pages/analytics/history'))
+const OperationsOverviewPage = lazy(() => import('@/pages/workbench/operations'))
+const TableBrowserPage = lazy(() => import('@/pages/assets/tables'))
 const DashboardListPage = lazy(() => import('@/pages/analytics/dashboards'))
 const DashboardEditorPage = lazy(() => import('@/pages/analytics/dashboards/editor'))
 const DashboardPreviewPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.DashboardPreviewPage })))
@@ -103,6 +108,11 @@ export const router = createBrowserRouter([
 
       // 运维中心
       { path: 'operations/tasks', element: <TaskMonitorPage /> },
+      { path: 'operations/alerts', element: <AlertCenterPage /> },
+      { path: 'operations/services', element: <ServiceMonitorPage /> },
+      { path: 'analytics/history', element: <QueryHistoryPage /> },
+      { path: 'assets/tables', element: <TableBrowserPage /> },
+      { path: 'workbench/operations', element: <OperationsOverviewPage /> },
       {
         path: 'operations/audit',
         element: (

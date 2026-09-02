@@ -92,3 +92,39 @@ export function markNotificationRead(id: number): Promise<void> {
 export function markAllNotificationsRead(): Promise<void> {
   return http.put('/api/system/notifications/read-all').then(() => undefined)
 }
+
+// —— 告警中心（运维视角）：admin 看全局，普通用户看自己 ——
+
+export interface AlertStats {
+  critical: number
+  warning: number
+  info: number
+  total: number
+}
+
+export interface AlertQuery {
+  level?: string
+  source?: string
+  unread?: boolean
+}
+
+export function listAlerts(query: AlertQuery = {}): Promise<PlatformNotification[]> {
+  return http.get<PlatformNotification[]>('/api/system/alerts', { params: query }).then((res) => res.data)
+}
+
+export function getAlertStats(): Promise<AlertStats> {
+  return http.get<AlertStats>('/api/system/alerts/stats').then((res) => res.data)
+}
+
+// —— 服务监控：聚合各微服务健康状态 ——
+
+export interface ServiceStatus {
+  name: string
+  status: 'UP' | 'DOWN'
+  detail?: string
+  checkedAt?: string
+}
+
+export function getServiceHealth(): Promise<ServiceStatus[]> {
+  return http.get<ServiceStatus[]>('/api/system/service-health').then((res) => res.data)
+}

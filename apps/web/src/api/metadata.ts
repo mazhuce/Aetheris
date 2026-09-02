@@ -293,3 +293,32 @@ export function updateLineage(id: number, payload: LineageRelationInput): Promis
 export function deleteLineage(id: number): Promise<void> {
   return http.delete(`/api/metadata/lineages/${id}`).then(() => undefined)
 }
+
+// —— 查询历史：即席查询执行记录，按用户隔离 ——
+
+export interface QueryHistoryRecord {
+  id: number
+  username: string
+  datasourceId: number
+  datasourceName?: string
+  sqlText: string
+  status: 'success' | 'failed'
+  rowCount?: number
+  durationMs?: number
+  errorMessage?: string
+  createdAt?: string
+}
+
+export function listQueryHistory(status?: string): Promise<QueryHistoryRecord[]> {
+  return http
+    .get<QueryHistoryRecord[]>('/api/metadata/query-history', { params: status ? { status } : {} })
+    .then((res) => res.data)
+}
+
+export function deleteQueryHistory(id: number): Promise<void> {
+  return http.delete(`/api/metadata/query-history/${id}`).then(() => undefined)
+}
+
+export function clearQueryHistory(): Promise<number> {
+  return http.delete<{ deleted: number }>('/api/metadata/query-history').then((res) => res.data.deleted)
+}
