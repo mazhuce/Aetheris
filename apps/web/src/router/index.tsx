@@ -45,6 +45,15 @@ const DashboardListPage = lazy(() => import('@/pages/analytics/dashboards'))
 const DashboardEditorPage = lazy(() => import('@/pages/analytics/dashboards/editor'))
 const DashboardPreviewPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.DashboardPreviewPage })))
 const PublishedDashboardPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.PublishedDashboardPage })))
+const MetricManagePage = lazy(() => import('@/pages/modeling/metrics'))
+const LogicalModelPage = lazy(() => import('@/pages/modeling/logical-models'))
+const ApiAssetPage = lazy(() => import('@/pages/assets/apis'))
+const DataProductPage = lazy(() => import('@/pages/assets/products'))
+const DataStandardPage = lazy(() => import('@/pages/governance/standards'))
+const ReleasePage = lazy(() => import('@/pages/development/releases'))
+const WorkflowGraphPage = lazy(() => import('@/pages/development/workflows'))
+const SubscriptionPage = lazy(() => import('@/pages/services/subscriptions'))
+const ServiceAuthorizationPage = lazy(() => import('@/pages/services/authorization'))
 
 function Deferred({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div className="route-loading">页面加载中…</div>}>{children}</Suspense>
@@ -130,6 +139,15 @@ export const router = createBrowserRouter([
       { path: 'modeling/dimensions', element: <DimensionPage /> },
       { path: 'assets/metrics', element: <MetricAssetsPage /> },
       { path: 'assets/tags', element: <TagAssetsPage /> },
+      { path: 'modeling/metrics', element: <MetricManagePage /> },
+      { path: 'modeling/logical-models', element: <LogicalModelPage /> },
+      { path: 'assets/apis', element: <ApiAssetPage /> },
+      { path: 'assets/products', element: <DataProductPage /> },
+      { path: 'governance/standards', element: <DataStandardPage /> },
+      { path: 'development/releases', element: <ReleasePage /> },
+      { path: 'development/workflows', element: <WorkflowGraphPage /> },
+      { path: 'services/subscriptions', element: <SubscriptionPage /> },
+      { path: 'services/authorization', element: <ServiceAuthorizationPage /> },
       { path: 'workbench/operations', element: <OperationsOverviewPage /> },
       {
         path: 'operations/audit',

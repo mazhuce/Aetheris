@@ -352,3 +352,194 @@ export function deleteQueryHistory(id: number): Promise<void> {
 export function clearQueryHistory(): Promise<number> {
   return http.delete<{ deleted: number }>('/api/metadata/query-history').then((res) => res.data.deleted)
 }
+
+// —— 指标定义：业务指标的计算口径与版本 ——
+
+export interface MetricDefinition {
+  id: number
+  metricCode: string
+  metricName: string
+  businessDomain?: string
+  layer?: 'atomic' | 'derived' | 'composite'
+  calibreFormula?: string
+  unit?: string
+  owner?: string
+  status?: 'draft' | 'published' | 'deprecated'
+  version?: number
+  description?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface MetricDefinitionInput {
+  metricCode: string
+  metricName: string
+  businessDomain?: string
+  layer?: string
+  calibreFormula?: string
+  unit?: string
+  owner?: string
+  status?: string
+  version?: number
+  description?: string
+}
+
+export function listMetricDefinitions(keyword?: string): Promise<MetricDefinition[]> {
+  return http
+    .get<MetricDefinition[]>('/api/metadata/metric-definitions', { params: keyword ? { keyword } : {} })
+    .then((res) => res.data)
+}
+
+export function createMetricDefinition(payload: MetricDefinitionInput): Promise<MetricDefinition> {
+  return http.post<MetricDefinition>('/api/metadata/metric-definitions', payload).then((res) => res.data)
+}
+
+export function updateMetricDefinition(id: number, payload: MetricDefinitionInput): Promise<MetricDefinition> {
+  return http.put<MetricDefinition>(`/api/metadata/metric-definitions/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteMetricDefinition(id: number): Promise<void> {
+  return http.delete(`/api/metadata/metric-definitions/${id}`).then(() => undefined)
+}
+
+// —— 逻辑模型：面向业务的概念与逻辑模型设计 ——
+
+export interface LogicalModel {
+  id: number
+  modelCode: string
+  modelName: string
+  businessDomain?: string
+  modelType?: 'conceptual' | 'relational' | 'dimensional'
+  entitiesJson?: unknown
+  status?: 'draft' | 'published' | 'deprecated'
+  version?: number
+  description?: string
+  owner?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface LogicalModelInput {
+  modelCode: string
+  modelName: string
+  businessDomain?: string
+  modelType?: string
+  status?: string
+  version?: number
+  description?: string
+  owner?: string
+}
+
+export function listLogicalModels(keyword?: string): Promise<LogicalModel[]> {
+  return http
+    .get<LogicalModel[]>('/api/metadata/logical-models', { params: keyword ? { keyword } : {} })
+    .then((res) => res.data)
+}
+
+export function createLogicalModel(payload: LogicalModelInput): Promise<LogicalModel> {
+  return http.post<LogicalModel>('/api/metadata/logical-models', payload).then((res) => res.data)
+}
+
+export function updateLogicalModel(id: number, payload: LogicalModelInput): Promise<LogicalModel> {
+  return http.put<LogicalModel>(`/api/metadata/logical-models/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteLogicalModel(id: number): Promise<void> {
+  return http.delete(`/api/metadata/logical-models/${id}`).then(() => undefined)
+}
+
+// —— API 资产：可复用数据 API 的集中登记 ——
+
+export interface ApiAsset {
+  id: number
+  assetCode: string
+  assetName: string
+  apiPath: string
+  httpMethod?: string
+  category?: string
+  owner?: string
+  status?: 'registered' | 'published' | 'deprecated'
+  version?: string
+  description?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiAssetInput {
+  assetCode: string
+  assetName: string
+  apiPath: string
+  httpMethod?: string
+  category?: string
+  owner?: string
+  status?: string
+  version?: string
+  description?: string
+}
+
+export function listApiAssets(keyword?: string): Promise<ApiAsset[]> {
+  return http
+    .get<ApiAsset[]>('/api/metadata/api-assets', { params: keyword ? { keyword } : {} })
+    .then((res) => res.data)
+}
+
+export function createApiAsset(payload: ApiAssetInput): Promise<ApiAsset> {
+  return http.post<ApiAsset>('/api/metadata/api-assets', payload).then((res) => res.data)
+}
+
+export function updateApiAsset(id: number, payload: ApiAssetInput): Promise<ApiAsset> {
+  return http.put<ApiAsset>(`/api/metadata/api-assets/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteApiAsset(id: number): Promise<void> {
+  return http.delete(`/api/metadata/api-assets/${id}`).then(() => undefined)
+}
+
+// —— 数据产品：面向业务交付的数据产品及其生命周期 ——
+
+export interface DataProduct {
+  id: number
+  productCode: string
+  productName: string
+  category?: string
+  lifecycle?: 'planning' | 'developing' | 'released' | 'offline'
+  owner?: string
+  consumers?: string
+  sla?: string
+  description?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface DataProductInput {
+  productCode: string
+  productName: string
+  category?: string
+  lifecycle?: string
+  owner?: string
+  consumers?: string
+  sla?: string
+  description?: string
+}
+
+export function listDataProducts(keyword?: string): Promise<DataProduct[]> {
+  return http
+    .get<DataProduct[]>('/api/metadata/data-products', { params: keyword ? { keyword } : {} })
+    .then((res) => res.data)
+}
+
+export function createDataProduct(payload: DataProductInput): Promise<DataProduct> {
+  return http.post<DataProduct>('/api/metadata/data-products', payload).then((res) => res.data)
+}
+
+export function updateDataProduct(id: number, payload: DataProductInput): Promise<DataProduct> {
+  return http.put<DataProduct>(`/api/metadata/data-products/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteDataProduct(id: number): Promise<void> {
+  return http.delete(`/api/metadata/data-products/${id}`).then(() => undefined)
+}

@@ -72,9 +72,9 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'available' },
       { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'comingSoon', description: '提交与管理 Spark 作业，支持大数据量离线计算。' },
-      { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'comingSoon', description: '以可视化方式编排任务依赖，构建端到端数据加工流水线。' },
+      { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'available' },
       { key: 'scheduling', label: '任务调度', path: '/development/scheduling', status: 'available' },
-      { key: 'releases', label: '发布管理', path: '/development/releases', status: 'comingSoon', description: '管理数据开发产物的发布、审批与版本上线。' }
+      { key: 'releases', label: '发布管理', path: '/development/releases', status: 'available' }
     ]
   },
   {
@@ -95,7 +95,7 @@ export const navModules: NavModule[] = [
     icon: <SafetyCertificateOutlined />,
     children: [
       { key: 'metadata', label: '元数据管理', path: '/governance/metadata', status: 'available' },
-      { key: 'standards', label: '数据标准', path: '/governance/standards', status: 'comingSoon', description: '维护字段命名、编码与取值标准，统一数据规范。' },
+      { key: 'standards', label: '数据标准', path: '/governance/standards', status: 'available' },
       { key: 'quality', label: '数据质量', path: '/governance/quality', status: 'available' },
       { key: 'quality-trend', label: '质量趋势', path: '/governance/quality-trend', status: 'available' },
       { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
@@ -113,8 +113,8 @@ export const navModules: NavModule[] = [
       { key: 'datasets', label: '数据集', path: '/assets/datasets', status: 'available', description: '管理面向分析场景的、可复用的数据集。' },
       { key: 'metrics', label: '指标资产', path: '/assets/metrics', status: 'available' },
       { key: 'tags', label: '标签资产', path: '/assets/tags', status: 'available' },
-      { key: 'apis', label: 'API资产', path: '/assets/apis', status: 'comingSoon', description: '集中登记与展示可复用的数据 API 资产。' },
-      { key: 'products', label: '数据产品', path: '/assets/products', status: 'comingSoon', description: '管理面向业务交付的数据产品及其生命周期。' }
+      { key: 'apis', label: 'API资产', path: '/assets/apis', status: 'available' },
+      { key: 'products', label: '数据产品', path: '/assets/products', status: 'available' }
     ]
   },
   {
@@ -124,8 +124,8 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'apis', label: 'API管理', path: '/services/apis', status: 'comingSoon', description: '统一管理数据 API 的注册、发布与版本。' },
       { key: 'development', label: 'API开发', path: '/services/development', status: 'comingSoon', description: '将数据表、SQL 或指标编排为数据服务 API。' },
-      { key: 'subscriptions', label: '数据订阅', path: '/services/subscriptions', status: 'comingSoon', description: '管理数据订阅需求与下发配置。' },
-      { key: 'authorization', label: '服务授权', path: '/services/authorization', status: 'comingSoon', description: '配置数据服务的使用授权与访问范围。' },
+      { key: 'subscriptions', label: '数据订阅', path: '/services/subscriptions', status: 'available' },
+      { key: 'authorization', label: '服务授权', path: '/services/authorization', status: 'available' },
       { key: 'monitoring', label: '服务监控', path: '/services/monitoring', status: 'comingSoon', description: '监控数据服务的调用、耗时与异常。' }
     ]
   },

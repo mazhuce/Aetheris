@@ -162,3 +162,72 @@ export function removeDependency(id: number, upstreamTaskId: number): Promise<vo
     .delete(`/api/workflow/tasks/${id}/dependencies/${upstreamTaskId}`)
     .then(() => undefined)
 }
+
+// —— 发布管理：数据开发产物的发布、审批与版本上线 ——
+
+export type ReleaseStatus = 'pending' | 'approved' | 'rejected' | 'released' | 'rolled_back'
+
+export interface ReleaseRecord {
+  id: number
+  releaseNo: string
+  title: string
+  releaseType?: 'table' | 'task' | 'dashboard' | 'api' | 'model'
+  targetName: string
+  targetVersion?: string
+  changeSummary?: string
+  status?: ReleaseStatus
+  requestedBy?: string
+  approvedBy?: string
+  releasedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ReleaseRecordInput {
+  releaseNo: string
+  title: string
+  releaseType?: string
+  targetName: string
+  targetVersion?: string
+  changeSummary?: string
+}
+
+export function listReleases(status?: string, releaseType?: string): Promise<ReleaseRecord[]> {
+  return http
+    .get<ReleaseRecord[]>('/api/workflow/releases', {
+      params: { status: status || undefined, releaseType: releaseType || undefined }
+    })
+    .then((res) => res.data)
+}
+
+export function getRelease(id: number): Promise<ReleaseRecord> {
+  return http.get<ReleaseRecord>(`/api/workflow/releases/${id}`).then((res) => res.data)
+}
+
+export function createRelease(payload: ReleaseRecordInput): Promise<ReleaseRecord> {
+  return http.post<ReleaseRecord>('/api/workflow/releases', payload).then((res) => res.data)
+}
+
+export function updateRelease(id: number, payload: ReleaseRecordInput): Promise<ReleaseRecord> {
+  return http.put<ReleaseRecord>(`/api/workflow/releases/${id}`, payload).then((res) => res.data)
+}
+
+export function deleteRelease(id: number): Promise<void> {
+  return http.delete(`/api/workflow/releases/${id}`).then(() => undefined)
+}
+
+export function approveRelease(id: number): Promise<ReleaseRecord> {
+  return http.post<ReleaseRecord>(`/api/workflow/releases/${id}/approve`, undefined).then((res) => res.data)
+}
+
+export function rejectRelease(id: number): Promise<ReleaseRecord> {
+  return http.post<ReleaseRecord>(`/api/workflow/releases/${id}/reject`, undefined).then((res) => res.data)
+}
+
+export function publishRelease(id: number): Promise<ReleaseRecord> {
+  return http.post<ReleaseRecord>(`/api/workflow/releases/${id}/publish`, undefined).then((res) => res.data)
+}
+
+export function rollbackRelease(id: number): Promise<ReleaseRecord> {
+  return http.post<ReleaseRecord>(`/api/workflow/releases/${id}/rollback`, undefined).then((res) => res.data)
+}

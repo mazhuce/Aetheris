@@ -36,7 +36,7 @@ spring:
         - id: serving-service
           uri: http://${SERVING_SERVICE_HOST:localhost}:${SERVING_SERVICE_PORT:8089}
           predicates:
-            - Path=/api/analytics/**
+            - Path=/api/analytics/**,/api/serving/**
         - id: ai-agent
           uri: http://${AI_AGENT_HOST:localhost}:${AI_AGENT_PORT:8086}
           predicates:

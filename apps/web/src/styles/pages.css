@@ -1141,3 +1141,100 @@
 .quiet-table .ant-empty-normal {
   margin-block: var(--space-6);
 }
+
+/* == 工作流编排：任务依赖 DAG 画布 == */
+
+.dag-canvas {
+  position: relative;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.dag-edges {
+  position: absolute;
+  inset: var(--space-4);
+  pointer-events: none;
+}
+
+.dag-edge {
+  fill: none;
+  stroke: var(--border-strong, #5a6472);
+  stroke-width: 1.5;
+  opacity: 0.55;
+}
+
+.dag-edge.active {
+  stroke: var(--accent, #4c8dff);
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.dag-arrow {
+  fill: var(--border-strong, #5a6472);
+  opacity: 0.55;
+}
+
+.dag-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dag-node:hover {
+  border-color: var(--border-strong, #5a6472);
+}
+
+.dag-node.selected {
+  border-color: var(--accent, #4c8dff);
+  box-shadow: 0 0 0 1px var(--accent, #4c8dff);
+}
+
+.dag-node-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dag-node-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dep-cycle-warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.dep-add-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.dep-add-select {
+  min-width: 280px;
+}

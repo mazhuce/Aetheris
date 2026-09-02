@@ -18,6 +18,10 @@ describe('navigation visibility', () => {
     expect(viewerModules.flatMap((module) => module.children).some((child) => child.path === '/operations/audit')).toBe(false)
     expect(viewerModules.flatMap((module) => module.children).some((child) => child.path === '/admin/users')).toBe(false)
     expect(adminModules.flatMap((module) => module.children).some((child) => child.path === '/admin/users')).toBe(true)
-    expect(adminModules.some((module) => module.key === 'services')).toBe(false)
+    // 数据服务模块的订阅/授权页对 viewer 只读开放，模块应可见；
+    // 其中仍是占位的 API 管理/开发/监控不应出现在导航里。
+    expect(viewerModules.some((module) => module.key === 'services')).toBe(true)
+    expect(viewerModules.flatMap((module) => module.children).some((child) => child.path === '/services/apis')).toBe(false)
+    expect(viewerModules.flatMap((module) => module.children).some((child) => child.path === '/services/monitoring')).toBe(false)
   })
 })
