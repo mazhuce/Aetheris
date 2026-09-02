@@ -73,3 +73,27 @@ export function runTask(id: number): Promise<IngestionRun> {
 export function listRuns(id: number, limit = 30): Promise<IngestionRun[]> {
   return http.get<IngestionRun[]>(`/api/ingestion/tasks/${id}/runs`, { params: { limit } }).then((res) => res.data)
 }
+
+// —— 数据同步：跨任务的全局运行记录 ——
+
+export interface SyncRunRecord {
+  id: number
+  taskId: number
+  taskName: string
+  status: 'running' | 'success' | 'failed'
+  rowsRead?: number
+  rowsWritten?: number
+  durationMs?: number
+  errorMessage?: string
+  triggeredBy?: string
+  startedAt: string
+  finishedAt?: string
+}
+
+export function listAllSyncRuns(taskId?: number, status?: string): Promise<SyncRunRecord[]> {
+  return http
+    .get<SyncRunRecord[]>('/api/ingestion/runs', {
+      params: { taskId: taskId || undefined, status: status || undefined }
+    })
+    .then((res) => res.data)
+}

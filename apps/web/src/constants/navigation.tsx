@@ -51,7 +51,7 @@ export const navModules: NavModule[] = [
       { key: 'overview', label: '数据概览', path: '/workbench', status: 'available' },
       { key: 'operations', label: '运行概览', path: '/workbench/operations', status: 'available' },
       { key: 'todos', label: '我的待办', path: '/workbench/todos', status: 'available' },
-      { key: 'recent', label: '最近访问', path: '/workbench/recent', status: 'comingSoon', description: '记录最近访问的数据表、资产与功能入口，便于快速定位。' }
+      { key: 'recent', label: '最近访问', path: '/workbench/recent', status: 'available' }
     ]
   },
   {
@@ -60,7 +60,7 @@ export const navModules: NavModule[] = [
     icon: <DatabaseOutlined />,
     children: [
       { key: 'sources', label: '数据源管理', path: '/integration/sources', status: 'available' },
-      { key: 'sync', label: '数据同步', path: '/integration/sync', status: 'comingSoon', description: '配置数据库、文件与 API 之间的批量数据同步任务。' },
+      { key: 'sync', label: '数据同步', path: '/integration/sync', status: 'available' },
       { key: 'realtime', label: '实时采集', path: '/integration/realtime', status: 'comingSoon', description: '基于实时数据源的流式采集与增量接入。' },
       { key: 'tasks', label: '接入任务', path: '/integration/tasks', status: 'available' }
     ]
@@ -70,7 +70,7 @@ export const navModules: NavModule[] = [
     label: '数据开发',
     icon: <CodeOutlined />,
     children: [
-      { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'comingSoon', description: '提供 SQL 编写、调试与执行环境，支撑数据加工开发。' },
+      { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'available' },
       { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'comingSoon', description: '提交与管理 Spark 作业，支持大数据量离线计算。' },
       { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'comingSoon', description: '以可视化方式编排任务依赖，构建端到端数据加工流水线。' },
       { key: 'scheduling', label: '任务调度', path: '/development/scheduling', status: 'available' },
@@ -82,8 +82,8 @@ export const navModules: NavModule[] = [
     label: '数据建模',
     icon: <PartitionOutlined />,
     children: [
-      { key: 'domains', label: '主题域', path: '/modeling/domains', status: 'comingSoon', description: '按业务主题划分数据域，统一数仓的领域边界。' },
-      { key: 'dimensions', label: '维度管理', path: '/modeling/dimensions', status: 'comingSoon', description: '维护公共维度与维度属性，统一分析口径。' },
+      { key: 'domains', label: '主题域', path: '/modeling/domains', status: 'available' },
+      { key: 'dimensions', label: '维度管理', path: '/modeling/dimensions', status: 'available' },
       { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'comingSoon', description: '定义业务指标的计算口径、归属与版本。' },
       { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'comingSoon', description: '面向业务的概念与逻辑模型设计。' },
       { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' }
@@ -100,7 +100,7 @@ export const navModules: NavModule[] = [
       { key: 'quality-trend', label: '质量趋势', path: '/governance/quality-trend', status: 'available' },
       { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
       { key: 'classification', label: '分类分级', path: '/governance/classification', status: 'available' },
-      { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'comingSoon', description: '集中跟踪与闭环处理数据治理中发现的问题。' }
+      { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'available' }
     ]
   },
   {
@@ -108,11 +108,11 @@ export const navModules: NavModule[] = [
     label: '数据资产',
     icon: <FolderOpenOutlined />,
     children: [
-      { key: 'catalog', label: '资产目录', path: '/assets/catalog', status: 'comingSoon', description: '按主题与层级浏览企业数据资产全景。' },
+      { key: 'catalog', label: '资产目录', path: '/assets/catalog', status: 'available' },
       { key: 'tables', label: '数据表', path: '/assets/tables', status: 'available' },
       { key: 'datasets', label: '数据集', path: '/assets/datasets', status: 'available', description: '管理面向分析场景的、可复用的数据集。' },
-      { key: 'metrics', label: '指标资产', path: '/assets/metrics', status: 'comingSoon', description: '统一沉淀与共享企业指标资产。' },
-      { key: 'tags', label: '标签资产', path: '/assets/tags', status: 'comingSoon', description: '管理用户与实体的标签体系及标签资产。' },
+      { key: 'metrics', label: '指标资产', path: '/assets/metrics', status: 'available' },
+      { key: 'tags', label: '标签资产', path: '/assets/tags', status: 'available' },
       { key: 'apis', label: 'API资产', path: '/assets/apis', status: 'comingSoon', description: '集中登记与展示可复用的数据 API 资产。' },
       { key: 'products', label: '数据产品', path: '/assets/products', status: 'comingSoon', description: '管理面向业务交付的数据产品及其生命周期。' }
     ]

@@ -83,6 +83,36 @@ export function runAdhocQuery(datasourceId: number, sql: string): Promise<AdhocQ
     .then((res) => res.data)
 }
 
+// —— 标签资产：数据表的业务标签 ——
+
+export interface TableTagGroup {
+  tag: string
+  tableCount: number
+  tables: { id: number; tableId: number; tableName: string; createdBy?: string; createdAt?: string }[]
+}
+
+export interface TableTagItem {
+  id: number
+  metadataTableId: number
+  tagName: string
+  createdBy?: string
+  createdAt?: string
+}
+
+export function listTableTagGroups(): Promise<TableTagGroup[]> {
+  return http.get<TableTagGroup[]>('/api/metadata/table-tags').then((res) => res.data)
+}
+
+export function addTableTag(tableId: number, tag: string): Promise<TableTagItem> {
+  return http
+    .post<TableTagItem>('/api/metadata/table-tags', { tableId, tag })
+    .then((res) => res.data)
+}
+
+export function removeTableTag(id: number): Promise<void> {
+  return http.delete(`/api/metadata/table-tags/${id}`).then(() => undefined)
+}
+
 export function testDataSourceConfig(payload: DataSourceInput): Promise<TestResult> {
   return http.post<TestResult>('/api/metadata/datasources/test', payload, { timeout: 40000 }).then((res) => res.data)
 }

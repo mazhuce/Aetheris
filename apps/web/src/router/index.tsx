@@ -32,6 +32,15 @@ const ServiceMonitorPage = lazy(() => import('@/pages/operations/services'))
 const QueryHistoryPage = lazy(() => import('@/pages/analytics/history'))
 const OperationsOverviewPage = lazy(() => import('@/pages/workbench/operations'))
 const TableBrowserPage = lazy(() => import('@/pages/assets/tables'))
+const DataSyncPage = lazy(() => import('@/pages/integration/sync'))
+const SqlDevelopmentPage = lazy(() => import('@/pages/development/sql'))
+const AssetCatalogPage = lazy(() => import('@/pages/assets/catalog'))
+const DomainPage = lazy(() => import('@/pages/modeling/domains'))
+const GovernanceIssuesPage = lazy(() => import('@/pages/governance/issues'))
+const RecentVisitsPage = lazy(() => import('@/pages/workbench/recent'))
+const DimensionPage = lazy(() => import('@/pages/modeling/dimensions'))
+const MetricAssetsPage = lazy(() => import('@/pages/assets/metrics'))
+const TagAssetsPage = lazy(() => import('@/pages/assets/tags'))
 const DashboardListPage = lazy(() => import('@/pages/analytics/dashboards'))
 const DashboardEditorPage = lazy(() => import('@/pages/analytics/dashboards/editor'))
 const DashboardPreviewPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.DashboardPreviewPage })))
@@ -112,6 +121,15 @@ export const router = createBrowserRouter([
       { path: 'operations/services', element: <ServiceMonitorPage /> },
       { path: 'analytics/history', element: <QueryHistoryPage /> },
       { path: 'assets/tables', element: <TableBrowserPage /> },
+      { path: 'integration/sync', element: <DataSyncPage /> },
+      { path: 'development/sql', element: <SqlDevelopmentPage /> },
+      { path: 'assets/catalog', element: <AssetCatalogPage /> },
+      { path: 'modeling/domains', element: <DomainPage /> },
+      { path: 'governance/issues', element: <GovernanceIssuesPage /> },
+      { path: 'workbench/recent', element: <RecentVisitsPage /> },
+      { path: 'modeling/dimensions', element: <DimensionPage /> },
+      { path: 'assets/metrics', element: <MetricAssetsPage /> },
+      { path: 'assets/tags', element: <TagAssetsPage /> },
       { path: 'workbench/operations', element: <OperationsOverviewPage /> },
       {
         path: 'operations/audit',
