@@ -141,6 +141,19 @@ public class ChatService {
         return reply;
     }
 
+    /**
+     * ChatBI 智能问数：单问句、无会话状态的一次性问答。
+     *
+     * <p>与 {@link #chat} 的区别：不落库、无多轮上下文，返回内容按 CHAT_BI
+     * 提示包含结论、口径与 SQL。适合「问一句话拿一个数」的场景；
+     * 需要追问与上下文请用 AI 助手的 dataMode 对话。
+     */
+    public LlmReply chatBi(String question) {
+        return llmClient.chatWithTools(
+                List.of(new LlmMessage("user", question)),
+                AgentPrompts.CHAT_BI);
+    }
+
     /** 首轮提问用作会话标题，让侧边栏列表可辨识。 */
     private void touchConversation(ChatConversation conversation, String firstQuestion) {
         if (conversation.getTitle() == null

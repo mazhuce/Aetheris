@@ -45,6 +45,10 @@ export function login(username: string, password: string): Promise<LoginResult> 
   return http.post<LoginResult>('/api/auth/login', { username, password }).then((res) => res.data)
 }
 
+export function logout(): Promise<void> {
+  return http.post('/api/auth/logout').then(() => undefined)
+}
+
 export function listAuthUsers(): Promise<AuthUser[]> {
   return http.get<AuthUser[]>('/api/auth/users').then((res) => res.data)
 }

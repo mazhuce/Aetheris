@@ -80,15 +80,15 @@ services/<name>/
 任务执行刻意拆成两个服务，而不是让 workflow 自己连数据库：
 
 ```text
-workflow-service                 metadata-service
-  任务定义 / Quartz 调度            数据源凭据 / JDBC 驱动
-  实例状态 / 日志 / 重跑     ──▶    URL 协议校验 / 参数黑名单
-  依赖拓扑                         SqlWriteGuard 白名单
-                                  ↓
-                              Hive / Spark / PostgreSQL
+workflow / ingestion / quality       metadata-service
+  Quartz 调度 / 依赖拓扑                数据源凭据 / JDBC 驱动
+  批量接入 / 事务写入           ──▶     URL 协议校验 / 参数黑名单
+  质量检查 / 运行留痕                   只读与写入 SQL 守卫
+                                       ↓
+                                Hive / Spark / PostgreSQL / MySQL
 ```
 
-**为什么执行能力放在 metadata**：它已持有凭据、驱动（含 hive-jdbc 的 12 处 exclusion）、
+**为什么数据库执行能力放在 metadata**：它已持有凭据、驱动（含 hive-jdbc 的 12 处 exclusion）、
 `buildUrl` 的协议校验和危险连接参数黑名单。把这些复制到 workflow 不只是重复代码，
 而是复制一份安全边界——两边任一处遗漏就是缺口。走 `/internal/**` 路径，
 网关只路由 `/api/**`，因此该端点仅在 Compose 内部网络可达。
@@ -205,18 +205,18 @@ provider 耦合；换模型只替换适配器。随 Spring AI 引入的
 ## 演进路线
 
 - **Phase 1（已完成）**：单机 Docker Compose、前端、网关、领域服务、PostgreSQL 与 JWT 登录闭环。
-- **Phase 2（进行中）**：实现数据接入、质量和治理执行引擎，补齐 RBAC、审计、测试与可观测性。
+- **Phase 2（进行中）**：数据接入与质量执行引擎、持久化调度、失败待办、任务监控、RBAC、审计、跨服务测试和容器健康检查已完成；高级治理与指标可观测性继续建设。
 - **Phase 3（已完成基础设施）**：升级到 Boot 3.4.7 + Spring AI 1.0.0，引入 DeepSeek starter、工具调用能力、pgvector 向量库支持；为 DataAgent（元数据检索、NL2SQL、查询执行）打好基础。后续接入注册/配置中心与 Python 数据服务。
 - **Phase 4**：Kubernetes + 完整数据治理与服务开放能力。
 
 ## 当前进度
 
 - Monorepo 目录结构、Git 规范、版本矩阵、企业级前端设计规范已建立。
-- 已实现：前端、网关、`auth`、`system`、`metadata`、`quality`、`ingestion`、`governance`、`ai-agent` 与 PostgreSQL 编排。
-- 已形成真实执行闭环：登录鉴权、数据源连接测试/只读查询、DeepSeek 对话（通过 Spring AI）与按用户隔离的会话持久化。
+- 已实现：前端、网关、`auth`、`system`、`metadata`、`quality`、`ingestion`、`governance`、`workflow`、`serving`、`ai-agent` 与 PostgreSQL 编排。
+- 已形成真实执行闭环：登录鉴权、数据源连接测试/即席只读查询、跨关系型数据源批量接入、质量检查、持久化 SQL 调度、失败待办、DeepSeek 对话与按用户隔离的会话持久化。
 - 已建立最小 RBAC：认证账号由 `auth` 服务统一管理，JWT 携带 `admin` / `viewer` 角色，网关负责写操作授权。
 - `ai-agent` 分层清晰（controller 协议转换、service 编排、LlmClient 端口、SpringAiLlmClient 适配器），测试覆盖从 2 个增至 20 个，为后续工具调用循环与 DataAgent 扩展准备好基础。
 - 数仓底座已建立：WSL Spark 五层数仓（ODS/DWD/DWS/ADS/DIM）130 万订单 + 320 万明细、11 类脏数据、180 个分区；元数据采集支持层级推断、表注释抓取、17 条真实血缘（从 SQL 解析生成）。
 - `system.sys_user` 作为旧版资料目录暂时保留，后续在确认无外部调用后再通过独立迁移退役。
-- 仍属于管理能力：接入任务、质量规则、治理策略；对应执行引擎尚未完成。
+- 高级治理策略与数据服务开放仍处于管理能力阶段，未交付入口不会显示在产品导航中。
 - Docker 一键构建与启动已打通，并使用国内镜像源。

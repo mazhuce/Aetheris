@@ -18,7 +18,9 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,6 +48,7 @@ public class TaskController {
 
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
     private static final String USER_HEADER = "X-User-Name";
+    private static final String ROLE_HEADER = "X-User-Role";
     private static final DateTimeFormatter BIZ_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final TaskService taskService;
@@ -95,7 +98,9 @@ public class TaskController {
     @Transactional
     public ResponseEntity<?> create(
             @Valid @RequestBody Task task,
-            @RequestHeader(value = USER_HEADER, required = false) String username) {
+            @RequestHeader(value = USER_HEADER, required = false) String username,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         String rejection = validateDefinition(task);
         if (rejection != null) {
             return ResponseEntity.badRequest().body(Map.of("message", rejection));
@@ -130,7 +135,11 @@ public class TaskController {
 
     @PutMapping("/{id}")
     @Transactional
-    public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody Task task) {
+    public ResponseEntity<?> update(
+            @PathVariable Long id,
+            @Valid @RequestBody Task task,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         Task existing = taskService.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
@@ -153,7 +162,10 @@ public class TaskController {
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(
+            @PathVariable Long id,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         if (taskService.getById(id) == null) {
             return ResponseEntity.notFound().build();
         }
@@ -173,7 +185,9 @@ public class TaskController {
     public ResponseEntity<?> run(
             @PathVariable Long id,
             @RequestBody(required = false) TaskRunRequest request,
-            @RequestHeader(value = USER_HEADER, required = false) String username) {
+            @RequestHeader(value = USER_HEADER, required = false) String username,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         String bizDate = request == null || request.bizDate() == null || request.bizDate().isBlank()
                 // 默认取昨天，与定时触发口径一致：数仓通常加工前一天的完整数据。
                 ? LocalDate.now().minusDays(1).format(BIZ_DATE)
@@ -206,6 +220,18 @@ public class TaskController {
                         .last("LIMIT " + Math.clamp(limit, 1, 200)));
     }
 
+    /** 全局运行实例列表（任务监控页用），按开始时间倒序，可按状态过滤。 */
+    @GetMapping("/instances")
+    public List<TaskInstance> allInstances(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "50") int limit) {
+        return instanceService.list(
+                new LambdaQueryWrapper<TaskInstance>()
+                        .eq(StringUtils.hasText(status), TaskInstance::getStatus, status)
+                        .orderByDesc(TaskInstance::getStartedAt)
+                        .last("LIMIT " + Math.clamp(limit, 1, 200)));
+    }
+
     /** 某次运行的日志。 */
     @GetMapping("/instances/{instanceId}/logs")
     public List<TaskLog> logs(@PathVariable Long instanceId) {
@@ -224,7 +250,9 @@ public class TaskController {
     @PostMapping("/{id}/dependencies")
     public ResponseEntity<?> addDependency(
             @PathVariable Long id,
-            @RequestParam Long upstreamTaskId) {
+            @RequestParam Long upstreamTaskId,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         if (taskService.getById(id) == null || taskService.getById(upstreamTaskId) == null) {
             return ResponseEntity.notFound().build();
         }
@@ -251,13 +279,29 @@ public class TaskController {
     @DeleteMapping("/{id}/dependencies/{upstreamTaskId}")
     public ResponseEntity<Void> removeDependency(
             @PathVariable Long id,
-            @PathVariable Long upstreamTaskId) {
+            @PathVariable Long upstreamTaskId,
+            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
+        requireAdmin(role);
         dependencyService.remove(
                 new LambdaQueryWrapper<TaskDependency>()
                         .eq(TaskDependency::getTaskId, id)
                         .eq(TaskDependency::getUpstreamTaskId, upstreamTaskId));
         return ResponseEntity.noContent().build();
     }
+
+    private void requireAdmin(String role) {
+        if (!"admin".equals(role)) {
+            throw new ForbiddenException();
+        }
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> forbidden() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "仅管理员可以修改或运行工作流任务"));
+    }
+
+    public static class ForbiddenException extends RuntimeException { }
 
     /**
      * 从 upstreamTaskId 出发沿依赖边向上遍历，若能回到 taskId 说明会形成环。

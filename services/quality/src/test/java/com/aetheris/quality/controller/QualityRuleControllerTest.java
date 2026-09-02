@@ -1,7 +1,10 @@
 package com.aetheris.quality.controller;
 
 import com.aetheris.quality.entity.QualityRule;
+import com.aetheris.quality.service.QualityCheckResultService;
+import com.aetheris.quality.service.QualityExecutionService;
 import com.aetheris.quality.service.QualityRuleService;
+import com.aetheris.quality.service.QualitySchedulerService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
@@ -18,13 +21,16 @@ import static org.mockito.Mockito.when;
 class QualityRuleControllerTest {
 
     private final QualityRuleService service = mock(QualityRuleService.class);
-    private final QualityRuleController controller = new QualityRuleController(service);
+    private final QualityRuleController controller = new QualityRuleController(
+            service, mock(QualityCheckResultService.class), mock(QualityExecutionService.class),
+            mock(QualitySchedulerService.class));
 
     private QualityRule rule(Long id, String name) {
         QualityRule rule = new QualityRule();
         rule.setId(id);
         rule.setName(name);
         rule.setRuleType("not_null");
+        rule.setDatasourceId(1L);
         rule.setTargetTable("ods.orders");
         rule.setStatus("active");
         return rule;

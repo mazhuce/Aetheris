@@ -47,6 +47,7 @@ services:
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      AETHERIS_DATASOURCE_MASTER_KEY: ${AETHERIS_DATASOURCE_MASTER_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +70,7 @@ services:
       postgres:
         condition: service_healthy
       metadata-service:
-        condition: service_started
+        condition: service_healthy
 
   quality-service:
     build:
@@ -82,8 +83,15 @@ services:
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
+      # 检查失败时写通知（我的待办）。
+      SYSTEM_SERVICE_HOST: system-service
+      SYSTEM_SERVICE_PORT: "8081"
     depends_on:
       postgres:
+        condition: service_healthy
+      metadata-service:
         condition: service_healthy
 
   ingestion-service:
@@ -100,11 +108,14 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      # 检查失败时写通知（我的待办）。
+      SYSTEM_SERVICE_HOST: system-service
+      SYSTEM_SERVICE_PORT: "8081"
     depends_on:
       postgres:
         condition: service_healthy
       metadata-service:
-        condition: service_started
+        condition: service_healthy
 
   governance-service:
     build:
@@ -136,11 +147,14 @@ services:
       # 任务执行通过 metadata 的 /internal 端点，凭据与驱动都在那边，workflow 不直连数据源。
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      # 任务失败时写通知（我的待办）。
+      SYSTEM_SERVICE_HOST: system-service
+      SYSTEM_SERVICE_PORT: "8081"
     depends_on:
       postgres:
         condition: service_healthy
       metadata-service:
-        condition: service_started
+        condition: service_healthy
 
   ai-agent:
     image: ghcr.io/mazhuce/aetheris-ai-agent:latest
@@ -166,7 +180,7 @@ services:
       postgres:
         condition: service_healthy
       metadata-service:
-        condition: service_started
+        condition: service_healthy
 
   auth-service:
     image: ghcr.io/mazhuce/aetheris-auth:latest
@@ -197,6 +211,8 @@ services:
     restart: unless-stopped
     environment:
       JWT_SECRET: ${JWT_SECRET:-}
+      AETHERIS_RATE_LIMIT_CAPACITY: ${AETHERIS_RATE_LIMIT_CAPACITY:-60}
+      AETHERIS_RATE_LIMIT_WINDOW_SECONDS: ${AETHERIS_RATE_LIMIT_WINDOW_SECONDS:-60}
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
       METADATA_SERVICE_HOST: metadata-service
@@ -216,17 +232,26 @@ services:
       SERVING_SERVICE_HOST: serving-service
       SERVING_SERVICE_PORT: "8089"
     depends_on:
-      - system-service
-      - metadata-service
-      - quality-service
-      - ingestion-service
-      - governance-service
-      - ai-agent
-      - workflow-service
-      - auth-service
-      - serving-service
+      system-service:
+        condition: service_healthy
+      metadata-service:
+        condition: service_healthy
+      quality-service:
+        condition: service_healthy
+      ingestion-service:
+        condition: service_healthy
+      governance-service:
+        condition: service_healthy
+      ai-agent:
+        condition: service_healthy
+      workflow-service:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      serving-service:
+        condition: service_healthy
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
 
   web:
     image: ghcr.io/mazhuce/aetheris-web:latest
@@ -237,7 +262,8 @@ services:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
     restart: unless-stopped
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy
     ports:
       # 宿主端口可用 WEB_PORT 覆盖：Windows 上 Hyper-V 会随机保留端口区间，
       # 5173 若落入保留区间则无法绑定（报 ports are not available）。

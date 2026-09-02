@@ -128,6 +128,15 @@ export function listInstances(id: number, limit = 30): Promise<TaskInstance[]> {
     .then((res) => res.data)
 }
 
+/** 全局实例列表（任务监控页），按开始时间倒序，可按状态过滤。 */
+export function listAllInstances(status?: string, limit = 100): Promise<TaskInstance[]> {
+  return http
+    .get<TaskInstance[]>('/api/workflow/tasks/instances', {
+      params: status ? { status, limit } : { limit }
+    })
+    .then((res) => res.data)
+}
+
 export function listInstanceLogs(instanceId: number): Promise<TaskLog[]> {
   return http
     .get<TaskLog[]>(`/api/workflow/tasks/instances/${instanceId}/logs`)

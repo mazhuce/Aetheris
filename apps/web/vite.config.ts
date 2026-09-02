@@ -37,7 +37,11 @@ export default defineConfig(() => {
         output: {
           manualChunks: {
             antd: ['antd', '@ant-design/icons'],
-            vendor: ['axios']
+            charts: ['echarts'],
+            dashboard: ['react-grid-layout'],
+            markdown: ['react-markdown', 'remark-gfm'],
+            react: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+            vendor: ['axios', 'dayjs']
           }
         }
       }

@@ -64,5 +64,10 @@ logging:
 jwt:
   secret: ${JWT_SECRET:}
 
+aetheris:
+  rate-limit:
+    capacity: ${AETHERIS_RATE_LIMIT_CAPACITY:60}
+    window-seconds: ${AETHERIS_RATE_LIMIT_WINDOW_SECONDS:60}
+
 audit:
   base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}

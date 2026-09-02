@@ -18,6 +18,25 @@ spring:
   jackson:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
+  quartz:
+    # JDBC 存储而非内存：服务重启不丢调度（与 workflow 服务同一套模式）。
+    job-store-type: jdbc
+    jdbc:
+      # 表结构由 Flyway 的 V3 管理（各服务 schema 隔离，表前缀见 tablePrefix）。
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceName: AetherisIngestionScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.tablePrefix: ingestion.QRTZ_
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 20000
+      # 接入任务按批次搬数可能持续较久，misfire 阈值给足余量。
+      org.quartz.jobStore.misfireThreshold: 300000
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      # 每个线程都可能长时间占用一个源库连接做搬运，不宜过多。
+      org.quartz.threadPool.threadCount: 3
 
 mybatis-plus:
   configuration:
@@ -41,3 +60,10 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+aetheris:
+  metadata:
+    base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+  system:
+    # 任务失败时写入 system 服务的通知表（我的待办）；走 /internal 路径，网关不暴露。
+    base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}

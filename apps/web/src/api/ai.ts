@@ -51,3 +51,10 @@ export function sendChat(
     )
     .then((res) => res.data)
 }
+
+export function askChatBi(question: string): Promise<ChatResult> {
+  // 模型需要检索表结构并执行查询，超时与 dataMode 对话一致。
+  return http
+    .post<ChatResult>('/api/ai/chatbi', { question }, { timeout: 300000 })
+    .then((res) => res.data)
+}

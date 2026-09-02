@@ -72,6 +72,19 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void blocksViewerFromCreatingOrRunningWorkflowTasks() {
+        for (String path : new String[]{"/api/workflow/tasks", "/api/workflow/tasks/7/run"}) {
+            MockServerWebExchange exchange = exchange("POST", path, token("alice", "viewer"));
+
+            new JwtAuthFilter(SECRET).filter(exchange, ignored -> {
+                throw new AssertionError("filter chain must not run");
+            }).block();
+
+            assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode(), path);
+        }
+    }
+
+    @Test
     void blocksViewerFromReadingAuditLogs() {
         MockServerWebExchange exchange = exchange("GET", "/api/system/audit-logs", token("alice", "viewer"));
 
@@ -118,6 +131,21 @@ class JwtAuthFilterTest {
 
         assertEquals("alice", exchange.getAttribute(JwtAuthFilter.AUTHENTICATED_USER_ATTRIBUTE));
         assertEquals("viewer", exchange.getAttribute(JwtAuthFilter.AUTHENTICATED_ROLE_ATTRIBUTE));
+    }
+
+    @Test
+    void logoutRevokesTokenForSubsequentRequests() {
+        String token = token("alice", "viewer");
+        JwtAuthFilter filter = new JwtAuthFilter(SECRET);
+        MockServerWebExchange logout = exchange("POST", "/api/auth/logout", token);
+        filter.filter(logout, filtered -> filtered.getResponse().setComplete()).block();
+
+        MockServerWebExchange subsequent = exchange("GET", "/api/quality/rules", token);
+        filter.filter(subsequent, ignored -> {
+            throw new AssertionError("revoked token must not reach downstream");
+        }).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, subsequent.getResponse().getStatusCode());
     }
 
     private MockServerWebExchange exchange(String method, String path, String token) {

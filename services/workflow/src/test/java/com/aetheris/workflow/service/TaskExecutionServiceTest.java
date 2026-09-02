@@ -268,7 +268,8 @@ class TaskExecutionServiceTest {
             task.setMaxRetries(0);
             when(tasks.getById(anyLong())).thenReturn(task);
             when(dependencies.list(any(Wrapper.class))).thenReturn(List.of());
-            service = new TaskExecutionService(tasks, instances, logs, dependencies, client);
+            service = new TaskExecutionService(tasks, instances, logs, dependencies, client,
+                    mock(NotificationClient.class));
         }
     }
 

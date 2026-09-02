@@ -14,6 +14,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
@@ -29,6 +30,15 @@ import java.util.Set;
 public class JdbcService {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcService.class);
+    private DataSourceSecretService secretService;
+
+    public JdbcService() {
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public JdbcService(DataSourceSecretService secretService) {
+        this.secretService = secretService;
+    }
     private static final int MAX_QUERY_ROWS = 100;
     private static final int MAX_PREVIEW_ROWS = 50;
     private static final int QUERY_TIMEOUT_SECONDS = 30;
@@ -144,6 +154,122 @@ public class JdbcService {
         }
     }
 
+    /**
+     * 将一个受管数据源的只读查询结果批量写入另一个关系型数据源。
+     * 目标写入在单个事务中完成，replace 使用同一事务内的 DELETE + INSERT，失败不会留下半批数据。
+     */
+    public Map<String, Object> transfer(
+            DataSource source,
+            DataSource target,
+            String sourceSql,
+            String targetTable,
+            String writeMode,
+            Integer requestedBatchSize) {
+        String query = validateReadOnlySql(sourceSql);
+        if (!isPostgresLike(target) && !isMysqlLike(target)) {
+            throw new IllegalArgumentException("批量接入目标当前仅支持 PostgreSQL/MySQL 兼容数据源");
+        }
+        String mode = StringUtils.hasText(writeMode) ? writeMode.trim().toLowerCase(Locale.ROOT) : "append";
+        if (!Set.of("append", "replace").contains(mode)) {
+            throw new IllegalArgumentException("写入模式仅支持 append 或 replace");
+        }
+        int batchSize = Math.clamp(requestedBatchSize == null ? 500 : requestedBatchSize, 1, 5000);
+        String quotedTable = quoteQualifiedIdentifier(targetTable, target);
+        long startedAt = System.currentTimeMillis();
+
+        try (Connection sourceConnection = connect(source);
+             Connection targetConnection = connect(target);
+             Statement sourceStatement = sourceConnection.createStatement()) {
+            sourceConnection.setReadOnly(true);
+            sourceStatement.setFetchSize(batchSize);
+            try {
+                sourceStatement.setQueryTimeout(WRITE_TIMEOUT_SECONDS);
+            } catch (SQLFeatureNotSupportedException ignored) {
+                log.debug("Source JDBC driver does not support query timeout");
+            }
+            targetConnection.setAutoCommit(false);
+
+            try (ResultSet rows = sourceStatement.executeQuery(query)) {
+                ResultSetMetaData metadata = rows.getMetaData();
+                int columnCount = metadata.getColumnCount();
+                if (columnCount == 0) {
+                    throw new IllegalArgumentException("来源查询没有可写入的字段");
+                }
+                List<String> columns = new ArrayList<>(columnCount);
+                for (int index = 1; index <= columnCount; index++) {
+                    columns.add(quoteIdentifier(metadata.getColumnLabel(index), target));
+                }
+                String placeholders = String.join(", ", java.util.Collections.nCopies(columnCount, "?"));
+                String insertSql = "INSERT INTO " + quotedTable + " (" + String.join(", ", columns)
+                        + ") VALUES (" + placeholders + ")";
+
+                if ("replace".equals(mode)) {
+                    try (Statement delete = targetConnection.createStatement()) {
+                        delete.executeUpdate("DELETE FROM " + quotedTable);
+                    }
+                }
+
+                long written = 0;
+                try (PreparedStatement insert = targetConnection.prepareStatement(insertSql)) {
+                    while (rows.next()) {
+                        for (int index = 1; index <= columnCount; index++) {
+                            insert.setObject(index, rows.getObject(index));
+                        }
+                        insert.addBatch();
+                        written++;
+                        if (written % batchSize == 0) {
+                            insert.executeBatch();
+                        }
+                    }
+                    if (written % batchSize != 0) {
+                        insert.executeBatch();
+                    }
+                }
+                targetConnection.commit();
+
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("success", true);
+                result.put("rowsRead", written);
+                result.put("rowsWritten", written);
+                result.put("durationMs", System.currentTimeMillis() - startedAt);
+                return result;
+            } catch (RuntimeException | SQLException error) {
+                try {
+                    targetConnection.rollback();
+                } catch (SQLException rollbackError) {
+                    error.addSuppressed(rollbackError);
+                }
+                throw error;
+            }
+        } catch (IllegalArgumentException error) {
+            throw error;
+        } catch (SQLException error) {
+            log.warn("JDBC ingestion failed: sourceType={}, targetType={}", source.getType(), target.getType(), error);
+            throw new IllegalStateException(friendlyMessage(error));
+        }
+    }
+
+    private String quoteQualifiedIdentifier(String value, DataSource target) {
+        if (!StringUtils.hasText(value)) {
+            throw new IllegalArgumentException("目标表不能为空");
+        }
+        String[] parts = value.trim().split("\\.");
+        if (parts.length < 1 || parts.length > 3) {
+            throw new IllegalArgumentException("目标表格式不正确");
+        }
+        return java.util.Arrays.stream(parts)
+                .map(part -> quoteIdentifier(part, target))
+                .collect(java.util.stream.Collectors.joining("."));
+    }
+
+    private String quoteIdentifier(String value, DataSource target) {
+        if (!StringUtils.hasText(value) || !value.matches("[A-Za-z_][A-Za-z0-9_$]*")) {
+            throw new IllegalArgumentException("字段或表名包含不支持的字符");
+        }
+        String quote = isPostgresLike(target) ? "\"" : "`";
+        return quote + value + quote;
+    }
+
     /** 逐条应用动态分区参数；个别引擎不认某个参数时跳过，不影响主语句执行。 */
     private void applyHiveWriteSettings(Connection connection) {
         for (String setting : HIVE_WRITE_SESSION_SETTINGS) {
@@ -256,7 +382,9 @@ public class JdbcService {
         int port = dataSource.getPort() == null ? defaultPort(type) : dataSource.getPort();
         DriverManager.setLoginTimeout(8);
         String username = dataSource.getUsername() == null ? "" : dataSource.getUsername();
-        String password = dataSource.getPassword() == null ? "" : dataSource.getPassword();
+        String storedPassword = dataSource.getPassword();
+        String password = storedPassword == null ? ""
+                : (secretService == null ? storedPassword : secretService.decrypt(storedPassword));
         return DriverManager.getConnection(buildUrl(dataSource, type, port), username, password);
     }
 

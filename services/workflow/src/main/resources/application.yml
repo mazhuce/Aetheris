@@ -53,6 +53,9 @@ aetheris:
     # SQL 执行下沉到 metadata 服务，因为凭据与驱动都在那边；走 /internal 路径，网关不暴露。
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
     connect-timeout: PT10S
+  system:
+    # 任务失败时写入 system 服务的通知表（我的待办）；走 /internal 路径，网关不暴露。
+    base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}
 
 management:
   endpoints:

@@ -61,3 +61,34 @@ export function deleteConfig(id: number): Promise<void> {
 export function listAuditLogs(params: AuditLogQuery = {}): Promise<AuditLog[]> {
   return http.get<AuditLog[]>('/api/system/audit-logs', { params }).then((res) => res.data)
 }
+
+export interface PlatformNotification {
+  id: number
+  recipient: string
+  source: string
+  sourceId?: number
+  level: 'info' | 'warning' | 'critical'
+  title: string
+  message?: string
+  linkPath?: string
+  isRead?: boolean
+  createdAt?: string
+}
+
+export function listNotifications(unread?: boolean): Promise<PlatformNotification[]> {
+  return http
+    .get<PlatformNotification[]>('/api/system/notifications', { params: unread === undefined ? {} : { unread } })
+    .then((res) => res.data)
+}
+
+export function getUnreadNotificationCount(): Promise<number> {
+  return http.get<{ count: number }>('/api/system/notifications/unread-count').then((res) => res.data.count)
+}
+
+export function markNotificationRead(id: number): Promise<void> {
+  return http.put(`/api/system/notifications/${id}/read`).then(() => undefined)
+}
+
+export function markAllNotificationsRead(): Promise<void> {
+  return http.put('/api/system/notifications/read-all').then(() => undefined)
+}

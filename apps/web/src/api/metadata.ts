@@ -69,6 +69,20 @@ export function testDataSource(id: number): Promise<TestResult> {
   return http.post<TestResult>(`/api/metadata/datasources/${id}/test`, undefined, { timeout: 40000 }).then((res) => res.data)
 }
 
+export interface AdhocQueryResult {
+  columns: string[]
+  rows: unknown[][]
+  rowCount: number
+  truncated: boolean
+  durationMs?: number
+}
+
+export function runAdhocQuery(datasourceId: number, sql: string): Promise<AdhocQueryResult> {
+  return http
+    .post<AdhocQueryResult>('/api/metadata/query', { datasourceId, sql }, { timeout: 70000 })
+    .then((res) => res.data)
+}
+
 export function testDataSourceConfig(payload: DataSourceInput): Promise<TestResult> {
   return http.post<TestResult>('/api/metadata/datasources/test', payload, { timeout: 40000 }).then((res) => res.data)
 }

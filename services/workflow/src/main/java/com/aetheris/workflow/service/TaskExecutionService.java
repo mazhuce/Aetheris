@@ -39,18 +39,21 @@ public class TaskExecutionService {
     private final TaskLogService logService;
     private final TaskDependencyService dependencyService;
     private final SqlExecutionClient executionClient;
+    private final NotificationClient notificationClient;
 
     public TaskExecutionService(
             TaskService taskService,
             TaskInstanceService instanceService,
             TaskLogService logService,
             TaskDependencyService dependencyService,
-            SqlExecutionClient executionClient) {
+            SqlExecutionClient executionClient,
+            NotificationClient notificationClient) {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
         this.dependencyService = dependencyService;
         this.executionClient = executionClient;
+        this.notificationClient = notificationClient;
     }
 
     /**
@@ -150,7 +153,14 @@ public class TaskExecutionService {
             }
         }
 
-        return finishFailed(instance, lastError, System.currentTimeMillis() - startedAt);
+        TaskInstance failed = finishFailed(instance, lastError, System.currentTimeMillis() - startedAt);
+        // 通知在 finishFailed 返回之后发：失败状态已落库（REQUIRES_NEW），
+        // 且网络调用不会延长落库事务的持锁时间。
+        notificationClient.notifyAdmin(task.getId(), instance.getBizDate(), "critical",
+                "任务执行失败：" + task.getName(),
+                "业务日期 " + instance.getBizDate() + "，重试耗尽后仍失败："
+                        + truncate(lastError == null ? "未知错误" : lastError.getMessage()));
+        return failed;
     }
 
     /**

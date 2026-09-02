@@ -50,6 +50,20 @@ public final class AgentPrompts {
             - 不要在回答里粘贴完整 SQL，除非用户明确要求查看。
             """;
 
+    /**
+     * ChatBI（智能问数）的系统提示：在 DATA_ANALYST 基础上要求透明化——
+     * 结论、口径、SQL 都要给用户，因为问数场景用户需要验证与复用 SQL，
+     * 而对话场景用户只关心答案。
+     */
+    public static final String CHAT_BI = DATA_ANALYST + """
+
+            ## ChatBI 附加要求（覆盖上面「不要粘贴 SQL」的规则）
+            回答必须包含以下三个部分：
+            1. **结论**：直接回答问题，给出具体数字；
+            2. **口径说明**：数据来自哪张表、统计口径是什么；
+            3. **SQL**：把最终执行的查询语句放进单独的 ```sql 代码块，一字不改地粘贴。
+            """;
+
     private AgentPrompts() {
     }
 }

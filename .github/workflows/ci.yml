@@ -42,3 +42,30 @@ jobs:
           npm run type-check
           npm test
           npm run build
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    timeout-minutes: 25
+    env:
+      POSTGRES_PASSWORD: smoke-db-password
+      DB_PASSWORD: smoke-db-password
+      JWT_SECRET: smoke-jwt-secret-that-is-longer-than-32-bytes
+      INITIAL_ADMIN_PASSWORD: smoke-admin-password
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start stack
+        run: docker compose up --build -d
+
+      - name: Run cross-service smoke test
+        run: bash scripts/smoke-test.sh
+
+      - name: Collect logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down -v

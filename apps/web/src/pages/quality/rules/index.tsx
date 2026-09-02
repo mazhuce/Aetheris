@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Form, Input, InputNumber, Modal, Select, Table, Tag } from 'antd'
+import { App, Button, Form, Input, InputNumber, Modal, Select, Table, Tag, Tooltip } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { PlusOutlined, ReloadOutlined } from '@ant-design/icons'
+import { PlayCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
@@ -11,12 +11,14 @@ import {
   createRule,
   deleteRule,
   listRules,
+  runRule,
   updateRule,
   type QualityRule,
   type QualityRuleInput
 } from '@/api/quality'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { listDataSources, type DataSource } from '@/api/metadata'
 
 const severityMeta: Record<string, { color: string; text: string }> = {
   low: { color: 'default', text: '低' },
@@ -28,6 +30,7 @@ export default function QualityRulePage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
   const [allData, setAllData] = useState<QualityRule[]>([])
+  const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [ruleType, setRuleType] = useState<string>()
@@ -50,7 +53,8 @@ export default function QualityRulePage() {
 
   useEffect(() => {
     void refresh()
-  }, [refresh])
+    void listDataSources().then(setDataSources).catch(() => message.error('数据源列表加载失败'))
+  }, [refresh, message])
 
   useEffect(() => {
     if (open) {
@@ -98,9 +102,24 @@ export default function QualityRulePage() {
     }
   }
 
+  const handleRun = async (id: number) => {
+    try {
+      const result = await runRule(id)
+      if (result.status === 'passed') message.success('质量检查通过')
+      else message.warning(`质量检查未通过，发现 ${result.violationCount ?? 0} 条违规数据`)
+      await refresh()
+    } catch {
+      message.error('质量检查执行失败')
+      await refresh()
+    }
+  }
+
+  const dataSourceName = (id?: number) => dataSources.find((source) => source.id === id)?.name ?? '待配置'
+
   const columns: TableColumnsType<QualityRule> = [
     { title: '规则名称', dataIndex: 'name', key: 'name', width: 180 },
     { title: '规则类型', dataIndex: 'ruleType', key: 'ruleType', width: 120, render: (value: string) => <Tag>{value}</Tag> },
+    { title: '数据源', dataIndex: 'datasourceId', key: 'datasourceId', width: 140, render: (value?: number) => dataSourceName(value) },
     { title: '目标表', dataIndex: 'targetTable', key: 'targetTable', width: 140 },
     { title: '表达式', dataIndex: 'expression', key: 'expression', ellipsis: true },
     { title: '阈值', dataIndex: 'threshold', key: 'threshold', width: 80, render: (value?: number) => value ?? '—' },
@@ -122,7 +141,17 @@ export default function QualityRulePage() {
       width: 90,
       render: (value?: string) => <StatusBadge tone={value === 'enabled' ? 'success' : 'neutral'}>{value === 'enabled' ? '启用' : '禁用'}</StatusBadge>
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) }
+    {
+      title: '最近检查',
+      dataIndex: 'lastCheckStatus',
+      key: 'lastCheckStatus',
+      width: 110,
+      render: (value?: string) => value
+        ? <StatusBadge tone={value === 'passed' ? 'success' : value === 'failed' ? 'danger' : 'warning'}>{value === 'passed' ? '通过' : value === 'failed' ? '未通过' : '执行错误'}</StatusBadge>
+        : '—'
+    },
+    { title: '违规数', dataIndex: 'lastViolationCount', key: 'lastViolationCount', width: 80, render: (value?: number) => value ?? '—' },
+    { title: '检查时间', dataIndex: 'lastCheckedAt', key: 'lastCheckedAt', width: 170, render: (value?: string) => formatDateTime(value) }
   ]
 
   if (canManage) columns.push({
@@ -132,7 +161,11 @@ export default function QualityRulePage() {
       align: 'right',
       fixed: 'right',
       render: (_, record) => (
-        <RowActions items={[
+        <RowActions primary={(
+          <Tooltip title={record.datasourceId ? '立即检查' : '请先配置数据源'}>
+            <Button type="text" size="small" icon={<PlayCircleOutlined />} disabled={!record.datasourceId} onClick={() => void handleRun(record.id)} />
+          </Tooltip>
+        )} items={[
           { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
           {
             key: 'delete',
@@ -170,7 +203,7 @@ export default function QualityRulePage() {
           <div className="filter-item">
             <span>类型</span>
             <Select value={ruleType} onChange={setRuleType} allowClear placeholder="全部" className="filter-control-md"
-              options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'sql', label: '自定义 SQL' }]} />
+              options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'range', label: '范围检查' }, { value: 'enum', label: '枚举检查' }, { value: 'sql', label: '自定义 SQL' }]} />
           </div>
           <div className="filter-item">
             <span>状态</span>
@@ -207,12 +240,15 @@ export default function QualityRulePage() {
             <Input placeholder="例如：订单表空值检查" />
           </Form.Item>
           <Form.Item name="ruleType" label="规则类型" rules={[{ required: true, message: '请选择类型' }]}>
-            <Select options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'sql', label: '自定义 SQL' }]} />
+            <Select options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'range', label: '范围检查' }, { value: 'enum', label: '枚举检查' }, { value: 'sql', label: '自定义 SQL' }]} />
+          </Form.Item>
+          <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+            <Select showSearch optionFilterProp="label" options={dataSources.map((source) => ({ value: source.id, label: `${source.name} · ${source.type}` }))} />
           </Form.Item>
           <Form.Item name="targetTable" label="目标表" rules={[{ required: true, message: '请输入目标表' }]}>
             <Input placeholder="例如：orders" />
           </Form.Item>
-          <Form.Item name="expression" label="表达式 / SQL">
+          <Form.Item name="expression" label="有效数据表达式 / SQL" rules={[{ required: true, message: '请输入规则表达式' }]} extra="空值、范围、枚举填写有效数据应满足的条件；重复检查填写逗号分隔字段；自定义 SQL 第一列必须返回违规数。">
             <Input.TextArea rows={3} placeholder="例如：order_id IS NOT NULL" />
           </Form.Item>
           <Form.Item name="threshold" label="阈值">
@@ -223,6 +259,9 @@ export default function QualityRulePage() {
           </Form.Item>
           <Form.Item name="status" label="状态">
             <Select options={[{ value: 'enabled', label: '启用' }, { value: 'disabled', label: '禁用' }]} />
+          </Form.Item>
+          <Form.Item name="cronExpression" label="定时调度" extra="Quartz cron（6/7 段），例如 0 0 2 * * ? 表示每天凌晨 2 点；留空表示仅手动执行。">
+            <Input placeholder="例如：0 0 2 * * ?" />
           </Form.Item>
           <Form.Item name="description" label="说明">
             <Input placeholder="可选" />

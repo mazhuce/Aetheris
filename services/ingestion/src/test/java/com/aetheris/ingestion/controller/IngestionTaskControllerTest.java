@@ -1,33 +1,38 @@
 package com.aetheris.ingestion.controller;
 
 import com.aetheris.ingestion.entity.IngestionTask;
+import com.aetheris.ingestion.entity.IngestionRun;
+import com.aetheris.ingestion.service.IngestionExecutionService;
+import com.aetheris.ingestion.service.IngestionRunService;
+import com.aetheris.ingestion.service.IngestionSchedulerService;
 import com.aetheris.ingestion.service.IngestionTaskService;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class IngestionTaskControllerTest {
 
     private final IngestionTaskService service = mock(IngestionTaskService.class);
-    private final IngestionTaskController controller = new IngestionTaskController(service);
+    private final IngestionRunService runService = mock(IngestionRunService.class);
+    private final IngestionExecutionService executionService = mock(IngestionExecutionService.class);
+    private final IngestionTaskController controller = new IngestionTaskController(service, runService, executionService, mock(IngestionSchedulerService.class));
 
     private IngestionTask task(Long id, String name) {
         IngestionTask task = new IngestionTask();
         task.setId(id);
         task.setName(name);
         task.setSourceType("postgres");
+        task.setSourceDatasourceId(1L);
+        task.setTargetDatasourceId(2L);
+        task.setSourceSql("SELECT id FROM public.orders");
         task.setTargetTable("ods.orders");
         task.setStatus("idle");
         return task;
@@ -95,39 +100,32 @@ class IngestionTaskControllerTest {
     }
 
     @Test
-    void runMarksTaskSuccess() {
-        IngestionTask stored = task(7L, "库存同步");
-        when(service.getById(7L)).thenReturn(stored);
-        when(service.updateById(stored)).thenReturn(true);
+    void runReturnsPersistedExecutionResult() {
+        IngestionRun run = new IngestionRun();
+        run.setId(9L);
+        run.setTaskId(7L);
+        run.setStatus("success");
+        run.setRowsWritten(42L);
+        when(executionService.execute(7L, "admin")).thenReturn(run);
 
-        ResponseEntity<IngestionTask> response = controller.run(7L);
+        ResponseEntity<?> response = controller.run(7L, "admin");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(7L, response.getBody().getId());
-        assertEquals("success", stored.getLastRunStatus());
-        assertNotNull(stored.getLastRunAt());
-        verify(service).updateById(stored);
+        assertEquals(run, response.getBody());
+        verify(executionService).execute(7L, "admin");
     }
 
     @Test
-    void runReturns404WhenTaskMissing() {
-        when(service.getById(99L)).thenReturn(null);
-        assertEquals(HttpStatus.NOT_FOUND, controller.run(99L).getStatusCode());
-        verify(service, never()).updateById(any(IngestionTask.class));
+    void runReturns400WhenTaskIsInvalid() {
+        when(executionService.execute(99L, "admin"))
+                .thenThrow(new IllegalArgumentException("接入任务不存在"));
+        assertEquals(HttpStatus.BAD_REQUEST, controller.run(99L, "admin").getStatusCode());
     }
 
     @Test
-    void runRecordsTimestampNearNow() {
-        IngestionTask stored = task(2L, "延迟校验");
-        OffsetDateTime before = OffsetDateTime.now().minusSeconds(5);
-        when(service.getById(2L)).thenReturn(stored);
-        when(service.updateById(stored)).thenReturn(true);
-
-        controller.run(2L);
-
-        ArgumentCaptor<IngestionTask> captor = ArgumentCaptor.forClass(IngestionTask.class);
-        verify(service).updateById(captor.capture());
-        assertEquals("success", captor.getValue().getLastRunStatus());
-        assertEquals(true, captor.getValue().getLastRunAt().isAfter(before));
+    void runReturnsConflictWhenAlreadyRunning() {
+        when(executionService.execute(2L, "admin"))
+                .thenThrow(new IllegalStateException("该任务已有运行中的实例"));
+        assertEquals(HttpStatus.CONFLICT, controller.run(2L, "admin").getStatusCode());
     }
 }

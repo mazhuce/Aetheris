@@ -1,7 +1,12 @@
 package com.aetheris.ingestion.controller;
 
 import com.aetheris.ingestion.entity.IngestionTask;
+import com.aetheris.ingestion.entity.IngestionRun;
+import com.aetheris.ingestion.service.IngestionExecutionService;
+import com.aetheris.ingestion.service.IngestionRunService;
+import com.aetheris.ingestion.service.IngestionSchedulerService;
 import com.aetheris.ingestion.service.IngestionTaskService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -11,19 +16,31 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ingestion/tasks")
 public class IngestionTaskController {
 
     private final IngestionTaskService service;
+    private final IngestionRunService runService;
+    private final IngestionExecutionService executionService;
+    private final IngestionSchedulerService schedulerService;
 
-    public IngestionTaskController(IngestionTaskService service) {
+    public IngestionTaskController(
+            IngestionTaskService service,
+            IngestionRunService runService,
+            IngestionExecutionService executionService,
+            IngestionSchedulerService schedulerService) {
         this.service = service;
+        this.runService = runService;
+        this.executionService = executionService;
+        this.schedulerService = schedulerService;
     }
 
     @GetMapping
@@ -37,30 +54,68 @@ public class IngestionTaskController {
 
     @PostMapping
     public IngestionTask create(@Valid @RequestBody IngestionTask task) {
+        task.setId(null);
+        applyDefaults(task);
+        IngestionSchedulerService.validateCron(task.getScheduleCron());
         service.save(task);
+        schedulerService.sync(task);
         return task;
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<IngestionTask> update(@PathVariable Long id, @Valid @RequestBody IngestionTask task) {
         task.setId(id);
+        applyDefaults(task);
+        IngestionSchedulerService.validateCron(task.getScheduleCron());
         boolean updated = service.updateById(task);
-        return updated ? ResponseEntity.ok(service.getById(id)) : ResponseEntity.notFound().build();
+        if (!updated) {
+            return ResponseEntity.notFound().build();
+        }
+        IngestionTask saved = service.getById(id);
+        schedulerService.sync(saved);
+        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         boolean removed = service.removeById(id);
-        return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+        if (!removed) {
+            return ResponseEntity.notFound().build();
+        }
+        // 先删数据再取消调度：调度残留最多导致一次「任务不存在」的失败日志，反向则可能漏删。
+        schedulerService.unschedule(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/run")
-    public ResponseEntity<IngestionTask> run(@PathVariable Long id) {
-        IngestionTask task = service.getById(id);
-        if (task == null) return ResponseEntity.notFound().build();
-        task.setLastRunStatus("success");
-        task.setLastRunAt(OffsetDateTime.now());
-        service.updateById(task);
-        return ResponseEntity.ok(service.getById(id));
+    public ResponseEntity<?> run(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
+        try {
+            return ResponseEntity.ok(executionService.execute(id, username));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        } catch (RuntimeException error) {
+            return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/runs")
+    public List<IngestionRun> runs(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "30") int limit) {
+        return runService.list(new LambdaQueryWrapper<IngestionRun>()
+                .eq(IngestionRun::getTaskId, id)
+                .orderByDesc(IngestionRun::getStartedAt)
+                .last("LIMIT " + Math.clamp(limit, 1, 200)));
+    }
+
+    private void applyDefaults(IngestionTask task) {
+        if (task.getSourceType() == null || task.getSourceType().isBlank()) task.setSourceType("jdbc");
+        if (task.getStatus() == null || task.getStatus().isBlank()) task.setStatus("enabled");
+        if (task.getWriteMode() == null || task.getWriteMode().isBlank()) task.setWriteMode("append");
+        if (task.getBatchSize() == null) task.setBatchSize(500);
     }
 }

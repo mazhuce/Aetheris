@@ -18,6 +18,24 @@ spring:
   jackson:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
+  quartz:
+    # JDBC 存储而非内存：服务重启不丢调度（与 workflow 服务同一套模式）。
+    job-store-type: jdbc
+    jdbc:
+      # 表结构由 Flyway 的 V3 管理（各服务 schema 隔离，表前缀见 tablePrefix）。
+      initialize-schema: never
+    properties:
+      org.quartz.scheduler.instanceName: AetherisQualityScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.tablePrefix: quality.QRTZ_
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 20000
+      org.quartz.jobStore.misfireThreshold: 60000
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      # 质量检查都是短查询，线程数可以比 workflow 略多。
+      org.quartz.threadPool.threadCount: 5
 
 mybatis-plus:
   configuration:
@@ -45,3 +63,10 @@ springdoc:
 info:
   app:
     version: 0.1.0
+
+aetheris:
+  metadata:
+    base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+  system:
+    # 检查失败时写入 system 服务的通知表（我的待办）；走 /internal 路径，网关不暴露。
+    base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}

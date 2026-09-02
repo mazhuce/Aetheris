@@ -21,12 +21,14 @@ import {
   type TaskInstanceStatus
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
 import TaskFormModal from './components/TaskFormModal'
 import TaskRunModal from './components/TaskRunModal'
 import TaskDetailDrawer from './components/TaskDetailDrawer'
 
 export default function WorkflowPage() {
   const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
   const [data, setData] = useState<TaskView[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -170,15 +172,15 @@ export default function WorkflowPage() {
       fixed: 'right',
       render: (_, view) => (
         <RowActions
-          primary={(
+          primary={canManage ? (
             <Tooltip title="运行任务">
               <Button type="text" size="small" icon={<PlayCircleOutlined />} aria-label={`运行任务 ${view.task.name}`} onClick={() => setRunTarget(view)} />
             </Tooltip>
-          )}
-          items={[
+          ) : undefined}
+          items={canManage ? [
             { key: 'edit', label: '编辑', onClick: () => { setEditing(view); setFormOpen(true) } },
             { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(view) }
-          ]}
+          ] : []}
         />
       )
     }
@@ -191,13 +193,15 @@ export default function WorkflowPage() {
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => { setEditing(null); setFormOpen(true) }}
-            >
-              新建任务
-            </Button>
+            {canManage ? (
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => { setEditing(null); setFormOpen(true) }}
+              >
+                新建任务
+              </Button>
+            ) : <Tag>只读访问</Tag>}
           </Space>
         }
       />

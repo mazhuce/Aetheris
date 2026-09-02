@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -14,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 class JdbcServiceTest {
 
@@ -98,5 +102,55 @@ class JdbcServiceTest {
         when(connection.createStatement()).thenThrow(new SQLException("权限不足"));
 
         assertNull(jdbcService.hiveTableComment(connection, "ods", "ods_order"));
+    }
+
+    @Test
+    void transfersQueryRowsWithTransactionalBatchInsert() throws Exception {
+        DataSource source = source("postgresql", "source", "app");
+        DataSource target = source("postgresql", "target", "warehouse");
+        Connection sourceConnection = mock(Connection.class);
+        Connection targetConnection = mock(Connection.class);
+        Statement query = mock(Statement.class);
+        ResultSet rows = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+
+        when(sourceConnection.createStatement()).thenReturn(query);
+        when(query.executeQuery("SELECT id, name FROM orders")).thenReturn(rows);
+        when(rows.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(2);
+        when(metadata.getColumnLabel(1)).thenReturn("id");
+        when(metadata.getColumnLabel(2)).thenReturn("name");
+        when(rows.next()).thenReturn(true, true, false);
+        when(rows.getObject(1)).thenReturn(1L, 2L);
+        when(rows.getObject(2)).thenReturn("A", "B");
+        when(targetConnection.prepareStatement(
+                "INSERT INTO \"ods\".\"orders\" (\"id\", \"name\") VALUES (?, ?)"))
+                .thenReturn(insert);
+
+        JdbcService service = new JdbcService() {
+            @Override
+            Connection connect(DataSource dataSource) {
+                return dataSource == source ? sourceConnection : targetConnection;
+            }
+        };
+
+        var result = service.transfer(
+                source, target, "SELECT id, name FROM orders", "ods.orders", "append", 100);
+
+        assertEquals(2L, result.get("rowsWritten"));
+        verify(targetConnection).setAutoCommit(false);
+        verify(insert, times(2)).addBatch();
+        verify(insert).executeBatch();
+        verify(targetConnection).commit();
+    }
+
+    @Test
+    void transferRejectsUnsafeTargetIdentifier() {
+        DataSource source = source("postgresql", "source", "app");
+        DataSource target = source("postgresql", "target", "warehouse");
+
+        assertThrows(IllegalArgumentException.class, () -> jdbcService.transfer(
+                source, target, "SELECT id FROM orders", "ods.orders; DROP TABLE users", "append", 100));
     }
 }

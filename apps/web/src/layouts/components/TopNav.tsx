@@ -1,12 +1,13 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Avatar, Button, Dropdown } from 'antd'
 import { DownOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { firstAvailablePath, findModule, navModules } from '@/constants/navigation'
+import { availableNavModules, firstAvailablePath, findModule } from '@/constants/navigation'
 import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 import GlobalSearch from '@/components/GlobalSearch'
 import BrandMark from '@/components/BrandMark'
 import { getCurrentRole } from '@/utils/access'
+import { logout } from '@/api/auth'
 
 /** 「更多」按钮预留宽度，用于计算一级模块能放下多少个。 */
 const MORE_RESERVE = 64
@@ -15,12 +16,13 @@ export default function TopNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const role = getCurrentRole()
+  const modules = useMemo(() => availableNavModules(role), [role])
   const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
 
   const navRef = useRef<HTMLElement>(null)
   const itemRefs = useRef<(HTMLAnchorElement | null)[]>([])
   const naturalWidths = useRef<number[]>([])
-  const [overflowAt, setOverflowAt] = useState(navModules.length)
+  const [overflowAt, setOverflowAt] = useState(modules.length)
 
   const activeKey = findModule(location.pathname)?.key
 
@@ -41,7 +43,7 @@ export default function TopNav() {
 
       const total = widths.reduce((sum, width) => sum + width, 0)
       if (total <= available) {
-        setOverflowAt(navModules.length)
+        setOverflowAt(modules.length)
         return
       }
 
@@ -62,17 +64,21 @@ export default function TopNav() {
     const observer = new ResizeObserver(compute)
     observer.observe(nav)
     return () => observer.disconnect()
-  }, [])
+  }, [modules.length])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } catch {
+    }
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USERNAME_KEY)
     localStorage.removeItem(ROLE_KEY)
     navigate('/login', { replace: true })
   }
 
-  const visibleModules = navModules.slice(0, overflowAt)
-  const overflowModules = navModules.slice(overflowAt)
+  const visibleModules = modules.slice(0, overflowAt)
+  const overflowModules = modules.slice(overflowAt)
   const overflowActive = overflowModules.some((module) => module.key === activeKey)
 
   return (
@@ -125,22 +131,24 @@ export default function TopNav() {
 
       <div className="topnav-actions">
         <GlobalSearch />
-        <Dropdown
-          menu={{
-            items: [
-              ...(role === 'admin' ? [{ key: 'source', label: '新建数据源' }] : []),
-              { key: 'task', label: '新建任务' },
-              ...(role === 'admin' ? [{ key: 'rule', label: '新建规则' }] : [])
-            ],
-            onClick: ({ key }) => {
-              if (key === 'source') navigate('/integration/sources')
-              if (key === 'task') navigate('/development/scheduling')
-              if (key === 'rule') navigate('/governance/quality')
-            }
-          }}
-        >
-          <Button className="create-button" type="primary" icon={<PlusOutlined />} aria-label="新建内容">新建</Button>
-        </Dropdown>
+        {role === 'admin' && (
+          <Dropdown
+            menu={{
+              items: [
+                { key: 'source', label: '新建数据源' },
+                { key: 'task', label: '新建任务' },
+                { key: 'rule', label: '新建规则' }
+              ],
+              onClick: ({ key }) => {
+                if (key === 'source') navigate('/integration/sources')
+                if (key === 'task') navigate('/development/scheduling')
+                if (key === 'rule') navigate('/governance/quality')
+              }
+            }}
+          >
+            <Button className="create-button" type="primary" icon={<PlusOutlined />} aria-label="新建内容">新建</Button>
+          </Dropdown>
+        )}
         <Dropdown
           menu={{
             items: [

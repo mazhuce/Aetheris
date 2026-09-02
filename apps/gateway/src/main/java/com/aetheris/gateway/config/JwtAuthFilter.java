@@ -4,6 +4,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -37,17 +38,25 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/metadata/",
             "/api/quality/",
             "/api/ingestion/",
-            "/api/governance/"
+            "/api/governance/",
+            "/api/workflow/"
     );
 
     private final SecretKey key;
+    private final TokenRevocationStore revocationStore;
 
-    public JwtAuthFilter(@Value("${jwt.secret}") String secret) {
+    @Autowired
+    public JwtAuthFilter(@Value("${jwt.secret}") String secret, TokenRevocationStore revocationStore) {
         byte[] keyBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
         }
         this.key = Keys.hmacShaKeyFor(keyBytes);
+        this.revocationStore = revocationStore;
+    }
+
+    public JwtAuthFilter(String secret) {
+        this(secret, new TokenRevocationStore());
     }
 
     @Override
@@ -70,6 +79,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .build()
                     .parseSignedClaims(authorization.substring(7))
                     .getPayload();
+            String rawToken = authorization.substring(7);
+            String jti = claims.getId();
+            String revocationKey = jti == null ? TokenRevocationStore.fingerprint(rawToken) : jti;
+            if (revocationStore.isRevoked(revocationKey)) {
+                return unauthorized(exchange);
+            }
+            if ("/api/auth/logout".equals(path)) {
+                revocationStore.revoke(revocationKey, claims.getExpiration() == null
+                        ? null : claims.getExpiration().toInstant());
+            }
             String username = claims.getSubject();
             String role = claims.get("role", String.class);
             if (role == null) {

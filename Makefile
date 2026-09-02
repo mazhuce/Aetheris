@@ -1,13 +1,14 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help init dev test backend-build frontend-build build up down logs clean
+.PHONY: help init dev test smoke backend-build frontend-build build up down logs clean
 
 MAVEN := mvn -f pom.xml -s scripts/maven-mirror-settings.xml
 
 help:
 	@echo "make init    安装依赖"
 	@echo "make dev     启动本地开发环境"
-	@echo "make test    运行全部后端测试和前端类型检查"
+	@echo "make test    运行全部后端与前端测试和类型检查"
+	@echo "make smoke   对已启动环境运行跨服务冒烟测试"
 	@echo "make backend-build  构建全部后端模块"
 	@echo "make frontend-build 构建前端"
 	@echo "make build   构建镜像"
@@ -24,7 +25,11 @@ dev:
 
 test:
 	$(MAVEN) test
+	cd apps/web && npm test
 	cd apps/web && npm run type-check
+
+smoke:
+	bash scripts/smoke-test.sh
 
 backend-build:
 	$(MAVEN) package

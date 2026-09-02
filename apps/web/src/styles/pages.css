@@ -1,4 +1,9 @@
 /* Workbench */
+.todos-page .filter-item .ant-segmented {
+  justify-self: start;
+  width: max-content;
+}
+
 .dashboard-v3 {
   width: 100%;
 }
@@ -543,7 +548,10 @@
 .assistant-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr);
-  height: min(720px, calc(100dvh - 168px));
+  /* 扣除 200px：顶栏48 + 子导航40 + 页头84 + 上内边距20 + 外壳边框2
+     + 浏览器渲染/缩放舍入余量6。192px 时用户仍反馈差几像素显示不全，
+     逐像素猜不准（边框与亚像素舍入参与其中），一次留足余量定稿。 */
+  height: calc(100dvh - 200px);
   min-height: 480px;
   overflow: hidden;
   border: 1px solid var(--border-subtle);

@@ -1,5 +1,6 @@
 package com.aetheris.aiagent.controller;
 
+import com.aetheris.aiagent.dto.ChatBiRequest;
 import com.aetheris.aiagent.dto.ChatRequest;
 import com.aetheris.aiagent.entity.ChatConversation;
 import com.aetheris.aiagent.entity.ChatMessage;
@@ -102,6 +103,29 @@ public class ChatController {
             // 用户提问已落库，此处只回错误提示；刷新后用户仍能看到自己问过什么。
             return ResponseEntity.status(statusOf(error))
                     .body(assistant(error.getMessage(), request.conversationId()));
+        }
+    }
+
+    /**
+     * ChatBI 智能问数：单问句一次性问答，无会话状态。
+     * 模型自动检索表结构并执行只读 SQL，回答含结论、口径与 SQL。
+     */
+    @PostMapping("/chatbi")
+    public ResponseEntity<Map<String, Object>> chatBi(
+            @RequestHeader(USER_HEADER) String username,
+            @Valid @RequestBody ChatBiRequest request) {
+        if (!rateLimiter.tryAcquire(username)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(assistant("请求过于频繁，请稍后再试", null));
+        }
+        try {
+            LlmReply reply = chatService.chatBi(request.question());
+            Map<String, Object> body = assistant(reply.content(), null);
+            body.put("model", reply.model());
+            return ResponseEntity.ok(body);
+        } catch (LlmException error) {
+            log.warn("ChatBI failed for user {}: {}", username, error.kind(), error);
+            return ResponseEntity.status(statusOf(error)).body(assistant(error.getMessage(), null));
         }
     }
 

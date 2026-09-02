@@ -5,6 +5,8 @@ WORKDIR /workspace
 COPY scripts/maven-mirror-settings.xml ./settings.xml
 COPY services/system/pom.xml ./pom.xml
 RUN mvn -s settings.xml -q -DskipTests dependency:go-offline
+COPY scripts/HealthCheck.java ./HealthCheck.java
+RUN javac HealthCheck.java
 COPY services/system/src ./src
 RUN mvn -s settings.xml -q -DskipTests package
 
@@ -12,5 +14,7 @@ RUN mvn -s settings.xml -q -DskipTests package
 FROM docker.1panel.live/library/eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /workspace/target/*.jar app.jar
+COPY --from=build /workspace/HealthCheck.class HealthCheck.class
 EXPOSE 8081
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=4 CMD ["java", "HealthCheck", "http://127.0.0.1:8081/actuator/health"]
 ENTRYPOINT ["java", "-jar", "app.jar"]

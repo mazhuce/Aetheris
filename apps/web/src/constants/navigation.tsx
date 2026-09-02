@@ -50,7 +50,7 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'overview', label: '数据概览', path: '/workbench', status: 'available' },
       { key: 'operations', label: '运行概览', path: '/workbench/operations', status: 'comingSoon', description: '集中展示数据接入、开发与调度任务的实时运行状态。' },
-      { key: 'todos', label: '我的待办', path: '/workbench/todos', status: 'comingSoon', description: '汇总与当前账号相关的审批、告警与待处理事项。' },
+      { key: 'todos', label: '我的待办', path: '/workbench/todos', status: 'available' },
       { key: 'recent', label: '最近访问', path: '/workbench/recent', status: 'comingSoon', description: '记录最近访问的数据表、资产与功能入口，便于快速定位。' }
     ]
   },
@@ -97,6 +97,7 @@ export const navModules: NavModule[] = [
       { key: 'metadata', label: '元数据管理', path: '/governance/metadata', status: 'available' },
       { key: 'standards', label: '数据标准', path: '/governance/standards', status: 'comingSoon', description: '维护字段命名、编码与取值标准，统一数据规范。' },
       { key: 'quality', label: '数据质量', path: '/governance/quality', status: 'available' },
+      { key: 'quality-trend', label: '质量趋势', path: '/governance/quality-trend', status: 'available' },
       { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
       { key: 'classification', label: '分类分级', path: '/governance/classification', status: 'available' },
       { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'comingSoon', description: '集中跟踪与闭环处理数据治理中发现的问题。' }
@@ -133,7 +134,7 @@ export const navModules: NavModule[] = [
     label: '数据分析',
     icon: <BarChartOutlined />,
     children: [
-      { key: 'query', label: '即席查询', path: '/analytics/query', status: 'comingSoon', description: '面向分析人员的自助式 SQL 即席查询。' },
+      { key: 'query', label: '即席查询', path: '/analytics/query', status: 'available' },
       { key: 'visualization', label: '可视化分析', path: '/analytics/visualization', status: 'comingSoon', description: '以拖拽方式编排图表，完成数据可视化探索。' },
       { key: 'dashboards', label: '数据看板', path: '/analytics/dashboards', status: 'available', description: '编排与发布面向业务的运营看板。' },
       { key: 'history', label: '查询历史', path: '/analytics/history', status: 'comingSoon', description: '查看与复用历史查询记录。' }
@@ -145,7 +146,7 @@ export const navModules: NavModule[] = [
     icon: <RobotOutlined />,
     children: [
       { key: 'assistant', label: '数据助手', path: '/ai/assistant', status: 'available' },
-      { key: 'chatbi', label: '智能问数', path: '/ai/chatbi', status: 'comingSoon', description: '以自然语言提问，自动生成查询并返回结果。' },
+      { key: 'chatbi', label: '智能问数', path: '/ai/chatbi', status: 'available' },
       { key: 'sql', label: 'SQL助手', path: '/ai/sql', status: 'comingSoon', description: '辅助编写、解释与优化 SQL。' },
       { key: 'governance', label: '治理助手', path: '/ai/governance', status: 'comingSoon', description: '辅助完成数据标准、质量与血缘等治理任务。' },
       { key: 'agents', label: 'Agent中心', path: '/ai/agents', status: 'comingSoon', description: '管理可编排的智能体与自动化流程。' }
@@ -156,7 +157,7 @@ export const navModules: NavModule[] = [
     label: '运维中心',
     icon: <CloudServerOutlined />,
     children: [
-      { key: 'tasks', label: '任务监控', path: '/operations/tasks', status: 'comingSoon', description: '监控调度任务的运行状态、成功率与耗时。' },
+      { key: 'tasks', label: '任务监控', path: '/operations/tasks', status: 'available' },
       { key: 'services', label: '服务监控', path: '/operations/services', status: 'comingSoon', description: '监控各微服务的健康与可用性。' },
       { key: 'resources', label: '资源监控', path: '/operations/resources', status: 'comingSoon', description: '监控计算与存储资源的用量与水位。' },
       { key: 'alerts', label: '告警中心', path: '/operations/alerts', status: 'comingSoon', description: '统一管理告警规则与告警事件。' },
@@ -179,6 +180,18 @@ export const navModules: NavModule[] = [
   }
 ]
 
+/** 仅返回当前角色可使用且已经交付的导航，规划项仍保留在配置中供路线图维护。 */
+export function availableNavModules(role?: 'admin' | 'viewer'): NavModule[] {
+  return navModules
+    .map((module) => ({
+      ...module,
+      children: module.children.filter(
+        (child) => child.status === 'available' && (!child.requiredRole || child.requiredRole === role)
+      )
+    }))
+    .filter((module) => module.children.length > 0)
+}
+
 /** 按路径首段匹配一级模块。 */
 export function findModule(pathname: string): NavModule | undefined {
   const first = pathname.split('/')[1]
@@ -198,11 +211,11 @@ export function findChild(pathname: string): { module: NavModule; child: NavChil
   return best ? { module, child: best } : undefined
 }
 
-/** 当前模块下首个可访问的真实功能（无 available 时回退到首项）。 */
+/** 当前模块下首个可访问的真实功能。 */
 export function firstAvailablePath(module: NavModule, role?: 'admin' | 'viewer'): string {
-  const visible = module.children.filter((child) => !child.requiredRole || child.requiredRole === role)
-  const available = visible.find((child) => child.status === 'available')
-  return (available ?? visible[0])?.path ?? '/'
+  return module.children.find(
+    (child) => child.status === 'available' && (!child.requiredRole || child.requiredRole === role)
+  )?.path ?? '/workbench'
 }
 
 export interface FlatNavItem {
@@ -216,7 +229,7 @@ export interface FlatNavItem {
 /** 展平为一级/二级合并列表，供全局搜索使用。 */
 export function flattenNavItems(): FlatNavItem[] {
   return navModules.flatMap((module) =>
-    module.children.map((child) => ({
+    module.children.filter((child) => child.status === 'available').map((child) => ({
       key: `${module.key}-${child.key}`,
       label: child.label,
       path: child.path,

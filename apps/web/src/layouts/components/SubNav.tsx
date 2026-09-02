@@ -10,7 +10,9 @@ export default function SubNav() {
   if (!matched) return null
 
   const { module, child } = matched
-  const children = module.children.filter((item) => !item.requiredRole || item.requiredRole === role)
+  const children = module.children.filter(
+    (item) => item.status === 'available' && (!item.requiredRole || item.requiredRole === role)
+  )
 
   return (
     <div className="subnav">
@@ -23,7 +25,6 @@ export default function SubNav() {
               className={`subnav-item${item.key === child.key ? ' active' : ''}`}
             >
               {item.label}
-              {item.status === 'comingSoon' && <span className="subnav-badge">规划中</span>}
             </Link>
           ))}
         </nav>

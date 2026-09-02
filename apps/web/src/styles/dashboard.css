@@ -1,7 +1,7 @@
+/* 数据集/看板页与其他页面保持一致的全宽布局（原先限宽 1480px 居中导致视觉上偏窄） */
 .analytics-dataset-page,
 .dashboard-list-page {
-  max-width: 1480px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .dataset-name-cell {

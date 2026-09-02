@@ -47,5 +47,7 @@ info:
     version: 0.1.0
 
 aetheris:
+  datasource:
+    master-key: ${AETHERIS_DATASOURCE_MASTER_KEY:}
   managed-datasource:
     enabled: ${REGISTER_INTERNAL_DATASOURCE:true}

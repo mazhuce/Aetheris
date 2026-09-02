@@ -1,36 +1,40 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import BasicLayout from '@/layouts/BasicLayout'
 import RequireAuth from '@/components/RequireAuth'
 import RequireRole from '@/components/RequireRole'
 import { firstAvailablePath, navModules } from '@/constants/navigation'
 import { getCurrentRole } from '@/utils/access'
-import LoginPage from '@/pages/login'
-import Dashboard from '@/pages/dashboard'
-import DataSourcePage from '@/pages/datasource'
-import IngestionPage from '@/pages/ingestion'
-import GovernancePage from '@/pages/governance'
-import MetadataTablePage from '@/pages/metadata/tables'
-import WarehouseMapPage from '@/pages/metadata/warehouse'
-import LineagePage from '@/pages/metadata/lineage'
-import WorkflowPage from '@/pages/workflow'
-import QualityRulePage from '@/pages/quality/rules'
-import ChatPage from '@/pages/ai/chat'
-import SystemConfigPage from '@/pages/system/config'
-import UserPage from '@/pages/system/users'
-import AuditLogPage from '@/pages/system/audit'
-import AccountPage from '@/pages/account'
-import AnalyticsDatasetPage from '@/pages/analytics/datasets'
-import DashboardListPage from '@/pages/analytics/dashboards'
-import DashboardEditorPage from '@/pages/analytics/dashboards/editor'
-import { DashboardPreviewPage, PublishedDashboardPage } from '@/pages/analytics/dashboards/stage'
-import Placeholder from '@/pages/placeholder'
 
-/** 占位路由：由导航配置统一生成（status === 'comingSoon'）。 */
-const placeholderRoutes = navModules.flatMap((module) =>
-  module.children
-    .filter((child) => child.status === 'comingSoon')
-    .map((child) => ({ path: child.path.slice(1), element: <Placeholder /> }))
-)
+const LoginPage = lazy(() => import('@/pages/login'))
+const Dashboard = lazy(() => import('@/pages/dashboard'))
+const TodosPage = lazy(() => import('@/pages/workbench/todos'))
+const DataSourcePage = lazy(() => import('@/pages/datasource'))
+const IngestionPage = lazy(() => import('@/pages/ingestion'))
+const GovernancePage = lazy(() => import('@/pages/governance'))
+const MetadataTablePage = lazy(() => import('@/pages/metadata/tables'))
+const WarehouseMapPage = lazy(() => import('@/pages/metadata/warehouse'))
+const LineagePage = lazy(() => import('@/pages/metadata/lineage'))
+const WorkflowPage = lazy(() => import('@/pages/workflow'))
+const QualityRulePage = lazy(() => import('@/pages/quality/rules'))
+const QualityTrendPage = lazy(() => import('@/pages/quality/trend'))
+const ChatPage = lazy(() => import('@/pages/ai/chat'))
+const ChatBiPage = lazy(() => import('@/pages/ai/chatbi'))
+const SystemConfigPage = lazy(() => import('@/pages/system/config'))
+const UserPage = lazy(() => import('@/pages/system/users'))
+const AuditLogPage = lazy(() => import('@/pages/system/audit'))
+const AccountPage = lazy(() => import('@/pages/account'))
+const AnalyticsDatasetPage = lazy(() => import('@/pages/analytics/datasets'))
+const AdhocQueryPage = lazy(() => import('@/pages/analytics/query'))
+const TaskMonitorPage = lazy(() => import('@/pages/operations/tasks'))
+const DashboardListPage = lazy(() => import('@/pages/analytics/dashboards'))
+const DashboardEditorPage = lazy(() => import('@/pages/analytics/dashboards/editor'))
+const DashboardPreviewPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.DashboardPreviewPage })))
+const PublishedDashboardPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.PublishedDashboardPage })))
+
+function Deferred({ children }: { children: ReactNode }) {
+  return <Suspense fallback={<div className="route-loading">页面加载中…</div>}>{children}</Suspense>
+}
 
 /** 一级模块根路径 → 默认二级页（运行时按当前角色解析，避免加载期固化角色）。 */
 function ModuleRedirect({ moduleKey }: { moduleKey: string }) {
@@ -40,20 +44,20 @@ function ModuleRedirect({ moduleKey }: { moduleKey: string }) {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
+  { path: '/login', element: <Deferred><LoginPage /></Deferred> },
   {
     path: '/analytics/dashboards/:id/preview',
-    element: <RequireAuth><DashboardPreviewPage /></RequireAuth>
+    element: <RequireAuth><Deferred><DashboardPreviewPage /></Deferred></RequireAuth>
   },
   {
     path: '/d/:slug',
-    element: <RequireAuth><PublishedDashboardPage /></RequireAuth>
+    element: <RequireAuth><Deferred><PublishedDashboardPage /></Deferred></RequireAuth>
   },
   {
     path: '/',
     element: (
       <RequireAuth>
-        <BasicLayout />
+        <Deferred><BasicLayout /></Deferred>
       </RequireAuth>
     ),
     children: [
@@ -61,6 +65,7 @@ export const router = createBrowserRouter([
 
       // 工作台
       { path: 'workbench', element: <Dashboard /> },
+      { path: 'workbench/todos', element: <TodosPage /> },
 
       // 数据接入
       { path: 'integration/sources', element: <DataSourcePage /> },
@@ -75,14 +80,17 @@ export const router = createBrowserRouter([
       // 数据治理
       { path: 'governance/metadata', element: <MetadataTablePage /> },
       { path: 'governance/quality', element: <QualityRulePage /> },
+      { path: 'governance/quality-trend', element: <QualityTrendPage /> },
       { path: 'governance/lineage', element: <LineagePage /> },
       { path: 'governance/classification', element: <GovernancePage /> },
 
       // 智能中心
       { path: 'ai/assistant', element: <ChatPage /> },
+      { path: 'ai/chatbi', element: <ChatBiPage /> },
 
       // 数据资产与分析
       { path: 'assets/datasets', element: <AnalyticsDatasetPage /> },
+      { path: 'analytics/query', element: <AdhocQueryPage /> },
       { path: 'analytics/dashboards', element: <DashboardListPage /> },
       {
         path: 'analytics/dashboards/:id/edit',
@@ -94,6 +102,7 @@ export const router = createBrowserRouter([
       },
 
       // 运维中心
+      { path: 'operations/tasks', element: <TaskMonitorPage /> },
       {
         path: 'operations/audit',
         element: (
@@ -117,12 +126,10 @@ export const router = createBrowserRouter([
       // 账户设置（头部下拉进入，不进导航）
       { path: 'account', element: <AccountPage /> },
 
-      // 占位页（生成）
-      ...placeholderRoutes,
-
-      // 一级模块根路径重定向（排除根路径已等于某个二级页的模块，如工作台）
+      // 一级模块根路径重定向；未交付模块不注册入口。
       ...navModules
-        .filter((module) => !module.children.some((child) => child.path === `/${module.key}`))
+        .filter((module) => module.children.some((child) => child.status === 'available'))
+        .filter((module) => !module.children.some((child) => child.path === `/${module.key}` && child.status === 'available'))
         .map((module) => ({ path: module.key, element: <ModuleRedirect moduleKey={module.key} /> })),
 
       // 旧路由兼容重定向

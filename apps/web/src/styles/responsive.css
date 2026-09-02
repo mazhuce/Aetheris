@@ -186,7 +186,8 @@
 
   .assistant-shell {
     grid-template-columns: 1fr;
-    height: calc(100dvh - 176px);
+    /* 移动端 chrome 更高（折行标题/更大内边距），比桌面版多扣 32px */
+    height: calc(100dvh - 224px);
   }
 
   .conversation-sidebar {

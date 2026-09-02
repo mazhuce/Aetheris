@@ -20,20 +20,20 @@
 
 Aetheris 采用前后端分离与领域微服务架构。所有业务 API 通过网关统一鉴权，数据源凭据与 JDBC 驱动集中保留在元数据服务中，其他服务通过受控内部接口完成查询与执行。
 
-当前版本已经形成从数据连接、元数据采集、SQL 加工、任务调度，到自然语言数据问答和可视化看板发布的核心闭环。数据接入执行器、质量检测执行器和高级治理策略仍在持续建设。
+当前版本已经形成从数据连接、关系型数据批量接入、质量检测、SQL 加工与任务调度，到即席查询、自然语言数据问答和可视化看板发布的核心闭环。失败任务会进入用户待办，尚未交付的高级治理与服务开放能力不会出现在产品导航中。
 
 ## 核心能力
 
 | 领域 | 能力 |
 | --- | --- |
-| 数据接入 | 数据源连接管理、连接测试、库表浏览与接入任务定义 |
+| 数据接入 | 数据源连接管理、库表浏览、跨数据源批量写入、Quartz 调度与执行记录 |
 | 数据开发 | SQL 加工任务、Quartz 调度、依赖管理、运行实例与重跑 |
 | 数据建模 | ODS / DWD / DWS / ADS / DIM 数仓分层与物理模型管理 |
-| 数据治理 | 元数据目录、字段检索、表级血缘、质量规则与治理策略 |
+| 数据治理 | 元数据目录、字段检索、表级血缘、质量规则执行与结果留痕 |
 | 数据服务 | 统一 API 入口、JWT 鉴权、角色权限与审计边界 |
-| 数据分析 | 可复用数据集、拖拽式看板、内置模板、实时预览与版本发布 |
+| 数据分析 | 安全即席查询、可复用数据集、拖拽式看板、实时预览与版本发布 |
 | 智能中心 | 元数据检索、NL2SQL、只读查询、工具调用与会话持久化 |
-| 系统运维 | 服务探活、平台概览、账号管理、系统配置与审计日志 |
+| 系统运维 | 服务探活、任务监控、失败待办、账号管理、系统配置与审计日志 |
 
 ### 可视化看板
 
@@ -79,8 +79,8 @@ flowchart LR
 | `gateway` | 8080 | API 路由、JWT 校验、角色门禁与请求头注入 |
 | `system-service` | 8081 | 平台配置、系统信息与基础运维能力 |
 | `metadata-service` | 8082 | 数据源、元数据、数仓地图、血缘与受控 SQL 执行 |
-| `quality-service` | 8083 | 数据质量规则管理 |
-| `ingestion-service` | 8084 | 数据接入任务管理 |
+| `quality-service` | 8083 | 数据质量规则、真实查询检查与结果留痕 |
+| `ingestion-service` | 8084 | 跨关系型数据源批量接入、事务写入与运行记录 |
 | `governance-service` | 8085 | 数据治理策略管理 |
 | `ai-agent` | 8086 | 数据智能体、工具调用与会话管理 |
 | `auth-service` | 8087 | 账号、登录、密码管理与 JWT 签发 |
@@ -126,6 +126,7 @@ cp .env.example .env
 ```dotenv
 JWT_SECRET=请替换为足够长的随机密钥
 INITIAL_ADMIN_PASSWORD=请设置初始管理员密码
+AETHERIS_DATASOURCE_MASTER_KEY=请填入 `openssl rand -base64 32` 生成的值
 ```
 
 如需启用数据智能体，还应配置 `DEEPSEEK_API_KEY`。`.env` 已被 Git 忽略，不应提交真实密钥和口令。
@@ -150,6 +151,8 @@ docker compose ps
 ```bash
 curl http://localhost:5173/healthz
 ```
+
+所有 Java 容器也通过各自的 `/actuator/health` 提供容器级健康探针；网关会等待依赖服务健康后再启动。
 
 ## 本地开发
 
@@ -194,10 +197,14 @@ npm run dev
 # 全部后端模块
 mvn -f pom.xml -s scripts/maven-mirror-settings.xml test
 
-# 前端类型检查与生产构建
+# 前端测试、类型检查与生产构建
 cd apps/web
+npm test
 npm run type-check
 npm run build
+
+# 已启动完整环境后，验证认证、接入、工作流、质量与分析的真实跨服务链路
+INITIAL_ADMIN_PASSWORD=... POSTGRES_PASSWORD=... make smoke
 
 # 构建全部镜像
 docker compose build
@@ -236,6 +243,9 @@ Aetheris/
 - `viewer`：查看平台资源并使用查询、分析和智能问答能力。
 - 权限变化后需要重新登录，以获取包含最新角色声明的 JWT。
 - 数据源凭据仅由元数据服务持有，不向前端或其他业务服务返回。
+- 数据源密码使用 AES-256-GCM 加密后落库；`AETHERIS_DATASOURCE_MASTER_KEY` 只从环境变量读取，首次升级会自动重加密历史明文密码。
+- 网关对 `/api/**` 写请求按用户和来源 IP 做 Caffeine 限流，超限返回 `429`；可用 `AETHERIS_RATE_LIMIT_CAPACITY` 与 `AETHERIS_RATE_LIMIT_WINDOW_SECONDS` 调整。
+- JWT 带唯一 `jti`；调用 `POST /api/auth/logout` 后，网关会在剩余有效期内拒绝该令牌。黑名单为单网关实例内存缓存，多实例部署应替换为共享 Redis 存储。
 - 数据查询执行只读限制与 SQL 安全检查；生产环境必须使用独立数据库账号和随机密钥。
 - 所有数据库结构变化应通过服务内的 Flyway 迁移管理，避免手工修改生产结构。
 
