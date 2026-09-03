@@ -1,7 +1,9 @@
 package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.entity.DataProduct;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.DataProductService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,44 +20,46 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 数据产品端点：
+ * 数据产品端点（映射为数据集资源 dataset）：
  * - GET    /api/metadata/data-products         → 产品列表（可选 keyword 模糊匹配名称/编码）
  * - GET    /api/metadata/data-products/{id}    → 产品详情
- * - POST   /api/metadata/data-products         → 新增产品（admin）
- * - PUT    /api/metadata/data-products/{id}    → 更新产品（admin）
- * - DELETE /api/metadata/data-products/{id}    → 删除产品（admin）
+ * - POST   /api/metadata/data-products         → 新增产品
+ * - PUT    /api/metadata/data-products/{id}    → 更新产品
+ * - DELETE /api/metadata/data-products/{id}    → 删除产品
  *
- * <p>写操作通过网关注入的 X-User-Role 头鉴权，创建人记入 created_by。
+ * <p>写操作经 auth-service 决策引擎做 dataset.create/update/delete 判定，
+ * 创建人取网关验签身份（不再信任 X-User-Role 请求头）。
  */
 @RestController
 @RequestMapping("/api/metadata/data-products")
 public class DataProductController {
 
     private final DataProductService service;
+    private final MetadataSecurity security;
 
-    public DataProductController(DataProductService service) {
+    public DataProductController(DataProductService service, MetadataSecurity security) {
         this.service = service;
+        this.security = security;
     }
 
     @GetMapping
-    public List<DataProduct> list(@RequestParam(required = false) String keyword) {
+    public List<DataProduct> list(HttpServletRequest request, @RequestParam(required = false) String keyword) {
+        security.require(request, "dataset", null, "view", Map.of());
         return service.list(keyword);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DataProduct> getById(@PathVariable Long id) {
+    public ResponseEntity<DataProduct> getById(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "dataset", id, "view", Map.of());
         DataProduct product = service.getById(id);
         return product != null ? ResponseEntity.ok(product) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public ResponseEntity<?> create(
-            @Valid @RequestBody DataProduct product,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可创建数据产品"));
-        }
+            HttpServletRequest request,
+            @Valid @RequestBody DataProduct product) {
+        String username = security.require(request, "dataset", null, "create", Map.of()).username();
         if (service.codeExists(product.getProductCode(), null)) {
             return ResponseEntity.status(409).body(Map.of("message", "产品编码已存在：" + product.getProductCode()));
         }
@@ -66,12 +69,10 @@ public class DataProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
+            HttpServletRequest request,
             @PathVariable Long id,
-            @Valid @RequestBody DataProduct product,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可修改数据产品"));
-        }
+            @Valid @RequestBody DataProduct product) {
+        security.require(request, "dataset", id, "update", Map.of());
         DataProduct existing = service.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
@@ -89,11 +90,9 @@ public class DataProductController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可删除数据产品"));
-        }
+            HttpServletRequest request,
+            @PathVariable Long id) {
+        security.require(request, "dataset", id, "delete", Map.of());
         if (service.getById(id) == null) {
             return ResponseEntity.notFound().build();
         }

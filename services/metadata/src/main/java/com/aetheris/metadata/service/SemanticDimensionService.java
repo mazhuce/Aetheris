@@ -18,6 +18,7 @@ import org.springframework.util.StringUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -52,12 +53,24 @@ public class SemanticDimensionService {
     }
 
     public List<SemanticDimension> list(String keyword, String status, Long tableId) {
-        if ("published".equals(status)) return published(keyword, tableId);
+        return list(keyword, status, tableId, null);
+    }
+
+    /**
+     * @param domainIds 业务域 id 白名单（权限收窄列表过滤）；null 表示不过滤，
+     *                  空集合时返回空列表。
+     */
+    public List<SemanticDimension> list(String keyword, String status, Long tableId, Collection<Long> domainIds) {
+        if (domainIds != null && domainIds.isEmpty()) {
+            return List.of();
+        }
+        if ("published".equals(status)) return published(keyword, tableId, domainIds);
         LambdaQueryWrapper<SemanticDimension> query = new LambdaQueryWrapper<SemanticDimension>()
                 .and(StringUtils.hasText(keyword), q -> q.like(SemanticDimension::getDimensionCode, keyword.trim())
                         .or().like(SemanticDimension::getDimensionName, keyword.trim()))
                 .eq(StringUtils.hasText(status), SemanticDimension::getStatus, status)
                 .eq(tableId != null, SemanticDimension::getMetadataTableId, tableId)
+                .in(domainIds != null, SemanticDimension::getBusinessDomainId, domainIds)
                 .orderByDesc(SemanticDimension::getUpdatedAt);
         return mapper.selectList(query);
     }
@@ -283,7 +296,7 @@ public class SemanticDimensionService {
         catch (JsonProcessingException error) { throw new IllegalStateException("无法生成维度版本快照", error); }
     }
 
-    private List<SemanticDimension> published(String keyword, Long tableId) {
+    private List<SemanticDimension> published(String keyword, Long tableId, Collection<Long> domainIds) {
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
         return mapper.selectList(new LambdaQueryWrapper<SemanticDimension>()
                         .isNotNull(SemanticDimension::getPublishedVersion)
@@ -291,6 +304,7 @@ public class SemanticDimensionService {
                         .orderByAsc(SemanticDimension::getDimensionCode)).stream()
                 .map(this::resolvePublished)
                 .filter(dimension -> tableId == null || tableId.equals(dimension.getMetadataTableId()))
+                .filter(dimension -> domainIds == null || domainIds.contains(dimension.getBusinessDomainId()))
                 .filter(dimension -> normalizedKeyword == null || Stream.of(dimension.getDimensionCode(), dimension.getDimensionName())
                         .filter(value -> value != null)
                         .anyMatch(value -> value.toLowerCase(Locale.ROOT).contains(normalizedKeyword)))

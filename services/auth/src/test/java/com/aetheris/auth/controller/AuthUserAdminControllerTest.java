@@ -4,7 +4,9 @@ import com.aetheris.auth.dto.AuthUserResponse;
 import com.aetheris.auth.dto.CreateAuthUserRequest;
 import com.aetheris.auth.dto.UpdateAuthUserRequest;
 import com.aetheris.auth.entity.AuthUser;
+import com.aetheris.auth.service.AdminGuard;
 import com.aetheris.auth.service.AuthUserService;
+import com.aetheris.auth.web.AccessDeniedException;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.junit.jupiter.api.Test;
@@ -20,8 +22,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,9 +39,9 @@ class AuthUserAdminControllerTest {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         when(userService.findByUsername("analyst")).thenReturn(Optional.empty());
         when(encoder.encode(anyString())).thenReturn("encoded-password");
-        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder);
+        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder, mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.create(new CreateAuthUserRequest(
+        ResponseEntity<?> response = controller.create("admin", null, new CreateAuthUserRequest(
                 "analyst", "strong-password", "分析师", "analyst@example.com", null,
                 "viewer", "active"));
 
@@ -55,10 +59,10 @@ class AuthUserAdminControllerTest {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         AuthUser admin = user(1L, "admin", "admin", "active");
         when(userService.getById(1L)).thenReturn(admin);
-        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder);
+        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder, mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.update(
-                1L, "admin", new UpdateAuthUserRequest(null, null, null, null, "admin", "disabled"));
+        ResponseEntity<?> response = controller.update(1L, "admin", null,
+                new UpdateAuthUserRequest(null, null, null, null, "admin", "disabled"));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(userService, never()).updateById(admin);
@@ -70,9 +74,9 @@ class AuthUserAdminControllerTest {
         AuthUser admin = user(1L, "admin", "admin", "active");
         when(userService.getById(1L)).thenReturn(admin);
         AuthUserAdminController controller = new AuthUserAdminController(
-                userService, mock(PasswordEncoder.class));
+                userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.delete(1L, "admin");
+        ResponseEntity<?> response = controller.delete(1L, "admin", null);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(userService, never()).removeById(1L);
@@ -92,9 +96,9 @@ class AuthUserAdminControllerTest {
         AuthUserService userService = mock(AuthUserService.class);
         AuthUser alice = user(1L, "alice", "admin", "active");
         when(userService.list(any(Wrapper.class))).thenReturn(List.of(alice));
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        List<AuthUserResponse> result = controller.list();
+        List<AuthUserResponse> result = controller.list("admin", null);
 
         assertEquals(1, result.size());
         assertEquals("alice", result.get(0).username());
@@ -105,9 +109,9 @@ class AuthUserAdminControllerTest {
     void createUserRejectsDuplicateUsername() {
         AuthUserService userService = mock(AuthUserService.class);
         when(userService.findByUsername("alice")).thenReturn(Optional.of(user(1L, "alice", "viewer", "active")));
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.create(new CreateAuthUserRequest(
+        ResponseEntity<?> response = controller.create("admin", null, new CreateAuthUserRequest(
                 "alice", "pass", null, null, null, "viewer", "active"));
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
@@ -123,9 +127,9 @@ class AuthUserAdminControllerTest {
         when(userService.getById(2L)).thenReturn(target);
         when(userService.count(any(Wrapper.class))).thenReturn(2L);
         when(encoder.encode(anyString())).thenReturn("new-hash");
-        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder);
+        AuthUserAdminController controller = new AuthUserAdminController(userService, encoder, mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.update(2L, "admin",
+        ResponseEntity<?> response = controller.update(2L, "admin", null,
                 new UpdateAuthUserRequest("new-pass", "新昵称", "e@b.c", "1", "admin", "active"));
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -140,10 +144,9 @@ class AuthUserAdminControllerTest {
     void updateReturns404WhenUserNotFound() {
         AuthUserService userService = mock(AuthUserService.class);
         when(userService.getById(99L)).thenReturn(null);
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        assertEquals(HttpStatus.NOT_FOUND, controller.update(
-                99L, "admin", new UpdateAuthUserRequest(null, null, null, null, "admin", "active")).getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, controller.update(99L, "admin", null, new UpdateAuthUserRequest(null, null, null, null, "admin", "active")).getStatusCode());
     }
 
     @Test
@@ -152,9 +155,9 @@ class AuthUserAdminControllerTest {
         AuthUser target = user(2L, "viewer1", "viewer", "active");
         when(userService.getById(2L)).thenReturn(target);
         when(userService.count(any(Wrapper.class))).thenReturn(2L);
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.delete(2L, "admin");
+        ResponseEntity<?> response = controller.delete(2L, "admin", null);
 
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertNull(response.getBody());
@@ -165,9 +168,9 @@ class AuthUserAdminControllerTest {
     void deleteReturns404WhenUserNotFound() {
         AuthUserService userService = mock(AuthUserService.class);
         when(userService.getById(99L)).thenReturn(null);
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        assertEquals(HttpStatus.NOT_FOUND, controller.delete(99L, "admin").getStatusCode());
+        assertEquals(HttpStatus.NOT_FOUND, controller.delete(99L, "admin", null).getStatusCode());
     }
 
     @Test
@@ -176,9 +179,9 @@ class AuthUserAdminControllerTest {
         AuthUser admin = user(1L, "admin", "admin", "active");
         when(userService.getById(1L)).thenReturn(admin);
         when(userService.count(any(Wrapper.class))).thenReturn(1L);
-        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class));
+        AuthUserAdminController controller = new AuthUserAdminController(userService, mock(PasswordEncoder.class), mock(AdminGuard.class));
 
-        ResponseEntity<?> response = controller.delete(1L, "other-admin");
+        ResponseEntity<?> response = controller.delete(1L, "other-admin", null);
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         verify(userService, never()).removeById(1L);

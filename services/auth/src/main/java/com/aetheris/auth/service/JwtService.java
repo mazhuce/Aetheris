@@ -27,11 +27,18 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    public String generateToken(String username, String role) {
+    /**
+     * 签发登录令牌：sub=username，uid=数据库主键 id。
+     * uid 是权限判定的稳定主体标识（决策引擎以数据库里的授权/角色/组为准），
+     * username 仅用于兼容展示；两者都由网关从同一签名的 JWT 解析后转发，
+     * 下游服务不得信任客户端自带的可伪造请求头。
+     */
+    public String generateToken(Long userId, String username, String role) {
         Date now = new Date();
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .subject(username)
+                .claim("uid", userId)
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))

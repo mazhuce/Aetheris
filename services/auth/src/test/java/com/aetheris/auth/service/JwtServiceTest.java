@@ -27,11 +27,12 @@ class JwtServiceTest {
         var claims = Jwts.parser()
                 .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .build()
-                .parseSignedClaims(service.generateToken("alice", "admin"))
+                .parseSignedClaims(service.generateToken(42L, "alice", "admin"))
                 .getPayload();
 
         assertEquals("alice", claims.getSubject());
         assertEquals("admin", claims.get("role", String.class));
+        assertEquals(42L, claims.get("uid", Long.class));
     }
 
     @Test
@@ -55,7 +56,7 @@ class JwtServiceTest {
     @Test
     void tamperedTokenFailsValidation() {
         JwtService service = new JwtService(SECRET, 60_000);
-        String token = service.generateToken("alice", "admin");
+        String token = service.generateToken(42L, "alice", "admin");
         // 修改 token 中间部分（payload），最后一个字符改一下。
         String tampered = token.substring(0, token.length() - 2) + "X";
 
@@ -73,7 +74,7 @@ class JwtServiceTest {
         var claims = Jwts.parser()
                 .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
                 .build()
-                .parseSignedClaims(service.generateToken("alice", "admin"))
+                .parseSignedClaims(service.generateToken(42L, "alice", "admin"))
                 .getPayload();
 
         assertTrue(claims.getExpiration().after(new Date()),

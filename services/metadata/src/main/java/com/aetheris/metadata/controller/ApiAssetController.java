@@ -1,7 +1,9 @@
 package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.entity.ApiAsset;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.ApiAssetService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -10,7 +12,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -19,44 +20,46 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * API 资产登记端点：
+ * API 资产登记端点（数据服务资源 data_service）：
  * - GET    /api/metadata/api-assets         → 资产列表（可选 keyword 模糊匹配名称/编码）
  * - GET    /api/metadata/api-assets/{id}    → 资产详情
- * - POST   /api/metadata/api-assets         → 登记资产（admin）
- * - PUT    /api/metadata/api-assets/{id}    → 更新资产（admin）
- * - DELETE /api/metadata/api-assets/{id}    → 删除资产（admin）
+ * - POST   /api/metadata/api-assets         → 登记资产
+ * - PUT    /api/metadata/api-assets/{id}    → 更新资产
+ * - DELETE /api/metadata/api-assets/{id}    → 删除资产
  *
- * <p>写操作通过网关注入的 X-User-Role 头鉴权，创建人记入 created_by。
+ * <p>写操作经 auth-service 决策引擎做 data_service.create/update/delete 判定，
+ * 创建人取网关验签身份（不再信任 X-User-Role 请求头）。
  */
 @RestController
 @RequestMapping("/api/metadata/api-assets")
 public class ApiAssetController {
 
     private final ApiAssetService service;
+    private final MetadataSecurity security;
 
-    public ApiAssetController(ApiAssetService service) {
+    public ApiAssetController(ApiAssetService service, MetadataSecurity security) {
         this.service = service;
+        this.security = security;
     }
 
     @GetMapping
-    public List<ApiAsset> list(@RequestParam(required = false) String keyword) {
+    public List<ApiAsset> list(HttpServletRequest request, @RequestParam(required = false) String keyword) {
+        security.require(request, "data_service", null, "view", Map.of());
         return service.list(keyword);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiAsset> getById(@PathVariable Long id) {
+    public ResponseEntity<ApiAsset> getById(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "data_service", id, "view", Map.of());
         ApiAsset asset = service.getById(id);
         return asset != null ? ResponseEntity.ok(asset) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public ResponseEntity<?> create(
-            @Valid @RequestBody ApiAsset asset,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可登记 API 资产"));
-        }
+            HttpServletRequest request,
+            @Valid @RequestBody ApiAsset asset) {
+        String username = security.require(request, "data_service", null, "create", Map.of()).username();
         if (service.codeExists(asset.getAssetCode(), null)) {
             return ResponseEntity.status(409).body(Map.of("message", "资产编码已存在：" + asset.getAssetCode()));
         }
@@ -66,12 +69,10 @@ public class ApiAssetController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
+            HttpServletRequest request,
             @PathVariable Long id,
-            @Valid @RequestBody ApiAsset asset,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可修改 API 资产"));
-        }
+            @Valid @RequestBody ApiAsset asset) {
+        security.require(request, "data_service", id, "update", Map.of());
         ApiAsset existing = service.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
@@ -89,11 +90,9 @@ public class ApiAssetController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        if (!"admin".equals(role)) {
-            return ResponseEntity.status(403).body(Map.of("message", "仅管理员可删除 API 资产"));
-        }
+            HttpServletRequest request,
+            @PathVariable Long id) {
+        security.require(request, "data_service", id, "delete", Map.of());
         if (service.getById(id) == null) {
             return ResponseEntity.notFound().build();
         }

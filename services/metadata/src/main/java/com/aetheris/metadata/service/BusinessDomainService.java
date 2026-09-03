@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
@@ -23,10 +24,22 @@ public class BusinessDomainService {
     }
 
     public List<BusinessDomain> list(String keyword, String status) {
+        return list(keyword, status, null);
+    }
+
+    /**
+     * @param idFilter 业务域 id 白名单（权限收窄列表过滤）；null 表示不过滤，
+     *                 空集合时返回空列表（用户没有任何可见域）。
+     */
+    public List<BusinessDomain> list(String keyword, String status, Collection<Long> idFilter) {
+        if (idFilter != null && idFilter.isEmpty()) {
+            return List.of();
+        }
         LambdaQueryWrapper<BusinessDomain> query = new LambdaQueryWrapper<BusinessDomain>()
                 .and(StringUtils.hasText(keyword), q -> q.like(BusinessDomain::getDomainCode, keyword.trim())
                         .or().like(BusinessDomain::getDomainName, keyword.trim()))
                 .eq(StringUtils.hasText(status), BusinessDomain::getStatus, status)
+                .in(idFilter != null, BusinessDomain::getId, idFilter)
                 .orderByAsc(BusinessDomain::getDomainCode);
         return mapper.selectList(query);
     }

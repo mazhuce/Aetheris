@@ -68,6 +68,14 @@ aetheris:
   rate-limit:
     capacity: ${AETHERIS_RATE_LIMIT_CAPACITY:60}
     window-seconds: ${AETHERIS_RATE_LIMIT_WINDOW_SECONDS:60}
+  # 与各业务服务共享的内部令牌：用于 X-Aetheris-Identity 身份签名和
+  # 调用 auth-service /internal/permissions 粗粒度判定。未配置时跳过
+  # 身份签名且 access 判定将 fail-closed（503）。
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
 
 audit:
   base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}

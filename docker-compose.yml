@@ -32,6 +32,10 @@ services:
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,6 +52,10 @@ services:
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       AETHERIS_DATASOURCE_MASTER_KEY: ${AETHERIS_DATASOURCE_MASTER_KEY:-}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
     depends_on:
       postgres:
         condition: service_healthy
@@ -199,6 +207,9 @@ services:
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
       INITIAL_ADMIN_NICKNAME: ${INITIAL_ADMIN_NICKNAME:-系统管理员}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      SYSTEM_SERVICE_HOST: system-service
+      SYSTEM_SERVICE_PORT: "8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -213,6 +224,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:-}
       AETHERIS_RATE_LIMIT_CAPACITY: ${AETHERIS_RATE_LIMIT_CAPACITY:-60}
       AETHERIS_RATE_LIMIT_WINDOW_SECONDS: ${AETHERIS_RATE_LIMIT_WINDOW_SECONDS:-60}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
       METADATA_SERVICE_HOST: metadata-service

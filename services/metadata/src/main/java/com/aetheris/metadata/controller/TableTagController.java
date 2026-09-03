@@ -2,15 +2,16 @@ package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.entity.MetadataTable;
 import com.aetheris.metadata.entity.TableTag;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.MetadataTableService;
 import com.aetheris.metadata.service.TableTagService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,8 +23,8 @@ import java.util.Map;
 /**
  * 标签资产端点：
  * - GET  /api/metadata/table-tags         → 按标签名分组的资产清单（标签 → 表列表）
- * - POST /api/metadata/table-tags         → 给表打标签（幂等）
- * - DELETE /api/metadata/table-tags/{id}  → 删除标签关系
+ * - POST /api/metadata/table-tags         → 给表打标签（幂等，要求表更新权限）
+ * - DELETE /api/metadata/table-tags/{id}  → 删除标签关系（本人或表更新权限）
  *
  * <p>标签创建者与管理员可删除；表名以快照形式返回，表被删除后标签仍可追溯。
  */
@@ -33,15 +34,19 @@ public class TableTagController {
 
     private final TableTagService tagService;
     private final MetadataTableService tableService;
+    private final MetadataSecurity security;
 
-    public TableTagController(TableTagService tagService, MetadataTableService tableService) {
+    public TableTagController(TableTagService tagService, MetadataTableService tableService,
+                              MetadataSecurity security) {
         this.tagService = tagService;
         this.tableService = tableService;
+        this.security = security;
     }
 
-    /** 标签分组视图：[{ tag, tableCount, tables: [{id, tableName, createdBy}] }]。 */
+    /** 标签分组视图：[{ tag, tableCount, tables: [{id, tableId, tableName, createdBy}] }]。 */
     @GetMapping
-    public List<Map<String, Object>> groups() {
+    public List<Map<String, Object>> groups(HttpServletRequest request) {
+        security.requireIdentity(request);
         List<TableTag> tags = tagService.listAll();
         Map<Long, String> tableNames = new HashMap<>();
         for (TableTag tag : tags) {
@@ -79,35 +84,43 @@ public class TableTagController {
 
     @PostMapping
     public ResponseEntity<?> add(
-            @RequestBody TagRequest request,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
-        if (request.tableId() == null || request.tag() == null || request.tag().isBlank()) {
+            HttpServletRequest request,
+            @RequestBody TagRequest tagRequest) {
+        if (tagRequest.tableId() == null || tagRequest.tag() == null || tagRequest.tag().isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "tableId 与 tag 不能为空"));
         }
-        if (request.tag().length() > 64) {
+        if (tagRequest.tag().length() > 64) {
             return ResponseEntity.badRequest().body(Map.of("message", "标签长度不能超过 64 字符"));
         }
-        MetadataTable table = tableService.getById(request.tableId());
+        MetadataTable table = tableService.getById(tagRequest.tableId());
         if (table == null) {
             return ResponseEntity.status(404).body(Map.of("message", "目标表不存在"));
         }
-        return ResponseEntity.ok(tagService.add(request.tableId(), request.tag().trim(), username));
+        String username = security.require(request, "table", tagRequest.tableId(), "update",
+                domainCtx(table.getBusinessDomainId())).username();
+        return ResponseEntity.ok(tagService.add(tagRequest.tableId(), tagRequest.tag().trim(), username));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> remove(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
+            HttpServletRequest request,
+            @PathVariable Long id) {
         TableTag tag = tagService.getById(id);
         if (tag == null) {
             return ResponseEntity.notFound().build();
         }
-        // admin 可删任何标签；普通用户只能删自己打的
-        if (!"admin".equals(role) && !username.equals(tag.getCreatedBy())) {
-            return ResponseEntity.status(403).body(Map.of("message", "只能删除自己创建的标签"));
+        String username = security.requireIdentity(request).username();
+        // 本人可删自己打的标签；其他用户需要表更新权限（admin 经决策引擎全量通过）。
+        if (!username.equals(tag.getCreatedBy())) {
+            MetadataTable table = tableService.getById(tag.getMetadataTableId());
+            Long domainId = table == null ? null : table.getBusinessDomainId();
+            security.require(request, "table", tag.getMetadataTableId(), "update", domainCtx(domainId));
         }
         tagService.remove(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private static Map<String, String> domainCtx(Long domainId) {
+        return domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId));
     }
 }

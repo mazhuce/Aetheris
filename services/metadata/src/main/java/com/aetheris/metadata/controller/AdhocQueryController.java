@@ -3,16 +3,17 @@ package com.aetheris.metadata.controller;
 import com.aetheris.metadata.dto.AdhocQueryRequest;
 import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.entity.QueryHistory;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.QueryHistoryService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,6 +26,9 @@ import java.util.Map;
  * {@code validateReadOnlySql} 守卫：只放行 SELECT / SHOW / DESCRIBE / EXPLAIN，
  * 拒绝写入与危险函数——人工输入与 agent 生成的 SQL 受同一套约束。
  * 行数上限与查询超时也由 JdbcService 统一控制。
+ *
+ * <p>执行前经 auth-service 决策引擎做 datasource.query 判定，用户名取网关
+ * 验签身份（不再信任 X-User-Name 请求头）。
  */
 @RestController
 @RequestMapping("/api/metadata/query")
@@ -35,38 +39,42 @@ public class AdhocQueryController {
     private final DataSourceService dataSourceService;
     private final JdbcService jdbcService;
     private final QueryHistoryService queryHistoryService;
+    private final MetadataSecurity security;
 
     public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService,
-                                QueryHistoryService queryHistoryService) {
+                                QueryHistoryService queryHistoryService, MetadataSecurity security) {
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
         this.queryHistoryService = queryHistoryService;
+        this.security = security;
     }
 
     @PostMapping
     public ResponseEntity<Map<String, Object>> query(
-            @Valid @RequestBody AdhocQueryRequest request,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
-        DataSource dataSource = dataSourceService.getById(request.datasourceId());
+            HttpServletRequest request,
+            @Valid @RequestBody AdhocQueryRequest queryRequest) {
+        String username = security.require(request, "datasource", queryRequest.datasourceId(),
+                "query", Map.of()).username();
+        DataSource dataSource = dataSourceService.getById(queryRequest.datasourceId());
         if (dataSource == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "数据源不存在"));
         }
 
         long startedAt = System.currentTimeMillis();
         try {
-            Map<String, Object> result = jdbcService.query(dataSource, request.sql());
+            Map<String, Object> result = jdbcService.query(dataSource, queryRequest.sql());
             result.put("durationMs", System.currentTimeMillis() - startedAt);
-            recordHistory(username, dataSource, request.sql(), "success",
+            recordHistory(username, dataSource, queryRequest.sql(), "success",
                     asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
             // 语句被只读守卫拒绝：原因可安全回显。
-            recordHistory(username, dataSource, request.sql(), "failed",
+            recordHistory(username, dataSource, queryRequest.sql(), "failed",
                     null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
         } catch (IllegalStateException error) {
-            log.warn("Adhoc query by {} on datasource {} failed", username, request.datasourceId(), error);
-            recordHistory(username, dataSource, request.sql(), "failed",
+            log.warn("Adhoc query by {} on datasource {} failed", username, queryRequest.datasourceId(), error);
+            recordHistory(username, dataSource, queryRequest.sql(), "failed",
                     null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
         }

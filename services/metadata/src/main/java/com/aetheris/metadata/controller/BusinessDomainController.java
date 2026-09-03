@@ -1,7 +1,9 @@
 package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.entity.BusinessDomain;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.BusinessDomainService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +14,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -24,43 +25,58 @@ import java.util.Map;
 @RequestMapping("/api/metadata/business-domains")
 public class BusinessDomainController {
     private final BusinessDomainService service;
+    private final MetadataSecurity security;
 
-    public BusinessDomainController(BusinessDomainService service) { this.service = service; }
+    public BusinessDomainController(BusinessDomainService service, MetadataSecurity security) {
+        this.service = service;
+        this.security = security;
+    }
 
     @GetMapping
-    public List<BusinessDomain> list(@RequestParam(required = false) String keyword,
+    public List<BusinessDomain> list(HttpServletRequest request,
+                                     @RequestParam(required = false) String keyword,
                                      @RequestParam(required = false) String status) {
-        return service.list(keyword, status);
+        MetadataSecurity.Scope scope = security.visibility(request, "domain", "view");
+        return switch (scope.mode()) {
+            case ALL -> service.list(keyword, status);
+            case IDS -> service.list(keyword, status, scope.ids());
+            case OPAQUE -> filteredList(request, service.list(keyword, status));
+        };
     }
 
     @GetMapping("/{id}")
-    public BusinessDomain get(@PathVariable Long id) { return service.require(id); }
+    public BusinessDomain get(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "domain", id, "view", Map.of("domainId", String.valueOf(id)));
+        return service.require(id);
+    }
 
     @PostMapping
-    public BusinessDomain create(@Valid @RequestBody BusinessDomain domain,
-                                 @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-                                 @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public BusinessDomain create(HttpServletRequest request, @Valid @RequestBody BusinessDomain domain) {
+        String username = security.require(request, "domain", null, "create", Map.of()).username();
         return service.create(domain, username);
     }
 
     @PutMapping("/{id}")
-    public BusinessDomain update(@PathVariable Long id, @Valid @RequestBody BusinessDomain domain,
-                                 @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public BusinessDomain update(HttpServletRequest request, @PathVariable Long id,
+                                 @Valid @RequestBody BusinessDomain domain) {
+        security.require(request, "domain", id, "update", Map.of("domainId", String.valueOf(id)));
         return service.update(id, domain);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id,
-                                       @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "domain", id, "delete", Map.of("domainId", String.valueOf(id)));
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    private void requireAdmin(String role) {
-        if (!"admin".equals(role)) throw new ForbiddenException();
+    /** OPAQUE（子资源级授权）时逐条判定可见性。 */
+    private List<BusinessDomain> filteredList(HttpServletRequest request, List<BusinessDomain> domains) {
+        String username = security.requireIdentity(request).username();
+        return domains.stream()
+                .filter(domain -> security.isAllowed(username, "domain", domain.getId(), "view",
+                        Map.of("domainId", String.valueOf(domain.getId()))))
+                .toList();
     }
 
     @ExceptionHandler(BusinessDomainService.NotFoundException.class)
@@ -72,11 +88,4 @@ public class BusinessDomainController {
     public ResponseEntity<Map<String, String>> badRequest(RuntimeException error) {
         return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
     }
-
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<Map<String, String>> forbidden() {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "仅管理员可以管理业务域"));
-    }
-
-    private static class ForbiddenException extends RuntimeException { }
 }

@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -46,9 +47,21 @@ public class LogicalModelService {
     }
 
     public List<LogicalModel> list(String keyword, String status) {
-        if ("published".equals(status)) return published(keyword);
+        return list(keyword, status, null);
+    }
+
+    /**
+     * @param domainIds 业务域 id 白名单（权限收窄列表过滤）；null 表示不过滤，
+     *                  空集合时返回空列表。
+     */
+    public List<LogicalModel> list(String keyword, String status, Collection<Long> domainIds) {
+        if (domainIds != null && domainIds.isEmpty()) {
+            return List.of();
+        }
+        if ("published".equals(status)) return published(keyword, domainIds);
         LambdaQueryWrapper<LogicalModel> wrapper = new LambdaQueryWrapper<LogicalModel>()
                 .eq(StringUtils.hasText(status), LogicalModel::getStatus, status)
+                .in(domainIds != null, LogicalModel::getBusinessDomainId, domainIds)
                 .orderByDesc(LogicalModel::getUpdatedAt);
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
@@ -61,13 +74,14 @@ public class LogicalModelService {
 
     public List<LogicalModel> list(String keyword) { return list(keyword, null); }
 
-    private List<LogicalModel> published(String keyword) {
+    private List<LogicalModel> published(String keyword, Collection<Long> domainIds) {
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
         return mapper.selectList(new LambdaQueryWrapper<LogicalModel>()
                         .isNotNull(LogicalModel::getPublishedVersion)
                         .ne(LogicalModel::getStatus, "deprecated")
                         .orderByAsc(LogicalModel::getModelCode)).stream()
                 .map(this::resolvePublished)
+                .filter(model -> domainIds == null || domainIds.contains(model.getBusinessDomainId()))
                 .filter(model -> normalizedKeyword == null || Stream.of(model.getModelCode(), model.getModelName(), model.getBusinessDomain())
                         .filter(value -> value != null)
                         .anyMatch(value -> value.toLowerCase(Locale.ROOT).contains(normalizedKeyword)))

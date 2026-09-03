@@ -23,6 +23,12 @@ const ChatPage = lazy(() => import('@/pages/ai/chat'))
 const ChatBiPage = lazy(() => import('@/pages/ai/chatbi'))
 const SystemConfigPage = lazy(() => import('@/pages/system/config'))
 const UserPage = lazy(() => import('@/pages/system/users'))
+const RolePage = lazy(() => import('@/pages/system/roles'))
+const PermissionPage = lazy(() => import('@/pages/system/permissions'))
+const GroupPage = lazy(() => import('@/pages/system/groups'))
+const OrganizationPage = lazy(() => import('@/pages/system/organizations'))
+const WorkspacePage = lazy(() => import('@/pages/system/workspaces'))
+const GrantPage = lazy(() => import('@/pages/system/grants'))
 const AuditLogPage = lazy(() => import('@/pages/system/audit'))
 const AccountPage = lazy(() => import('@/pages/account'))
 const SettingsPage = lazy(() => import('@/pages/settings'))
@@ -171,6 +177,54 @@ export const router = createBrowserRouter([
         element: (
           <RequireRole role="admin">
             <UserPage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/roles',
+        element: (
+          <RequireRole role="admin">
+            <RolePage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/permissions',
+        element: (
+          <RequireRole role="admin">
+            <PermissionPage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/groups',
+        element: (
+          <RequireRole role="admin">
+            <GroupPage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/organizations',
+        element: (
+          <RequireRole role="admin">
+            <OrganizationPage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/workspaces',
+        element: (
+          <RequireRole role="admin">
+            <WorkspacePage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'admin/grants',
+        element: (
+          <RequireRole role="admin">
+            <GrantPage />
           </RequireRole>
         )
       },

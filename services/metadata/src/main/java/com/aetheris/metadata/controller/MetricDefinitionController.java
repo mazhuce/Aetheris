@@ -3,7 +3,9 @@ package com.aetheris.metadata.controller;
 import com.aetheris.metadata.dto.MetricQueryRequest;
 import com.aetheris.metadata.dto.SemanticVersion;
 import com.aetheris.metadata.entity.MetricDefinition;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.MetricDefinitionService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,66 +18,110 @@ import java.util.Map;
 @RequestMapping("/api/metadata/metric-definitions")
 public class MetricDefinitionController {
     private final MetricDefinitionService service;
-    public MetricDefinitionController(MetricDefinitionService service) { this.service = service; }
+    private final MetadataSecurity security;
 
-    @GetMapping public List<MetricDefinition> list(@RequestParam(required = false) String keyword,
+    public MetricDefinitionController(MetricDefinitionService service, MetadataSecurity security) {
+        this.service = service;
+        this.security = security;
+    }
+
+    @GetMapping public List<MetricDefinition> list(HttpServletRequest request,
+                                                   @RequestParam(required = false) String keyword,
                                                    @RequestParam(required = false) String status) {
-        return service.list(keyword, status);
-    }
-    @GetMapping("/{id}") public MetricDefinition get(@PathVariable Long id) { return service.require(id); }
-    @GetMapping("/{id}/versions") public List<SemanticVersion> versions(@PathVariable Long id) { return service.versions(id); }
-    @PostMapping public MetricDefinition create(@Valid @RequestBody MetricDefinition metric,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.create(metric, username);
-    }
-    @PutMapping("/{id}") public MetricDefinition update(@PathVariable Long id, @Valid @RequestBody MetricDefinition metric,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.update(id, metric);
-    }
-    @PostMapping("/{id}/validate") public Map<String, Object> validate(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.validate(id);
-    }
-    @PostMapping("/{id}/preview") public Map<String, Object> preview(@PathVariable Long id,
-            @Valid @RequestBody(required = false) MetricQueryRequest request,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.preview(id, request);
-    }
-    @PostMapping("/{id}/publish") public MetricDefinition publish(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.publish(id, username);
-    }
-    @PostMapping("/{id}/new-version") public MetricDefinition newVersion(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.newVersion(id);
-    }
-    @PostMapping("/{id}/discard-draft") public MetricDefinition discardDraft(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.discardDraft(id);
-    }
-    @PostMapping("/{id}/deprecate") public MetricDefinition deprecate(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); return service.deprecate(id);
-    }
-    @DeleteMapping("/{id}") public ResponseEntity<Void> delete(@PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role); service.remove(id); return ResponseEntity.noContent().build();
+        MetadataSecurity.Scope scope = security.visibility(request, "metric", "view");
+        return switch (scope.mode()) {
+            case ALL -> service.list(keyword, status);
+            case IDS -> service.list(keyword, status, scope.ids());
+            case OPAQUE -> filteredList(request, service.list(keyword, status));
+        };
     }
 
-    private void requireAdmin(String role) { if (!"admin".equals(role)) throw new ForbiddenException(); }
+    @GetMapping("/{id}") public MetricDefinition get(HttpServletRequest request, @PathVariable Long id) {
+        MetricDefinition metric = service.require(id);
+        security.require(request, "metric", id, "view", domainCtx(metric.getBusinessDomainId()));
+        return metric;
+    }
+
+    @GetMapping("/{id}/versions") public List<SemanticVersion> versions(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "view");
+        return service.versions(id);
+    }
+
+    @PostMapping public MetricDefinition create(HttpServletRequest request, @Valid @RequestBody MetricDefinition metric) {
+        String username = security.require(request, "metric", null, "create",
+                domainCtx(metric.getBusinessDomainId())).username();
+        return service.create(metric, username);
+    }
+
+    @PutMapping("/{id}") public MetricDefinition update(HttpServletRequest request, @PathVariable Long id,
+                                                        @Valid @RequestBody MetricDefinition metric) {
+        requireAccess(request, id, "update");
+        return service.update(id, metric);
+    }
+
+    @PostMapping("/{id}/validate") public Map<String, Object> validate(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "query");
+        return service.validate(id);
+    }
+
+    @PostMapping("/{id}/preview") public Map<String, Object> preview(HttpServletRequest request, @PathVariable Long id,
+            @Valid @RequestBody(required = false) MetricQueryRequest queryRequest) {
+        requireAccess(request, id, "query");
+        return service.preview(id, queryRequest);
+    }
+
+    @PostMapping("/{id}/publish") public MetricDefinition publish(HttpServletRequest request, @PathVariable Long id) {
+        String username = requireAccess(request, id, "publish");
+        return service.publish(id, username);
+    }
+
+    @PostMapping("/{id}/new-version") public MetricDefinition newVersion(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "update");
+        return service.newVersion(id);
+    }
+
+    @PostMapping("/{id}/discard-draft") public MetricDefinition discardDraft(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "update");
+        return service.discardDraft(id);
+    }
+
+    @PostMapping("/{id}/deprecate") public MetricDefinition deprecate(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "deprecate");
+        return service.deprecate(id);
+    }
+
+    @DeleteMapping("/{id}") public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable Long id) {
+        requireAccess(request, id, "delete");
+        service.remove(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** 先取资源归属域（顺带 404），再做资源级判定。 */
+    private String requireAccess(HttpServletRequest request, Long id, String action) {
+        MetricDefinition metric = service.require(id);
+        return security.require(request, "metric", id, action,
+                domainCtx(metric.getBusinessDomainId())).username();
+    }
+
+    private List<MetricDefinition> filteredList(HttpServletRequest request, List<MetricDefinition> metrics) {
+        String username = security.requireIdentity(request).username();
+        return metrics.stream()
+                .filter(metric -> security.isAllowed(username, "metric", metric.getId(), "view",
+                        domainCtx(metric.getBusinessDomainId())))
+                .toList();
+    }
+
+    private static Map<String, String> domainCtx(Long domainId) {
+        return domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId));
+    }
+
     @ExceptionHandler(MetricDefinitionService.NotFoundException.class)
     public ResponseEntity<Map<String, String>> notFound(RuntimeException error) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", error.getMessage()));
     }
+
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<Map<String, String>> badRequest(RuntimeException error) {
         return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
     }
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<Map<String, String>> forbidden() {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "仅管理员可以管理指标"));
-    }
-    private static class ForbiddenException extends RuntimeException { }
 }

@@ -53,7 +53,7 @@ public class AuthController {
         }
         loginAttempts.reset(request.username());
         String role = user.getRole() == null ? "viewer" : user.getRole();
-        String token = jwtService.generateToken(user.getUsername(), role);
+        String token = jwtService.generateToken(user.getId(), user.getUsername(), role);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("token", token);
         response.put("username", user.getUsername());

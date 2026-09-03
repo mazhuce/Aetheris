@@ -51,3 +51,8 @@ aetheris:
     master-key: ${AETHERIS_DATASOURCE_MASTER_KEY:}
   managed-datasource:
     enabled: ${REGISTER_INTERNAL_DATASOURCE:true}
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}

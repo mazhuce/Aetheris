@@ -1,8 +1,10 @@
 package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.entity.DataSource;
+import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.DataSourceService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,19 +30,24 @@ public class DataSourceController {
 
     private final DataSourceService dataSourceService;
     private final JdbcService jdbcService;
+    private final MetadataSecurity security;
 
-    public DataSourceController(DataSourceService dataSourceService, JdbcService jdbcService) {
+    public DataSourceController(DataSourceService dataSourceService, JdbcService jdbcService,
+                                MetadataSecurity security) {
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
+        this.security = security;
     }
 
     @GetMapping
-    public List<DataSource> list() {
+    public List<DataSource> list(HttpServletRequest request) {
+        security.require(request, "datasource", null, "view", Map.of());
         return dataSourceService.list();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DataSource> getById(@PathVariable Long id) {
+    public ResponseEntity<DataSource> getById(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "datasource", id, "view", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         return dataSource != null
                 ? ResponseEntity.ok(dataSource)
@@ -48,26 +55,30 @@ public class DataSourceController {
     }
 
     @PostMapping
-    public DataSource create(@Valid @RequestBody DataSource dataSource) {
+    public DataSource create(HttpServletRequest request, @Valid @RequestBody DataSource dataSource) {
+        security.require(request, "datasource", null, "create", Map.of());
         dataSource.setManaged(false);
         dataSourceService.save(dataSource);
         return dataSource;
     }
 
     @PostMapping("/test")
-    public Map<String, Object> testBeforeSave(@Valid @RequestBody DataSource dataSource) {
+    public Map<String, Object> testBeforeSave(HttpServletRequest request, @Valid @RequestBody DataSource dataSource) {
+        security.require(request, "datasource", null, "create", Map.of());
         dataSource.setManaged(false);
         return jdbcService.test(dataSource);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<DataSource> update(
+            HttpServletRequest request,
             @PathVariable Long id,
         @Valid @RequestBody DataSource dataSource) {
         DataSource existing = dataSourceService.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
+        security.require(request, "datasource", id, "update", Map.of());
         if (Boolean.TRUE.equals(existing.getManaged())) {
             return ResponseEntity.status(403).build();
         }
@@ -83,11 +94,12 @@ public class DataSourceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable Long id) {
         DataSource existing = dataSourceService.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
+        security.require(request, "datasource", id, "delete", Map.of());
         if (Boolean.TRUE.equals(existing.getManaged())) {
             return ResponseEntity.status(403).build();
         }
@@ -96,7 +108,8 @@ public class DataSourceController {
     }
 
     @PostMapping("/{id}/test")
-    public ResponseEntity<Map<String, Object>> test(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> test(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "datasource", id, "query", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
@@ -106,8 +119,10 @@ public class DataSourceController {
 
     @PostMapping("/{id}/query")
     public ResponseEntity<Map<String, Object>> query(
+            HttpServletRequest request,
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
+        security.require(request, "datasource", id, "query", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
@@ -123,7 +138,8 @@ public class DataSourceController {
     }
 
     @GetMapping("/{id}/schemas")
-    public ResponseEntity<?> schemas(@PathVariable Long id) {
+    public ResponseEntity<?> schemas(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "datasource", id, "view", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
@@ -138,8 +154,10 @@ public class DataSourceController {
 
     @GetMapping("/{id}/tables")
     public ResponseEntity<?> tables(
+            HttpServletRequest request,
             @PathVariable Long id,
             @RequestParam String schema) {
+        security.require(request, "datasource", id, "view", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
@@ -156,9 +174,11 @@ public class DataSourceController {
 
     @GetMapping("/{id}/columns")
     public ResponseEntity<?> columns(
+            HttpServletRequest request,
             @PathVariable Long id,
             @RequestParam String schema,
             @RequestParam String table) {
+        security.require(request, "datasource", id, "view", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
@@ -175,8 +195,10 @@ public class DataSourceController {
 
     @PostMapping("/{id}/preview")
     public ResponseEntity<?> preview(
+            HttpServletRequest request,
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
+        security.require(request, "datasource", id, "query", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         if (dataSource == null) {
             return ResponseEntity.notFound().build();

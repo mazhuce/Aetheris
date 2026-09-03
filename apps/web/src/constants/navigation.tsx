@@ -171,10 +171,12 @@ export const navModules: NavModule[] = [
     icon: <SettingOutlined />,
     children: [
       { key: 'users', label: '用户管理', path: '/admin/users', status: 'available', requiredRole: 'admin' },
-      { key: 'roles', label: '角色管理', path: '/admin/roles', status: 'comingSoon', description: '维护角色及其权限集合。' },
-      { key: 'organizations', label: '组织管理', path: '/admin/organizations', status: 'comingSoon', description: '维护组织与部门结构。' },
-      { key: 'permissions', label: '权限管理', path: '/admin/permissions', status: 'comingSoon', description: '配置功能与数据的访问权限。' },
-      { key: 'workspaces', label: '项目空间', path: '/admin/workspaces', status: 'comingSoon', description: '按项目或团队划分隔离的工作空间。' },
+      { key: 'roles', label: '角色管理', path: '/admin/roles', status: 'available', requiredRole: 'admin' },
+      { key: 'permissions', label: '权限集合', path: '/admin/permissions', status: 'available', requiredRole: 'admin' },
+      { key: 'groups', label: '用户组', path: '/admin/groups', status: 'available', requiredRole: 'admin' },
+      { key: 'organizations', label: '组织管理', path: '/admin/organizations', status: 'available', requiredRole: 'admin' },
+      { key: 'workspaces', label: '项目空间', path: '/admin/workspaces', status: 'available', requiredRole: 'admin' },
+      { key: 'grants', label: '资源授权', path: '/admin/grants', status: 'available', requiredRole: 'admin' },
       { key: 'settings', label: '系统配置', path: '/admin/settings', status: 'available' }
     ]
   }

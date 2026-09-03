@@ -4,6 +4,7 @@ import com.aetheris.auth.dto.AuthUserResponse;
 import com.aetheris.auth.dto.CreateAuthUserRequest;
 import com.aetheris.auth.dto.UpdateAuthUserRequest;
 import com.aetheris.auth.entity.AuthUser;
+import com.aetheris.auth.service.AdminGuard;
 import com.aetheris.auth.service.AuthUserService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -30,17 +31,24 @@ import java.util.Map;
 public class AuthUserAdminController {
 
     private static final String USER_HEADER = "X-User-Name";
+    private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final AuthUserService authUserService;
     private final PasswordEncoder passwordEncoder;
+    private final AdminGuard adminGuard;
 
-    public AuthUserAdminController(AuthUserService authUserService, PasswordEncoder passwordEncoder) {
+    public AuthUserAdminController(AuthUserService authUserService, PasswordEncoder passwordEncoder,
+                                   AdminGuard adminGuard) {
         this.authUserService = authUserService;
         this.passwordEncoder = passwordEncoder;
+        this.adminGuard = adminGuard;
     }
 
     @GetMapping
-    public List<AuthUserResponse> list() {
+    public List<AuthUserResponse> list(
+            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
+        guard(requester, requestId);
         return authUserService.list(
                         new LambdaQueryWrapper<AuthUser>().orderByAsc(AuthUser::getId))
                 .stream()
@@ -49,7 +57,11 @@ public class AuthUserAdminController {
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@Valid @RequestBody CreateAuthUserRequest request) {
+    public ResponseEntity<?> create(
+            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
+            @Valid @RequestBody CreateAuthUserRequest request) {
+        guard(requester, requestId);
         if (authUserService.findByUsername(request.username()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "用户名已存在"));
@@ -71,7 +83,9 @@ public class AuthUserAdminController {
     public ResponseEntity<?> update(
             @PathVariable Long id,
             @RequestHeader(USER_HEADER) String requester,
+            @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody UpdateAuthUserRequest request) {
+        guard(requester, requestId);
         AuthUser user = authUserService.getById(id);
         if (user == null) {
             return ResponseEntity.notFound().build();
@@ -110,7 +124,9 @@ public class AuthUserAdminController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
             @PathVariable Long id,
-            @RequestHeader(USER_HEADER) String requester) {
+            @RequestHeader(USER_HEADER) String requester,
+            @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
+        guard(requester, requestId);
         AuthUser user = authUserService.getById(id);
         if (user == null) {
             return ResponseEntity.notFound().build();
@@ -130,6 +146,10 @@ public class AuthUserAdminController {
         return "admin".equals(user.getRole())
                 && "active".equals(user.getStatus())
                 && (!"admin".equals(nextRole) || !"active".equals(nextStatus));
+    }
+
+    private void guard(String requester, String requestId) {
+        adminGuard.requireManage(requester, requestId);
     }
 
     private long activeAdminCount() {

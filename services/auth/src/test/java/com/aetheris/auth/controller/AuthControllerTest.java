@@ -26,13 +26,14 @@ class AuthControllerTest {
         PasswordEncoder encoder = mock(PasswordEncoder.class);
         JwtService jwtService = mock(JwtService.class);
         AuthUser user = new AuthUser();
+        user.setId(7L);
         user.setUsername("alice");
         user.setPasswordHash("hash");
         user.setRole("viewer");
         user.setStatus("active");
         when(userService.findByUsername("alice")).thenReturn(Optional.of(user));
         when(encoder.matches("password", "hash")).thenReturn(true);
-        when(jwtService.generateToken("alice", "viewer")).thenReturn("token");
+        when(jwtService.generateToken(7L, "alice", "viewer")).thenReturn("token");
         when(jwtService.getExpirationMs()).thenReturn(60_000L);
 
         ResponseEntity<Map<String, Object>> response =

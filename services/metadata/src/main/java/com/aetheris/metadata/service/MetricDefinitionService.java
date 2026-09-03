@@ -16,6 +16,7 @@ import org.springframework.util.StringUtils;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -44,9 +45,21 @@ public class MetricDefinitionService {
     }
 
     public List<MetricDefinition> list(String keyword, String status) {
-        if ("published".equals(status)) return published(keyword);
+        return list(keyword, status, null);
+    }
+
+    /**
+     * @param domainIds 业务域 id 白名单（权限收窄列表过滤）；null 表示不过滤，
+     *                  空集合时返回空列表。
+     */
+    public List<MetricDefinition> list(String keyword, String status, Collection<Long> domainIds) {
+        if (domainIds != null && domainIds.isEmpty()) {
+            return List.of();
+        }
+        if ("published".equals(status)) return published(keyword, domainIds);
         LambdaQueryWrapper<MetricDefinition> wrapper = new LambdaQueryWrapper<MetricDefinition>()
                 .eq(StringUtils.hasText(status), MetricDefinition::getStatus, status)
+                .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
                 .orderByDesc(MetricDefinition::getUpdatedAt);
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
@@ -60,12 +73,17 @@ public class MetricDefinitionService {
     public List<MetricDefinition> list(String keyword) { return list(keyword, null); }
 
     public List<MetricDefinition> published(String keyword) {
+        return published(keyword, null);
+    }
+
+    public List<MetricDefinition> published(String keyword, Collection<Long> domainIds) {
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
         return mapper.selectList(new LambdaQueryWrapper<MetricDefinition>()
                         .isNotNull(MetricDefinition::getPublishedVersion)
                         .ne(MetricDefinition::getStatus, "deprecated")
                         .orderByAsc(MetricDefinition::getMetricCode)).stream()
                 .map(this::resolvePublished)
+                .filter(metric -> domainIds == null || domainIds.contains(metric.getBusinessDomainId()))
                 .filter(metric -> normalizedKeyword == null || matches(metric, normalizedKeyword))
                 .toList();
     }

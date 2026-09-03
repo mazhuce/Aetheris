@@ -36,6 +36,15 @@ management:
     health:
       show-details: never
 
+aetheris:
+  # 与网关共享的内部令牌：校验 X-Aetheris-Identity 身份签名，并调用
+  # auth-service /internal/permissions 判定。未配置时敏感端点 fail-closed。
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
+
 springdoc:
   api-docs:
     path: /v3/api-docs
