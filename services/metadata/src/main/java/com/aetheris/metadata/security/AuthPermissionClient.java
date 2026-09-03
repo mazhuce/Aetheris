@@ -2,11 +2,13 @@ package com.aetheris.metadata.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +26,7 @@ public class AuthPermissionClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public AuthPermissionClient(
             RestClient.Builder builder,
             @Value("${aetheris.internal-token:}") String internalToken,
@@ -38,18 +41,17 @@ public class AuthPermissionClient {
                 .build();
     }
 
+    AuthPermissionClient(RestClient restClient) {
+        this.restClient = restClient;
+    }
+
     /** 单条资源级权限判定（与 auth-service PermissionCheckResponse 对齐）。 */
     public Access check(String username, String resourceType, Long resourceId,
                         String action, Map<String, String> ctx) {
         try {
             PermissionCheckResponse response = restClient.post()
                     .uri("/internal/permissions/check")
-                    .body(Map.of(
-                            "username", username,
-                            "resourceType", resourceType,
-                            "resourceId", resourceId == null ? null : resourceId,
-                            "action", action,
-                            "ctx", ctx == null ? Map.of() : ctx))
+                    .body(checkRequestBody(username, resourceType, resourceId, action, ctx))
                     .retrieve()
                     .body(PermissionCheckResponse.class);
             return response != null && response.allowed()
@@ -60,6 +62,18 @@ public class AuthPermissionClient {
                     username, resourceType, resourceId, action, error.getMessage());
             return new Access(false, "权限服务不可用");
         }
+    }
+
+    private Map<String, Object> checkRequestBody(String username, String resourceType,
+                                                  Long resourceId, String action,
+                                                  Map<String, String> ctx) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("username", username);
+        body.put("resourceType", resourceType);
+        body.put("resourceId", resourceId);
+        body.put("action", action);
+        body.put("ctx", ctx == null ? Map.of() : ctx);
+        return body;
     }
 
     /**
