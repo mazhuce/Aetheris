@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { App, Button, Col, Empty, Popconfirm, Row, Tag, Typography } from 'antd'
+import { App, Button, Col, Empty, Pagination, Popconfirm, Row, Tag, Typography } from 'antd'
 import { ClockCircleOutlined, DeleteOutlined, RightOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
@@ -8,6 +8,8 @@ import StatCard from '@/components/StatCard'
 import { USERNAME_KEY } from '@/api/http'
 import { clearRecentVisits, readRecentVisits, type RecentVisit } from '@/utils/recentVisits'
 import { flattenNavItems } from '@/constants/navigation'
+
+const PAGE_SIZE = 12
 
 function relativeTime(timestamp: number): string {
   const diff = Date.now() - timestamp
@@ -25,6 +27,7 @@ export default function RecentVisitsPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const [visits, setVisits] = useState<RecentVisit[]>([])
+  const [page, setPage] = useState(1)
 
   const refresh = useCallback(() => {
     setVisits(readRecentVisits(localStorage.getItem(USERNAME_KEY) ?? undefined))
@@ -37,12 +40,14 @@ export default function RecentVisitsPage() {
   const handleClear = () => {
     clearRecentVisits(localStorage.getItem(USERNAME_KEY) ?? undefined)
     message.success('已清空最近访问记录')
+    setPage(1)
     refresh()
   }
 
   // 仍可用的页面才允许点击跳转；功能下线后显示为普通文本
   const availablePaths = new Set(flattenNavItems().map((item) => item.path))
   const todayCount = visits.filter((visit) => Date.now() - visit.visitedAt < 86_400_000).length
+  const pageVisits = visits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="recent-visits-page">
@@ -66,46 +71,45 @@ export default function RecentVisitsPage() {
         </Col>
       </Row>
 
-      <DataSurface title="访问足迹" description={visits.length ? `最近 ${visits.length} 个页面` : ''} label="最近访问列表">
+      <DataSurface title="访问足迹" description={visits.length ? `最近 ${visits.length} 个页面，每页最多 ${PAGE_SIZE} 个` : ''} label="最近访问列表">
         {visits.length ? (
-          <Row gutter={[12, 12]} style={{ padding: 8 }}>
-            {visits.map((visit) => {
-              const active = availablePaths.has(visit.path)
-              return (
-                <Col xs={24} sm={12} lg={8} key={visit.path}>
-                  <button
-                    onClick={() => active && navigate(visit.path)}
-                    disabled={!active}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      width: '100%',
-                      padding: '14px 16px',
-                      borderRadius: 10,
-                      border: '1px solid var(--border-color, #e5e7eb)',
-                      background: 'var(--surface-color, #fafafa)',
-                      cursor: active ? 'pointer' : 'default',
-                      textAlign: 'left',
-                      transition: 'box-shadow .15s ease',
-                      opacity: active ? 1 : 0.55
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>
-                        {visit.label}
-                        <Tag style={{ marginLeft: 10 }}>{visit.moduleLabel}</Tag>
+          <div className="recent-visits-list">
+            <Row gutter={[12, 12]}>
+              {pageVisits.map((visit) => {
+                const active = availablePaths.has(visit.path)
+                return (
+                  <Col xs={24} sm={12} lg={8} key={visit.path}>
+                    <button
+                      className="recent-visit-card"
+                      onClick={() => active && navigate(visit.path)}
+                      disabled={!active}
+                    >
+                      <div className="recent-visit-copy">
+                        <div className="recent-visit-title">
+                          {visit.label}
+                          <Tag>{visit.moduleLabel}</Tag>
+                        </div>
+                        <Typography.Text type="secondary" className="recent-visit-meta">
+                          {relativeTime(visit.visitedAt)} · {visit.path}
+                        </Typography.Text>
                       </div>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        {relativeTime(visit.visitedAt)} · {visit.path}
-                      </Typography.Text>
-                    </div>
-                    {active && <RightOutlined style={{ color: 'var(--text-tertiary)' }} />}
-                  </button>
-                </Col>
-              )
-            })}
-          </Row>
+                      {active && <RightOutlined className="recent-visit-arrow" />}
+                    </button>
+                  </Col>
+                )
+              })}
+            </Row>
+            {visits.length > PAGE_SIZE && (
+              <Pagination
+                className="recent-visits-pagination"
+                current={page}
+                pageSize={PAGE_SIZE}
+                total={visits.length}
+                showSizeChanger={false}
+                onChange={setPage}
+              />
+            )}
+          </div>
         ) : (
           <Empty description="暂无访问记录，去左侧导航浏览几个功能页后再回来" />
         )}

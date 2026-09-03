@@ -5,6 +5,7 @@ import RequireAuth from '@/components/RequireAuth'
 import RequireRole from '@/components/RequireRole'
 import { firstAvailablePath, navModules } from '@/constants/navigation'
 import { getCurrentRole } from '@/utils/access'
+import { usePreferences } from '@/contexts/PreferencesContext'
 
 const LoginPage = lazy(() => import('@/pages/login'))
 const Dashboard = lazy(() => import('@/pages/dashboard'))
@@ -24,6 +25,7 @@ const SystemConfigPage = lazy(() => import('@/pages/system/config'))
 const UserPage = lazy(() => import('@/pages/system/users'))
 const AuditLogPage = lazy(() => import('@/pages/system/audit'))
 const AccountPage = lazy(() => import('@/pages/account'))
+const SettingsPage = lazy(() => import('@/pages/settings'))
 const AnalyticsDatasetPage = lazy(() => import('@/pages/analytics/datasets'))
 const AdhocQueryPage = lazy(() => import('@/pages/analytics/query'))
 const TaskMonitorPage = lazy(() => import('@/pages/operations/tasks'))
@@ -66,6 +68,11 @@ function ModuleRedirect({ moduleKey }: { moduleKey: string }) {
   return <Navigate to={firstAvailablePath(module, getCurrentRole())} replace />
 }
 
+function HomeRedirect() {
+  const { homePath } = usePreferences()
+  return <Navigate to={homePath} replace />
+}
+
 export const router = createBrowserRouter([
   { path: '/login', element: <Deferred><LoginPage /></Deferred> },
   {
@@ -84,7 +91,7 @@ export const router = createBrowserRouter([
       </RequireAuth>
     ),
     children: [
-      { index: true, element: <Navigate to="/workbench" replace /> },
+      { index: true, element: <HomeRedirect /> },
 
       // 工作台
       { path: 'workbench', element: <Dashboard /> },
@@ -169,7 +176,8 @@ export const router = createBrowserRouter([
       },
       { path: 'admin/settings', element: <SystemConfigPage /> },
 
-      // 账户设置（头部下拉进入，不进导航）
+      // 系统与账户偏好（头部下拉进入，不进导航）
+      { path: 'settings', element: <SettingsPage /> },
       { path: 'account', element: <AccountPage /> },
 
       // 一级模块根路径重定向；未交付模块不注册入口。

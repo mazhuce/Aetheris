@@ -37,6 +37,28 @@
   --info: #c9cbd1;
   --info-subtle: rgba(255, 255, 255, 0.07);
 
+  /* Theme-aware neutral effects */
+  --soft-overlay: rgba(255, 255, 255, 0.045);
+  --nav-hover: rgba(255, 255, 255, 0.03);
+  --subnav-hover: rgba(255, 255, 255, 0.035);
+  --selection-bg: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --decorative-glow: rgba(255, 255, 255, 0.035);
+  --surface-tint: rgba(255, 255, 255, 0.018);
+  --dashboard-grid-line: rgba(255, 255, 255, 0.025);
+  --dashboard-canvas-grid-line: rgba(255, 255, 255, 0.018);
+  --dashboard-preview-bg: #111216;
+  --dashboard-preview-shade: rgba(0, 0, 0, 0.35);
+  --dashboard-block-border: rgba(255, 255, 255, 0.11);
+  --dashboard-block-bg: rgba(255, 255, 255, 0.055);
+  --dashboard-block-sheen: rgba(255, 255, 255, 0.03);
+  --dashboard-block-strong: rgba(255, 255, 255, 0.10);
+  --dashboard-widget-edge: rgba(255, 255, 255, 0.025);
+  --dashboard-selection-ring: rgba(255, 255, 255, 0.18);
+  --dashboard-resize-handle: rgba(255, 255, 255, 0.30);
+  --stage-header-bg: rgba(19, 20, 23, 0.94);
+  --stage-glow: rgba(255, 255, 255, 0.04);
+
   /* Typography */
   --font-sans: "DM Sans Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-display: "Host Grotesk Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
@@ -87,4 +109,61 @@
   --accent-soft: var(--accent-subtle);
 
   font-synthesis: none;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-app: #f5f6f8;
+  --bg-nav: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f6f7f9;
+  --bg-raised: #ffffff;
+  --bg-hover: #eef0f3;
+  --bg-selected: rgba(15, 23, 42, 0.08);
+
+  --text-primary: #181a1f;
+  --text-secondary: #4f5560;
+  --text-tertiary: #737b87;
+  --text-disabled: #a1a7b0;
+
+  --border-default: rgba(15, 23, 42, 0.12);
+  --border-subtle: rgba(15, 23, 42, 0.075);
+  --border-strong: rgba(15, 23, 42, 0.18);
+
+  --accent: #202226;
+  --accent-hover: #08090a;
+  --accent-subtle: rgba(15, 23, 42, 0.07);
+  --accent-border: rgba(15, 23, 42, 0.20);
+  --action-primary-bg: #202226;
+  --action-primary-hover: #08090a;
+  --action-primary-active: #383b41;
+  --action-primary-text: #ffffff;
+
+  --info: #59606b;
+  --info-subtle: rgba(15, 23, 42, 0.055);
+
+  --soft-overlay: rgba(15, 23, 42, 0.045);
+  --nav-hover: rgba(15, 23, 42, 0.04);
+  --subnav-hover: rgba(15, 23, 42, 0.05);
+  --selection-bg: rgba(15, 23, 42, 0.16);
+  --scrollbar-thumb: rgba(15, 23, 42, 0.20);
+  --decorative-glow: rgba(15, 23, 42, 0.04);
+  --surface-tint: rgba(15, 23, 42, 0.025);
+  --dashboard-grid-line: rgba(15, 23, 42, 0.055);
+  --dashboard-canvas-grid-line: rgba(15, 23, 42, 0.045);
+  --dashboard-preview-bg: #f0f2f5;
+  --dashboard-preview-shade: rgba(15, 23, 42, 0.04);
+  --dashboard-block-border: rgba(15, 23, 42, 0.12);
+  --dashboard-block-bg: rgba(15, 23, 42, 0.055);
+  --dashboard-block-sheen: rgba(255, 255, 255, 0.55);
+  --dashboard-block-strong: rgba(15, 23, 42, 0.10);
+  --dashboard-widget-edge: rgba(15, 23, 42, 0.055);
+  --dashboard-selection-ring: rgba(15, 23, 42, 0.22);
+  --dashboard-resize-handle: rgba(15, 23, 42, 0.35);
+  --stage-header-bg: rgba(255, 255, 255, 0.94);
+  --stage-glow: rgba(15, 23, 42, 0.04);
+
+  --shadow-float: 0 10px 28px rgba(15, 23, 42, 0.12);
+  --shadow-dialog: 0 18px 48px rgba(15, 23, 42, 0.16);
 }

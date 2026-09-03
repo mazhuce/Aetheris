@@ -1,11 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { App as AntdApp, ConfigProvider } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import { App as AntdApp } from 'antd'
 import { RouterProvider } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from './router'
-import { appTheme } from './theme'
+import { PreferencesProvider } from './contexts/PreferencesContext'
+import { applyPreferences, readPreferences } from './utils/preferences'
 import '@fontsource-variable/dm-sans/wght.css'
 import '@fontsource-variable/host-grotesk/wght.css'
 import 'react-grid-layout/css/styles.css'
@@ -22,14 +22,17 @@ const queryClient = new QueryClient({
   }
 })
 
+// 在首屏渲染前恢复主题，避免已选择浅色时短暂闪现深色界面。
+applyPreferences(readPreferences())
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN} theme={appTheme}>
+    <PreferencesProvider>
       <AntdApp>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
         </QueryClientProvider>
       </AntdApp>
-    </ConfigProvider>
+    </PreferencesProvider>
   </React.StrictMode>
 )

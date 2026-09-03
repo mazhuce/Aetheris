@@ -108,9 +108,9 @@
   height: 128px;
   border-bottom: 1px solid var(--border-subtle);
   background:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px),
-    #111216;
+    linear-gradient(var(--dashboard-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dashboard-grid-line) 1px, transparent 1px),
+    var(--dashboard-preview-bg);
   background-size: 18px 18px;
 }
 
@@ -119,7 +119,7 @@
   position: absolute;
   inset: 0;
   content: '';
-  background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,.35));
+  background: linear-gradient(180deg, transparent 50%, var(--dashboard-preview-shade));
   pointer-events: none;
 }
 
@@ -127,15 +127,15 @@
 .dashboard-card-preview i {
   position: absolute;
   min-height: 16px;
-  border: 1px solid rgba(255,255,255,.11);
+  border: 1px solid var(--dashboard-block-border);
   border-radius: 3px;
-  background: rgba(255,255,255,.055);
-  box-shadow: inset 0 1px rgba(255,255,255,.03);
+  background: var(--dashboard-block-bg);
+  box-shadow: inset 0 1px var(--dashboard-block-sheen);
 }
 
 .tone-emerald .template-miniature i:nth-child(3n),
 .tone-amber .template-miniature i:nth-child(2n) {
-  background: rgba(255,255,255,.10);
+  background: var(--dashboard-block-strong);
 }
 
 .template-miniature b {
@@ -407,8 +407,8 @@
   overflow: auto;
   padding: 22px;
   background:
-    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(var(--dashboard-canvas-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--dashboard-canvas-grid-line) 1px, transparent 1px),
     var(--bg-app);
   background-size: 24px 24px;
 }
@@ -465,7 +465,7 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
-  box-shadow: 0 1px 0 rgba(255,255,255,.025);
+  box-shadow: 0 1px 0 var(--dashboard-widget-edge);
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
@@ -475,7 +475,7 @@
 }
 
 .dashboard-widget.is-selected {
-  box-shadow: 0 0 0 1px rgba(255,255,255,.18), var(--shadow-float);
+  box-shadow: 0 0 0 1px var(--dashboard-selection-ring), var(--shadow-float);
 }
 
 .dashboard-widget-header {
@@ -643,7 +643,7 @@
 }
 
 .react-resizable-handle::after {
-  border-color: rgba(255,255,255,.3) !important;
+  border-color: var(--dashboard-resize-handle) !important;
 }
 
 .dashboard-property-form {
@@ -709,7 +709,7 @@
   height: 56px;
   padding: 0 22px;
   border-bottom: 1px solid var(--border-default);
-  background: rgba(19,20,23,.94);
+  background: var(--stage-header-bg);
   backdrop-filter: blur(16px);
 }
 
@@ -755,7 +755,7 @@
   min-height: calc(100dvh - 56px);
   padding: 20px 22px 32px;
   background:
-    radial-gradient(circle at 50% -20%, rgba(255,255,255,.04), transparent 38%),
+    radial-gradient(circle at 50% -20%, var(--stage-glow), transparent 38%),
     var(--bg-app);
 }
 

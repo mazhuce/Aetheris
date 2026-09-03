@@ -242,6 +242,17 @@
     display: none;
   }
 
+  .setting-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .settings-select,
+  .theme-mode-control {
+    width: 100%;
+  }
+
   .metric-grid {
     grid-template-columns: 1fr;
   }

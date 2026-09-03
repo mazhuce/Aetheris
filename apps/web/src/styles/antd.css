@@ -78,7 +78,7 @@
 
 .ant-btn-link:not(:disabled):hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--soft-overlay);
 }
 
 .ant-btn-text {

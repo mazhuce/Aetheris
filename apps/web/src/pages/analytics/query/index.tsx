@@ -88,7 +88,7 @@ export default function AdhocQueryPage() {
       <DataSurface title="查询编辑器" label="SQL 输入">
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <Space wrap>
-            <span style={{ color: '#666' }}>数据源</span>
+            <span style={{ color: 'var(--text-tertiary)' }}>数据源</span>
             <Select
               showSearch
               optionFilterProp="label"

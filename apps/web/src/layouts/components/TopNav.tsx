@@ -8,6 +8,7 @@ import GlobalSearch from '@/components/GlobalSearch'
 import BrandMark from '@/components/BrandMark'
 import { getCurrentRole } from '@/utils/access'
 import { logout } from '@/api/auth'
+import { usePreferences } from '@/contexts/PreferencesContext'
 
 /** 「更多」按钮预留宽度，用于计算一级模块能放下多少个。 */
 const MORE_RESERVE = 64
@@ -16,6 +17,7 @@ export default function TopNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const role = getCurrentRole()
+  const { homePath } = usePreferences()
   const modules = useMemo(() => availableNavModules(role), [role])
   const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
 
@@ -41,17 +43,24 @@ export default function TopNav() {
       const widths = naturalWidths.current
       if (available <= 0 || widths.length === 0) return
 
+      const navStyle = getComputedStyle(nav)
+      const gap = Number.parseFloat(navStyle.columnGap) || 0
+      const horizontalPadding = (Number.parseFloat(navStyle.paddingLeft) || 0)
+        + (Number.parseFloat(navStyle.paddingRight) || 0)
       const total = widths.reduce((sum, width) => sum + width, 0)
+        + gap * Math.max(widths.length - 1, 0)
+        + horizontalPadding
       if (total <= available) {
         setOverflowAt(modules.length)
         return
       }
 
-      let used = 0
+      let used = horizontalPadding
       let fit = 0
       for (let i = 0; i < widths.length; i++) {
-        if (used + widths[i] <= available - MORE_RESERVE) {
-          used += widths[i]
+        const itemWidth = widths[i] + (i > 0 ? gap : 0)
+        if (used + itemWidth <= available - MORE_RESERVE) {
+          used += itemWidth
           fit = i + 1
         } else {
           break
@@ -84,7 +93,7 @@ export default function TopNav() {
   return (
     <header className="topnav">
       <div className="topnav-brand">
-        <Link to="/workbench" className="topnav-logo" aria-label="返回工作台">
+        <Link to={homePath} className="topnav-logo" aria-label="返回默认首页">
           <BrandMark />
           <span className="topnav-wordmark">
             <strong>Aetheris</strong>
@@ -151,14 +160,17 @@ export default function TopNav() {
         )}
         <Dropdown
           menu={{
-            items: [
-              { key: 'identity', label: `${username} · ${role === 'admin' ? '管理员' : '只读用户'}`, disabled: true },
-              { type: 'divider' },
-              { key: 'profile', label: '账户设置' },
-              { key: 'logout', label: '退出登录', danger: true }
-            ],
-            onClick: ({ key }) => {
-              if (key === 'profile') navigate('/account')
+              items: [
+                { key: 'identity', label: `${username} · ${role === 'admin' ? '管理员' : '只读用户'}`, disabled: true },
+                { type: 'divider' },
+                { key: 'settings', label: '系统设置' },
+                { key: 'profile', label: '账户设置' },
+                { type: 'divider' },
+                { key: 'logout', label: '退出登录', danger: true }
+              ],
+              onClick: ({ key }) => {
+                if (key === 'settings') navigate('/settings')
+                if (key === 'profile') navigate('/account')
               if (key === 'logout') handleLogout()
             }
           }}

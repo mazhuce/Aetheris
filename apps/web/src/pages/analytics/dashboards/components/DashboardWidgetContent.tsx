@@ -9,16 +9,38 @@ import {
   type DashboardWidget
 } from '@/api/analytics'
 import EChart from './EChart'
+import { usePreferences } from '@/contexts/PreferencesContext'
+import type { ColorMode } from '@/utils/preferences'
 
 interface DashboardWidgetContentProps {
   widget: DashboardWidget
   datasets: AnalyticsDataset[]
 }
 
-const axisText = '#777b85'
-const line = 'rgba(255,255,255,.08)'
-const primary = '#f0f0f2'
-const muted = '#a8abb3'
+const chartPalettes = {
+  dark: {
+    axisText: '#777b85',
+    line: 'rgba(255,255,255,.08)',
+    primary: '#f0f0f2',
+    muted: '#a8abb3',
+    surface: '#16171b',
+    tooltipBg: '#202126',
+    tooltipBorder: 'rgba(255,255,255,.12)',
+    tooltipText: '#f0f0f2',
+    area: 'rgba(255,255,255,.07)'
+  },
+  light: {
+    axisText: '#737b87',
+    line: 'rgba(15,23,42,.10)',
+    primary: '#202226',
+    muted: '#4f5560',
+    surface: '#ffffff',
+    tooltipBg: '#25272b',
+    tooltipBorder: 'rgba(15,23,42,.18)',
+    tooltipText: '#ffffff',
+    area: 'rgba(15,23,42,.09)'
+  }
+} as const
 
 function fieldIndex(result: AnalyticsQueryResult, field?: string, fallback = 0) {
   if (!field) return Math.min(fallback, Math.max(result.columns.length - 1, 0))
@@ -36,7 +58,13 @@ function formatMetric(value: unknown, decimals = 0) {
   return value == null ? '—' : String(value)
 }
 
-function buildChartOption(widget: DashboardWidget, result: AnalyticsQueryResult): EChartsCoreOption {
+function buildChartOption(
+  widget: DashboardWidget,
+  result: AnalyticsQueryResult,
+  colorMode: ColorMode,
+  reduceMotion: boolean
+): EChartsCoreOption {
+  const palette = chartPalettes[colorMode]
   const xIndex = fieldIndex(result, widget.mapping.xField ?? widget.mapping.categoryField, 0)
   const yIndex = fieldIndex(result, widget.mapping.yField ?? widget.mapping.valueField, 1)
   const categories = result.rows.map((row) => String(row[xIndex] ?? ''))
@@ -44,14 +72,19 @@ function buildChartOption(widget: DashboardWidget, result: AnalyticsQueryResult)
 
   if (widget.type === 'pie') {
     return {
-      animationDuration: 420,
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 2, textStyle: { color: muted, fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
+      animationDuration: reduceMotion ? 0 : 420,
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: palette.tooltipBg,
+        borderColor: palette.tooltipBorder,
+        textStyle: { color: palette.tooltipText }
+      },
+      legend: { bottom: 2, textStyle: { color: palette.muted, fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
       series: [{
         type: 'pie',
         radius: ['48%', '72%'],
         center: ['50%', '43%'],
-        itemStyle: { borderColor: '#16171b', borderWidth: 2, borderRadius: 3 },
+        itemStyle: { borderColor: palette.surface, borderWidth: 2, borderRadius: 3 },
         label: { show: false },
         data: categories.map((name, index) => ({ name, value: values[index] }))
       }]
@@ -59,20 +92,20 @@ function buildChartOption(widget: DashboardWidget, result: AnalyticsQueryResult)
   }
 
   return {
-    animationDuration: 420,
+    animationDuration: reduceMotion ? 0 : 420,
     grid: { left: 10, right: 16, top: 18, bottom: 8, containLabel: true },
-    tooltip: { trigger: 'axis', backgroundColor: '#202126', borderColor: 'rgba(255,255,255,.12)', textStyle: { color: primary } },
+    tooltip: { trigger: 'axis', backgroundColor: palette.tooltipBg, borderColor: palette.tooltipBorder, textStyle: { color: palette.tooltipText } },
     xAxis: {
       type: 'category',
       data: categories,
-      axisLabel: { color: axisText, fontSize: 10, hideOverlap: true },
-      axisLine: { lineStyle: { color: line } },
+      axisLabel: { color: palette.axisText, fontSize: 10, hideOverlap: true },
+      axisLine: { lineStyle: { color: palette.line } },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
-      axisLabel: { color: axisText, fontSize: 10 },
-      splitLine: { lineStyle: { color: line } }
+      axisLabel: { color: palette.axisText, fontSize: 10 },
+      splitLine: { lineStyle: { color: palette.line } }
     },
     series: [{
       type: widget.type,
@@ -80,15 +113,16 @@ function buildChartOption(widget: DashboardWidget, result: AnalyticsQueryResult)
       smooth: widget.type === 'line',
       symbol: 'circle',
       symbolSize: 5,
-      itemStyle: { color: primary, borderRadius: widget.type === 'bar' ? [3, 3, 0, 0] : 0 },
-      lineStyle: { color: primary, width: 2 },
-      areaStyle: widget.type === 'line' ? { color: 'rgba(255,255,255,.07)' } : undefined,
+      itemStyle: { color: palette.primary, borderRadius: widget.type === 'bar' ? [3, 3, 0, 0] : 0 },
+      lineStyle: { color: palette.primary, width: 2 },
+      areaStyle: widget.type === 'line' ? { color: palette.area } : undefined,
       barMaxWidth: 26
     }]
   }
 }
 
 export default function DashboardWidgetContent({ widget, datasets }: DashboardWidgetContentProps) {
+  const { colorMode, reduceMotion } = usePreferences()
   const dataset = datasets.find((item) => item.id === widget.datasetId)
   const query = useQuery({
     queryKey: ['analytics-dataset-result', widget.datasetId],
@@ -103,8 +137,10 @@ export default function DashboardWidgetContent({ widget, datasets }: DashboardWi
   })
 
   const option = useMemo(
-    () => query.data && ['line', 'bar', 'pie'].includes(widget.type) ? buildChartOption(widget, query.data) : undefined,
-    [query.data, widget]
+    () => query.data && ['line', 'bar', 'pie'].includes(widget.type)
+      ? buildChartOption(widget, query.data, colorMode, reduceMotion)
+      : undefined,
+    [colorMode, query.data, reduceMotion, widget]
   )
 
   if (widget.type === 'text') {

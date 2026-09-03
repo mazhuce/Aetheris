@@ -64,12 +64,12 @@ textarea:focus-visible,
 
 ::selection {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--selection-bg);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -80,7 +80,7 @@ textarea:focus-visible,
 *::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--scrollbar-thumb);
   background-clip: padding-box;
 }
 
@@ -115,4 +115,13 @@ time {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
 }

@@ -116,11 +116,11 @@ export default function TodosPage() {
                 ]}
               >
                 <List.Item.Meta
-                  avatar={<BellOutlined style={{ fontSize: 20, color: item.isRead ? '#bbb' : '#1677ff' }} />}
+                  avatar={<BellOutlined style={{ fontSize: 20, color: item.isRead ? 'var(--text-disabled)' : '#1677ff' }} />}
                   title={
                     <Space size={8} wrap>
                       {!item.isRead && <Badge status="processing" />}
-                      <span style={item.isRead ? { color: '#999' } : undefined}>{item.title}</span>
+                      <span style={item.isRead ? { color: 'var(--text-tertiary)' } : undefined}>{item.title}</span>
                       <Tag color={source.color}>{source.label}</Tag>
                       <StatusBadge tone={level.tone}>{level.text}</StatusBadge>
                     </Space>

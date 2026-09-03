@@ -83,6 +83,7 @@
   align-items: center;
   gap: var(--space-3);
   height: 100%;
+  flex: 0 0 auto;
   padding: 0 10px;
   border: 0;
   border-radius: 0;
@@ -109,7 +110,7 @@
 
 .topnav-item:hover {
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--nav-hover);
 }
 
 .topnav-item.active {
@@ -269,7 +270,7 @@
 
 .subnav-item:hover {
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--subnav-hover);
 }
 
 .subnav-item.active {

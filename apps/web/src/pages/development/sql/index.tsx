@@ -131,7 +131,7 @@ export default function SqlDevelopmentPage() {
               <DataSurface title={tab.name} label={`SQL 编辑器 ${tab.name}`}>
                 <Space direction="vertical" size={12} style={{ width: '100%' }}>
                   <Space wrap>
-                    <span style={{ color: '#666' }}>数据源</span>
+                    <span style={{ color: 'var(--text-tertiary)' }}>数据源</span>
                     <Select
                       showSearch
                       optionFilterProp="label"
