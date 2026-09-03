@@ -12,12 +12,14 @@ import {
   createTable,
   deleteTable,
   listDataSources,
+  listBusinessDomains,
   listTables,
   syncMetadataTables,
   updateTable,
   warehouseLayerLabel,
   WAREHOUSE_LAYERS,
   type DataSource,
+  type BusinessDomain,
   type MetadataTable,
   type MetadataTableInput,
   type WarehouseLayer
@@ -33,7 +35,8 @@ export default function MetadataTablePage() {
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [layerFilter, setLayerFilter] = useState<WarehouseLayer | undefined>()
-  const [domainFilter, setDomainFilter] = useState<string | undefined>()
+  const [domainFilter, setDomainFilter] = useState<number | undefined>()
+  const [domains, setDomains] = useState<BusinessDomain[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<MetadataTable | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -45,7 +48,10 @@ export default function MetadataTablePage() {
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    try { setAllData(await listTables()) } catch { message.error('元数据目录加载失败') } finally { setLoading(false) }
+    try {
+      const [nextTables, nextDomains] = await Promise.all([listTables(), listBusinessDomains(undefined, 'active')])
+      setAllData(nextTables); setDomains(nextDomains)
+    } catch { message.error('元数据目录加载失败') } finally { setLoading(false) }
   }, [message])
 
   useEffect(() => { void refresh() }, [refresh])
@@ -89,11 +95,7 @@ export default function MetadataTablePage() {
     }
   }
 
-  const domainOptions = useMemo(() => {
-    const domains = new Set<string>()
-    allData.forEach((t) => { if (t.domain) domains.add(t.domain) })
-    return Array.from(domains).sort().map((d) => ({ value: d, label: d }))
-  }, [allData])
+  const domainOptions = useMemo(() => domains.map((item) => ({ value: item.id, label: item.domainName })), [domains])
 
   const filtered = useMemo(
     () =>
@@ -101,7 +103,7 @@ export default function MetadataTablePage() {
         if (keyword && !t.tableName.includes(keyword) && !t.datasourceName.includes(keyword)) return false
         // layer 为空的历史记录按「未分层」处理，与后端数仓地图的归类保持一致。
         if (layerFilter && (t.layer ?? 'other') !== layerFilter) return false
-        if (domainFilter && t.domain !== domainFilter) return false
+        if (domainFilter && t.businessDomainId !== domainFilter) return false
         return true
       }),
     [allData, keyword, layerFilter, domainFilter]
@@ -239,6 +241,8 @@ export default function MetadataTablePage() {
           <Form.Item name="schemaName" label="Schema"><Input placeholder="例如：public" /></Form.Item>
           <Form.Item name="tableName" label="表名" rules={[{ required: true, message: '请输入表名' }]}><Input /></Form.Item>
           <Form.Item name="tableComment" label="说明"><Input /></Form.Item>
+          <Form.Item name="businessDomainId" label="业务域"><Select allowClear showSearch optionFilterProp="label" placeholder="选择正式业务域" options={domainOptions} /></Form.Item>
+          <Form.Item name="layer" label="数仓分层"><Select options={WAREHOUSE_LAYERS.map((item) => ({ value: item.value, label: item.label }))} /></Form.Item>
           <Form.Item name="owner" label="负责人"><Input /></Form.Item>
           <Form.Item name="rowCount" label="行数"><InputNumber min={0} className="full-width-control" /></Form.Item>
           <Form.Item name="status" label="状态">

@@ -45,29 +45,31 @@ class AnalyticsControllerTest {
     @Test
     void datasetByIdDelegatesToService() {
         when(service.dataset(1L)).thenReturn(new AnalyticsDataset(
-                1L, "ds", null, 10L, "dsrc", "SELECT 1", null, 30, "active", "admin", null, null));
+                1L, "ds", null, "sql", 10L, "dsrc", "SELECT 1", null, null,
+                null, 30, "active", "admin", null, null));
         assertEquals("ds", controller.dataset(1L).name());
     }
 
     @Test
     void createDatasetRequiresAdminRole() {
-        DatasetInput input = new DatasetInput("test", null, 10L, "test", "SELECT 1", 30);
+        DatasetInput input = sqlInput("test");
         assertThrows(AnalyticsController.ForbiddenException.class,
                 () -> controller.createDataset(input, "system", VIEWER));
     }
 
     @Test
     void createDatasetSucceedsForAdmin() {
-        DatasetInput input = new DatasetInput("test", null, 10L, "test", "SELECT 1", 30);
+        DatasetInput input = sqlInput("test");
         when(service.createDataset(any(), anyString())).thenReturn(new AnalyticsDataset(
-                1L, "test", null, 10L, "test", "SELECT 1", null, 30, "active", "admin", null, null));
+                1L, "test", null, "sql", 10L, "test", "SELECT 1", null, null,
+                null, 30, "active", "admin", null, null));
         assertEquals("test", controller.createDataset(input, "admin", ADMIN).name());
     }
 
     @Test
     void updateDatasetRequiresAdminRole() {
         assertThrows(AnalyticsController.ForbiddenException.class,
-                () -> controller.updateDataset(1L, new DatasetInput("x", null, 10L, "x", "SELECT 1", 30), VIEWER));
+                () -> controller.updateDataset(1L, sqlInput("x"), VIEWER));
     }
 
     @Test
@@ -87,6 +89,10 @@ class AnalyticsControllerTest {
     void queryDatasetDelegatesToService() {
         when(service.queryDataset(1L, false)).thenReturn(Map.of("rows", List.of()));
         assertEquals(Map.of("rows", List.of()), controller.queryDataset(1L, false));
+    }
+
+    private DatasetInput sqlInput(String name) {
+        return new DatasetInput(name, null, "sql", 10L, "test", "SELECT 1", null, null, 30);
     }
 
     @Test

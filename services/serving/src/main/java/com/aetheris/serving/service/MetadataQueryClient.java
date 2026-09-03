@@ -30,4 +30,15 @@ public class MetadataQueryClient {
         if (body.get("error") instanceof String message) throw new IllegalArgumentException(message);
         return body;
     }
+
+    public Map<String, Object> queryMetric(String metricCode, Object query) {
+        Map<String, Object> body = restClient.post()
+                .uri("/internal/semantic/metrics/{code}/query", metricCode)
+                .body(query == null ? Map.of() : query)
+                .retrieve()
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+        if (body == null) throw new IllegalStateException("指标查询结果为空");
+        if (body.get("error") instanceof String message) throw new IllegalArgumentException(message);
+        return body;
+    }
 }

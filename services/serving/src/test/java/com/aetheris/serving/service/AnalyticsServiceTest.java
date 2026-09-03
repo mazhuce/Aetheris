@@ -36,8 +36,14 @@ class AnalyticsServiceTest {
     private final AnalyticsService service = new AnalyticsService(repository, queryClient, objectMapper);
 
     private AnalyticsDataset dataset(Long id) {
-        return new AnalyticsDataset(id, "订单数据集", null, 10L, "订单库",
-                "SELECT * FROM dwd.orders", null, 30, "active", "admin", null, null);
+        return new AnalyticsDataset(id, "订单数据集", null, "sql", 10L, "订单库",
+                "SELECT * FROM dwd.orders", null, null, null, 30, "active", "admin", null, null);
+    }
+
+    private AnalyticsDataset metricDataset(Long id) {
+        return new AnalyticsDataset(id, "成交金额", null, "metric", null, null,
+                null, "GMV", objectMapper.createObjectNode().put("timeGrain", "day"),
+                null, 30, "active", "admin", null, null);
     }
 
     private Dashboard dashboard(Long id, String status, int publishedVersion) {
@@ -151,6 +157,19 @@ class AnalyticsServiceTest {
 
         verify(queryClient, times(2)).query(10L, "SELECT * FROM dwd.orders");
         verify(repository, times(2)).updateDatasetSchema(eq(1L), any(JsonNode.class));
+    }
+
+    @Test
+    void semanticDatasetUsesPublishedMetricEndpoint() {
+        when(repository.findDataset(2L)).thenReturn(Optional.of(metricDataset(2L)));
+        when(queryClient.queryMetric(eq("GMV"), any())).thenReturn(Map.of(
+                "columns", java.util.List.of("time_bucket", "metric_value"),
+                "rows", java.util.List.of()));
+
+        service.queryDataset(2L, true);
+
+        verify(queryClient).queryMetric(eq("GMV"), any());
+        verify(queryClient, never()).query(anyLong(), anyString());
     }
 
     @Test

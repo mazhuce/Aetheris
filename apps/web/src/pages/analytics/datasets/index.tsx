@@ -11,12 +11,13 @@ import {
   Space,
   Table,
   Tag,
+  Typography,
   message,
   type TableColumnsType
 } from 'antd'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
-import { listDataSources, type DataSource } from '@/api/metadata'
+import { listDataSources, listPublishedMetrics, listSemanticDimensions, type DataSource, type MetricDefinition, type SemanticDimension } from '@/api/metadata'
 import {
   createAnalyticsDataset,
   deleteAnalyticsDataset,
@@ -40,20 +41,28 @@ function resultRows(result: AnalyticsQueryResult) {
 export default function AnalyticsDatasetPage() {
   const [datasets, setDatasets] = useState<AnalyticsDataset[]>([])
   const [sources, setSources] = useState<DataSource[]>([])
+  const [metrics, setMetrics] = useState<MetricDefinition[]>([])
+  const [dimensions, setDimensions] = useState<SemanticDimension[]>([])
   const [loading, setLoading] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<AnalyticsDataset | null>(null)
   const [preview, setPreview] = useState<{ dataset: AnalyticsDataset; result: AnalyticsQueryResult } | null>(null)
   const [querying, setQuerying] = useState<number | null>(null)
   const [form] = Form.useForm<DatasetInput>()
+  const sourceType = Form.useWatch('sourceType', form) || 'sql'
+  const metricCode = Form.useWatch('metricCode', form)
   const isAdmin = getCurrentRole() === 'admin'
 
   const reload = async () => {
     setLoading(true)
     try {
-      const [nextDatasets, nextSources] = await Promise.all([listAnalyticsDatasets(), listDataSources()])
+      const [nextDatasets, nextSources, nextMetrics, nextDimensions] = await Promise.all([
+        listAnalyticsDatasets(), listDataSources(), listPublishedMetrics(), listSemanticDimensions(undefined, 'published')
+      ])
       setDatasets(nextDatasets)
       setSources(nextSources)
+      setMetrics(nextMetrics)
+      setDimensions(nextDimensions)
     } catch {
       message.error('数据集加载失败')
     } finally {
@@ -66,7 +75,7 @@ export default function AnalyticsDatasetPage() {
   const openCreate = () => {
     setEditing(null)
     form.resetFields()
-    form.setFieldsValue({ refreshSeconds: 30 })
+    form.setFieldsValue({ refreshSeconds: 30, sourceType: 'sql', metricQuery: { timeGrain: 'none', dimensions: [], limit: 100 } })
     setEditorOpen(true)
   }
 
@@ -75,9 +84,12 @@ export default function AnalyticsDatasetPage() {
     form.setFieldsValue({
       name: dataset.name,
       description: dataset.description,
+      sourceType: dataset.sourceType || 'sql',
       datasourceId: dataset.datasourceId,
       datasourceName: dataset.datasourceName,
       querySql: dataset.querySql,
+      metricCode: dataset.metricCode,
+      metricQuery: dataset.metricQuery,
       refreshSeconds: dataset.refreshSeconds
     })
     setEditorOpen(true)
@@ -86,7 +98,14 @@ export default function AnalyticsDatasetPage() {
   const save = async () => {
     const values = await form.validateFields()
     const source = sources.find((item) => item.id === values.datasourceId)
-    const input = { ...values, datasourceName: source?.name }
+    const input = {
+      ...values,
+      datasourceId: values.sourceType === 'sql' ? values.datasourceId : undefined,
+      datasourceName: values.sourceType === 'sql' ? source?.name : undefined,
+      querySql: values.sourceType === 'sql' ? values.querySql : undefined,
+      metricCode: values.sourceType === 'metric' ? values.metricCode : undefined,
+      metricQuery: values.sourceType === 'metric' ? values.metricQuery : undefined
+    }
     try {
       const saved = editing
         ? await updateAnalyticsDataset(editing.id, input)
@@ -122,7 +141,8 @@ export default function AnalyticsDatasetPage() {
         <div className="dataset-name-cell"><strong>{value}</strong><span>{record.description || '暂无描述'}</span></div>
       )
     },
-    { title: '数据源', dataIndex: 'datasourceName', width: 170, render: (value) => value || '—' },
+    { title: '来源类型', dataIndex: 'sourceType', width: 100, render: (value) => <Tag color={value === 'metric' ? 'purple' : 'default'}>{value === 'metric' ? '语义指标' : '只读 SQL'}</Tag> },
+    { title: '数据来源', width: 190, render: (_, row) => row.sourceType === 'metric' ? <Typography.Text code>{row.metricCode}</Typography.Text> : row.datasourceName || '—' },
     {
       title: '字段',
       width: 90,
@@ -196,26 +216,40 @@ export default function AnalyticsDatasetPage() {
             <Form.Item name="name" label="数据集名称" rules={[{ required: true, message: '请输入数据集名称' }]}>
               <Input placeholder="例如：每日销售趋势" maxLength={128} />
             </Form.Item>
-            <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
+            <Form.Item name="sourceType" label="数据集来源" rules={[{ required: true }]}>
+              <Select options={[{ value: 'metric', label: '企业语义指标（推荐）' }, { value: 'sql', label: '受控只读 SQL' }]} />
+            </Form.Item>
+            {sourceType === 'sql' && <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
               <Select
                 showSearch
                 optionFilterProp="label"
                 placeholder="选择 Aetheris 已管理的数据源"
                 options={sources.map((source) => ({ value: source.id, label: source.name }))}
               />
-            </Form.Item>
+            </Form.Item>}
           </div>
           <Form.Item name="description" label="业务说明">
             <Input placeholder="说明指标口径、数据范围和适用场景" maxLength={512} />
           </Form.Item>
-          <Form.Item
+          {sourceType === 'sql' ? <Form.Item
             name="querySql"
             label="只读 SQL"
             extra="仅允许 SELECT / SHOW / DESCRIBE / EXPLAIN；正式看板建议查询 ADS 表或物化视图。"
             rules={[{ required: true, message: '请输入只读 SQL' }]}
           >
             <Input.TextArea className="dataset-sql-input" rows={9} placeholder="SELECT business_date, sales_amount FROM ads_sales_daily ORDER BY business_date" />
-          </Form.Item>
+          </Form.Item> : <>
+            <Form.Item name="metricCode" label="已发布指标" rules={[{ required: true, message: '请选择已发布指标' }]}>
+              <Select showSearch optionFilterProp="label" placeholder="选择企业统一指标" options={metrics.map((item) => ({ value: item.metricCode, label: `${item.metricCode} · ${item.metricName} · v${item.version}` }))} />
+            </Form.Item>
+            <div className="dataset-form-grid">
+              <Form.Item name={['metricQuery', 'timeGrain']} label="时间粒度"><Select options={[{ value: 'none', label: '不分组' }, { value: 'day', label: '日' }, { value: 'month', label: '月' }, { value: 'year', label: '年' }]} /></Form.Item>
+              <Form.Item name={['metricQuery', 'dimensions']} label="分析维度">
+                <Select mode="multiple" placeholder="选择与指标同表的已发布维度" options={dimensions.filter((dimension) => dimension.metadataTableId === metrics.find((metric) => metric.metricCode === metricCode)?.sourceTableId).map((item) => ({ value: item.dimensionCode, label: `${item.dimensionCode} · ${item.dimensionName}` }))} />
+              </Form.Item>
+            </div>
+            <Form.Item name={['metricQuery', 'limit']} hidden><InputNumber /></Form.Item>
+          </>}
           <Form.Item name="refreshSeconds" label="默认刷新周期（秒）" rules={[{ required: true }]}>
             <InputNumber min={5} max={3600} step={5} style={{ width: 180 }} />
           </Form.Item>

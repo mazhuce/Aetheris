@@ -37,6 +37,34 @@ class DataToolsTest {
     }
 
     @Test
+    @DisplayName("已发布指标优先返回统一口径提示")
+    void returnsPublishedMetrics() {
+        AgentToolClient client = mock(AgentToolClient.class);
+        when(client.searchMetrics("成交金额")).thenReturn(List.of(
+                Map.of("metricCode", "GMV", "metricName", "成交金额", "version", 3)));
+        DataTools tools = new DataTools(client, objectMapper);
+
+        String result = tools.searchMetrics("成交金额");
+
+        assertTrue(result.contains("GMV"));
+        assertTrue(result.contains("优先使用 queryMetric"));
+    }
+
+    @Test
+    @DisplayName("指标查询参数完整透传到统一语义服务")
+    void delegatesSemanticMetricQuery() {
+        AgentToolClient client = mock(AgentToolClient.class);
+        when(client.queryMetric(anyString(), any(), anyString(), anyString(), anyString()))
+                .thenReturn(Map.of("metricCode", "GMV", "rowCount", 1));
+        DataTools tools = new DataTools(client, objectMapper);
+
+        String result = tools.queryMetric("GMV", List.of("REGION"), "month", "2026-01-01", "2026-08-31");
+
+        verify(client).queryMetric("GMV", List.of("REGION"), "month", "2026-01-01", "2026-08-31");
+        assertTrue(result.contains("GMV"));
+    }
+
+    @Test
     @DisplayName("检索无结果时给出改写建议，而不是返回空让模型卡住")
     void returnsHintWhenNoMatch() {
         AgentToolClient client = mock(AgentToolClient.class);

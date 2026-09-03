@@ -84,8 +84,8 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'domains', label: '主题域', path: '/modeling/domains', status: 'available' },
       { key: 'dimensions', label: '维度管理', path: '/modeling/dimensions', status: 'available' },
-      { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'comingSoon', description: '定义业务指标的计算口径、归属与版本。' },
-      { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'comingSoon', description: '面向业务的概念与逻辑模型设计。' },
+      { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'available', description: '定义业务指标的计算口径、归属与版本。' },
+      { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'available', description: '面向业务的概念与逻辑模型设计。' },
       { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' }
     ]
   },

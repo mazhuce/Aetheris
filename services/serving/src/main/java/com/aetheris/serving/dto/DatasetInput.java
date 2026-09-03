@@ -2,14 +2,17 @@ package com.aetheris.serving.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record DatasetInput(
         @NotBlank String name,
         String description,
-        @NotNull Long datasourceId,
+        String sourceType,
+        Long datasourceId,
         String datasourceName,
-        @NotBlank String querySql,
+        String querySql,
+        String metricCode,
+        JsonNode metricQuery,
         @Min(5) @Max(3600) Integer refreshSeconds) {
 }

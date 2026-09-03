@@ -42,10 +42,12 @@ public class AnalyticsService {
     }
 
     public AnalyticsDataset createDataset(DatasetInput input, String username) {
+        validateDataset(input);
         return repository.createDataset(input, username);
     }
 
     public AnalyticsDataset updateDataset(Long id, DatasetInput input) {
+        validateDataset(input);
         queryCache.invalidate(id);
         return repository.updateDataset(id, input).orElseThrow(() -> new NotFoundException("数据集不存在"));
     }
@@ -59,12 +61,26 @@ public class AnalyticsService {
         AnalyticsDataset dataset = dataset(id);
         if (refresh) queryCache.invalidate(id);
         return queryCache.get(id, ignored -> {
-            Map<String, Object> result = queryClient.query(dataset.datasourceId(), dataset.querySql());
+            Map<String, Object> result = "metric".equals(dataset.sourceType())
+                    ? queryClient.queryMetric(dataset.metricCode(), dataset.metricQuery())
+                    : queryClient.query(dataset.datasourceId(), dataset.querySql());
             Object columns = result.get("columns");
             JsonNode schema = objectMapper.valueToTree(Map.of("columns", columns == null ? List.of() : columns));
             repository.updateDatasetSchema(id, schema);
             return result;
         });
+    }
+
+    private void validateDataset(DatasetInput input) {
+        String sourceType = input.sourceType() == null || input.sourceType().isBlank()
+                ? "sql" : input.sourceType().trim().toLowerCase(java.util.Locale.ROOT);
+        if (!List.of("sql", "metric").contains(sourceType)) throw new IllegalArgumentException("数据集来源仅支持 sql 或 metric");
+        if ("sql".equals(sourceType) && (input.datasourceId() == null || input.querySql() == null || input.querySql().isBlank())) {
+            throw new IllegalArgumentException("SQL 数据集必须选择数据源并填写只读 SQL");
+        }
+        if ("metric".equals(sourceType) && (input.metricCode() == null || input.metricCode().isBlank())) {
+            throw new IllegalArgumentException("指标数据集必须选择已发布指标");
+        }
     }
 
     public Dashboard createDashboard(DashboardCreateRequest request, String username) {

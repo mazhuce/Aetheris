@@ -27,6 +27,8 @@ public class MetadataTable {
     private String layer;
     /** 业务域，例如 electronic_commerce；当前由人工维护。 */
     private String domain;
+    /** 正式业务域外键；domain 文本仅作为历史兼容展示。 */
+    private Long businessDomainId;
     /** layer 的来源：auto=按库名推断，manual=人工指定；人工指定后采集不覆盖。 */
     private String layerSource;
     private OffsetDateTime syncedAt;
@@ -61,6 +63,8 @@ public class MetadataTable {
     public void setLayer(String layer) { this.layer = layer; }
     public String getDomain() { return domain; }
     public void setDomain(String domain) { this.domain = domain; }
+    public Long getBusinessDomainId() { return businessDomainId; }
+    public void setBusinessDomainId(Long businessDomainId) { this.businessDomainId = businessDomainId; }
     public String getLayerSource() { return layerSource; }
     public void setLayerSource(String layerSource) { this.layerSource = layerSource; }
     public OffsetDateTime getSyncedAt() { return syncedAt; }

@@ -172,11 +172,102 @@ export interface MetadataTable {
   source?: 'manual' | 'auto'
   layer?: WarehouseLayer
   domain?: string
+  businessDomainId?: number
   layerSource?: 'manual' | 'auto'
   status?: string
   syncedAt?: string
   createdAt?: string
   updatedAt?: string
+}
+
+// —— 企业语义层：业务域与可复用维度 ——
+
+export interface BusinessDomain {
+  id: number
+  domainCode: string
+  domainName: string
+  owner?: string
+  status: 'active' | 'disabled'
+  description?: string
+  createdBy?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type BusinessDomainInput = Omit<BusinessDomain, 'id' | 'createdBy' | 'createdAt' | 'updatedAt'>
+
+export function listBusinessDomains(keyword?: string, status?: string): Promise<BusinessDomain[]> {
+  return http.get<BusinessDomain[]>('/api/metadata/business-domains', { params: { keyword, status } }).then((res) => res.data)
+}
+export function createBusinessDomain(payload: BusinessDomainInput): Promise<BusinessDomain> {
+  return http.post<BusinessDomain>('/api/metadata/business-domains', payload).then((res) => res.data)
+}
+export function updateBusinessDomain(id: number, payload: BusinessDomainInput): Promise<BusinessDomain> {
+  return http.put<BusinessDomain>(`/api/metadata/business-domains/${id}`, payload).then((res) => res.data)
+}
+export function deleteBusinessDomain(id: number): Promise<void> {
+  return http.delete(`/api/metadata/business-domains/${id}`).then(() => undefined)
+}
+
+export interface SemanticVersion {
+  id: number
+  versionNo: number
+  snapshot: Record<string, unknown>
+  publishedBy: string
+  publishedAt: string
+}
+
+export interface SemanticDimension {
+  id: number
+  dimensionCode: string
+  dimensionName: string
+  businessDomainId?: number
+  metadataTableId: number
+  columnName: string
+  dimensionType: 'categorical' | 'time' | 'geography'
+  status: 'draft' | 'published' | 'deprecated'
+  version: number
+  publishedVersion?: number
+  owner?: string
+  description?: string
+  createdBy?: string
+  publishedBy?: string
+  publishedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export type SemanticDimensionInput = Omit<SemanticDimension, 'id' | 'status' | 'version' | 'createdBy' | 'publishedBy' | 'publishedAt' | 'createdAt' | 'updatedAt'>
+
+export function listSemanticDimensions(keyword?: string, status?: string, tableId?: number): Promise<SemanticDimension[]> {
+  return http.get<SemanticDimension[]>('/api/metadata/semantic-dimensions', { params: { keyword, status, tableId } }).then((res) => res.data)
+}
+export function createSemanticDimension(payload: SemanticDimensionInput): Promise<SemanticDimension> {
+  return http.post<SemanticDimension>('/api/metadata/semantic-dimensions', payload).then((res) => res.data)
+}
+export function updateSemanticDimension(id: number, payload: SemanticDimensionInput): Promise<SemanticDimension> {
+  return http.put<SemanticDimension>(`/api/metadata/semantic-dimensions/${id}`, payload).then((res) => res.data)
+}
+export function deleteSemanticDimension(id: number): Promise<void> {
+  return http.delete(`/api/metadata/semantic-dimensions/${id}`).then(() => undefined)
+}
+export function validateSemanticDimension(id: number): Promise<{ valid: boolean; message: string }> {
+  return http.post(`/api/metadata/semantic-dimensions/${id}/validate`).then((res) => res.data)
+}
+export function publishSemanticDimension(id: number): Promise<SemanticDimension> {
+  return http.post<SemanticDimension>(`/api/metadata/semantic-dimensions/${id}/publish`).then((res) => res.data)
+}
+export function newSemanticDimensionVersion(id: number): Promise<SemanticDimension> {
+  return http.post<SemanticDimension>(`/api/metadata/semantic-dimensions/${id}/new-version`).then((res) => res.data)
+}
+export function discardSemanticDimensionDraft(id: number): Promise<SemanticDimension> {
+  return http.post<SemanticDimension>(`/api/metadata/semantic-dimensions/${id}/discard-draft`).then((res) => res.data)
+}
+export function deprecateSemanticDimension(id: number): Promise<SemanticDimension> {
+  return http.post<SemanticDimension>(`/api/metadata/semantic-dimensions/${id}/deprecate`).then((res) => res.data)
+}
+export function listSemanticDimensionVersions(id: number): Promise<SemanticVersion[]> {
+  return http.get<SemanticVersion[]>(`/api/metadata/semantic-dimensions/${id}/versions`).then((res) => res.data)
 }
 
 /** 层级中文名与展示顺序，顺序即数据流向；与后端 WarehouseMapService 保持一致。 */
@@ -249,6 +340,10 @@ export interface MetadataTableInput {
   owner?: string
   rowCount?: number
   status?: string
+  layer?: WarehouseLayer
+  layerSource?: 'manual' | 'auto'
+  domain?: string
+  businessDomainId?: number
 }
 
 export interface LineageRelation {
@@ -360,14 +455,26 @@ export interface MetricDefinition {
   metricCode: string
   metricName: string
   businessDomain?: string
+  businessDomainId?: number
+  logicalModelId?: number
+  sourceTableId?: number
   layer?: 'atomic' | 'derived' | 'composite'
   calibreFormula?: string
+  aggregation?: 'SUM' | 'COUNT' | 'COUNT_DISTINCT' | 'AVG' | 'MIN' | 'MAX'
+  measureColumn?: string
+  filtersJson?: string
+  timeColumn?: string
+  defaultTimeGrain?: 'none' | 'day' | 'month' | 'year'
+  dimensionIdsJson?: string
   unit?: string
   owner?: string
   status?: 'draft' | 'published' | 'deprecated'
   version?: number
+  publishedVersion?: number
   description?: string
   createdBy?: string
+  publishedBy?: string
+  publishedAt?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -376,8 +483,17 @@ export interface MetricDefinitionInput {
   metricCode: string
   metricName: string
   businessDomain?: string
+  businessDomainId?: number
+  logicalModelId?: number
+  sourceTableId?: number
   layer?: string
   calibreFormula?: string
+  aggregation?: string
+  measureColumn?: string
+  filtersJson?: string
+  timeColumn?: string
+  defaultTimeGrain?: string
+  dimensionIdsJson?: string
   unit?: string
   owner?: string
   status?: string
@@ -389,6 +505,54 @@ export function listMetricDefinitions(keyword?: string): Promise<MetricDefinitio
   return http
     .get<MetricDefinition[]>('/api/metadata/metric-definitions', { params: keyword ? { keyword } : {} })
     .then((res) => res.data)
+}
+
+export function listPublishedMetrics(keyword?: string): Promise<MetricDefinition[]> {
+  return http.get<MetricDefinition[]>('/api/metadata/semantic/metrics', { params: { keyword } }).then((res) => res.data)
+}
+
+export interface MetricQueryInput {
+  dimensions?: string[]
+  timeGrain?: 'none' | 'day' | 'month' | 'year'
+  startDate?: string
+  endDate?: string
+  limit?: number
+}
+
+export interface SemanticMetricQueryResult extends QueryResult {
+  metricCode: string
+  metricName: string
+  version: number
+  publishedVersion?: number
+  unit?: string
+  dimensions: string[]
+  timeGrain: string
+  generatedSql: string
+}
+
+export function validateMetricDefinition(id: number): Promise<{ valid: boolean; message: string }> {
+  return http.post(`/api/metadata/metric-definitions/${id}/validate`).then((res) => res.data)
+}
+export function previewMetricDefinition(id: number, input: MetricQueryInput = {}): Promise<SemanticMetricQueryResult> {
+  return http.post<SemanticMetricQueryResult>(`/api/metadata/metric-definitions/${id}/preview`, input, { timeout: 50000 }).then((res) => res.data)
+}
+export function querySemanticMetric(code: string, input: MetricQueryInput = {}): Promise<SemanticMetricQueryResult> {
+  return http.post<SemanticMetricQueryResult>(`/api/metadata/semantic/metrics/${code}/query`, input, { timeout: 50000 }).then((res) => res.data)
+}
+export function publishMetricDefinition(id: number): Promise<MetricDefinition> {
+  return http.post<MetricDefinition>(`/api/metadata/metric-definitions/${id}/publish`).then((res) => res.data)
+}
+export function newMetricDefinitionVersion(id: number): Promise<MetricDefinition> {
+  return http.post<MetricDefinition>(`/api/metadata/metric-definitions/${id}/new-version`).then((res) => res.data)
+}
+export function discardMetricDefinitionDraft(id: number): Promise<MetricDefinition> {
+  return http.post<MetricDefinition>(`/api/metadata/metric-definitions/${id}/discard-draft`).then((res) => res.data)
+}
+export function deprecateMetricDefinition(id: number): Promise<MetricDefinition> {
+  return http.post<MetricDefinition>(`/api/metadata/metric-definitions/${id}/deprecate`).then((res) => res.data)
+}
+export function listMetricDefinitionVersions(id: number): Promise<SemanticVersion[]> {
+  return http.get<SemanticVersion[]>(`/api/metadata/metric-definitions/${id}/versions`).then((res) => res.data)
 }
 
 export function createMetricDefinition(payload: MetricDefinitionInput): Promise<MetricDefinition> {
@@ -410,13 +574,17 @@ export interface LogicalModel {
   modelCode: string
   modelName: string
   businessDomain?: string
+  businessDomainId?: number
   modelType?: 'conceptual' | 'relational' | 'dimensional'
   entitiesJson?: unknown
   status?: 'draft' | 'published' | 'deprecated'
   version?: number
+  publishedVersion?: number
   description?: string
   owner?: string
   createdBy?: string
+  publishedBy?: string
+  publishedAt?: string
   createdAt?: string
   updatedAt?: string
 }
@@ -425,16 +593,18 @@ export interface LogicalModelInput {
   modelCode: string
   modelName: string
   businessDomain?: string
+  businessDomainId?: number
   modelType?: string
   status?: string
   version?: number
   description?: string
   owner?: string
+  entitiesJson?: string
 }
 
-export function listLogicalModels(keyword?: string): Promise<LogicalModel[]> {
+export function listLogicalModels(keyword?: string, status?: string): Promise<LogicalModel[]> {
   return http
-    .get<LogicalModel[]>('/api/metadata/logical-models', { params: keyword ? { keyword } : {} })
+    .get<LogicalModel[]>('/api/metadata/logical-models', { params: { keyword, status } })
     .then((res) => res.data)
 }
 
@@ -448,6 +618,25 @@ export function updateLogicalModel(id: number, payload: LogicalModelInput): Prom
 
 export function deleteLogicalModel(id: number): Promise<void> {
   return http.delete(`/api/metadata/logical-models/${id}`).then(() => undefined)
+}
+
+export function validateLogicalModel(id: number): Promise<{ valid: boolean; message: string; entities: number; relations: number }> {
+  return http.post(`/api/metadata/logical-models/${id}/validate`).then((res) => res.data)
+}
+export function publishLogicalModel(id: number): Promise<LogicalModel> {
+  return http.post<LogicalModel>(`/api/metadata/logical-models/${id}/publish`).then((res) => res.data)
+}
+export function newLogicalModelVersion(id: number): Promise<LogicalModel> {
+  return http.post<LogicalModel>(`/api/metadata/logical-models/${id}/new-version`).then((res) => res.data)
+}
+export function discardLogicalModelDraft(id: number): Promise<LogicalModel> {
+  return http.post<LogicalModel>(`/api/metadata/logical-models/${id}/discard-draft`).then((res) => res.data)
+}
+export function deprecateLogicalModel(id: number): Promise<LogicalModel> {
+  return http.post<LogicalModel>(`/api/metadata/logical-models/${id}/deprecate`).then((res) => res.data)
+}
+export function listLogicalModelVersions(id: number): Promise<SemanticVersion[]> {
+  return http.get<SemanticVersion[]>(`/api/metadata/logical-models/${id}/versions`).then((res) => res.data)
 }
 
 // —— API 资产：可复用数据 API 的集中登记 ——

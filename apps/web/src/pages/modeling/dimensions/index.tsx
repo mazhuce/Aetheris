@@ -1,177 +1,143 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Empty, Row, Table, Tag, Typography } from 'antd'
+import { App, Button, Col, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { ApartmentOutlined, DatabaseOutlined, ReloadOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+import { ApartmentOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
-import { listTables, type MetadataTable } from '@/api/metadata'
+import StatusBadge from '@/components/StatusBadge'
+import RowActions from '@/components/RowActions'
+import {
+  createSemanticDimension, deleteSemanticDimension, deprecateSemanticDimension, discardSemanticDimensionDraft, listBusinessDomains,
+  listDataSourceColumns, listSemanticDimensions, listSemanticDimensionVersions, listTables,
+  newSemanticDimensionVersion, publishSemanticDimension, updateSemanticDimension, validateSemanticDimension,
+  type BusinessDomain, type DataSourceColumn, type MetadataTable, type SemanticDimension,
+  type SemanticDimensionInput, type SemanticVersion
+} from '@/api/metadata'
+import { canManagePlatform } from '@/utils/access'
 import { formatDateTime } from '@/utils/format'
 
-/** 维度管理（A 档·只读视角）：DIM 层维度表清单与公共维度盘点。
- *  维度建模的编辑能力属于 B 档逻辑模型，这里先交付「有什么维度、被多少表引用」的盘点视图。 */
+const typeLabels: Record<string, string> = { categorical: '分类维度', time: '时间维度', geography: '地理维度' }
+const statusMeta: Record<string, { label: string; tone: 'neutral' | 'success' | 'warning' }> = {
+  draft: { label: '草稿', tone: 'neutral' }, published: { label: '已发布', tone: 'success' }, deprecated: { label: '已废弃', tone: 'warning' }
+}
+
 export default function DimensionPage() {
-  const { message } = App.useApp()
-  const navigate = useNavigate()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
+  const [dimensions, setDimensions] = useState<SemanticDimension[]>([])
+  const [domains, setDomains] = useState<BusinessDomain[]>([])
   const [tables, setTables] = useState<MetadataTable[]>([])
+  const [columns, setColumns] = useState<DataSourceColumn[]>([])
   const [loading, setLoading] = useState(false)
+  const [keyword, setKeyword] = useState('')
+  const [status, setStatus] = useState<string>()
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<SemanticDimension | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [versions, setVersions] = useState<{ title: string; rows: SemanticVersion[] } | null>(null)
+  const [form] = Form.useForm<SemanticDimensionInput>()
+  const selectedTableId = Form.useWatch('metadataTableId', form)
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      setTables(await listTables())
-    } catch {
-      message.error('维度数据加载失败')
-    } finally {
-      setLoading(false)
-    }
+      const [nextDimensions, nextDomains, nextTables] = await Promise.all([listSemanticDimensions(), listBusinessDomains(undefined, 'active'), listTables()])
+      setDimensions(nextDimensions); setDomains(nextDomains); setTables(nextTables.filter((item) => item.status !== 'stale'))
+    } catch { message.error('语义维度加载失败') } finally { setLoading(false) }
   }, [message])
-
+  useEffect(() => { void refresh() }, [refresh])
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    if (!open) return
+    if (editing) form.setFieldsValue(editing)
+    else { form.resetFields(); form.setFieldsValue({ dimensionType: 'categorical' }) }
+  }, [editing, form, open])
+  useEffect(() => {
+    const table = tables.find((item) => item.id === selectedTableId)
+    if (!open || !table?.datasourceId) { setColumns([]); return }
+    void listDataSourceColumns(table.datasourceId, table.schemaName || '', table.tableName)
+      .then(setColumns).catch(() => { setColumns([]); message.warning('暂时无法读取绑定表字段，请检查数据源连通性') })
+  }, [message, open, selectedTableId, tables])
 
-  /** 维度表 = dim 层，或表名以 dim_ 开头。 */
-  const dimensionTables = useMemo(
-    () => tables.filter(
-      (table) => table.layer === 'dim' || table.tableName.toLowerCase().startsWith('dim_')
-    ),
-    [tables]
-  )
+  const filtered = useMemo(() => dimensions.filter((item) =>
+    (!keyword || item.dimensionName.includes(keyword) || item.dimensionCode.toLowerCase().includes(keyword.toLowerCase()))
+    && (!status || item.status === status)), [dimensions, keyword, status])
+  const tableName = (id: number) => tables.find((item) => item.id === id)?.tableName || `表 #${id}`
+  const domainName = (id?: number) => domains.find((item) => item.id === id)?.domainName || '未归属'
 
-  /** 引用关系近似：其他表名中包含维度表的核心词（去 dim_ 前缀后的主干）即视为引用。 */
-  const dimensionStats = useMemo(() => {
-    return dimensionTables.map((dimension) => {
-      const stem = dimension.tableName.toLowerCase().replace(/^dim_/, '')
-      const referencing = tables.filter(
-        (table) => table.id !== dimension.id && table.tableName.toLowerCase().includes(stem)
-      )
-      return { dimension, referencing }
-    })
-  }, [tables, dimensionTables])
+  const save = async (values: SemanticDimensionInput) => {
+    setSubmitting(true)
+    try {
+      if (editing) await updateSemanticDimension(editing.id, values)
+      else await createSemanticDimension(values)
+      message.success(editing ? '维度草稿已更新' : '维度草稿已创建'); setOpen(false); setEditing(null); await refresh()
+    } catch (error: any) { message.error(error.response?.data?.message || '保存失败') }
+    finally { setSubmitting(false) }
+  }
+  const run = async (action: () => Promise<unknown>, success: string) => {
+    try { await action(); message.success(success); await refresh() }
+    catch (error: any) { message.error(error.response?.data?.message || '操作失败') }
+  }
 
-  const columns: TableColumnsType<{ dimension: MetadataTable; referencing: MetadataTable[] }> = [
-    {
-      title: '维度表',
-      dataIndex: ['dimension', 'tableName'],
-      key: 'tableName',
-      render: (value: string, record) => (
-        <div>
-          <Typography.Text strong style={{ fontSize: 13 }}>{value}</Typography.Text>
-          {record.dimension.tableComment && (
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{record.dimension.tableComment}</div>
-          )}
-        </div>
-      )
-    },
-    {
-      title: '数据源',
-      dataIndex: ['dimension', 'datasourceName'],
-      key: 'datasourceName',
-      width: 130,
-      render: (value: string) => <Typography.Text type="secondary">{value}</Typography.Text>
-    },
-    {
-      title: '字段数',
-      key: 'columnCount',
-      width: 80,
-      render: (_, record) => record.dimension.columnCount ?? '—'
-    },
-    {
-      title: '行数',
-      key: 'rowCount',
-      width: 110,
-      render: (_, record) => {
-        const value = record.dimension.rowCount
-        return value === undefined || value === null ? '—' : value.toLocaleString()
-      }
-    },
-    {
-      title: '被引用',
-      key: 'refCount',
-      width: 90,
-      sorter: (a, b) => a.referencing.length - b.referencing.length,
-      render: (_, record) => (
-        <Tag color={record.referencing.length > 0 ? 'blue' : 'default'}>{record.referencing.length} 张表</Tag>
-      )
-    },
-    {
-      title: '引用明细',
-      key: 'references',
-      ellipsis: true,
-      render: (_, record) => record.referencing.length
-        ? record.referencing.slice(0, 4).map((table) => table.tableName).join('、') + (record.referencing.length > 4 ? ` 等 ${record.referencing.length} 张` : '')
-        : <Typography.Text type="secondary">暂无表名匹配引用</Typography.Text>
-    },
-    {
-      title: '同步时间',
-      key: 'syncedAt',
-      width: 160,
-      render: (_, record) => formatDateTime(record.dimension.syncedAt)
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      width: 90,
-      render: () => <Button size="small" type="link" onClick={() => navigate('/assets/tables')}>表详情</Button>
-    }
+  const columnsDef: TableColumnsType<SemanticDimension> = [
+    { title: '维度编码', dataIndex: 'dimensionCode', width: 150, render: (value) => <Typography.Text code>{value}</Typography.Text> },
+    { title: '维度名称', dataIndex: 'dimensionName', width: 150, render: (value) => <Typography.Text strong>{value}</Typography.Text> },
+    { title: '业务域', dataIndex: 'businessDomainId', width: 110, render: domainName },
+    { title: '物理绑定', width: 230, render: (_, row) => <span>{tableName(row.metadataTableId)} · <Typography.Text code>{row.columnName}</Typography.Text></span> },
+    { title: '类型', dataIndex: 'dimensionType', width: 100, render: (value) => <Tag>{typeLabels[value] || value}</Tag> },
+    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value].tone}>{statusMeta[value].label}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
+    { title: '版本', dataIndex: 'version', width: 80, render: (value, row) => row.publishedVersion && row.publishedVersion !== value ? `v${value} / v${row.publishedVersion}` : `v${value}` },
+    { title: '负责人', dataIndex: 'owner', width: 100, render: (value) => value || '—' },
+    { title: '更新时间', dataIndex: 'updatedAt', width: 170, render: formatDateTime }
   ]
+  if (canManage) columnsDef.push({ title: '操作', width: 56, fixed: 'right', align: 'right', render: (_, record) => (
+    <RowActions items={[
+      ...(record.status === 'draft' ? [
+        { key: 'edit', label: '编辑草稿', onClick: () => { setEditing(record); setOpen(true) } },
+        { key: 'validate', label: '校验绑定', onClick: () => void run(() => validateSemanticDimension(record.id), '维度校验通过') },
+        { key: 'publish', label: '发布版本', onClick: () => modal.confirm({ title: `发布 ${record.dimensionCode} v${record.version}？`, content: '发布后形成不可变快照，如需修改必须创建新版本。', onOk: () => run(() => publishSemanticDimension(record.id), '维度已发布') }) },
+        ...(record.publishedVersion ? [
+          { key: 'discard', label: '放弃草稿', onClick: () => modal.confirm({ title: `放弃 v${record.version} 草稿？`, content: `将恢复为线上 v${record.publishedVersion}，本次未发布修改不会保留。`, onOk: () => run(() => discardSemanticDimensionDraft(record.id), '草稿已放弃') }) },
+          { key: 'deprecate', label: '下线线上版本', danger: true, onClick: () => modal.confirm({ title: '下线当前线上维度版本？', content: '依赖该维度的新查询将不再允许执行，历史快照仍会保留。', okButtonProps: { danger: true }, onOk: () => run(() => deprecateSemanticDimension(record.id), '维度线上版本已下线') }) }
+        ] : [
+          { key: 'delete', label: '删除草稿', danger: true, onClick: () => modal.confirm({ title: '删除维度草稿？', okButtonProps: { danger: true }, onOk: () => run(() => deleteSemanticDimension(record.id), '维度草稿已删除') }) }
+        ])
+      ] : [
+        { key: 'version', label: '创建新版本', onClick: () => void run(() => newSemanticDimensionVersion(record.id), '已创建可编辑的新版本草稿') },
+        ...(record.publishedVersion ? [{ key: 'deprecate', label: '废弃维度', danger: true, onClick: () => modal.confirm({ title: '下线当前线上维度版本？', content: '依赖该维度的新查询将不再允许执行，历史快照仍会保留。', okButtonProps: { danger: true }, onOk: () => run(() => deprecateSemanticDimension(record.id), '维度线上版本已下线') }) }] : [])
+      ]),
+      { key: 'history', label: '版本记录', onClick: () => void listSemanticDimensionVersions(record.id).then((rows) => setVersions({ title: record.dimensionName, rows })) }
+    ]} />
+  ) })
 
-  return (
-    <div className="dimension-page">
-      <PageHeader
-        description="公共维度盘点：DIM 层维度表清单及其引用情况，支撑「一处维护、多处复用」的维度治理口径。维度建模的编辑能力将随逻辑模型（规划中）交付。"
-        extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>}
-      />
-
-      <Row gutter={[16, 16]}>
-        <Col xs={12} lg={6}>
-          <StatCard title="维度表" value={String(dimensionTables.length)} icon={<ApartmentOutlined />} footer="DIM 层或 dim_ 前缀" />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="被引用维度"
-            value={String(dimensionStats.filter((item) => item.referencing.length > 0).length)}
-            icon={<DatabaseOutlined />}
-            footer="至少被一张表引用"
-            tone="green"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="孤立维度"
-            value={String(dimensionStats.filter((item) => item.referencing.length === 0).length)}
-            icon={<ApartmentOutlined />}
-            footer="无表名匹配引用"
-            tone="orange"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="总表规模"
-            value={String(tables.length)}
-            icon={<DatabaseOutlined />}
-            footer="平台纳管全部表"
-          />
-        </Col>
-      </Row>
-
-      <DataSurface title="维度清单" description="按引用数排序体现复用价值" label="维度表明细">
-        {dimensionTables.length ? (
-          <Table
-            rowKey={(record) => record.dimension.id}
-            size="middle"
-            columns={columns}
-            dataSource={dimensionStats.sort((a, b) => b.referencing.length - a.referencing.length)}
-            loading={loading}
-            scroll={{ x: 1200 }}
-            pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
-          />
-        ) : (
-          <Empty description="暂无维度表。同步含 DIM 层表的数据源，或将表分层维护为维度层后生效。" />
-        )}
-      </DataSurface>
-    </div>
-  )
+  return <>
+    <PageHeader description="将业务维度绑定到真实数据字段，发布后供指标、数据集、看板和智能问数统一复用。" extra={canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新建维度</Button> : <Tag>只读访问</Tag>} />
+    <Row gutter={12} className="stat-row">
+      <Col span={8}><StatCard title="维度总数" value={String(dimensions.length)} icon={<ApartmentOutlined />} /></Col>
+      <Col span={8}><StatCard title="线上维度" value={String(dimensions.filter((item) => item.publishedVersion).length)} icon={<ApartmentOutlined />} tone="green" /></Col>
+      <Col span={8}><StatCard title="覆盖数据表" value={String(new Set(dimensions.map((item) => item.metadataTableId)).size)} icon={<ApartmentOutlined />} tone="orange" /></Col>
+    </Row>
+    <PageToolbar><div className="filter-bar">
+      <div className="filter-item"><span>名称/编码</span><Input allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索语义维度" className="filter-control-3xl" /></div>
+      <div className="filter-item"><span>状态</span><Select allowClear value={status} onChange={setStatus} placeholder="全部状态" className="filter-control-lg" options={Object.entries(statusMeta).map(([value, meta]) => ({ value, label: meta.label }))} /></div>
+      <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
+    </div></PageToolbar>
+    <DataSurface title="语义维度目录" description="发布版本不可直接编辑，确保消费方口径稳定" label="语义维度目录">
+      <Table rowKey="id" size="small" loading={loading} columns={columnsDef} dataSource={filtered} scroll={{ x: 1250 }} pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个维度` }} />
+    </DataSurface>
+    <Modal title={editing ? `编辑维度 · v${editing.version}` : '新建语义维度'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={720}>
+      <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
+        <Row gutter={12}><Col span={12}><Form.Item name="dimensionCode" label="维度编码" rules={[{ required: true }, { pattern: /^[A-Za-z][A-Za-z0-9_]{1,63}$/ }]}><Input disabled={Boolean(editing)} placeholder="如 REGION" /></Form.Item></Col><Col span={12}><Form.Item name="dimensionName" label="维度名称" rules={[{ required: true }]}><Input placeholder="如 销售区域" /></Form.Item></Col></Row>
+        <Row gutter={12}><Col span={12}><Form.Item name="businessDomainId" label="业务域"><Select allowClear showSearch optionFilterProp="label" options={domains.map((item) => ({ value: item.id, label: item.domainName }))} /></Form.Item></Col><Col span={12}><Form.Item name="dimensionType" label="维度类型" rules={[{ required: true }]}><Select options={Object.entries(typeLabels).map(([value, label]) => ({ value, label }))} /></Form.Item></Col></Row>
+        <Form.Item name="metadataTableId" label="绑定数据表" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={tables.map((item) => ({ value: item.id, label: `${item.datasourceName} / ${item.schemaName}.${item.tableName}` }))} /></Form.Item>
+        <Form.Item name="columnName" label="维度字段" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" placeholder={selectedTableId ? '选择真实字段' : '请先选择数据表'} options={columns.map((item) => ({ value: item.name, label: `${item.name} · ${item.type}${item.remarks ? ` · ${item.remarks}` : ''}` }))} /></Form.Item>
+        <Row gutter={12}><Col span={12}><Form.Item name="owner" label="负责人"><Input /></Form.Item></Col><Col span={12} /></Row>
+        <Form.Item name="description" label="口径说明"><Input.TextArea rows={3} maxLength={512} showCount /></Form.Item>
+      </Form>
+    </Modal>
+    <Modal title={`版本记录 · ${versions?.title || ''}`} open={Boolean(versions)} onCancel={() => setVersions(null)} footer={null} width={720}>
+      <Table rowKey="id" size="small" dataSource={versions?.rows || []} pagination={false} columns={[{ title: '版本', dataIndex: 'versionNo', render: (value) => `v${value}` }, { title: '发布人', dataIndex: 'publishedBy' }, { title: '发布时间', dataIndex: 'publishedAt', render: formatDateTime }]} />
+    </Modal>
+  </>
 }

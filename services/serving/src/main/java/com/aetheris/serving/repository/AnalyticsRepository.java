@@ -38,24 +38,28 @@ public class AnalyticsRepository {
     public AnalyticsDataset createDataset(DatasetInput input, String username) {
         Long id = jdbc.queryForObject("""
                 INSERT INTO serving.bi_dataset
-                    (name, description, datasource_id, datasource_name, query_sql, refresh_seconds, created_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (name, description, source_type, datasource_id, datasource_name, query_sql,
+                     metric_code, metric_query_json, refresh_seconds, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)
                 RETURNING id
                 """, Long.class,
-                input.name().trim(), clean(input.description()), input.datasourceId(), clean(input.datasourceName()),
-                input.querySql().trim(), input.refreshSeconds() == null ? 30 : input.refreshSeconds(), username);
+                input.name().trim(), clean(input.description()), sourceType(input), sqlDatasourceId(input), sqlValue(input.datasourceName(), input),
+                sqlValue(input.querySql(), input), metricCode(input), metricQuery(input),
+                input.refreshSeconds() == null ? 30 : input.refreshSeconds(), username);
         return findDataset(id).orElseThrow();
     }
 
     public Optional<AnalyticsDataset> updateDataset(Long id, DatasetInput input) {
         int changed = jdbc.update("""
                 UPDATE serving.bi_dataset
-                   SET name = ?, description = ?, datasource_id = ?, datasource_name = ?, query_sql = ?,
-                       refresh_seconds = ?, schema_json = '{}'::jsonb, updated_at = now()
+                   SET name = ?, description = ?, source_type = ?, datasource_id = ?, datasource_name = ?, query_sql = ?,
+                       metric_code = ?, metric_query_json = ?::jsonb, refresh_seconds = ?,
+                       schema_json = '{}'::jsonb, updated_at = now()
                  WHERE id = ?
                 """,
-                input.name().trim(), clean(input.description()), input.datasourceId(), clean(input.datasourceName()),
-                input.querySql().trim(), input.refreshSeconds() == null ? 30 : input.refreshSeconds(), id);
+                input.name().trim(), clean(input.description()), sourceType(input), sqlDatasourceId(input), sqlValue(input.datasourceName(), input),
+                sqlValue(input.querySql(), input), metricCode(input), metricQuery(input),
+                input.refreshSeconds() == null ? 30 : input.refreshSeconds(), id);
         return changed == 0 ? Optional.empty() : findDataset(id);
     }
 
@@ -135,7 +139,8 @@ public class AnalyticsRepository {
     private AnalyticsDataset mapDataset(ResultSet rs, int row) throws SQLException {
         return new AnalyticsDataset(
                 rs.getLong("id"), rs.getString("name"), rs.getString("description"),
-                rs.getLong("datasource_id"), rs.getString("datasource_name"), rs.getString("query_sql"),
+                rs.getString("source_type"), nullableLong(rs, "datasource_id"), rs.getString("datasource_name"), rs.getString("query_sql"),
+                rs.getString("metric_code"), parse(rs.getString("metric_query_json")),
                 parse(rs.getString("schema_json")), rs.getInt("refresh_seconds"), rs.getString("status"),
                 rs.getString("created_by"), rs.getObject("created_at", java.time.OffsetDateTime.class),
                 rs.getObject("updated_at", java.time.OffsetDateTime.class));
@@ -177,5 +182,24 @@ public class AnalyticsRepository {
 
     private String clean(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String sourceType(DatasetInput input) {
+        return input.sourceType() == null || input.sourceType().isBlank() ? "sql" : input.sourceType().trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private Long sqlDatasourceId(DatasetInput input) { return "sql".equals(sourceType(input)) ? input.datasourceId() : null; }
+    private String sqlValue(String value, DatasetInput input) { return "sql".equals(sourceType(input)) ? clean(value) : null; }
+    private String metricCode(DatasetInput input) {
+        String value = "metric".equals(sourceType(input)) ? clean(input.metricCode()) : null;
+        return value == null ? null : value.toUpperCase(java.util.Locale.ROOT);
+    }
+    private String metricQuery(DatasetInput input) {
+        return "metric".equals(sourceType(input)) && input.metricQuery() != null ? json(input.metricQuery()) : "{}";
+    }
+
+    private Long nullableLong(ResultSet rs, String column) throws SQLException {
+        long value = rs.getLong(column);
+        return rs.wasNull() ? null : value;
     }
 }

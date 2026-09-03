@@ -62,6 +62,10 @@ export function listAuditLogs(params: AuditLogQuery = {}): Promise<AuditLog[]> {
   return http.get<AuditLog[]>('/api/system/audit-logs', { params }).then((res) => res.data)
 }
 
+export function listActivity(limit = 12): Promise<AuditLog[]> {
+  return http.get<AuditLog[]>('/api/system/activity', { params: { limit } }).then((res) => res.data)
+}
+
 export interface PlatformNotification {
   id: number
   recipient: string

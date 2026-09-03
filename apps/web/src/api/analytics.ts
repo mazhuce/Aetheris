@@ -4,9 +4,18 @@ export interface AnalyticsDataset {
   id: number
   name: string
   description?: string
-  datasourceId: number
+  sourceType: 'sql' | 'metric'
+  datasourceId?: number
   datasourceName?: string
-  querySql: string
+  querySql?: string
+  metricCode?: string
+  metricQuery?: {
+    dimensions?: string[]
+    timeGrain?: 'none' | 'day' | 'month' | 'year'
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }
   schema?: { columns?: string[] }
   refreshSeconds: number
   status: string
@@ -18,9 +27,12 @@ export interface AnalyticsDataset {
 export interface DatasetInput {
   name: string
   description?: string
-  datasourceId: number
+  sourceType: 'sql' | 'metric'
+  datasourceId?: number
   datasourceName?: string
-  querySql: string
+  querySql?: string
+  metricCode?: string
+  metricQuery?: AnalyticsDataset['metricQuery']
   refreshSeconds: number
 }
 

@@ -86,4 +86,42 @@ public class AgentToolClient {
             return Map.of("error", "查询执行失败，请检查 SQL 或数据源连通性");
         }
     }
+
+    /** 检索企业已发布指标；优先复用口径，避免模型临时发明统计逻辑。 */
+    public List<Map<String, Object>> searchMetrics(String keyword) {
+        try {
+            List<Map<String, Object>> result = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/internal/semantic/metrics")
+                            .queryParam("keyword", keyword == null ? "" : keyword)
+                            .build())
+                    .retrieve()
+                    .body(LIST_TYPE);
+            return result == null ? List.of() : result;
+        } catch (RuntimeException error) {
+            log.warn("Tool searchMetrics failed: keyword={}", keyword, error);
+            return List.of();
+        }
+    }
+
+    /** 通过统一语义服务查询指标；底层 SQL 由 metadata 编译并校验。 */
+    public Map<String, Object> queryMetric(String metricCode, List<String> dimensions, String timeGrain,
+                                           String startDate, String endDate) {
+        try {
+            Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("dimensions", dimensions == null ? List.of() : dimensions);
+            if (timeGrain != null && !timeGrain.isBlank()) body.put("timeGrain", timeGrain);
+            if (startDate != null && !startDate.isBlank()) body.put("startDate", startDate);
+            if (endDate != null && !endDate.isBlank()) body.put("endDate", endDate);
+            body.put("limit", 100);
+            Map<String, Object> result = restClient.post()
+                    .uri("/internal/semantic/metrics/{code}/query", metricCode)
+                    .body(body)
+                    .retrieve()
+                    .body(MAP_TYPE);
+            return result == null ? Map.of("error", "指标查询无返回") : result;
+        } catch (RuntimeException error) {
+            log.warn("Tool queryMetric failed: metricCode={}", metricCode, error);
+            return Map.of("error", "指标查询失败，请检查指标状态、维度或日期条件");
+        }
+    }
 }

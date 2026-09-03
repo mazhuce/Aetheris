@@ -5,6 +5,7 @@ import com.aetheris.metadata.dto.WarehouseMap;
 import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.entity.MetadataTable;
 import com.aetheris.metadata.service.DataSourceService;
+import com.aetheris.metadata.service.BusinessDomainService;
 import com.aetheris.metadata.service.MetadataSyncService;
 import com.aetheris.metadata.service.MetadataTableService;
 import com.aetheris.metadata.service.WarehouseMapService;
@@ -35,16 +36,19 @@ public class MetadataTableController {
     private final DataSourceService dataSourceService;
     private final MetadataSyncService syncService;
     private final WarehouseMapService warehouseMapService;
+    private final BusinessDomainService businessDomainService;
 
     public MetadataTableController(
             MetadataTableService service,
             DataSourceService dataSourceService,
             MetadataSyncService syncService,
-            WarehouseMapService warehouseMapService) {
+            WarehouseMapService warehouseMapService,
+            BusinessDomainService businessDomainService) {
         this.service = service;
         this.dataSourceService = dataSourceService;
         this.syncService = syncService;
         this.warehouseMapService = warehouseMapService;
+        this.businessDomainService = businessDomainService;
     }
 
     @GetMapping
@@ -90,6 +94,7 @@ public class MetadataTableController {
     @PostMapping
     public MetadataTable create(@Valid @RequestBody MetadataTable table) {
         table.setSource("manual");
+        applyBusinessDomain(table);
         service.save(table);
         return table;
     }
@@ -97,8 +102,17 @@ public class MetadataTableController {
     @PutMapping("/{id}")
     public ResponseEntity<MetadataTable> update(@PathVariable Long id, @Valid @RequestBody MetadataTable table) {
         table.setId(id);
+        applyBusinessDomain(table);
+        if (table.getLayer() != null) table.setLayerSource("manual");
         boolean updated = service.updateById(table);
         return updated ? ResponseEntity.ok(service.getById(id)) : ResponseEntity.notFound().build();
+    }
+
+    private void applyBusinessDomain(MetadataTable table) {
+        if (table.getBusinessDomainId() == null) return;
+        var domain = businessDomainService.require(table.getBusinessDomainId());
+        if (!"active".equals(domain.getStatus())) throw new IllegalArgumentException("不能关联已停用的业务域");
+        table.setDomain(domain.getDomainName());
     }
 
     @DeleteMapping("/{id}")

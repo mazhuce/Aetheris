@@ -1,170 +1,119 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Empty, Row, Table, Tag, Typography } from 'antd'
+import { App, Button, Col, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { AppstoreOutlined, DatabaseOutlined, PartitionOutlined, ReloadOutlined } from '@ant-design/icons'
+import { AppstoreOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
-import { listTables, WAREHOUSE_LAYERS, type MetadataTable } from '@/api/metadata'
-
-const OTHER_DOMAIN = '未归属域'
-const layerColor: Record<string, string> = {
-  ods: 'default', dwd: 'blue', dws: 'cyan', ads: 'purple', dim: 'gold', other: 'default'
-}
+import RowActions from '@/components/RowActions'
+import StatusBadge from '@/components/StatusBadge'
+import {
+  createBusinessDomain,
+  deleteBusinessDomain,
+  listBusinessDomains,
+  listTables,
+  updateBusinessDomain,
+  type BusinessDomain,
+  type BusinessDomainInput,
+  type MetadataTable
+} from '@/api/metadata'
+import { canManagePlatform } from '@/utils/access'
+import { formatDateTime } from '@/utils/format'
 
 export default function DomainPage() {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
+  const canManage = canManagePlatform()
+  const [domains, setDomains] = useState<BusinessDomain[]>([])
   const [tables, setTables] = useState<MetadataTable[]>([])
   const [loading, setLoading] = useState(false)
+  const [keyword, setKeyword] = useState('')
+  const [status, setStatus] = useState<string>()
+  const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState<BusinessDomain | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [form] = Form.useForm<BusinessDomainInput>()
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      setTables(await listTables())
-    } catch {
-      message.error('主题域数据加载失败')
-    } finally {
-      setLoading(false)
-    }
+      const [nextDomains, nextTables] = await Promise.all([listBusinessDomains(), listTables()])
+      setDomains(nextDomains)
+      setTables(nextTables)
+    } catch { message.error('业务域加载失败') } finally { setLoading(false) }
   }, [message])
 
+  useEffect(() => { void refresh() }, [refresh])
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    if (!open) return
+    if (editing) form.setFieldsValue(editing)
+    else { form.resetFields(); form.setFieldsValue({ status: 'active' }) }
+  }, [editing, form, open])
 
-  const domains = useMemo(() => {
-    const byDomain = new Map<string, MetadataTable[]>()
-    for (const table of tables) {
-      const domain = table.domain || OTHER_DOMAIN
-      if (!byDomain.has(domain)) byDomain.set(domain, [])
-      byDomain.get(domain)!.push(table)
-    }
-    return Array.from(byDomain.entries())
-      .map(([name, domainTables]) => ({
-        name,
-        tables: domainTables,
-        layerCounts: WAREHOUSE_LAYERS
-          .map((item) => ({
-            layer: item.value,
-            label: item.label,
-            count: domainTables.filter((table) => (table.layer || 'other') === item.value).length
-          }))
-          .filter((item) => item.count > 0)
-      }))
-      .sort((a, b) => b.tables.length - a.tables.length)
-  }, [tables])
+  const rows = useMemo(() => domains
+    .filter((item) => !keyword || item.domainCode.toLowerCase().includes(keyword.toLowerCase()) || item.domainName.includes(keyword))
+    .filter((item) => !status || item.status === status)
+    .map((item) => ({ ...item, tableCount: tables.filter((table) => table.businessDomainId === item.id).length })),
+  [domains, keyword, status, tables])
 
-  const columns: TableColumnsType<{ name: string; total: number; layers: string[] }> = [
-    {
-      title: '主题域',
-      dataIndex: 'name',
-      key: 'name',
-      render: (value: string) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>
-          <AppstoreOutlined style={{ marginRight: 8, color: 'var(--text-tertiary)' }} />
-          {value}
-        </Typography.Text>
-      )
-    },
-    { title: '表数量', dataIndex: 'total', key: 'total', width: 100, sorter: (a, b) => a.total - b.total },
-    {
-      title: '分层分布',
-      key: 'layers',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {record.layers.length
-            ? record.layers.map((item) => <Tag key={item}>{item}</Tag>)
-            : <Typography.Text type="secondary">未分层</Typography.Text>}
-        </div>
-      )
-    }
+  const save = async (values: BusinessDomainInput) => {
+    setSubmitting(true)
+    try {
+      if (editing) await updateBusinessDomain(editing.id, values)
+      else await createBusinessDomain(values)
+      message.success(editing ? '业务域已更新' : '业务域已创建')
+      setOpen(false); setEditing(null); await refresh()
+    } catch (error: any) { message.error(error.response?.data?.message || '业务域保存失败') }
+    finally { setSubmitting(false) }
+  }
+
+  const columns: TableColumnsType<BusinessDomain & { tableCount: number }> = [
+    { title: '业务域编码', dataIndex: 'domainCode', width: 180, render: (value) => <Typography.Text code>{value}</Typography.Text> },
+    { title: '业务域名称', dataIndex: 'domainName', width: 180, render: (value) => <Typography.Text strong>{value}</Typography.Text> },
+    { title: '负责人', dataIndex: 'owner', width: 120, render: (value) => value || '—' },
+    { title: '纳管数据表', dataIndex: 'tableCount', width: 110, render: (value) => <Tag>{value} 张</Tag> },
+    { title: '状态', dataIndex: 'status', width: 100, render: (value) => <StatusBadge tone={value === 'active' ? 'success' : 'neutral'}>{value === 'active' ? '启用' : '停用'}</StatusBadge> },
+    { title: '说明', dataIndex: 'description', ellipsis: true, render: (value) => value || '—' },
+    { title: '更新时间', dataIndex: 'updatedAt', width: 170, render: formatDateTime }
   ]
+  if (canManage) columns.push({ title: '操作', width: 56, align: 'right', render: (_, record) => (
+    <RowActions items={[
+      { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+      ...(record.domainCode === 'UNASSIGNED' ? [] : [{ key: 'delete', label: '删除', danger: true, onClick: () => modal.confirm({
+        title: `删除业务域“${record.domainName}”？`, content: '仅未被任何资产引用的业务域可以删除。', okButtonProps: { danger: true },
+        onOk: async () => { try { await deleteBusinessDomain(record.id); message.success('业务域已删除'); await refresh() } catch (error: any) { message.error(error.response?.data?.message || '删除失败') } }
+      }) }])
+    ]} />
+  ) })
 
-  const dataSource = domains.map((domain) => ({
-    name: domain.name,
-    total: domain.tables.length,
-    layers: domain.layerCounts.map((item) => `${item.label} ${item.count}`)
-  }))
-
-  return (
-    <div className="domain-page">
-      <PageHeader
-        description="数仓主题域视图：以业务域为中心统计各域的表规模与分层分布，作为数仓建模与域边界治理的依据。表的业务域在元数据同步时自动识别，也可在数据表页人工维护。"
-        extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>}
-      />
-
-      <Row gutter={[16, 16]}>
-        <Col xs={12} lg={6}>
-          <StatCard title="主题域数量" value={String(domains.length)} icon={<AppstoreOutlined />} footer={`覆盖 ${tables.length} 张表`} />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="最大域"
-            value={domains.length ? domains[0].name : '—'}
-            icon={<PartitionOutlined />}
-            footer={domains.length ? `${domains[0].tables.length} 张表` : '暂无数据'}
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="已分层表"
-            value={String(tables.filter((table) => table.layer).length)}
-            icon={<DatabaseOutlined />}
-            footer={`占比 ${tables.length ? Math.round((tables.filter((table) => table.layer).length / tables.length) * 100) : 0}%`}
-            tone="green"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="未归属域的表"
-            value={String(tables.filter((table) => !table.domain).length)}
-            icon={<DatabaseOutlined />}
-            footer="建议在元数据中补充"
-            tone="orange"
-          />
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        {domains.slice(0, 6).map((domain) => (
-          <Col xs={24} sm={12} lg={8} key={domain.name}>
-            <DataSurface
-              title={domain.name}
-              description={`${domain.tables.length} 张表`}
-              label={`主题域 ${domain.name}`}
-            >
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '4px 0' }}>
-                {domain.layerCounts.map((item) => (
-                  <Tag key={item.layer} color={layerColor[item.layer]}>
-                    {item.label} · {item.count}
-                  </Tag>
-                ))}
-                {!domain.layerCounts.length && <Typography.Text type="secondary">全部未分层</Typography.Text>}
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  代表表：{domain.tables.slice(0, 3).map((table) => table.tableName).join('、') || '—'}
-                </Typography.Text>
-              </div>
-            </DataSurface>
-          </Col>
-        ))}
-      </Row>
-
-      <DataSurface title="域清单" description="全部主题域汇总" label="主题域清单">
-        {domains.length ? (
-          <Table
-            rowKey="name"
-            size="middle"
-            columns={columns}
-            dataSource={dataSource}
-            loading={loading}
-            pagination={false}
-          />
-        ) : (
-          <Empty description="暂无主题域数据，先同步数据源元数据" />
-        )}
-      </DataSurface>
-    </div>
-  )
+  const assigned = tables.filter((table) => table.businessDomainId).length
+  return <>
+    <PageHeader description="以稳定业务域统一组织数据表、逻辑模型、维度和指标；编码作为跨系统契约，名称可随组织语言演进。" extra={canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新建业务域</Button> : <Tag>只读访问</Tag>} />
+    <Row gutter={12} className="stat-row">
+      <Col span={8}><StatCard title="业务域" value={String(domains.filter((item) => item.domainCode !== 'UNASSIGNED').length)} icon={<AppstoreOutlined />} /></Col>
+      <Col span={8}><StatCard title="已归属数据表" value={String(assigned)} icon={<AppstoreOutlined />} tone="green" /></Col>
+      <Col span={8}><StatCard title="待归属数据表" value={String(tables.length - assigned)} icon={<AppstoreOutlined />} tone="orange" /></Col>
+    </Row>
+    <PageToolbar><div className="filter-bar">
+      <div className="filter-item"><span>名称/编码</span><Input allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索业务域" className="filter-control-3xl" /></div>
+      <div className="filter-item"><span>状态</span><Select allowClear value={status} onChange={setStatus} placeholder="全部状态" className="filter-control-lg" options={[{ value: 'active', label: '启用' }, { value: 'disabled', label: '停用' }]} /></div>
+      <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
+    </div></PageToolbar>
+    <DataSurface title="业务域目录" description="删除前必须先迁移所有关联资产" label="业务域目录">
+      <Table rowKey="id" size="small" loading={loading} columns={columns} dataSource={rows} scroll={{ x: 1050 }} pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个业务域` }} />
+    </DataSurface>
+    <Modal title={editing ? '编辑业务域' : '新建业务域'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={620}>
+      <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
+        <Space align="start" style={{ width: '100%' }} size={12}>
+          <Form.Item name="domainCode" label="业务域编码" rules={[{ required: true }, { pattern: /^[A-Za-z][A-Za-z0-9_]{1,63}$/, message: '以字母开头，仅支持字母、数字和下划线' }]}><Input disabled={Boolean(editing)} placeholder="如 TRADE" style={{ width: 260 }} /></Form.Item>
+          <Form.Item name="domainName" label="业务域名称" rules={[{ required: true }]}><Input placeholder="如 交易域" style={{ width: 260 }} /></Form.Item>
+        </Space>
+        <Space align="start" style={{ width: '100%' }} size={12}>
+          <Form.Item name="owner" label="负责人"><Input placeholder="账号或姓名" style={{ width: 260 }} /></Form.Item>
+          <Form.Item name="status" label="状态"><Select style={{ width: 260 }} options={[{ value: 'active', label: '启用' }, { value: 'disabled', label: '停用' }]} /></Form.Item>
+        </Space>
+        <Form.Item name="description" label="业务边界说明"><Input.TextArea rows={3} maxLength={512} showCount placeholder="说明该业务域包含和不包含的业务范围" /></Form.Item>
+      </Form>
+    </Modal>
+  </>
 }

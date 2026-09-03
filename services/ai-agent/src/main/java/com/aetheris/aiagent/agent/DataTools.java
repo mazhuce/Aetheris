@@ -59,6 +59,33 @@ public class DataTools {
     }
 
     @Tool(description = """
+            检索企业已经评审发布的业务指标。这是回答经营指标、转化率、金额、人数等标准口径问题的第一步。
+            如果找到匹配指标，应优先调用 queryMetric，不要自行拼 SQL 重复计算；只有没有匹配指标时，
+            才回退到 searchTables → describeTable → query 的探索流程。
+            """)
+    public String searchMetrics(
+            @ToolParam(description = "指标业务关键词，如「成交金额」「订单转化率」") String keyword) {
+        List<Map<String, Object>> metrics = client.searchMetrics(keyword);
+        return toJson(Map.of("metrics", metrics,
+                "hint", metrics.isEmpty() ? "未找到已发布指标，可回退到表检索流程" : "优先使用 queryMetric 查询统一口径"));
+    }
+
+    @Tool(description = """
+            查询一个已经发布的企业业务指标。底层 SQL 由语义层统一生成，结果与看板、数据集完全同口径。
+            dimensions 填 searchMetrics 返回的可用维度编码；timeGrain 支持 none/day/month/year；
+            日期格式为 yyyy-MM-dd。不要用本工具查询未发布指标。
+            """)
+    public String queryMetric(
+            @ToolParam(description = "已发布指标编码") String metricCode,
+            @ToolParam(description = "维度编码列表；不分组时传空列表", required = false) List<String> dimensions,
+            @ToolParam(description = "时间粒度 none/day/month/year", required = false) String timeGrain,
+            @ToolParam(description = "开始日期 yyyy-MM-dd", required = false) String startDate,
+            @ToolParam(description = "结束日期 yyyy-MM-dd", required = false) String endDate) {
+        log.info("Agent semantic metric query: metricCode={}", metricCode);
+        return toJson(client.queryMetric(metricCode, dimensions, timeGrain, startDate, endDate));
+    }
+
+    @Tool(description = """
             读取指定表的完整结构：字段名、类型与字段注释。
             必须先用 searchTables 拿到表 id 才能调用。
             写 SQL 前务必调用本工具确认字段真实存在——字段注释说明了业务含义，

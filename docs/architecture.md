@@ -116,6 +116,26 @@ workflow / ingestion / quality       metadata-service
 （仓库目录对其他用户为 `r-x`）。这不是权宜之计：阶段 3 的 DataAgent 需要「即使 SQL 守卫
 被绕过也无法写入」的兜底保证，因此两个账号不合并。
 
+## 企业语义层
+
+语义层由 metadata-service 统一管理，serving 与 ai-agent 只通过受控契约消费，不复制口径或数据库连接能力：
+
+```text
+业务域
+  ├── 逻辑模型（实体、关系、真实表绑定）
+  ├── 语义维度（真实字段绑定）
+  └── 指标（来源表、聚合、过滤、时间、维度）
+                         │
+                  发布不可变快照
+                         │
+          ┌──────────────┴──────────────┐
+     Serving 数据集/看板          DataAgent 智能问数
+```
+
+聚合根保留当前工作版本，同时以 `published_version` 指向不可变版本表。创建下一版时，旧版本继续在线；新草稿通过校验并发布后才原子切换消费者。这样避免常见的“开始编辑 v2 就让 v1 下线”故障，也允许用户放弃草稿恢复线上快照。
+
+指标消费者只提交指标编码、维度、粒度和日期范围。metadata-service 根据已发布快照校验真实 Schema、编译方言相关的只读聚合 SQL，并强制维度/过滤/结果规模上限。当前执行边界是单来源表；跨表关系暂不自动编译 JOIN，详见 [产品能力路线图](roadmap.md)。
+
 ## DataAgent 架构
 
 数据问答的完整链路：
@@ -129,10 +149,10 @@ ChatService           会话编排、持久化
       ↓
 SpringAiLlmClient     ChatClient 驱动工具调用循环
       ↓  ↑
-DataTools             @Tool 注解暴露给模型的三个工具
+DataTools             @Tool 注解暴露给模型的五个工具
       ↓  ↑
-AgentToolClient  ──▶  metadata /internal/agent/**
-                        searchTables / describeTable / query
+AgentToolClient  ──▶  metadata /internal/semantic/** + /internal/agent/**
+                        searchMetrics / queryMetric / searchTables / describeTable / query
                         ↓
                       Hive / Spark（只读账号）
 ```
@@ -140,10 +160,12 @@ AgentToolClient  ──▶  metadata /internal/agent/**
 工具调用循环由 Spring AI 的 `ChatClient` 内建驱动（模型请求调用 → 框架执行 → 回填结果
 → 再次询问模型），不需要自己实现多轮循环。
 
-### 三个工具的职责
+### 五个工具的职责
 
 | 工具 | 作用 | 约束 |
 | --- | --- | --- |
+| `searchMetrics` | 检索企业已发布指标 | 标准口径问题优先使用 |
+| `queryMetric` | 查询统一语义指标 | 不接受任意 SQL，只允许受控维度与日期条件 |
 | `searchTables` | 按关键词与层级检索表 | 排除 stale 表，按层级排序让 ADS/DWS 优先 |
 | `describeTable` | 读取字段名、类型、**注释** | 必须先检索拿到 id |
 | `query` | 执行只读 SQL | 走 `validateReadOnlySql`，最多 100 行 |
@@ -204,10 +226,7 @@ provider 耦合；换模型只替换适配器。随 Spring AI 引入的
 
 ## 演进路线
 
-- **Phase 1（已完成）**：单机 Docker Compose、前端、网关、领域服务、PostgreSQL 与 JWT 登录闭环。
-- **Phase 2（进行中）**：数据接入与质量执行引擎、持久化调度、失败待办、任务监控、RBAC、审计、跨服务测试和容器健康检查已完成；高级治理与指标可观测性继续建设。
-- **Phase 3（已完成基础设施）**：升级到 Boot 3.4.7 + Spring AI 1.0.0，引入 DeepSeek starter、工具调用能力、pgvector 向量库支持；为 DataAgent（元数据检索、NL2SQL、查询执行）打好基础。后续接入注册/配置中心与 Python 数据服务。
-- **Phase 4**：Kubernetes + 完整数据治理与服务开放能力。
+产品阶段、完成定义、能力矩阵和已知边界统一维护在 [产品能力路线图](roadmap.md)。架构演进顺序为：可信平台基线 → 企业语义层 → 治理与权限生产化 → 数据服务开放 → 规模化运行。
 
 ## 当前进度
 
@@ -215,7 +234,7 @@ provider 耦合；换模型只替换适配器。随 Spring AI 引入的
 - 已实现：前端、网关、`auth`、`system`、`metadata`、`quality`、`ingestion`、`governance`、`workflow`、`serving`、`ai-agent` 与 PostgreSQL 编排。
 - 已形成真实执行闭环：登录鉴权、数据源连接测试/即席只读查询、跨关系型数据源批量接入、质量检查、持久化 SQL 调度、失败待办、DeepSeek 对话与按用户隔离的会话持久化。
 - 已建立最小 RBAC：认证账号由 `auth` 服务统一管理，JWT 携带 `admin` / `viewer` 角色，网关负责写操作授权。
-- `ai-agent` 分层清晰（controller 协议转换、service 编排、LlmClient 端口、SpringAiLlmClient 适配器），测试覆盖从 2 个增至 20 个，为后续工具调用循环与 DataAgent 扩展准备好基础。
+- `ai-agent` 分层清晰（controller 协议转换、service 编排、LlmClient 端口、SpringAiLlmClient 适配器），已覆盖指标检索、统一指标查询、元数据检索、只读查询和模型故障分类测试，为后续 DataAgent 扩展准备好基础。
 - 数仓底座已建立：WSL Spark 五层数仓（ODS/DWD/DWS/ADS/DIM）130 万订单 + 320 万明细、11 类脏数据、180 个分区；元数据采集支持层级推断、表注释抓取、17 条真实血缘（从 SQL 解析生成）。
 - `system.sys_user` 作为旧版资料目录暂时保留，后续在确认无外部调用后再通过独立迁移退役。
 - 高级治理策略与数据服务开放仍处于管理能力阶段，未交付入口不会显示在产品导航中。

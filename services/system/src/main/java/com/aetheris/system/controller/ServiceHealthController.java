@@ -12,7 +12,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -46,7 +45,7 @@ public class ServiceHealthController {
             new HttpTarget("ai-agent 智能服务", "http://ai-agent:8086/actuator/health"),
             new HttpTarget("workflow 任务调度", "http://workflow-service:8088/actuator/health"),
             new HttpTarget("serving 数据服务", "http://serving-service:8089/actuator/health"),
-            new HttpTarget("web 前端", "http://web:5173/"),
+            new HttpTarget("web 前端", "http://web:80/healthz"),
             new TcpTarget("postgres 数据库", "postgres", 5432));
 
     private final HttpClient httpClient = HttpClient.newBuilder()
@@ -58,10 +57,11 @@ public class ServiceHealthController {
 
     @GetMapping
     public ResponseEntity<List<ServiceStatus>> health() {
-        List<ServiceStatus> results = new ArrayList<>();
-        TARGETS.parallelStream().forEach(target -> results.add(probe(target)));
-        // parallelStream 完成顺序不定，按名称排序保证输出稳定。
-        results.sort((a, b) -> a.name().compareTo(b.name()));
+        // 收集器负责合并并行分区，避免多个线程同时写普通 ArrayList。
+        List<ServiceStatus> results = TARGETS.parallelStream()
+                .map(this::probe)
+                .sorted((a, b) -> a.name().compareTo(b.name()))
+                .toList();
         return ResponseEntity.ok(results);
     }
 
