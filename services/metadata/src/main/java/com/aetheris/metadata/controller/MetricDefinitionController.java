@@ -5,6 +5,7 @@ import com.aetheris.metadata.dto.SemanticVersion;
 import com.aetheris.metadata.entity.MetricDefinition;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.MetricDefinitionService;
+import com.aetheris.metadata.service.SemanticAssetReviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,12 @@ import java.util.Map;
 public class MetricDefinitionController {
     private final MetricDefinitionService service;
     private final MetadataSecurity security;
+    private final SemanticAssetReviewService reviewService;
 
-    public MetricDefinitionController(MetricDefinitionService service, MetadataSecurity security) {
+    public MetricDefinitionController(MetricDefinitionService service, MetadataSecurity security, SemanticAssetReviewService reviewService) {
         this.service = service;
         this.security = security;
+        this.reviewService = reviewService;
     }
 
     @GetMapping public List<MetricDefinition> list(HttpServletRequest request,
@@ -72,7 +75,11 @@ public class MetricDefinitionController {
 
     @PostMapping("/{id}/publish") public MetricDefinition publish(HttpServletRequest request, @PathVariable Long id) {
         String username = requireAccess(request, id, "publish");
-        return service.publish(id, username);
+        var metric = service.require(id);
+        var review = reviewService.requireApproved("metric_definition", id, metric.getVersion());
+        var published = service.publish(id, username);
+        reviewService.markPublished(review.getId());
+        return published;
     }
 
     @PostMapping("/{id}/new-version") public MetricDefinition newVersion(HttpServletRequest request, @PathVariable Long id) {

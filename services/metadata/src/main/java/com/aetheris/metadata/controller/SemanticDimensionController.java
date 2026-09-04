@@ -4,6 +4,7 @@ import com.aetheris.metadata.dto.SemanticVersion;
 import com.aetheris.metadata.entity.SemanticDimension;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.SemanticDimensionService;
+import com.aetheris.metadata.service.SemanticAssetReviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -27,10 +28,12 @@ import java.util.Map;
 public class SemanticDimensionController {
     private final SemanticDimensionService service;
     private final MetadataSecurity security;
+    private final SemanticAssetReviewService reviewService;
 
-    public SemanticDimensionController(SemanticDimensionService service, MetadataSecurity security) {
+    public SemanticDimensionController(SemanticDimensionService service, MetadataSecurity security, SemanticAssetReviewService reviewService) {
         this.service = service;
         this.security = security;
+        this.reviewService = reviewService;
     }
 
     @GetMapping
@@ -80,7 +83,11 @@ public class SemanticDimensionController {
 
     @PostMapping("/{id}/publish") public SemanticDimension publish(HttpServletRequest request, @PathVariable Long id) {
         String username = requireAccess(request, id, "publish");
-        return service.publish(id, username);
+        var dimension = service.require(id);
+        var review = reviewService.requireApproved("semantic_dimension", id, dimension.getVersion());
+        var published = service.publish(id, username);
+        reviewService.markPublished(review.getId());
+        return published;
     }
 
     @PostMapping("/{id}/new-version") public SemanticDimension newVersion(HttpServletRequest request, @PathVariable Long id) {

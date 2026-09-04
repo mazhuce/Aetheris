@@ -10,7 +10,8 @@ import StatusBadge from '@/components/StatusBadge'
 import RowActions from '@/components/RowActions'
 import {
   createLogicalModel, deleteLogicalModel, deprecateLogicalModel, discardLogicalModelDraft, listBusinessDomains, listLogicalModels,
-  listLogicalModelVersions, listTables, newLogicalModelVersion, publishLogicalModel, updateLogicalModel,
+  listLogicalModelVersions, listTables, newLogicalModelVersion, updateLogicalModel,
+  submitSemanticReview,
   validateLogicalModel, type BusinessDomain, type LogicalModel, type MetadataTable, type SemanticVersion
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
@@ -111,7 +112,7 @@ export default function LogicalModelPage() {
       ...(record.status === 'draft' ? [
         { key: 'edit', label: '编辑草稿', onClick: () => { setEditing(record); setOpen(true) } },
         { key: 'validate', label: '模型校验', onClick: () => void run(() => validateLogicalModel(record.id), '模型校验通过') },
-        { key: 'publish', label: '发布版本', onClick: () => modal.confirm({ title: `发布 ${record.modelCode} v${record.version}？`, content: '发布后形成不可变模型快照。', onOk: () => run(() => publishLogicalModel(record.id), '逻辑模型已发布') }) },
+        { key: 'publish', label: '提交评审', onClick: () => modal.confirm({ title: `提交 ${record.modelCode} v${record.version} 评审？`, content: '通过复核后才可发布。', onOk: () => run(() => submitSemanticReview('logical_model', record.id, `提交模型 ${record.modelCode} v${record.version} 评审`), '已提交评审') }) },
         ...(record.publishedVersion ? [
           { key: 'discard', label: '放弃草稿', onClick: () => modal.confirm({ title: `放弃 v${record.version} 草稿？`, content: `将恢复为线上 v${record.publishedVersion}，本次未发布修改不会保留。`, onOk: () => run(() => discardLogicalModelDraft(record.id), '草稿已放弃') }) },
           { key: 'deprecate', label: '下线线上版本', danger: true, onClick: () => modal.confirm({ title: '下线当前线上模型版本？', content: '历史快照仍会保留。', okButtonProps: { danger: true }, onOk: () => run(() => deprecateLogicalModel(record.id), '模型线上版本已下线') }) }

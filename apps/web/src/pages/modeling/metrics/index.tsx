@@ -12,7 +12,8 @@ import {
   createMetricDefinition, deleteMetricDefinition, deprecateMetricDefinition, discardMetricDefinitionDraft, listBusinessDomains,
   listDataSourceColumns, listLogicalModels, listMetricDefinitions, listMetricDefinitionVersions,
   listSemanticDimensions, listTables, newMetricDefinitionVersion, previewMetricDefinition,
-  publishMetricDefinition, updateMetricDefinition, validateMetricDefinition,
+  updateMetricDefinition, validateMetricDefinition,
+  submitSemanticReview,
   type BusinessDomain, type DataSourceColumn, type LogicalModel, type MetadataTable,
   type MetricDefinition, type SemanticDimension, type SemanticMetricQueryResult, type SemanticVersion
 } from '@/api/metadata'
@@ -143,7 +144,7 @@ export default function MetricManagePage() {
       ...(record.status === 'draft' ? [
         { key: 'edit', label: '编辑草稿', onClick: () => { setEditing(record); setOpen(true) } },
         { key: 'validate', label: '口径校验', onClick: () => void run(() => validateMetricDefinition(record.id), '指标口径校验通过') },
-        { key: 'publish', label: '发布版本', onClick: () => modal.confirm({ title: `发布 ${record.metricCode} v${record.version}？`, content: '发布后看板和智能问数将使用这一不可变口径。', onOk: () => run(() => publishMetricDefinition(record.id), '指标已发布') }) },
+        { key: 'publish', label: '提交评审', onClick: () => modal.confirm({ title: `提交 ${record.metricCode} v${record.version} 评审？`, content: '提交后由具备发布权限的复核人审批，通过后再执行发布。', onOk: () => run(() => submitSemanticReview('metric_definition', record.id, `提交指标 ${record.metricCode} v${record.version} 评审`), '已提交评审') }) },
         ...(record.publishedVersion ? [
           { key: 'discard', label: '放弃草稿', onClick: () => modal.confirm({ title: `放弃 v${record.version} 草稿？`, content: `将恢复为线上 v${record.publishedVersion}，本次未发布修改不会保留。`, onOk: () => run(() => discardMetricDefinitionDraft(record.id), '草稿已放弃') }) },
           { key: 'deprecate', label: '下线线上版本', danger: true, onClick: () => modal.confirm({ title: '下线当前线上指标版本？', content: '依赖它的新查询将停止执行，历史快照仍会保留。', okButtonProps: { danger: true }, onOk: () => run(() => deprecateMetricDefinition(record.id), '指标线上版本已下线') }) }

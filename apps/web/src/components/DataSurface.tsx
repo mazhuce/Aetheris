@@ -7,6 +7,7 @@ interface DataSurfaceProps {
   extra?: ReactNode
   className?: string
   label?: string
+  style?: React.CSSProperties
 }
 
 export default function DataSurface({
@@ -15,10 +16,11 @@ export default function DataSurface({
   description,
   extra,
   className = '',
-  label
+  label,
+  style
 }: DataSurfaceProps) {
   return (
-    <section className={`data-surface${className ? ` ${className}` : ''}`} aria-label={label}>
+    <section className={`data-surface${className ? ` ${className}` : ''}`} aria-label={label} style={style}>
       {(title || description || extra) && (
         <div className="section-header">
           <div className="section-header-copy">

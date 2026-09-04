@@ -38,6 +38,7 @@ const TaskMonitorPage = lazy(() => import('@/pages/operations/tasks'))
 const AlertCenterPage = lazy(() => import('@/pages/operations/alerts'))
 const ServiceMonitorPage = lazy(() => import('@/pages/operations/services'))
 const QueryHistoryPage = lazy(() => import('@/pages/analytics/history'))
+const QueryAuditPage = lazy(() => import('@/pages/analytics/query-audit'))
 const OperationsOverviewPage = lazy(() => import('@/pages/workbench/operations'))
 const TableBrowserPage = lazy(() => import('@/pages/assets/tables'))
 const DataSyncPage = lazy(() => import('@/pages/integration/sync'))
@@ -55,6 +56,8 @@ const DashboardPreviewPage = lazy(() => import('@/pages/analytics/dashboards/sta
 const PublishedDashboardPage = lazy(() => import('@/pages/analytics/dashboards/stage').then((module) => ({ default: module.PublishedDashboardPage })))
 const MetricManagePage = lazy(() => import('@/pages/modeling/metrics'))
 const LogicalModelPage = lazy(() => import('@/pages/modeling/logical-models'))
+const SemanticReviewPage = lazy(() => import('@/pages/modeling/reviews'))
+const FieldLineagePage = lazy(() => import('@/pages/governance/field-lineage'))
 const ApiAssetPage = lazy(() => import('@/pages/assets/apis'))
 const DataProductPage = lazy(() => import('@/pages/assets/products'))
 const DataStandardPage = lazy(() => import('@/pages/governance/standards'))
@@ -118,6 +121,7 @@ export const router = createBrowserRouter([
       { path: 'governance/quality', element: <QualityRulePage /> },
       { path: 'governance/quality-trend', element: <QualityTrendPage /> },
       { path: 'governance/lineage', element: <LineagePage /> },
+      { path: 'governance/field-lineage', element: <FieldLineagePage /> },
       { path: 'governance/classification', element: <GovernancePage /> },
 
       // 智能中心
@@ -142,6 +146,7 @@ export const router = createBrowserRouter([
       { path: 'operations/alerts', element: <AlertCenterPage /> },
       { path: 'operations/services', element: <ServiceMonitorPage /> },
       { path: 'analytics/history', element: <QueryHistoryPage /> },
+      { path: 'analytics/query-audit', element: <QueryAuditPage /> },
       { path: 'assets/tables', element: <TableBrowserPage /> },
       { path: 'integration/sync', element: <DataSyncPage /> },
       { path: 'development/sql', element: <SqlDevelopmentPage /> },
@@ -154,6 +159,7 @@ export const router = createBrowserRouter([
       { path: 'assets/tags', element: <TagAssetsPage /> },
       { path: 'modeling/metrics', element: <MetricManagePage /> },
       { path: 'modeling/logical-models', element: <LogicalModelPage /> },
+      { path: 'modeling/reviews', element: <SemanticReviewPage /> },
       { path: 'assets/apis', element: <ApiAssetPage /> },
       { path: 'assets/products', element: <DataProductPage /> },
       { path: 'governance/standards', element: <DataStandardPage /> },

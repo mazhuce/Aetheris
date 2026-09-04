@@ -449,6 +449,74 @@ export function clearQueryHistory(): Promise<number> {
   return http.delete<{ deleted: number }>('/api/metadata/query-history').then((res) => res.data.deleted)
 }
 
+export interface SemanticAssetReview {
+  id: number
+  assetType: 'logical_model' | 'semantic_dimension' | 'metric_definition'
+  assetId: number
+  versionNo: number
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'published'
+  requestedBy: string
+  reviewedBy?: string
+  changeNote: string
+  reviewComment?: string
+  publishWindowStart?: string
+  publishWindowEnd?: string
+  requestedAt?: string
+  reviewedAt?: string
+  publishedAt?: string
+}
+export function listSemanticReviews(assetType?: string, status?: string): Promise<SemanticAssetReview[]> {
+  return http.get<SemanticAssetReview[]>('/api/metadata/semantic-reviews', { params: { assetType, status } }).then((res) => res.data)
+}
+export function submitSemanticReview(assetType: string, assetId: number, changeNote: string, publishWindowStart?: string, publishWindowEnd?: string): Promise<SemanticAssetReview> {
+  return http.post<SemanticAssetReview>(`/api/metadata/semantic-reviews/${assetType}/${assetId}`, { changeNote, publishWindowStart, publishWindowEnd }).then((res) => res.data)
+}
+export function approveSemanticReview(id: number, comment: string): Promise<SemanticAssetReview> {
+  return http.post<SemanticAssetReview>(`/api/metadata/semantic-reviews/${id}/approve`, { comment }).then((res) => res.data)
+}
+export function rejectSemanticReview(id: number, comment: string): Promise<SemanticAssetReview> {
+  return http.post<SemanticAssetReview>(`/api/metadata/semantic-reviews/${id}/reject`, { comment }).then((res) => res.data)
+}
+
+export interface FieldLineageRelation {
+  id: number
+  sourceTable: string
+  sourceColumn: string
+  targetTable: string
+  targetColumn: string
+  relationType: string
+  expression?: string
+  source: 'manual' | 'parsed'
+  confidence: number
+  description?: string
+}
+export function listFieldLineages(table?: string, column?: string): Promise<FieldLineageRelation[]> {
+  return http.get<FieldLineageRelation[]>('/api/metadata/field-lineages', { params: { table, column } }).then((res) => res.data)
+}
+export function parseFieldLineage(sql: string, relationType?: string): Promise<{ parsed: number; relations: FieldLineageRelation[] }> {
+  return http.post('/api/metadata/field-lineages/parse', { sql, relationType }, { timeout: 90000 }).then((res) => res.data)
+}
+export function deleteFieldLineage(id: number): Promise<void> { return http.delete(`/api/metadata/field-lineages/${id}`).then(() => undefined) }
+export function getFieldLineageImpact(table: string, column: string): Promise<FieldLineageRelation[]> {
+  return http.get<FieldLineageRelation[]>('/api/metadata/field-lineages/impact', { params: { table, column } }).then((res) => res.data)
+}
+
+export interface QueryAuditSummary {
+  total: number
+  success: number
+  failed: number
+  successRate: number
+  avgDurationMs: number
+  p50DurationMs: number
+  p95DurationMs: number
+  slowQueries: number
+  days: number
+  slowThresholdMs: number
+}
+export function getQueryAuditSummary(days = 30, slowMs?: number): Promise<QueryAuditSummary> {
+  return http.get<QueryAuditSummary>('/api/metadata/query-audit/summary', { params: { days, slowMs } }).then((res) => res.data)
+}
+
 // —— 指标定义：业务指标的计算口径与版本 ——
 
 export interface MetricDefinition {

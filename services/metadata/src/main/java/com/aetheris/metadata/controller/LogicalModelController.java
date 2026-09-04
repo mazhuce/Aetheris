@@ -4,6 +4,7 @@ import com.aetheris.metadata.dto.SemanticVersion;
 import com.aetheris.metadata.entity.LogicalModel;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.LogicalModelService;
+import com.aetheris.metadata.service.SemanticAssetReviewService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,12 @@ import java.util.Map;
 public class LogicalModelController {
     private final LogicalModelService service;
     private final MetadataSecurity security;
+    private final SemanticAssetReviewService reviewService;
 
-    public LogicalModelController(LogicalModelService service, MetadataSecurity security) {
+    public LogicalModelController(LogicalModelService service, MetadataSecurity security, SemanticAssetReviewService reviewService) {
         this.service = service;
         this.security = security;
+        this.reviewService = reviewService;
     }
 
     @GetMapping public List<LogicalModel> list(HttpServletRequest request,
@@ -65,7 +68,11 @@ public class LogicalModelController {
 
     @PostMapping("/{id}/publish") public LogicalModel publish(HttpServletRequest request, @PathVariable Long id) {
         String username = requireAccess(request, id, "publish");
-        return service.publish(id, username);
+        var model = service.require(id);
+        var review = reviewService.requireApproved("logical_model", id, model.getVersion());
+        var published = service.publish(id, username);
+        reviewService.markPublished(review.getId());
+        return published;
     }
 
     @PostMapping("/{id}/new-version") public LogicalModel newVersion(HttpServletRequest request, @PathVariable Long id) {

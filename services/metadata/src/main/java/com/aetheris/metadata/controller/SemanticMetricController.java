@@ -4,6 +4,7 @@ import com.aetheris.metadata.dto.MetricQueryRequest;
 import com.aetheris.metadata.entity.MetricDefinition;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.MetricDefinitionService;
+import com.aetheris.metadata.service.QueryAuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,10 +20,12 @@ import java.util.Map;
 public class SemanticMetricController {
     private final MetricDefinitionService service;
     private final MetadataSecurity security;
+    private final QueryAuditService auditService;
 
-    public SemanticMetricController(MetricDefinitionService service, MetadataSecurity security) {
+    public SemanticMetricController(MetricDefinitionService service, MetadataSecurity security, QueryAuditService auditService) {
         this.service = service;
         this.security = security;
+        this.auditService = auditService;
     }
 
     @GetMapping public List<MetricDefinition> list(HttpServletRequest request,
@@ -46,7 +49,15 @@ public class SemanticMetricController {
         MetricDefinition metric = service.requirePublished(code);
         security.require(request, "metric", metric.getId(), "query",
                 domainCtx(metric.getBusinessDomainId()));
-        return service.query(code, queryRequest);
+        long started = System.currentTimeMillis();
+        try {
+            Map<String,Object> result = service.query(code, queryRequest);
+            auditService.record("metric", metric.getMetricCode(), metric.getId(), metric.getSourceTableId(), security.requireIdentity(request).username(), "success", result.get("rowCount") instanceof Number n ? n.longValue() : null, System.currentTimeMillis()-started, false, null, null, (String) result.get("generatedSql"));
+            return result;
+        } catch (RuntimeException error) {
+            try { auditService.record("metric", metric.getMetricCode(), metric.getId(), metric.getSourceTableId(), security.requireIdentity(request).username(), "failed", null, System.currentTimeMillis()-started, false, error.getClass().getSimpleName(), error.getMessage(), null); } catch (Exception ignored) { }
+            throw error;
+        }
     }
 
     private static Map<String, String> domainCtx(Long domainId) {

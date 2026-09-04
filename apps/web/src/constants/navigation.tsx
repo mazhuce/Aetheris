@@ -86,6 +86,7 @@ export const navModules: NavModule[] = [
       { key: 'dimensions', label: '维度管理', path: '/modeling/dimensions', status: 'available' },
       { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'available', description: '定义业务指标的计算口径、归属与版本。' },
       { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'available', description: '面向业务的概念与逻辑模型设计。' },
+      { key: 'reviews', label: '语义资产评审', path: '/modeling/reviews', status: 'available' },
       { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' }
     ]
   },
@@ -99,6 +100,7 @@ export const navModules: NavModule[] = [
       { key: 'quality', label: '数据质量', path: '/governance/quality', status: 'available' },
       { key: 'quality-trend', label: '质量趋势', path: '/governance/quality-trend', status: 'available' },
       { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
+      { key: 'field-lineage', label: '字段级血缘', path: '/governance/field-lineage', status: 'available' },
       { key: 'classification', label: '分类分级', path: '/governance/classification', status: 'available' },
       { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'available' }
     ]
@@ -138,6 +140,7 @@ export const navModules: NavModule[] = [
       { key: 'visualization', label: '可视化分析', path: '/analytics/visualization', status: 'comingSoon', description: '以拖拽方式编排图表，完成数据可视化探索。' },
       { key: 'dashboards', label: '数据看板', path: '/analytics/dashboards', status: 'available', description: '编排与发布面向业务的运营看板。' },
       { key: 'history', label: '查询历史', path: '/analytics/history', status: 'available' }
+      ,{ key: 'query-audit', label: '查询审计', path: '/analytics/query-audit', status: 'available', description: '查看语义查询成功率、P95 耗时和慢查询。' }
     ]
   },
   {

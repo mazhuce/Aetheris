@@ -7,6 +7,7 @@ import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.QueryHistoryService;
+import com.aetheris.metadata.service.QueryAuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -40,13 +41,19 @@ public class AdhocQueryController {
     private final JdbcService jdbcService;
     private final QueryHistoryService queryHistoryService;
     private final MetadataSecurity security;
+    private final QueryAuditService auditService;
 
     public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService,
-                                QueryHistoryService queryHistoryService, MetadataSecurity security) {
+                                QueryHistoryService queryHistoryService, MetadataSecurity security, QueryAuditService auditService) {
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
         this.queryHistoryService = queryHistoryService;
         this.security = security;
+        this.auditService = auditService;
+    }
+    public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService,
+                                QueryHistoryService queryHistoryService, MetadataSecurity security) {
+        this(dataSourceService, jdbcService, queryHistoryService, security, null);
     }
 
     @PostMapping
@@ -66,16 +73,19 @@ public class AdhocQueryController {
             result.put("durationMs", System.currentTimeMillis() - startedAt);
             recordHistory(username, dataSource, queryRequest.sql(), "success",
                     asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
+            audit(username, dataSource, queryRequest.sql(), "success", asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
             // 语句被只读守卫拒绝：原因可安全回显。
             recordHistory(username, dataSource, queryRequest.sql(), "failed",
                     null, System.currentTimeMillis() - startedAt, error.getMessage());
+            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
         } catch (IllegalStateException error) {
             log.warn("Adhoc query by {} on datasource {} failed", username, queryRequest.datasourceId(), error);
             recordHistory(username, dataSource, queryRequest.sql(), "failed",
                     null, System.currentTimeMillis() - startedAt, error.getMessage());
+            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
         }
     }
@@ -101,5 +111,10 @@ public class AdhocQueryController {
         } catch (Exception error) {
             log.warn("Failed to persist query history for {}: {}", username, error.getMessage());
         }
+    }
+
+    private void audit(String username, DataSource source, String sql, String status, Long rows, Long duration, String error) {
+        try { if (auditService != null) auditService.record("adhoc", null, null, source.getId(), username, status, rows, duration, false, null, error, sql); }
+        catch (Exception ignored) { log.warn("Failed to persist query audit for {}", username); }
     }
 }
