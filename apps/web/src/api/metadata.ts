@@ -63,6 +63,7 @@ export interface QueryResult {
   rows: unknown[][]
   rowCount: number
   truncated: boolean
+  durationMs?: number
 }
 
 export function testDataSource(id: number): Promise<TestResult> {

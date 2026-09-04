@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   App,
+  Alert,
   Button,
   Card,
   Col,
@@ -173,8 +174,10 @@ export default function DataSourcePage() {
     setQueryLoading(true)
     try {
       setQueryResult(await queryDataSource(queryRecord.id, querySql))
-    } catch {
-      message.error('查询失败')
+    } catch (error) {
+      const responseData = (error as { response?: { data?: { message?: unknown } } }).response?.data
+      const apiMessage = typeof responseData?.message === 'string' ? responseData.message : null
+      message.error(apiMessage ?? '查询失败')
     } finally {
       setQueryLoading(false)
     }
@@ -406,24 +409,29 @@ export default function DataSourcePage() {
             执行
           </Button>
           {queryResult && (
-            <Table
-              size="small"
-              scroll={{ x: 'max-content' }}
-              pagination={false}
-              columns={queryResult.columns.map((column) => ({
-                title: column,
-                dataIndex: column,
-                key: column,
-                ellipsis: true
-              }))}
-              dataSource={queryResult.rows.map((row, rowIndex) => {
-                const record: Record<string, unknown> = { key: rowIndex }
-                queryResult.columns.forEach((column, columnIndex) => {
-                  record[column] = row[columnIndex]
-                })
-                return record
-              })}
-            />
+            <Space direction="vertical" className="full-width-stack" size={8}>
+              {queryResult.truncated && (
+                <Alert type="info" showIcon message={`结果已限制为前 ${queryResult.rowCount} 行`} />
+              )}
+              <Table
+                size="small"
+                scroll={{ x: 'max-content' }}
+                pagination={false}
+                columns={queryResult.columns.map((column) => ({
+                  title: column,
+                  dataIndex: column,
+                  key: column,
+                  ellipsis: true
+                }))}
+                dataSource={queryResult.rows.map((row, rowIndex) => {
+                  const record: Record<string, unknown> = { key: rowIndex }
+                  queryResult.columns.forEach((column, columnIndex) => {
+                    record[column] = row[columnIndex]
+                  })
+                  return record
+                })}
+              />
+            </Space>
           )}
         </Space>
       </Modal>

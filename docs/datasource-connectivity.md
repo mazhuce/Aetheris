@@ -6,7 +6,7 @@ Aetheris 的 `metadata-service` 运行在 Docker 中，不能直接使用 WSL �
 
 ```text
 metadata-service 容器
-  -> 172.22.208.1:10000（Hyper-V Default Switch 临时转发）
+  -> Hyper-V Default Switch 地址:10000（临时转发）
   -> WSL 动态 IP:10000
   -> Spark Thrift Server
   -> Hive Metastore
@@ -28,10 +28,12 @@ pwsh ./scripts/windows-wsl-hive-relay.ps1 status
 pwsh ./scripts/windows-wsl-hive-relay.ps1 stop
 ```
 
+Compose 默认使用 `172.31.0.0/16` 网段，避开 Windows 常见的 WSL/Hyper-V 网段冲突；如通过 `AETHERIS_DOCKER_SUBNET` 覆盖，必须选择与宿主机和 WSL 均不重叠的私有网段。
+
 新增数据源时可使用页面中的 `WSL · Spark Thrift` 预设，当前参数为：
 
 - 类型：`Spark Thrift Server`
-- 主机：`172.22.208.1`
+- 主机：填写 relay 启动输出的监听地址
 - 端口：`10000`
 - 数据库：`default`
 - 用户名：`aetheris`

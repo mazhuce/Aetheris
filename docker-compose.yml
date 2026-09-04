@@ -285,3 +285,10 @@ services:
 
 volumes:
   pgdata:
+
+networks:
+  default:
+    name: aetheris_default
+    ipam:
+      config:
+        - subnet: ${AETHERIS_DOCKER_SUBNET:-172.31.0.0/16}
