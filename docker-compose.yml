@@ -74,6 +74,12 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AETHERIS_SERVING_RATE_LIMIT_CAPACITY: ${AETHERIS_SERVING_RATE_LIMIT_CAPACITY:-60}
+      AETHERIS_SERVING_RATE_LIMIT_WINDOW_MS: ${AETHERIS_SERVING_RATE_LIMIT_WINDOW_MS:-60000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -93,6 +99,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
       # 检查失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -116,6 +123,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-aetheris}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
       # 检查失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -155,6 +163,7 @@ services:
       # 任务执行通过 metadata 的 /internal 端点，凭据与驱动都在那边，workflow 不直连数据源。
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
       # 任务失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -184,6 +193,7 @@ services:
       # 表现为工具调用全部返回空、模型误以为仓库里没有任何表。
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
     depends_on:
       postgres:
         condition: service_healthy

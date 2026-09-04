@@ -101,6 +101,7 @@ export const navModules: NavModule[] = [
       { key: 'quality-trend', label: '质量趋势', path: '/governance/quality-trend', status: 'available' },
       { key: 'lineage', label: '数据血缘', path: '/governance/lineage', status: 'available' },
       { key: 'field-lineage', label: '字段级血缘', path: '/governance/field-lineage', status: 'available' },
+      { key: 'dependencies', label: '语义依赖图', path: '/governance/dependencies', status: 'available' },
       { key: 'classification', label: '分类分级', path: '/governance/classification', status: 'available' },
       { key: 'issues', label: '治理问题', path: '/governance/issues', status: 'available' }
     ]

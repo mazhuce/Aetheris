@@ -58,6 +58,7 @@ const MetricManagePage = lazy(() => import('@/pages/modeling/metrics'))
 const LogicalModelPage = lazy(() => import('@/pages/modeling/logical-models'))
 const SemanticReviewPage = lazy(() => import('@/pages/modeling/reviews'))
 const FieldLineagePage = lazy(() => import('@/pages/governance/field-lineage'))
+const SemanticDependencyPage = lazy(() => import('@/pages/governance/dependencies'))
 const ApiAssetPage = lazy(() => import('@/pages/assets/apis'))
 const DataProductPage = lazy(() => import('@/pages/assets/products'))
 const DataStandardPage = lazy(() => import('@/pages/governance/standards'))
@@ -122,6 +123,7 @@ export const router = createBrowserRouter([
       { path: 'governance/quality-trend', element: <QualityTrendPage /> },
       { path: 'governance/lineage', element: <LineagePage /> },
       { path: 'governance/field-lineage', element: <FieldLineagePage /> },
+      { path: 'governance/dependencies', element: <SemanticDependencyPage /> },
       { path: 'governance/classification', element: <GovernancePage /> },
 
       // 智能中心

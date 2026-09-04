@@ -37,6 +37,7 @@ spring:
       exclude-on-http-codes: [429]
 
 aetheris:
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
   metadata:
     # agent 的元数据检索与只读查询都下沉到 metadata 服务：凭据、JDBC 驱动与
     # validateReadOnlySql 守卫都在那边，复制过来等于复制一份安全边界。

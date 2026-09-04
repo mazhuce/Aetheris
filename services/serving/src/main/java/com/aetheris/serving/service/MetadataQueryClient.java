@@ -13,11 +13,11 @@ public class MetadataQueryClient {
 
     private final RestClient restClient;
 
-    public MetadataQueryClient(RestClient.Builder builder, @Value("${aetheris.metadata.base-url}") String baseUrl) {
+    public MetadataQueryClient(RestClient.Builder builder, @Value("${aetheris.metadata.base-url}") String baseUrl, @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(45_000);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).defaultHeader("X-Internal-Token", internalToken).build();
     }
 
     public Map<String, Object> query(Long datasourceId, String sql) {
@@ -38,6 +38,17 @@ public class MetadataQueryClient {
                 .retrieve()
                 .body(new ParameterizedTypeReference<Map<String, Object>>() {});
         if (body == null) throw new IllegalStateException("指标查询结果为空");
+        if (body.get("error") instanceof String message) throw new IllegalArgumentException(message);
+        return body;
+    }
+
+    public Map<String, Object> queryTable(Long tableId, Object query) {
+        Map<String, Object> body = restClient.post()
+                .uri("/internal/tables/{id}/query", tableId)
+                .body(query == null ? Map.of() : query)
+                .retrieve()
+                .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+        if (body == null) throw new IllegalStateException("表查询结果为空");
         if (body.get("error") instanceof String message) throw new IllegalArgumentException(message);
         return body;
     }

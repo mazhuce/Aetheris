@@ -10,6 +10,7 @@ import com.aetheris.metadata.service.QueryHistoryService;
 import com.aetheris.metadata.service.QueryAuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,7 @@ public class AdhocQueryController {
     private final MetadataSecurity security;
     private final QueryAuditService auditService;
 
+    @Autowired
     public AdhocQueryController(DataSourceService dataSourceService, JdbcService jdbcService,
                                 QueryHistoryService queryHistoryService, MetadataSecurity security, QueryAuditService auditService) {
         this.dataSourceService = dataSourceService;

@@ -2,6 +2,7 @@ package com.aetheris.ingestion.service;
 
 import com.aetheris.ingestion.entity.IngestionTask;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -15,13 +16,20 @@ public class MetadataIngestionClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public MetadataIngestionClient(
             RestClient.Builder builder,
-            @Value("${aetheris.metadata.base-url}") String baseUrl) {
+            @Value("${aetheris.metadata.base-url}") String baseUrl,
+            @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(3_630_000);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken).build();
+    }
+
+    public MetadataIngestionClient(RestClient.Builder builder, String baseUrl) {
+        this(builder, baseUrl, "");
     }
 
     public TransferResult execute(IngestionTask task) {

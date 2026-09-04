@@ -65,6 +65,7 @@ info:
     version: 0.1.0
 
 aetheris:
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
   metadata:
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
   system:

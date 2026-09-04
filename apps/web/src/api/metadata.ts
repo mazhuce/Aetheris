@@ -500,6 +500,10 @@ export function deleteFieldLineage(id: number): Promise<void> { return http.dele
 export function getFieldLineageImpact(table: string, column: string): Promise<FieldLineageRelation[]> {
   return http.get<FieldLineageRelation[]>('/api/metadata/field-lineages/impact', { params: { table, column } }).then((res) => res.data)
 }
+export interface SemanticDependencyGraph { nodes: Array<{ id: string; type: string; label: string }>; edges: Array<{ from: string; to: string; relation: string }> }
+export function getSemanticDependencyGraph(): Promise<SemanticDependencyGraph> {
+  return http.get<SemanticDependencyGraph>('/api/metadata/semantic-dependencies').then((res) => res.data)
+}
 
 export interface QueryAuditSummary {
   total: number

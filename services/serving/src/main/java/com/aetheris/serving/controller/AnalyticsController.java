@@ -8,7 +8,9 @@ import com.aetheris.serving.model.Dashboard;
 import com.aetheris.serving.model.DashboardTemplate;
 import com.aetheris.serving.repository.AnalyticsRepository;
 import com.aetheris.serving.service.AnalyticsService;
+import com.aetheris.serving.security.ServingSecurity;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -31,106 +34,132 @@ public class AnalyticsController {
 
     private final AnalyticsService service;
     private final AnalyticsRepository repository;
+    private final ServingSecurity security;
 
-    public AnalyticsController(AnalyticsService service, AnalyticsRepository repository) {
-        this.service = service;
-        this.repository = repository;
+    @Autowired
+    public AnalyticsController(AnalyticsService service, AnalyticsRepository repository, ServingSecurity security) {
+        this.service = service; this.repository = repository; this.security = security;
     }
+    public AnalyticsController(AnalyticsService service, AnalyticsRepository repository) { this(service, repository, null); }
+    public List<AnalyticsDataset> datasets() { return service.datasets(); }
+    public AnalyticsDataset dataset(Long id) { return service.dataset(id); }
+    public AnalyticsDataset createDataset(DatasetInput input, String username, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); return service.createDataset(input, username); }
+    public AnalyticsDataset updateDataset(Long id, DatasetInput input, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); return service.updateDataset(id, input); }
+    public ResponseEntity<Void> deleteDataset(Long id, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); service.deleteDataset(id); return ResponseEntity.noContent().build(); }
+    public Map<String,Object> queryDataset(Long id, boolean refresh) { return service.queryDataset(id, refresh); }
+    public List<DashboardTemplate> templates() { return repository.listTemplates(); }
+    public List<Dashboard> dashboards() { return repository.listDashboards(); }
+    public Dashboard dashboard(Long id) { return service.dashboard(id); }
+    public Dashboard published(String slug) { return service.published(slug); }
+    public Dashboard createDashboard(DashboardCreateRequest body, String username, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); return service.createDashboard(body, username); }
+    public Dashboard updateDashboard(Long id, DashboardUpdateRequest body, String username, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); return service.updateDashboard(id, body, username); }
+    public Dashboard publish(Long id, String username, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); return service.publish(id, username); }
+    public ResponseEntity<Void> deleteDashboard(Long id, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); service.deleteDashboard(id); return ResponseEntity.noContent().build(); }
 
     @GetMapping("/datasets")
-    public List<AnalyticsDataset> datasets() { return service.datasets(); }
+    public List<AnalyticsDataset> datasets(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return service.datasets(); }
 
     @GetMapping("/datasets/{id}")
-    public AnalyticsDataset dataset(@PathVariable Long id) { return service.dataset(id); }
+    public AnalyticsDataset dataset(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dataset",id,"view"); return service.dataset(id); }
 
     @PostMapping("/datasets")
     public AnalyticsDataset createDataset(
             @Valid @RequestBody DatasetInput input,
-            @RequestHeader(value = "X-User-Name", defaultValue = "system") String username,
+            HttpServletRequest request,
+            @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
-        return service.createDataset(input, username);
+        security.requireManage(request);
+        return service.createDataset(input, security.requireIdentity(request).username());
     }
 
     @PutMapping("/datasets/{id}")
     public AnalyticsDataset updateDataset(
             @PathVariable Long id,
             @Valid @RequestBody DatasetInput input,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
+            HttpServletRequest request) {
+        security.requireManage(request);
         return service.updateDataset(id, input);
     }
 
     @DeleteMapping("/datasets/{id}")
     public ResponseEntity<Void> deleteDataset(
             @PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
+            HttpServletRequest request) {
+        security.requireManage(request);
         service.deleteDataset(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/datasets/{id}/query")
     public Map<String, Object> queryDataset(
-            @PathVariable Long id,
+            HttpServletRequest request,@PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean refresh) {
+        security.require(request,"dataset",id,"query");
         return service.queryDataset(id, refresh);
     }
 
     @GetMapping("/dashboard-templates")
-    public List<DashboardTemplate> templates() { return repository.listTemplates(); }
+    public List<DashboardTemplate> templates(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return repository.listTemplates(); }
 
     @GetMapping("/dashboards")
-    public List<Dashboard> dashboards() { return repository.listDashboards(); }
+    public List<Dashboard> dashboards(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return repository.listDashboards(); }
 
     @GetMapping("/dashboards/{id}")
-    public Dashboard dashboard(@PathVariable Long id) { return service.dashboard(id); }
+    public Dashboard dashboard(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dataset",id,"view"); return service.dashboard(id); }
 
     @GetMapping("/dashboards/published/{slug}")
-    public Dashboard published(@PathVariable String slug) { return service.published(slug); }
+    public Dashboard published(HttpServletRequest request,@PathVariable String slug) { security.require(request,"dataset",null,"view"); return service.published(slug); }
 
     @PostMapping("/dashboards")
     public Dashboard createDashboard(
-            @Valid @RequestBody DashboardCreateRequest request,
-            @RequestHeader(value = "X-User-Name", defaultValue = "system") String username,
+            @Valid @RequestBody DashboardCreateRequest body,
+            HttpServletRequest request,
+            @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
-        return service.createDashboard(request, username);
+        security.requireManage(request);
+        return service.createDashboard(body, security.requireIdentity(request).username());
     }
 
     @PutMapping("/dashboards/{id}")
     public Dashboard updateDashboard(
             @PathVariable Long id,
-            @Valid @RequestBody DashboardUpdateRequest request,
-            @RequestHeader(value = "X-User-Name", defaultValue = "system") String username,
+            @Valid @RequestBody DashboardUpdateRequest body,
+            HttpServletRequest request,
+            @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
-        return service.updateDashboard(id, request, username);
+        security.requireManage(request);
+        return service.updateDashboard(id, body, security.requireIdentity(request).username());
     }
 
     @PostMapping("/dashboards/{id}/publish")
     public Dashboard publish(
             @PathVariable Long id,
-            @RequestHeader(value = "X-User-Name", defaultValue = "system") String username,
+            HttpServletRequest request,
+            @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
-        return service.publish(id, username);
+        security.requireManage(request);
+        return service.publish(id, security.requireIdentity(request).username());
     }
 
     @DeleteMapping("/dashboards/{id}")
     public ResponseEntity<Void> deleteDashboard(
             @PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
+            HttpServletRequest request) {
+        security.requireManage(request);
         service.deleteDashboard(id);
         return ResponseEntity.noContent().build();
     }
 
-    private void requireAdmin(String role) {
-        if (!"admin".equals(role)) throw new ForbiddenException();
-    }
-
     public static class ForbiddenException extends RuntimeException { }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(ServingSecurity.UnauthorizedException.class)
+    public ResponseEntity<Map<String, String>> unauthorized(ServingSecurity.UnauthorizedException error) { return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", error.getMessage())); }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(ServingSecurity.ForbiddenException.class)
+    public ResponseEntity<Map<String, String>> secureForbidden(ServingSecurity.ForbiddenException error) { return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", error.getMessage())); }
 
     @org.springframework.web.bind.annotation.ExceptionHandler(AnalyticsService.NotFoundException.class)
     public ResponseEntity<Map<String, String>> notFound(AnalyticsService.NotFoundException error) {

@@ -3,6 +3,7 @@ package com.aetheris.workflow.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,15 +28,22 @@ public class SqlExecutionClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public SqlExecutionClient(
             RestClient.Builder builder,
             @Value("${aetheris.metadata.base-url}") String baseUrl,
-            @Value("${aetheris.metadata.connect-timeout:PT10S}") Duration connectTimeout) {
+            @Value("${aetheris.metadata.connect-timeout:PT10S}") Duration connectTimeout,
+            @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout((int) connectTimeout.toMillis());
         // 读超时不在这里设：加工任务可能跑很久，实际时限由任务的 timeoutSeconds 控制，
         // 在下面按次请求单独设置，避免用一个全局读超时误杀长任务。
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken).build();
+    }
+
+    public SqlExecutionClient(RestClient.Builder builder, String baseUrl, Duration connectTimeout) {
+        this(builder, baseUrl, connectTimeout, "");
     }
 
     /**

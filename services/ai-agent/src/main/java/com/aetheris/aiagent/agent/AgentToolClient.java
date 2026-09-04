@@ -3,6 +3,7 @@ package com.aetheris.aiagent.agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -28,15 +29,22 @@ public class AgentToolClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public AgentToolClient(
             RestClient.Builder builder,
-            @Value("${aetheris.metadata.base-url}") String baseUrl) {
+            @Value("${aetheris.metadata.base-url}") String baseUrl,
+            @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
         // 工具调用发生在用户等待回复的过程中，读超时不能太长，
         // 否则一个慢查询会让整轮对话卡住。查询本身在 metadata 侧还有 30 秒的语句超时。
         factory.setReadTimeout(45_000);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken).build();
+    }
+
+    public AgentToolClient(RestClient.Builder builder, String baseUrl) {
+        this(builder, baseUrl, "");
     }
 
     /** 按关键词与层级检索表。失败时返回空列表而非抛异常——让 agent 能继续尝试别的工具。 */

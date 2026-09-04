@@ -1,6 +1,7 @@
 package com.aetheris.quality.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -14,11 +15,18 @@ public class QualityQueryClient {
 
     private final RestClient restClient;
 
-    public QualityQueryClient(RestClient.Builder builder, @Value("${aetheris.metadata.base-url}") String baseUrl) {
+    @Autowired
+    public QualityQueryClient(RestClient.Builder builder, @Value("${aetheris.metadata.base-url}") String baseUrl,
+                              @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(60_000);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken).build();
+    }
+
+    public QualityQueryClient(RestClient.Builder builder, String baseUrl) {
+        this(builder, baseUrl, "");
     }
 
     public long violationCount(Long datasourceId, String sql) {
