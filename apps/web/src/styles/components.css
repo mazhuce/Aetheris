@@ -2,9 +2,8 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-6);
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-4);
+  gap: var(--page-header-gap);
+  padding-bottom: var(--page-section-gap-tight);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -46,11 +45,10 @@
 .page-toolbar,
 .filter-surface {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  min-height: 48px;
-  margin-bottom: var(--space-4);
+  min-height: var(--page-toolbar-min-h);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -224,6 +222,9 @@
 }
 
 .data-surface {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -243,7 +244,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-5);
-  min-height: 44px;
+  min-height: var(--page-toolbar-min-h);
   padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -487,7 +488,7 @@
 }
 
 .stat-card .ant-card-body {
-  padding: var(--space-4);
+  padding: var(--space-3) var(--space-4);
 }
 
 .stat-card-main {
@@ -503,7 +504,7 @@
 }
 
 .stat-value {
-  margin-top: var(--space-1);
+  margin-top: 2px;
   color: var(--text-primary);
   font-size: 22px;
   font-weight: 620;
@@ -518,7 +519,7 @@
 
 .stat-trend,
 .stat-footer {
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
   color: var(--text-tertiary);
   font-size: var(--font-meta);
 }

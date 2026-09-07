@@ -1,0 +1,9 @@
+services:
+  auth-service:
+    image: aetheris-local/auth:spark-m0-20260907
+  metadata-service:
+    image: aetheris-local/metadata:spark-m0-20260907
+  gateway:
+    image: aetheris-local/gateway:spark-m0-20260907
+  web:
+    image: aetheris-local/web:spark-m0-20260907

@@ -218,6 +218,53 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void datasourceReadPostsReachResourceAuthorizationWithSignedIdentity() {
+        for (String path : new String[]{"/api/metadata/query", "/api/metadata/datasources/5/query",
+                "/api/metadata/datasources/5/test", "/api/metadata/datasources/5/preview"}) {
+            MockServerWebExchange exchange = exchange("POST", path, token("alice", "viewer", 42L));
+            AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+            filter(neverCalledGate()).filter(exchange, request -> {
+                forwarded.set(request);
+                // The downstream resource check can still deny access.
+                request.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return request.getResponse().setComplete();
+            }).block();
+            assertNotNull(forwarded.get(), path);
+            assertArrayEquals(new String[]{"42", "alice"}, new IdentitySigner(INTERNAL_TOKEN).verify(
+                    forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER)));
+            assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode(), path);
+        }
+    }
+
+    @Test
+    void datasourceReadPostsStillRequireAuthentication() {
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.post("/api/metadata/datasources/5/query").build());
+        filter(neverCalledGate()).filter(exchange, request -> {
+            throw new AssertionError("anonymous query must not be forwarded");
+        }).block();
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void datasourceMutationAndLookalikeRoutesKeepCoarseGate() {
+        for (String path : new String[]{"/api/metadata/datasources", "/api/metadata/datasources/test",
+                "/api/metadata/datasources/5/query-extra", "/api/metadata/datasources/5/query/run",
+                "/api/metadata/query/export", "/api/metadata/datasources/5/sync"}) {
+            MockServerWebExchange exchange = exchange("POST", path, token("alice", "viewer", 42L));
+            filter(adminOnlyGate()).filter(exchange, request -> {
+                throw new AssertionError("write/lookalike route must not be forwarded: " + path);
+            }).block();
+            assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode(), path);
+        }
+        MockServerWebExchange update = exchange("PUT", "/api/metadata/datasources/5/query", token("alice", "viewer", 42L));
+        filter(adminOnlyGate()).filter(update, request -> {
+            throw new AssertionError("non-POST must retain mutation gate");
+        }).block();
+        assertEquals(HttpStatus.FORBIDDEN, update.getResponse().getStatusCode());
+    }
+
+    @Test
     void permissionServiceUnavailableFailsClosed() {
         MockServerWebExchange exchange = exchange("POST", "/api/quality/rules", token("admin", "admin", 1L));
 

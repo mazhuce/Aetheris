@@ -22,16 +22,10 @@ export default function TopNav() {
   const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
 
   const navRef = useRef<HTMLElement>(null)
-  const itemRefs = useRef<(HTMLAnchorElement | null)[]>([])
-  const naturalWidths = useRef<number[]>([])
+  const itemRefs = useRef<(HTMLSpanElement | null)[]>([])
   const [overflowAt, setOverflowAt] = useState(modules.length)
 
   const activeKey = findModule(location.pathname)?.key
-
-  // 记录每个模块标题的自然宽度（仅在首次全部渲染时测量一次，后续隐藏不影响）。
-  useLayoutEffect(() => {
-    naturalWidths.current = itemRefs.current.map((el) => el?.offsetWidth ?? 0)
-  }, [])
 
   // 依据可用宽度计算能放下多少个模块，放不下的收进「更多」。
   useLayoutEffect(() => {
@@ -40,7 +34,9 @@ export default function TopNav() {
 
     const compute = () => {
       const available = nav.clientWidth
-      const widths = naturalWidths.current
+      // 始终从不可见的完整菜单副本读取自然宽度。这样浏览器缩放或跨越
+      // 响应式断点后，计算不会继续使用旧密度下的缓存宽度。
+      const widths = itemRefs.current.map((el) => el?.offsetWidth ?? 0)
       if (available <= 0 || widths.length === 0) return
 
       const navStyle = getComputedStyle(nav)
@@ -102,10 +98,21 @@ export default function TopNav() {
       </div>
 
       <nav className="topnav-modules" ref={navRef} aria-label="主导航">
-        {visibleModules.map((module, index) => (
+        <div className="topnav-measure" aria-hidden="true">
+          {modules.map((module, index) => (
+            <span
+              key={module.key}
+              ref={(el) => { itemRefs.current[index] = el }}
+              className="topnav-item"
+            >
+              <span className="topnav-item-icon">{module.icon}</span>
+              <span className="topnav-item-label">{module.label}</span>
+            </span>
+          ))}
+        </div>
+        {visibleModules.map((module) => (
           <Link
             key={module.key}
-            ref={(el) => { itemRefs.current[index] = el }}
             to={firstAvailablePath(module, role)}
             className={`topnav-item${module.key === activeKey ? ' active' : ''}`}
           >

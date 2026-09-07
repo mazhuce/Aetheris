@@ -163,7 +163,7 @@ export default function GlobalSearch() {
     <>
       <button className="command-trigger" onClick={() => setOpen(true)} aria-label="打开全局搜索">
         <SearchOutlined />
-        <span>搜索或跳转</span>
+        <span>搜索和跳转</span>
       </button>
       <Modal
         open={open}

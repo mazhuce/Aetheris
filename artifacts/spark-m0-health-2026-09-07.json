@@ -1,0 +1,55 @@
+{
+  "checks": [
+    {
+      "name": "persisted_spark_probe_and_read_without_reprobe",
+      "status": "passed",
+      "datasourceId": 5,
+      "health": {
+        "status": "available",
+        "checkedAt": "2026-09-07T12:57:36.065932+08:00",
+        "lastSuccessAt": "2026-09-07T12:57:36.065932+08:00",
+        "expiresAt": "2026-09-07T12:58:36.065932+08:00",
+        "latencyMs": 719
+      }
+    },
+    {
+      "name": "persisted_spark_probe_and_read_without_reprobe",
+      "status": "passed",
+      "datasourceId": 6,
+      "health": {
+        "status": "available",
+        "checkedAt": "2026-09-07T12:57:36.448679+08:00",
+        "lastSuccessAt": "2026-09-07T12:57:36.448679+08:00",
+        "expiresAt": "2026-09-07T12:58:36.448679+08:00",
+        "latencyMs": 263
+      }
+    },
+    {
+      "name": "stored_active_and_client_health_are_not_live_success",
+      "status": "passed"
+    },
+    {
+      "name": "closed_port_has_safe_dependency_failure",
+      "status": "passed",
+      "health": {
+        "status": "unavailable",
+        "checkedAt": "2026-09-07T12:57:36.612463+08:00",
+        "expiresAt": "2026-09-07T12:58:36.612463+08:00",
+        "latencyMs": 1,
+        "failureCode": "CONNECTION_REFUSED",
+        "failureMessage": "目标端口拒绝连接，请检查数据库或 Spark Thrift 服务及转发链路"
+      }
+    },
+    {
+      "name": "connection_change_invalidates_and_description_preserves_observation",
+      "status": "passed"
+    },
+    {
+      "name": "concurrent_probe_is_single_and_old_configuration_completion_is_fenced",
+      "status": "passed"
+    }
+  ],
+  "temporaryDatasourceId": 8,
+  "status": "passed",
+  "temporaryDatasourceCleanup": "removed"
+}

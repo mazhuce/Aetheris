@@ -269,7 +269,7 @@ export default function AnalyticsDatasetPage() {
             columns={previewColumns}
             dataSource={resultRows(preview.result)}
             scroll={{ x: 'max-content', y: 460 }}
-            pagination={false}
+            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
           />
         )}
       </Modal>

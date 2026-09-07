@@ -3,7 +3,11 @@ package com.aetheris.metadata.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.aetheris.metadata.dto.ConnectionHealth;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -48,6 +52,19 @@ public class DataSource {
     private OffsetDateTime createdAt;
 
     private OffsetDateTime updatedAt;
+
+    @JsonIgnore
+    @TableField(insertStrategy = FieldStrategy.NEVER, updateStrategy = FieldStrategy.NEVER)
+    private Long connectionRevision;
+
+    @TableField(exist = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private ConnectionHealth connectionHealth = ConnectionHealth.unknown();
+
+    public Long getConnectionRevision() { return connectionRevision; }
+    public void setConnectionRevision(Long value) { connectionRevision = value; }
+    public ConnectionHealth getConnectionHealth() { return connectionHealth; }
+    public void setConnectionHealth(ConnectionHealth value) { connectionHealth = value; }
 
     public Long getId() {
         return id;

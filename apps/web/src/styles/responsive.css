@@ -2,56 +2,98 @@
   display: none;
 }
 
-@media (max-width: 1440px) {
+@media (max-height: 850px) and (min-width: 821px) {
+  .route-stage {
+    padding-block: var(--space-3);
+  }
+
+  .page-header-shell {
+    margin-bottom: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+
+  .page-meta {
+    margin-top: var(--space-2);
+  }
+
+  .page-toolbar,
+  .filter-surface {
+    min-height: 40px;
+    margin-bottom: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .section-header {
+    min-height: 38px;
+    padding-block: var(--space-2);
+  }
+
+  .metric-grid {
+    margin-bottom: var(--space-2);
+  }
+
+  .metric-item {
+    min-height: 72px;
+    padding-block: var(--space-3);
+  }
+
+  .ant-table-wrapper .ant-table-thead > tr > th,
+  .ant-table-wrapper .ant-table-tbody > tr > td {
+    height: 32px;
+    padding-block: var(--space-2);
+  }
+
+  .ant-table-wrapper .ant-table-pagination.ant-pagination {
+    margin-block: var(--space-2);
+  }
+
+  .stat-card .ant-card-body {
+    padding-block: var(--space-3);
+  }
+}
+
+@media (max-width: 1600px) {
+  .topnav {
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+
   .route-stage {
     padding-inline: var(--space-6);
   }
 
   .command-trigger {
-    width: 148px;
+    width: 112px;
+    justify-content: flex-start;
+    padding: 0 var(--space-3);
   }
 
   .topnav-item {
     padding-inline: var(--space-2);
   }
-}
 
-@media (max-width: 1280px) {
+  .create-button .ant-btn-icon + span,
   .account-copy {
     display: none;
   }
 
+  .create-button.ant-btn {
+    width: var(--control-sm);
+    padding: 0;
+  }
+}
+
+@media (max-width: 1280px) {
   .system-overview,
   .dashboard-grid {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.68fr);
   }
 
-  .metric-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .metric-item:nth-child(2) {
-    border-right: 0;
-  }
-
-  .metric-item:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--border-subtle);
-  }
 }
 
 @media (max-width: 1024px) {
   .route-stage {
     padding: var(--space-5);
-  }
-
-  .command-trigger {
-    width: var(--control-md);
-    justify-content: center;
-    padding: 0;
-  }
-
-  .command-trigger > span:nth-child(2) {
-    display: none;
   }
 
   .system-overview,
@@ -90,6 +132,18 @@
 }
 
 @media (max-width: 820px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-item:nth-child(2) {
+    border-right: 0;
+  }
+
+  .metric-item:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
   .ant-modal {
     top: var(--space-3);
     max-width: calc(100vw - 24px);
@@ -105,17 +159,6 @@
   .topnav {
     gap: var(--space-2);
     padding-inline: var(--space-3);
-  }
-
-  .topnav-wordmark,
-  .create-button .ant-btn-icon + span,
-  .topnav-item-icon {
-    display: none;
-  }
-
-  .create-button.ant-btn {
-    width: var(--control-sm);
-    padding: 0;
   }
 
   .subnav-inner {

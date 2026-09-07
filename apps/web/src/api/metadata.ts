@@ -1,5 +1,18 @@
 import http from './http'
 
+export type ConnectionHealthStatus = 'unknown' | 'checking' | 'available' | 'unavailable'
+
+/** A bounded connection probe result; configuration status and SQL query performance are separate. */
+export interface ConnectionHealth {
+  status: ConnectionHealthStatus
+  checkedAt?: string | null
+  lastSuccessAt?: string | null
+  expiresAt?: string | null
+  latencyMs?: number | null
+  failureCode?: string | null
+  failureMessage?: string | null
+}
+
 export interface DataSource {
   id: number
   name: string
@@ -14,6 +27,7 @@ export interface DataSource {
   connectionParams?: string
   description?: string
   status?: string
+  connectionHealth?: ConnectionHealth
   createdAt?: string
   updatedAt?: string
 }
@@ -56,6 +70,7 @@ export interface TestResult {
   databaseVersion?: string
   driverName?: string
   driverVersion?: string
+  connectionHealth?: ConnectionHealth
 }
 
 export interface QueryResult {

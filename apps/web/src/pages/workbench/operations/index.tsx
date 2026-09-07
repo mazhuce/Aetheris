@@ -141,7 +141,7 @@ export default function OperationsOverviewPage() {
         </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+      <Row gutter={[16, 16]} className="operations-second-row">
         <Col xs={24} lg={14}>
           <DataSurface
             title="最近任务执行"
@@ -155,7 +155,7 @@ export default function OperationsOverviewPage() {
               columns={instanceColumns}
               dataSource={recentInstances}
               loading={loading}
-              pagination={false}
+              pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
               scroll={{ x: 700 }}
               locale={{ emptyText: '暂无任务执行记录' }}
             />
@@ -174,7 +174,7 @@ export default function OperationsOverviewPage() {
               size="small"
               dataSource={recentAlerts}
               loading={loading}
-              pagination={false}
+              pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
               locale={{ emptyText: '暂无告警' }}
               columns={[
                 {

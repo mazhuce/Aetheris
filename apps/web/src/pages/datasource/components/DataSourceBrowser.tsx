@@ -163,7 +163,7 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
                   {
                     key: 'columns',
                     label: `字段结构 ${columns.length ? `(${columns.length})` : ''}`,
-                    children: <Table rowKey={(record) => `${record.ordinal}-${record.name}`} size="small" columns={columnDefinitions} dataSource={columns} pagination={false} scroll={{ x: 720 }} />
+                    children: <Table rowKey={(record) => `${record.ordinal}-${record.name}`} size="small" columns={columnDefinitions} dataSource={columns} pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 个字段` }} scroll={{ x: 720 }} />
                   },
                   {
                     key: 'preview',
@@ -173,7 +173,7 @@ export default function DataSourceBrowser({ open, dataSource, onClose }: DataSou
                         {preview.truncated && <Alert type="info" showIcon message="结果已限制为前 50 行" />}
                         <Table
                           size="small"
-                          pagination={false}
+                          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
                           dataSource={previewRows}
                           columns={preview.columns.map((column) => ({ title: column, dataIndex: column, key: column, ellipsis: true, width: 160 }))}
                           scroll={{ x: 'max-content', y: 430 }}

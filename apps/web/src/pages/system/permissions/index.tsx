@@ -120,7 +120,7 @@ export default function PermissionPage() {
           dataSource={filtered}
           loading={loading}
           scroll={{ x: 900 }}
-          pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无权限目录' }}
         />
       </DataSurface>

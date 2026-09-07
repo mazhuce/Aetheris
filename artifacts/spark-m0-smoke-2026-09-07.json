@@ -1,0 +1,64 @@
+{
+  "startedAt": "2026-09-07T04:58:21.062788+00:00",
+  "datasourceId": 6,
+  "fixture": "5b8e553a2067a4eb",
+  "database": "aetheris_smoke_5b8e553a2067a4eb",
+  "mode": "write",
+  "status": "failed",
+  "writeAcceptancePassed": false,
+  "checks": [
+    {
+      "name": "gateway_admin_login",
+      "status": "passed"
+    },
+    {
+      "name": "configured_spark_datasource",
+      "status": "passed"
+    },
+    {
+      "name": "metadata_container_connection",
+      "status": "passed",
+      "latencyMs": 240
+    },
+    {
+      "name": "gateway_metadata_relay_spark_select_one",
+      "status": "passed"
+    },
+    {
+      "name": "fixture_schema_table_column_discovery",
+      "status": "passed"
+    },
+    {
+      "name": "known_small_table",
+      "status": "passed",
+      "sql": "SELECT id, category, amount FROM aetheris_smoke_5b8e553a2067a4eb.source_orders ORDER BY id",
+      "rows": [
+        [
+          1,
+          "A",
+          10
+        ],
+        [
+          2,
+          "A",
+          20
+        ],
+        [
+          3,
+          "B",
+          7
+        ]
+      ]
+    }
+  ],
+  "cleanup": [
+    {
+      "resource": "user",
+      "id": 4,
+      "status": "removed"
+    }
+  ],
+  "temporaryUserId": 4,
+  "error": "POST /api/auth/rbac/grants returned HTTP 400",
+  "finishedAt": "2026-09-07T04:58:29.977023+00:00"
+}

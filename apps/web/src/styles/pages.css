@@ -6,6 +6,12 @@
 
 .dashboard-v3 {
   width: 100%;
+  display: grid;
+  gap: var(--page-section-gap);
+}
+
+.dashboard-v3 > .metric-grid {
+  align-self: start;
 }
 
 .dashboard-intro {
@@ -13,7 +19,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-6);
-  margin-bottom: var(--space-5);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
@@ -229,7 +234,6 @@
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-bottom: var(--space-4);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
@@ -239,8 +243,8 @@
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
   gap: var(--space-3);
-  min-height: 92px;
-  padding: var(--space-4);
+  min-height: var(--surface-min-h-tight);
+  padding: var(--space-3) var(--space-4);
   border-right: 1px solid var(--border-subtle);
 }
 
@@ -287,7 +291,7 @@
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  gap: var(--space-4);
+  gap: var(--page-section-gap);
   align-items: start;
 }
 
@@ -309,11 +313,20 @@
   display: grid;
   grid-column: 2;
   grid-row: 1 / span 2;
-  gap: var(--space-4);
+  gap: var(--page-section-gap);
+  min-height: 0;
 }
 
 .service-list {
   width: 100%;
+}
+
+.dashboard-list-pagination {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--row-min-h);
+  padding: var(--space-1) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .service-row {
@@ -321,7 +334,7 @@
   grid-template-columns: 8px minmax(160px, 1fr) minmax(100px, auto) minmax(92px, auto);
   align-items: center;
   gap: var(--space-3);
-  min-height: 40px;
+  min-height: var(--row-min-h-tight);
   padding: 0 var(--space-4);
   border-top: 1px solid var(--border-subtle);
   color: var(--text-tertiary);
@@ -366,7 +379,7 @@
   display: grid;
   align-items: center;
   gap: var(--space-3);
-  min-height: 38px;
+  min-height: var(--row-min-h-tight);
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -469,6 +482,10 @@
   background: var(--bg-subtle);
   color: var(--text-tertiary);
   font-size: var(--font-table);
+}
+
+.table-detail-tabs {
+  margin-top: var(--space-4);
 }
 
 /* Warehouse map */
@@ -1382,9 +1399,18 @@
 
 /* == 工作流编排：任务依赖 DAG 画布 == */
 
+.data-surface.dag-surface {
+  overflow: visible;
+}
+
+.data-surface.dag-surface > .data-surface-content {
+  min-width: 0;
+  overflow: auto;
+  max-height: 45vh;
+}
+
 .dag-canvas {
   position: relative;
-  overflow: auto;
   padding: var(--space-4);
 }
 
@@ -1475,6 +1501,93 @@
 
 .dep-add-select {
   min-width: 280px;
+}
+
+.operations-overview-page {
+  display: grid;
+  gap: var(--page-section-gap);
+  width: 100%;
+}
+
+.operations-overview-page > .ant-row + .ant-row {
+  margin-top: 0;
+}
+
+.workflow-list-page,
+.task-monitor-page {
+  display: grid;
+  gap: var(--page-section-gap);
+  width: 100%;
+}
+
+.workflow-list-page > .ant-row,
+.task-monitor-page > .ant-row {
+  margin-bottom: 0;
+}
+
+.workflow-graph-page {
+  display: grid;
+  gap: var(--page-section-gap);
+  width: 100%;
+}
+
+/* —— SQL 开发 / 即席查询 工作台 —— */
+.sql-development-page,
+.adhoc-query-page {
+  display: grid;
+  gap: var(--page-section-gap);
+  width: 100%;
+  min-height: 0;
+}
+
+.sql-development-page > .ant-tabs,
+.adhoc-query-page > .ant-tabs {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sql-development-page > .ant-tabs > .ant-tabs-nav,
+.adhoc-query-page > .ant-tabs > .ant-tabs-nav {
+  margin: 0 0 var(--space-3);
+}
+
+.sql-development-page > .ant-tabs > .ant-tabs-content-holder,
+.adhoc-query-page > .ant-tabs > .ant-tabs-content-holder {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sql-tab-pane {
+  display: grid;
+  gap: var(--page-section-gap);
+}
+
+.sql-editor-area {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.sql-editor-area .ant-input {
+  min-height: var(--input-area-min-h);
+}
+
+.sql-result-surface {
+  min-height: 0;
+}
+
+.sql-result-surface > .data-surface-content {
+  max-height: 100%;
+  overflow: auto;
+}
+
+/* 数据源过滤栏中的扩展控件：占满整行 */
+.filter-item-grow {
+  min-width: 280px;
+  flex: 1 1 280px;
+}
+
+.filter-control-full {
+  width: 100%;
 }
 
 /* —— 权限管理（RBAC）—— */

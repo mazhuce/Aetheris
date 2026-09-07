@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
+import com.aetheris.auth.handler.JsonbJacksonTypeHandler;
 import com.aetheris.auth.model.DataScope;
 
 import java.time.OffsetDateTime;
@@ -18,9 +18,9 @@ public class ResourceGrant {
     private Long granteeId;
     private String resourceType;
     private Long resourceId;
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JsonbJacksonTypeHandler.class)
     private DataScope dataScope;
-    @TableField(typeHandler = JacksonTypeHandler.class)
+    @TableField(typeHandler = JsonbJacksonTypeHandler.class)
     private List<String> actions;
     private Boolean enabled;
     private String grantedBy;

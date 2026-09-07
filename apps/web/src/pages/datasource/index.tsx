@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   App,
   Alert,
@@ -20,7 +20,6 @@ import type { TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
 import {
   ApiOutlined,
-  CheckCircleOutlined,
   ClusterOutlined,
   DatabaseOutlined,
   PlusOutlined,
@@ -47,6 +46,10 @@ import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
 import DataSourceForm from './components/DataSourceForm'
 import DataSourceBrowser from './components/DataSourceBrowser'
+import ConnectionHealthStatus from './components/ConnectionHealthStatus'
+import { connectionFailureDescription, effectiveConnectionStatus } from './connectionHealth'
+import { useConnectionHealthClock } from './useConnectionHealthClock'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import { dataSourceOptions, getDataSourceDefinition } from './sourceCatalog'
 
 const statusMeta: Record<string, { color: string; text: string }> = {
@@ -64,7 +67,7 @@ export default function DataSourcePage() {
   const [status, setStatus] = useState<string>()
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const pageSize = useResponsivePageSize()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DataSource | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -75,6 +78,9 @@ export default function DataSourcePage() {
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null)
   const [browserOpen, setBrowserOpen] = useState(false)
   const [browserRecord, setBrowserRecord] = useState<DataSource | null>(null)
+  const pendingProbes = useRef(new Set<number>())
+  const [testingIds, setTestingIds] = useState(new Set<number>())
+  const healthNow = useConnectionHealthClock(allData)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -108,6 +114,10 @@ export default function DataSourcePage() {
     () => filtered.slice((page - 1) * pageSize, page * pageSize),
     [filtered, page, pageSize]
   )
+
+  useEffect(() => {
+    setPage(1)
+  }, [pageSize])
 
   const overview = useMemo(() => ({
     total: allData.length,
@@ -147,18 +157,41 @@ export default function DataSourcePage() {
   }
 
   const handleTest = async (record: DataSource) => {
-    const hide = message.loading('正在测试连接...', 0)
+    if (pendingProbes.current.has(record.id)) return
+    pendingProbes.current.add(record.id)
+    setTestingIds(new Set(pendingProbes.current))
     try {
       const result = await testDataSource(record.id)
+      setAllData((items) => items.map((item) => item.id === record.id
+        ? { ...item, connectionHealth: result.connectionHealth ?? { status: 'unknown' } }
+        : item))
       if (result.success) {
-        message.success(`连接成功 · ${result.databaseProduct ?? record.type} · ${result.latencyMs ?? '—'} ms`)
+        message.success(`连接探测成功 · ${result.latencyMs ?? '—'} ms`)
+      } else if (result.connectionHealth?.status === 'checking') {
+        message.info('已有连接探测正在执行，稍后刷新可查看结果')
       } else {
-        message.error(result.message)
+        message.error(connectionFailureDescription(result.connectionHealth))
       }
-    } catch {
-      message.error('测试失败')
+    } catch (error) {
+      const statusCode = (error as { response?: { status?: number } }).response?.status
+      if (statusCode === 401 || statusCode === 403) {
+        message.error('没有测试此数据源连接的权限，请检查登录状态与数据源查询授权')
+      } else {
+        // A missing response cannot establish either database success or failure.
+        setAllData((items) => items.map((item) => item.id === record.id ? {
+          ...item,
+          connectionHealth: {
+            ...item.connectionHealth,
+            status: 'unknown',
+            failureCode: 'PROBE_REQUEST_FAILED',
+            failureMessage: '未取得探测结果，请检查平台服务与网络后刷新或重试。'
+          }
+        } : item))
+        message.error('未取得探测结果，连接状态未知；请检查平台服务与网络')
+      }
     } finally {
-      hide()
+      pendingProbes.current.delete(record.id)
+      setTestingIds(new Set(pendingProbes.current))
     }
   }
 
@@ -211,41 +244,47 @@ export default function DataSourcePage() {
     { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 120, render: (value?: string) => value || '—' },
     { title: '用户名', dataIndex: 'username', key: 'username', width: 110, render: (value?: string) => value || '—' },
     {
-      title: '状态',
+      title: '配置状态',
       dataIndex: 'status',
       key: 'status',
-      width: 80,
+      width: 100,
       render: (value?: string) => {
         const meta = statusMeta[value ?? ''] ?? { color: 'default', text: value ?? '—' }
-        return <StatusBadge tone={value === 'active' ? 'success' : 'neutral'}>{meta.text}</StatusBadge>
+        return <StatusBadge tone="neutral" dot={false}>{meta.text}</StatusBadge>
       }
+    },
+    {
+      title: '连接健康',
+      key: 'connectionHealth',
+      width: 320,
+      render: (_, record) => <ConnectionHealthStatus health={record.connectionHealth} now={healthNow} testing={testingIds.has(record.id)} />
     },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
     { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (value?: string) => formatDateTime(value) }
   ]
 
-  if (canManage) columns.push({
+  columns.push({
       title: '操作',
       key: 'action',
-      width: 96,
+      width: 140,
       align: 'right',
       fixed: 'right',
       render: (_, record) => (
         <RowActions
           primary={(
-            <Tooltip title="测试连接">
-              <Button type="text" size="small" icon={<ThunderboltOutlined />} aria-label={`测试数据源 ${record.name}`} onClick={() => void handleTest(record)} />
+            <Tooltip title="执行轻量连接探测，不采集库表；需要数据源查询权限">
+              <Button type="text" size="small" icon={<ThunderboltOutlined />} loading={testingIds.has(record.id)} disabled={effectiveConnectionStatus(record.connectionHealth, healthNow) === 'checking'} aria-label={`测试数据源 ${record.name}`} onClick={() => void handleTest(record)}>测试连接</Button>
             </Tooltip>
           )}
-          items={[
+          items={canManage ? [
             { key: 'query', label: 'SQL 查询', onClick: () => openQuery(record) },
             { key: 'browse', label: '浏览库表', onClick: () => { setBrowserRecord(record); setBrowserOpen(true) } },
-            { key: 'edit', label: '编辑', disabled: record.managed, onClick: () => { setEditing(record); setOpen(true) } },
+            { key: 'edit', label: '编辑', disabled: record.managed || testingIds.has(record.id), onClick: () => { setEditing(record); setOpen(true) } },
             {
               key: 'delete',
               label: '删除',
               danger: true,
-              disabled: record.managed,
+              disabled: record.managed || testingIds.has(record.id),
               onClick: () => modal.confirm({
                 title: `删除数据源“${record.name}”？`,
                 content: '删除后平台将无法继续访问该连接，此操作不可恢复。',
@@ -254,7 +293,7 @@ export default function DataSourcePage() {
                 onOk: () => handleDelete(record.id)
               })
             }
-          ]}
+          ] : []}
         />
       )
     })
@@ -281,10 +320,18 @@ export default function DataSourcePage() {
 
       <Row gutter={[16, 16]} className="datasource-overview">
         <Col xs={12} lg={6}><Card><Statistic title="已接入数据源" value={overview.total} prefix={<DatabaseOutlined />} /></Card></Col>
-        <Col xs={12} lg={6}><Card><Statistic title="启用连接" value={overview.active} prefix={<CheckCircleOutlined />} /></Card></Col>
+        <Col xs={12} lg={6}><Card><Statistic title="配置已启用" value={overview.active} prefix={<ApiOutlined />} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="Hive / 湖仓" value={overview.lakehouse} prefix={<ClusterOutlined />} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix="/ 13" prefix={<ApiOutlined />} /></Card></Col>
       </Row>
+
+      <Alert
+        type="info"
+        showIcon
+        className="form-section-space"
+        message="配置启用不代表连接可用。连接健康来自手动轻量探测，结果过期后显示未知；最近成功时间保留为历史记录。"
+        description="打开或刷新此页只读取已保存的状态。点击“测试连接”才发起连接探测；库表采集与业务查询耗时单独查看。"
+      />
 
       <PageToolbar>
         <div className="filter-bar">
@@ -310,7 +357,7 @@ export default function DataSourcePage() {
             />
           </div>
           <div className="filter-item">
-            <span>状态</span>
+            <span>配置状态</span>
             <Select
               value={status}
               onChange={setStatus}
@@ -341,7 +388,7 @@ export default function DataSourcePage() {
           >
             重置
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>
+          <Button icon={<ReloadOutlined />} disabled={testingIds.size > 0} onClick={() => void refresh()}>
             刷新
           </Button>
         </div>
@@ -354,16 +401,15 @@ export default function DataSourcePage() {
           columns={columns}
           dataSource={paged}
           loading={loading}
-          scroll={{ x: 1380 }}
+          scroll={{ x: 1740 }}
           pagination={{
             current: page,
             pageSize,
             total: filtered.length,
-            showSizeChanger: true,
+            showSizeChanger: false,
             showTotal: (total) => `共 ${total} 条`,
-            onChange: (nextPage, nextSize) => {
+            onChange: (nextPage) => {
               setPage(nextPage)
-              setPageSize(nextSize)
             }
           }}
           locale={{ emptyText: canManage ? '暂无数据源，点击右上角「新增数据源」开始。' : '暂无可查看的数据源。' }}
@@ -416,7 +462,7 @@ export default function DataSourcePage() {
               <Table
                 size="small"
                 scroll={{ x: 'max-content' }}
-                pagination={false}
+                pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
                 columns={queryResult.columns.map((column) => ({
                   title: column,
                   dataIndex: column,

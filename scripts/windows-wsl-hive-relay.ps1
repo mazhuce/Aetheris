@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('start', 'stop', 'status', 'run')]
+    [ValidateSet('start', 'stop', 'status', 'health', 'run')]
     [string]$Action = 'start',
     [string]$Distribution = 'Ubuntu',
     [string]$ListenAddress = '',
@@ -16,15 +16,42 @@ function Get-RelayProcess {
         return $null
     }
     $relayPid = [int](Get-Content -LiteralPath $pidFile -Raw)
-    return Get-Process -Id $relayPid -ErrorAction SilentlyContinue
+    $process = Get-Process -Id $relayPid -ErrorAction SilentlyContinue
+    if (-not $process) { return $null }
+    # A persisted PID can belong to another process after Windows restarts.
+    $commandLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $relayPid" -ErrorAction Stop).CommandLine
+    if (-not $commandLine -or
+        $commandLine.IndexOf($PSCommandPath, [System.StringComparison]::OrdinalIgnoreCase) -lt 0 -or
+        $commandLine -notmatch '-Action\s+run') {
+        throw 'relay PID 已被其他进程复用；请核对并移除过期的 relay.pid，未操作该进程。'
+    }
+    return $process
+}
+
+function Test-RelayPort([string]$Address, [int]$TargetPort, [int]$TimeoutMs = 3000) {
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $connectTask = $client.ConnectAsync($Address, $TargetPort)
+        return $connectTask.Wait($TimeoutMs) -and $client.Connected
+    } catch {
+        return $false
+    } finally {
+        $client.Dispose()
+    }
 }
 
 function Resolve-ListenAddress {
-    $address = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop |
-        Where-Object InterfaceAlias -Like '*Default Switch*' |
+    $addresses = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop)
+    # Docker Desktop's WSL network can reach the WSL adapter while a different
+    # Hyper-V Default Switch subnet may be unroutable from its containers.
+    $address = $addresses | Where-Object InterfaceAlias -Like '*WSL*' |
         Select-Object -First 1 -ExpandProperty IPAddress
     if (-not $address) {
-        throw '未找到 Hyper-V Default Switch IPv4 地址'
+        $address = $addresses | Where-Object InterfaceAlias -Like '*Default Switch*' |
+            Select-Object -First 1 -ExpandProperty IPAddress
+    }
+    if (-not $address) {
+        throw '未找到 WSL/Hyper-V IPv4 地址，请显式指定 -ListenAddress。'
     }
     return $address
 }
@@ -107,14 +134,46 @@ if ($Action -eq 'status') {
     exit 0
 }
 
-$existing = Get-RelayProcess
-if ($existing) {
-    Write-Output "WSL Hive relay already running (PID $($existing.Id))"
+if ($Action -eq 'health') {
+    $process = Get-RelayProcess
+    if (-not $process -or -not (Test-Path -LiteralPath $stateFile)) {
+        Write-Output 'relay: unavailable (process/state missing)'
+        exit 1
+    }
+    $state = (Get-Content -LiteralPath $stateFile -Raw).Trim()
+    if ($state -notmatch '^([\d.]+):(\d+) -> ([\d.]+):(\d+)$') {
+        throw 'relay.state 格式无法识别，请重新启动 relay。'
+    }
+    $relayAddress, $relayPort, $targetHost, $targetPort = $Matches[1], [int]$Matches[2], $Matches[3], [int]$Matches[4]
+    $currentListenAddress = if ($ListenAddress) { $ListenAddress } else { Resolve-ListenAddress }
+    $currentTargetAddress = if ($TargetAddress) { $TargetAddress } else { Resolve-WslAddress }
+    if ($relayAddress -ne $currentListenAddress -or $targetHost -ne $currentTargetAddress) {
+        Write-Output "relay: stale address ($state); stop/start relay and update datasource host"
+        exit 1
+    }
+    $listening = Test-RelayPort $relayAddress $relayPort
+    $targetReachable = Test-RelayPort $targetHost $targetPort
+    Write-Output "relay listener: $listening; WSL Spark Thrift: $targetReachable ($state)"
+    Write-Output 'TCP checks only; platform JDBC probe is still required.'
+    if (-not ($listening -and $targetReachable)) { exit 1 }
     exit 0
 }
 
 $resolvedListenAddress = if ($ListenAddress) { $ListenAddress } else { Resolve-ListenAddress }
 $resolvedTargetAddress = if ($TargetAddress) { $TargetAddress } else { Resolve-WslAddress }
+if (-not (Test-RelayPort $resolvedTargetAddress $Port)) {
+    throw "WSL 目标 $resolvedTargetAddress`:$Port 不可达，请先恢复 Spark Thrift Server。"
+}
+$existing = Get-RelayProcess
+if ($existing) {
+    $expectedState = "$resolvedListenAddress`:$Port -> $resolvedTargetAddress`:$Port"
+    if (-not (Test-Path -LiteralPath $stateFile) -or (Get-Content -LiteralPath $stateFile -Raw).Trim() -ne $expectedState) {
+        throw 'relay 地址已变化。请执行 stop、start，然后同步数据源主机地址。'
+    }
+    Write-Output "WSL Hive relay already running (PID $($existing.Id))"
+    exit 0
+}
+
 New-Item -ItemType Directory -Path $runtimeDirectory -Force | Out-Null
 $arguments = @(
     '-NoProfile',
@@ -127,8 +186,19 @@ $arguments = @(
 )
 $process = Start-Process -FilePath (Get-Process -Id $PID).Path -ArgumentList $arguments -WindowStyle Hidden -PassThru
 $process.Id | Set-Content -LiteralPath $pidFile -Encoding ascii
-Start-Sleep -Milliseconds 500
-if (-not (Get-RelayProcess)) {
-    throw 'WSL Hive relay 启动失败'
+$ready = $false
+for ($attempt = 0; $attempt -lt 30; $attempt++) {
+    Start-Sleep -Milliseconds 100
+    $relayProcess = Get-RelayProcess
+    if (-not $relayProcess) { break }
+    if (Test-RelayPort $resolvedListenAddress $Port 200) {
+        $ready = $true
+        break
+    }
+}
+if (-not $ready) {
+    Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $pidFile, $stateFile -Force -ErrorAction SilentlyContinue
+    throw 'WSL Hive relay 启动失败：监听端口未就绪。'
 }
 Write-Output "WSL Hive relay started (PID $($process.Id)): $resolvedListenAddress`:$Port -> $resolvedTargetAddress`:$Port"

@@ -67,6 +67,7 @@
 }
 
 .topnav-modules {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: var(--space-1);
@@ -75,6 +76,19 @@
   flex: 1 1 auto;
   overflow: hidden;
   padding: 0 var(--space-2);
+}
+
+.topnav-measure {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  width: max-content;
+  height: var(--topnav-height);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .topnav-item {
@@ -297,7 +311,21 @@
 }
 
 .route-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--page-section-gap);
   width: 100%;
   min-height: 100%;
-  padding: var(--space-6) var(--space-7) var(--space-8);
+  padding: var(--page-pad-block) var(--page-pad-inline) var(--space-7);
+}
+
+/* Stack children inside a route stage with the same vertical rhythm. */
+.route-stage > * + * {
+  margin-top: 0;
+}
+
+/* Compact variant for modules that need to fit on a single screen at 100% zoom. */
+.route-stage.is-tight {
+  gap: var(--page-section-gap-tight);
+  padding-block: var(--page-pad-block-tight);
 }

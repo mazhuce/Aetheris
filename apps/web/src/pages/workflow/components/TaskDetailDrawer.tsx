@@ -364,7 +364,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                       <Table<TaskDependency>
                         size="small"
                         rowKey="id"
-                        pagination={false}
+                        pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条依赖` }}
                         dataSource={dependencies}
                         columns={[
                           {

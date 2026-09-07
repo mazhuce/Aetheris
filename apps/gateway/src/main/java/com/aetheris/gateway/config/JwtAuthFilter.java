@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * 网关认证与粗粒度入口保护。
@@ -69,6 +70,12 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/governance/", "governance",
             "/api/workflow/", "workflow"
     );
+
+    // These POSTs execute bounded reads; metadata still verifies the signed
+    // identity and the concrete datasource's query permission. Unsaved tests,
+    // writes and similarly named routes remain behind the mutation gate.
+    private static final Pattern DATASOURCE_READ_EXECUTION = Pattern.compile(
+            "^/api/metadata/datasources/[0-9]+/(query|test|preview)$");
 
     private final SecretKey key;
     private final TokenRevocationStore revocationStore;
@@ -191,6 +198,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     /** 管理类服务的写请求 → 粗粒度判定；读请求与其它前缀返回 null（不拦）。 */
     private String serviceOf(String path, HttpMethod method) {
+        if (method == HttpMethod.POST && ("/api/metadata/query".equals(path)
+                || DATASOURCE_READ_EXECUTION.matcher(path).matches())) {
+            return null;
+        }
         if (method != HttpMethod.POST && method != HttpMethod.PUT
                 && method != HttpMethod.PATCH && method != HttpMethod.DELETE) {
             return null;

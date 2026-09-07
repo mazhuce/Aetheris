@@ -67,33 +67,35 @@ public class JdbcService {
             "SSLFACTORY", "SSLHOSTNAMEVERIFIER", "SSLPASSWORDCALLBACK",
             "LOGGERLEVEL", "LOGGERFILE", "LOGUNCLOSEDCONNECTIONS");
 
-    public Map<String, Object> test(DataSource dataSource) {
-        long startedAt = System.currentTimeMillis();
+    /** Called only by the bounded probe executor; never performs schema/table discovery. */
+    Map<String, Object> probe(DataSource dataSource, int timeoutSeconds) throws SQLException {
         try (Connection connection = connect(dataSource)) {
-            DatabaseMetaData metadata = connection.getMetaData();
+            if (Thread.currentThread().isInterrupted()) throw new java.sql.SQLTimeoutException("Probe cancelled");
+            try (Statement statement = connection.createStatement()) {
+                try {
+                    statement.setQueryTimeout(timeoutSeconds);
+                } catch (SQLFeatureNotSupportedException ignored) {
+                    log.debug("JDBC driver does not support probe query timeout");
+                }
+                try (ResultSet resultSet = statement.executeQuery("SELECT 1")) {
+                    if (!resultSet.next() || resultSet.getInt(1) != 1) {
+                        throw new SQLException("Unexpected SELECT 1 result");
+                    }
+                }
+            }
             Map<String, Object> result = new LinkedHashMap<>();
-            result.put("success", true);
-            result.put("message", "连接成功");
-            result.put("latencyMs", System.currentTimeMillis() - startedAt);
-            result.put("databaseProduct", metadata.getDatabaseProductName());
-            result.put("databaseVersion", metadata.getDatabaseProductVersion());
+            // Optional informational metadata must not change the SELECT 1 health observation.
             try {
+                DatabaseMetaData metadata = connection.getMetaData();
+                result.put("databaseProduct", metadata.getDatabaseProductName());
+                result.put("databaseVersion", metadata.getDatabaseProductVersion());
                 result.put("driverName", metadata.getDriverName());
                 result.put("driverVersion", metadata.getDriverVersion());
             } catch (SQLException metadataError) {
                 result.put("driverName", isHiveLike(dataSource) ? "Apache Hive JDBC" : "JDBC Driver");
-                if (metadata.getDriverMajorVersion() >= 0 && metadata.getDriverMinorVersion() >= 0) {
-                    result.put("driverVersion", metadata.getDriverMajorVersion() + "." + metadata.getDriverMinorVersion());
-                }
-                log.debug("JDBC driver manifest metadata is unavailable", metadataError);
+                log.debug("JDBC informational metadata unavailable during connection probe");
             }
             return result;
-        } catch (Exception error) {
-            log.warn("Datasource connection test failed: type={}, host={}", dataSource.getType(), dataSource.getHost(), error);
-            return Map.of(
-                    "success", false,
-                    "message", friendlyMessage(error)
-            );
         }
     }
 
@@ -180,7 +182,9 @@ public class JdbcService {
         try (Connection sourceConnection = connect(source);
              Connection targetConnection = connect(target);
              Statement sourceStatement = sourceConnection.createStatement()) {
-            sourceConnection.setReadOnly(true);
+            if (!isHiveLike(source)) {
+                sourceConnection.setReadOnly(true);
+            }
             sourceStatement.setFetchSize(batchSize);
             try {
                 sourceStatement.setQueryTimeout(WRITE_TIMEOUT_SECONDS);

@@ -49,6 +49,10 @@ info:
 aetheris:
   datasource:
     master-key: ${AETHERIS_DATASOURCE_MASTER_KEY:}
+    health:
+      ttl-seconds: ${DATASOURCE_HEALTH_TTL_SECONDS:60}
+      timeout-ms: ${DATASOURCE_HEALTH_TIMEOUT_MS:10000}
+      max-concurrent: ${DATASOURCE_HEALTH_MAX_CONCURRENT:4}
   managed-datasource:
     enabled: ${REGISTER_INTERNAL_DATASOURCE:true}
   internal-token: ${AETHERIS_INTERNAL_TOKEN:}

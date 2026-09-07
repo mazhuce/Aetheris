@@ -31,10 +31,10 @@ interface DagEdge {
   to: number
 }
 
-const NODE_WIDTH = 180
-const NODE_HEIGHT = 56
-const LAYER_GAP = 100
-const ROW_GAP = 18
+const NODE_WIDTH = 150
+const NODE_HEIGHT = 44
+const LAYER_GAP = 56
+const ROW_GAP = 10
 
 /** 依据依赖关系迭代计算每个任务的最深层级（最长上游路径），环依赖返回 null。 */
 function computeDepths(tasks: TaskView[], deps: Map<number, number[]>): Map<number, number> | null {
@@ -134,14 +134,22 @@ export default function WorkflowGraphPage() {
       if (!layers.has(d)) layers.set(d, [])
       layers.get(d)!.push(view)
     })
+    // 计算每一层的 y 起点：层 d 的 y = d * (LAYER_GAP + NODE_HEIGHT) + index * (ROW_GAP + NODE_HEIGHT)
+    // —— 把"层间间距"和"层内行距"叠加，让不同层节点在视觉上分行。
+    const sortedDepths = Array.from(layers.keys()).sort((a, b) => a - b)
+    const layerYOffset = new Map<number, number>()
+    sortedDepths.forEach((d, layerIndex) => {
+      layerYOffset.set(d, layerIndex * (NODE_HEIGHT + LAYER_GAP))
+    })
     const nodeList: DagNode[] = []
     layers.forEach((layerViews, depth) => {
+      const yBase = layerYOffset.get(depth) ?? 0
       layerViews.forEach((view, index) => {
         nodeList.push({
           task: view,
           depth,
           x: depth * (NODE_WIDTH + LAYER_GAP),
-          y: index * (NODE_HEIGHT + ROW_GAP)
+          y: yBase + index * (NODE_HEIGHT + ROW_GAP)
         })
       })
     })
@@ -245,7 +253,7 @@ export default function WorkflowGraphPage() {
   ]
 
   return (
-    <>
+    <div className="workflow-graph-page">
       <PageHeader description="以可视化方式编排任务依赖，构建端到端数据加工流水线，依赖就绪后自动联动调度。" />
       <Row gutter={12} className="stat-row">
         <Col span={8}>
@@ -264,7 +272,7 @@ export default function WorkflowGraphPage() {
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         </div>
       </PageToolbar>
-      <DataSurface label="任务依赖图">
+      <DataSurface label="任务依赖图" className="dag-surface">
         {hasCycle && (
           <div className="dep-cycle-warning">
             <Tag color="error">检测到循环依赖</Tag>
@@ -332,7 +340,7 @@ export default function WorkflowGraphPage() {
               columns={depColumns}
               dataSource={selectedDeps}
               loading={depsLoading}
-              pagination={false}
+              pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条依赖` }}
               locale={{ emptyText: '暂无上游依赖，该任务为流水线起点' }}
             />
             {canManage && (
@@ -357,6 +365,6 @@ export default function WorkflowGraphPage() {
           <Empty description="在上方依赖图中点击任务节点后，可在此维护其上游依赖" />
         )}
       </DataSurface>
-    </>
+    </div>
   )
 }

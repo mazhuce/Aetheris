@@ -6,7 +6,7 @@ import {
   ReloadOutlined,
   SafetyCertificateOutlined
 } from '@ant-design/icons'
-import { Button, Progress, Tag } from 'antd'
+import { Button, Pagination, Progress, Tag } from 'antd'
 import { getServiceHealth, listActivity, type AuditLog, type ServiceStatus } from '@/api/system'
 import { listDataSources, type DataSource } from '@/api/metadata'
 import { formatNumber } from '@/utils/format'
@@ -14,6 +14,7 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { EmptyState, ErrorState, LoadingState } from '@/components/FeedbackState'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function Dashboard() {
   const [serviceRows, setServiceRows] = useState<ServiceStatus[]>([])
@@ -24,6 +25,9 @@ export default function Dashboard() {
   const [healthError, setHealthError] = useState(false)
   const [sourcesError, setSourcesError] = useState(false)
   const [activityError, setActivityError] = useState(false)
+  const [servicePage, setServicePage] = useState(1)
+  const [activityPage, setActivityPage] = useState(1)
+  const pageSize = useResponsivePageSize(5, 3, 3, 2)
 
   const refresh = useCallback(async () => {
     const [health, sources, activity] = await Promise.allSettled([
@@ -36,6 +40,8 @@ export default function Dashboard() {
     setHealthError(health.status === 'rejected')
     setSourcesError(sources.status === 'rejected')
     setActivityError(activity.status === 'rejected')
+    setServicePage(1)
+    setActivityPage(1)
 
     setLastCheck(new Date().toLocaleTimeString('zh-CN', { hour12: false }))
   }, [])
@@ -43,6 +49,11 @@ export default function Dashboard() {
   useEffect(() => {
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    setServicePage(1)
+    setActivityPage(1)
+  }, [pageSize])
 
   const runningCount = serviceRows.filter((service) => service.status === 'UP').length
   const healthScore = serviceRows.length ? Math.round((runningCount / serviceRows.length) * 100) : 0
@@ -62,6 +73,14 @@ export default function Dashboard() {
   ]
 
   const attentionItems = serviceRows.filter((service) => service.status === 'DOWN')
+  const visibleServices = serviceRows.slice(
+    (servicePage - 1) * pageSize,
+    servicePage * pageSize
+  )
+  const visibleActivities = activities.slice(
+    (activityPage - 1) * pageSize,
+    activityPage * pageSize
+  )
 
   return (
     <div className="dashboard-v3">
@@ -92,7 +111,7 @@ export default function Dashboard() {
           extra={<StatusBadge tone={healthError ? 'danger' : allHealthy ? 'success' : 'warning'}>{healthError ? '读取失败' : `${runningCount}/${serviceRows.length} 在线`}</StatusBadge>}
         >
           {!healthChecked ? <LoadingState rows={5} /> : healthError ? <ErrorState description="无法读取服务健康状态，请确认 system-service 与网关可用。" onRetry={() => void refresh()} /> : <div className="service-list">
-            {serviceRows.map((service) => (
+            {visibleServices.map((service) => (
               <div className="service-row" key={service.name}>
                 <span className={`service-state ${service.status === 'UP' ? 'ok' : 'error'}`} aria-hidden="true" />
                 <div className="service-identity"><strong>{service.name}</strong></div>
@@ -102,19 +121,43 @@ export default function Dashboard() {
                 </StatusBadge>
               </div>
             ))}
+            {serviceRows.length > pageSize && (
+              <div className="dashboard-list-pagination">
+                <Pagination
+                  size="small"
+                  current={servicePage}
+                  pageSize={pageSize}
+                  total={serviceRows.length}
+                  showSizeChanger={false}
+                  onChange={setServicePage}
+                />
+              </div>
+            )}
           </div>}
         </DataSurface>
 
         <DataSurface className="activity-panel" title="最近动态" description="来自平台真实审计事件">
           {activityError ? <ErrorState description="无法读取审计活动，请稍后重试。" onRetry={() => void refresh()} /> : activities.length ? (
             <div className="activity-list">
-              {activities.map((activity) => (
+              {visibleActivities.map((activity) => (
                 <div className="notice-row" key={activity.id}>
                   <Tag color={activity.statusCode < 400 ? 'default' : 'error'}>{activity.method}</Tag>
                   <span title={activity.path}>{activity.username} · {activityLabel(activity.path)}</span>
                   <time>{activity.createdAt ? new Date(activity.createdAt).toLocaleString('zh-CN', { hour12: false }) : '—'}</time>
                 </div>
               ))}
+              {activities.length > pageSize && (
+                <div className="dashboard-list-pagination">
+                  <Pagination
+                    size="small"
+                    current={activityPage}
+                    pageSize={pageSize}
+                    total={activities.length}
+                    showSizeChanger={false}
+                    onChange={setActivityPage}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState compact title="暂无操作动态" description="完成新增、编辑、执行或发布操作后会显示在这里。" />

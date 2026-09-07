@@ -6,6 +6,7 @@ import com.aetheris.metadata.security.AetherisIdentity;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.DataSourceService;
+import com.aetheris.metadata.service.DataSourceHealthService;
 import com.aetheris.metadata.service.QueryHistoryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -35,19 +36,22 @@ public class DataSourceController {
     private final JdbcService jdbcService;
     private final QueryHistoryService queryHistoryService;
     private final MetadataSecurity security;
+    private final DataSourceHealthService healthService;
 
     public DataSourceController(DataSourceService dataSourceService, JdbcService jdbcService,
-                                 QueryHistoryService queryHistoryService, MetadataSecurity security) {
+                                 QueryHistoryService queryHistoryService, MetadataSecurity security,
+                                 DataSourceHealthService healthService) {
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
         this.queryHistoryService = queryHistoryService;
         this.security = security;
+        this.healthService = healthService;
     }
 
     @GetMapping
     public List<DataSource> list(HttpServletRequest request) {
         security.require(request, "datasource", null, "view", Map.of());
-        return dataSourceService.list();
+        return healthService.attach(dataSourceService.list());
     }
 
     @GetMapping("/{id}")
@@ -55,7 +59,7 @@ public class DataSourceController {
         security.require(request, "datasource", id, "view", Map.of());
         DataSource dataSource = dataSourceService.getById(id);
         return dataSource != null
-                ? ResponseEntity.ok(dataSource)
+                ? ResponseEntity.ok(healthService.attach(dataSource))
                 : ResponseEntity.notFound().build();
     }
 
@@ -71,7 +75,7 @@ public class DataSourceController {
     public Map<String, Object> testBeforeSave(HttpServletRequest request, @Valid @RequestBody DataSource dataSource) {
         security.require(request, "datasource", null, "create", Map.of());
         dataSource.setManaged(false);
-        return jdbcService.test(dataSource);
+        return healthService.testBeforeSave(dataSource);
     }
 
     @PutMapping("/{id}")
@@ -94,7 +98,7 @@ public class DataSourceController {
         dataSource.setId(id);
         boolean updated = dataSourceService.updateById(dataSource);
         return updated
-                ? ResponseEntity.ok(dataSourceService.getById(id))
+                ? ResponseEntity.ok(healthService.attach(dataSourceService.getById(id)))
                 : ResponseEntity.notFound().build();
     }
 
@@ -119,7 +123,7 @@ public class DataSourceController {
         if (dataSource == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(jdbcService.test(dataSource));
+        return ResponseEntity.ok(healthService.test(dataSource));
     }
 
     @PostMapping("/{id}/query")

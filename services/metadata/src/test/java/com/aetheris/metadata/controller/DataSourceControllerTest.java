@@ -4,6 +4,7 @@ import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.security.AetherisIdentity;
 import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.DataSourceService;
+import com.aetheris.metadata.service.DataSourceHealthService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.QueryHistoryService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,9 +28,10 @@ class DataSourceControllerTest {
     private final JdbcService jdbcService = mock(JdbcService.class);
     private final QueryHistoryService queryHistoryService = mock(QueryHistoryService.class);
     private final MetadataSecurity security = mock(MetadataSecurity.class);
+    private final DataSourceHealthService healthService = mock(DataSourceHealthService.class);
     private final HttpServletRequest request = mock(HttpServletRequest.class);
     private final DataSourceController controller = new DataSourceController(
-            dataSourceService, jdbcService, queryHistoryService, security);
+            dataSourceService, jdbcService, queryHistoryService, security, healthService);
 
     @Test
     void successfulDirectQueryRecordsHistoryAndDuration() {

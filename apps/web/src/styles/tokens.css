@@ -79,13 +79,28 @@
   --space-7: 24px;
   --space-8: 32px;
 
-  /* Geometry and motion */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
+  /* Page-level vertical rhythm: keep consistent across modules so
+     PageHeader / Toolbar / DataSurface / row stacks align on a single grid. */
+  --page-pad-block: var(--space-6);
+  --page-pad-block-tight: var(--space-4);
+  --page-pad-inline: var(--space-7);
+  --page-pad-inline-tight: var(--space-6);
+  --page-section-gap: var(--space-5);
+  --page-section-gap-tight: var(--space-4);
+  --page-header-gap: var(--space-5);
+  --page-toolbar-min-h: 48px;
+
+  /* Compact sizing for screens that need 100% zoom to fit the whole page. */
   --control-sm: 28px;
   --control-md: 32px;
   --control-lg: 36px;
+  --surface-min-h: 92px;
+  --surface-min-h-tight: 72px;
+  --row-min-h: 40px;
+  --row-min-h-tight: 32px;
+  --input-area-min-h: 160px;
+
+  /* Geometry and motion */
   --shadow-float: 0 10px 28px rgba(0, 0, 0, 0.28);
   --shadow-dialog: 0 18px 48px rgba(0, 0, 0, 0.38);
   --motion-fast: 140ms;

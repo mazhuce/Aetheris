@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Drawer, Input, Select, Table, Tag, Typography } from 'antd'
+import { App, Button, Drawer, Input, Select, Table, Tabs, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { DatabaseOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -13,6 +13,7 @@ import {
   type DataSourceColumn
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 /** 数仓层级元数据：与 WarehouseLayerResolver 的约定一致。 */
 const layerMeta: Record<string, { label: string; color: string }> = {
@@ -40,6 +41,7 @@ export default function TableBrowserPage() {
   const [columns, setColumns] = useState<DataSourceColumn[]>([])
   const [preview, setPreview] = useState<PreviewRow>()
   const [detailLoading, setDetailLoading] = useState(false)
+  const pageSize = useResponsivePageSize()
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -226,7 +228,7 @@ export default function TableBrowserPage() {
           dataSource={filtered}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary"><DatabaseOutlined /> 暂无表元数据。去元数据中心对数据源执行同步，或手工登记表。</Typography.Text> }}
         />
       </DataSurface>
@@ -239,56 +241,69 @@ export default function TableBrowserPage() {
         onClose={() => setActive(undefined)}
       >
         {active && (
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div>
             <Typography.Text type="secondary">
               {active.tableComment || '（无表注释）'} · 数据源 {active.datasourceName}
               {active.schemaName ? ` / ${active.schemaName}` : ''}
             </Typography.Text>
-
-            <DataSurface title="字段结构" label="字段列表">
-              <Table<DataSourceColumn>
-                rowKey={(record) => record.name}
-                size="small"
-                pagination={false}
-                loading={detailLoading}
-                dataSource={columns}
-                locale={{ emptyText: '字段信息不可用或数据源未同步' }}
-                columns={[
-                  { title: '字段名', dataIndex: 'name', key: 'name' },
-                  { title: '类型', dataIndex: 'type', key: 'type', width: 130 },
-                  {
-                    title: '说明',
-                    dataIndex: 'remarks',
-                    key: 'remarks',
-                    ellipsis: true,
-                    render: (value?: string) => value || '—'
-                  }
-                ]}
-              />
-            </DataSurface>
-
-            <DataSurface title="数据预览" description="前 20 行样例" label="样例数据">
-              {preview ? (
-                <Table
-                  rowKey={(_, index) => String(index)}
-                  size="small"
-                  pagination={false}
-                  scroll={{ x: true }}
-                  dataSource={preview.rows.map((row) => ({ key: JSON.stringify(row), row }))}
-                  columns={preview.columns.map((column) => ({
-                    title: column,
-                    key: column,
-                    render: (_: unknown, record: { row: unknown[] }) => {
-                      const index = preview.columns.indexOf(column)
-                      const cell = record.row[index]
-                      return cell === null || cell === undefined ? 'NULL' : String(cell)
-                    }
-                  }))}
-                />
-              ) : (
-                <Typography.Text type="secondary">{detailLoading ? '加载中…' : '预览不可用'}</Typography.Text>
-              )}
-            </DataSurface>
+            <Tabs
+              className="table-detail-tabs"
+              items={[
+                {
+                  key: 'columns',
+                  label: `字段结构${columns.length ? `（${columns.length}）` : ''}`,
+                  children: (
+                    <DataSurface label="字段列表">
+                      <Table<DataSourceColumn>
+                        rowKey={(record) => record.name}
+                        size="small"
+                        pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 个字段` }}
+                        loading={detailLoading}
+                        dataSource={columns}
+                        locale={{ emptyText: '字段信息不可用或数据源未同步' }}
+                        columns={[
+                          { title: '字段名', dataIndex: 'name', key: 'name' },
+                          { title: '类型', dataIndex: 'type', key: 'type', width: 130 },
+                          {
+                            title: '说明',
+                            dataIndex: 'remarks',
+                            key: 'remarks',
+                            ellipsis: true,
+                            render: (value?: string) => value || '—'
+                          }
+                        ]}
+                      />
+                    </DataSurface>
+                  )
+                },
+                {
+                  key: 'preview',
+                  label: `数据预览${preview ? `（${preview.rows.length}）` : ''}`,
+                  children: preview ? (
+                    <DataSurface description="前 20 行样例" label="样例数据">
+                      <Table
+                        rowKey={(_, index) => String(index)}
+                        size="small"
+                        pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
+                        scroll={{ x: true }}
+                        dataSource={preview.rows.map((row) => ({ key: JSON.stringify(row), row }))}
+                        columns={preview.columns.map((column) => ({
+                          title: column,
+                          key: column,
+                          render: (_: unknown, record: { row: unknown[] }) => {
+                            const index = preview.columns.indexOf(column)
+                            const cell = record.row[index]
+                            return cell === null || cell === undefined ? 'NULL' : String(cell)
+                          }
+                        }))}
+                      />
+                    </DataSurface>
+                  ) : (
+                    <Typography.Text type="secondary">{detailLoading ? '加载中…' : '预览不可用'}</Typography.Text>
+                  )
+                }
+              ]}
+            />
           </div>
         )}
       </Drawer>

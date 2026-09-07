@@ -282,7 +282,7 @@ export default function GroupPage() {
               size="small"
               rowKey="userId"
               dataSource={members}
-              pagination={false}
+              pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 位成员` }}
               locale={{ emptyText: '该用户组暂无成员' }}
               columns={[
                 { title: '用户 ID', dataIndex: 'userId', key: 'userId', width: 100 },

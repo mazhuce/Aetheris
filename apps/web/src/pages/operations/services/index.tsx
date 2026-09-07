@@ -7,6 +7,7 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { getServiceHealth, type ServiceStatus } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 /** 自动刷新间隔：健康探测本身是轻量调用，30 秒足够及时。 */
 const REFRESH_INTERVAL_MS = 30_000
@@ -15,6 +16,7 @@ export default function ServiceMonitorPage() {
   const { message } = App.useApp()
   const [services, setServices] = useState<ServiceStatus[]>([])
   const [loading, setLoading] = useState(false)
+  const pageSize = useResponsivePageSize()
 
   const refresh = useCallback(async (silent = false) => {
     setLoading(true)
@@ -99,7 +101,7 @@ export default function ServiceMonitorPage() {
           columns={columns}
           dataSource={services}
           loading={loading}
-          pagination={false}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 个服务` }}
           locale={{ emptyText: <Typography.Text type="secondary">正在探测服务状态…</Typography.Text> }}
         />
       </DataSurface>

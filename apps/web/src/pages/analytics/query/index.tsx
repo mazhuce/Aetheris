@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { App, Button, Input, Select, Space, Table, Tag, Tooltip, Typography } from 'antd'
+import { useMemo, useState } from 'react'
+import { App, Button, Input, Select, Table, Tooltip, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CaretRightOutlined, ClearOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
+import StatusBadge from '@/components/StatusBadge'
+import { useEffect } from 'react'
 import { listDataSources, runAdhocQuery, type AdhocQueryResult, type DataSource } from '@/api/metadata'
 
 const MAX_SQL_LENGTH = 4000
@@ -74,49 +77,72 @@ export default function AdhocQueryPage() {
       <PageHeader
         description="面向分析人员的自助式只读查询：在选定数据源上执行 SELECT / SHOW / DESCRIBE / EXPLAIN，最多返回 100 行。"
         extra={
-          <Space>
-            <Button icon={<ClearOutlined />} onClick={() => { setSql(''); setResult(undefined); setError(undefined) }}>
-              清空
-            </Button>
-            <Button type="primary" icon={<CaretRightOutlined />} loading={running} disabled={disabled} onClick={() => void handleRun()}>
-              执行查询
-            </Button>
-          </Space>
+          <StatusBadge tone={datasourceId ? 'success' : 'neutral'} dot>
+            {datasourceId ? '已就绪 · 只读' : '未选择数据源'}
+          </StatusBadge>
         }
       />
 
-      <DataSurface title="查询编辑器" label="SQL 输入">
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
-          <Space wrap>
-            <span style={{ color: 'var(--text-tertiary)' }}>数据源</span>
+      <DataSurface
+        title="查询编辑器"
+        description="选择数据源并撰写只读 SQL，最多返回 100 行结果"
+        label="SQL 输入"
+      >
+        <PageToolbar
+          label="即席查询操作区"
+          actions={
+            <>
+              <Button
+                icon={<ClearOutlined />}
+                onClick={() => { setSql(''); setResult(undefined); setError(undefined) }}
+              >
+                清空
+              </Button>
+              <Button
+                type="primary"
+                icon={<CaretRightOutlined />}
+                loading={running}
+                disabled={disabled}
+                onClick={() => void handleRun()}
+              >
+                执行查询
+              </Button>
+            </>
+          }
+        >
+          <div className="filter-item filter-item-grow">
+            <span>数据源</span>
             <Select
               showSearch
               optionFilterProp="label"
               placeholder="选择数据源"
-              style={{ minWidth: 280 }}
               value={datasourceId}
               onChange={setDatasourceId}
               options={dataSources.map((source) => ({
                 value: source.id,
                 label: `${source.name} · ${source.type}`
               }))}
+              className="filter-control-full"
             />
-            {datasourceId && (
-              <Tooltip title="只读守卫拒绝一切写入语句，请勿尝试 INSERT/UPDATE/DDL">
-                <Tag color="green">只读</Tag>
-              </Tooltip>
-            )}
-          </Space>
+          </div>
+          {datasourceId && (
+            <Tooltip title="只读守卫拒绝一切写入语句，请勿尝试 INSERT/UPDATE/DDL">
+              <StatusBadge tone="success">只读</StatusBadge>
+            </Tooltip>
+          )}
+        </PageToolbar>
+
+        <div className="sql-editor-area">
           <Input.TextArea
-            rows={8}
+            rows={6}
             value={sql}
             onChange={(event) => setSql(event.target.value)}
             placeholder={'-- 只读查询，例如：\nSELECT * FROM ods_orders LIMIT 100'}
-            style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}
+            className="code-input"
             maxLength={MAX_SQL_LENGTH}
             showCount
           />
-        </Space>
+        </div>
       </DataSurface>
 
       {error && (
@@ -127,15 +153,17 @@ export default function AdhocQueryPage() {
 
       {result && (
         <DataSurface
-          title={`查询结果（${result.rowCount} 行${result.truncated ? '，已截断' : ''}${result.durationMs !== undefined ? `，耗时 ${result.durationMs} ms` : ''}）`}
+          title={`查询结果 · ${result.rowCount} 行${result.truncated ? '（已截断）' : ''}`}
+          description={result.durationMs !== undefined ? `耗时 ${result.durationMs} ms` : undefined}
           label="查询结果"
+          className="sql-result-surface"
         >
           <Table<Record<string, unknown>>
             rowKey={(_, index) => String(index)}
             columns={columns}
             dataSource={dataSource}
             scroll={{ x: 'max-content' }}
-            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (total) => `共 ${total} 行` }}
+            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
             locale={{ emptyText: '查询没有返回数据' }}
           />
         </DataSurface>

@@ -187,7 +187,7 @@ export default function WorkflowPage() {
   ]
 
   return (
-    <>
+    <div className="workflow-list-page">
       <PageHeader
         description="定义数据加工任务并按计划周期调度执行；同一任务在同一业务日期仅保留一个实例，重跑将覆盖目标分区数据。"
         extra={
@@ -273,6 +273,6 @@ export default function WorkflowPage() {
         onClose={() => setDetailId(null)}
         onChanged={() => void refresh()}
       />
-    </>
+    </div>
   )
 }

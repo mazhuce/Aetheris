@@ -5,103 +5,159 @@
 <h1 align="center">Aetheris</h1>
 
 <p align="center">
-  面向数据团队的一体化数据中台，将数据接入、开发、建模、治理、服务、分析与智能问答整合到统一工作空间。
+  一个用 AI 辅助构建的数据平台：从数据接入、数仓建模、语义层到 NL2SQL 智能问数的完整闭环
 </p>
 
 <p align="center">
   <img alt="Java 21" src="https://img.shields.io/badge/Java-21-111111?style=flat-square" />
   <img alt="Spring Boot 3.4.7" src="https://img.shields.io/badge/Spring_Boot-3.4.7-111111?style=flat-square" />
-  <img alt="React" src="https://img.shields.io/badge/React-TypeScript-111111?style=flat-square" />
+  <img alt="Spring AI 1.0.0" src="https://img.shields.io/badge/Spring_AI-1.0.0-111111?style=flat-square" />
+  <img alt="React 18" src="https://img.shields.io/badge/React-18-111111?style=flat-square" />
   <img alt="PostgreSQL 16" src="https://img.shields.io/badge/PostgreSQL-16-111111?style=flat-square" />
-  <img alt="Docker Compose" src="https://img.shields.io/badge/Deployment-Docker_Compose-111111?style=flat-square" />
+  <img alt="Docker Compose" src="https://img.shields.io/badge/Docker_Compose-ready-111111?style=flat-square" />
 </p>
 
-## 项目概述
+---
 
-Aetheris 采用前后端分离与领域微服务架构。所有业务 API 通过网关统一鉴权，数据源凭据与 JDBC 驱动集中保留在元数据服务中，其他服务通过受控内部接口完成查询与执行。
+## 这是什么
 
-当前版本已经形成从数据连接、关系型数据批量接入、质量检测、SQL 加工与任务调度，到业务域/逻辑模型/维度/指标、即席查询、自然语言数据问答和可视化看板发布的核心闭环。语义资产具有校验、试算、不可变快照、线上/草稿并行、回退与下线生命周期；失败任务会进入用户待办，尚未交付的高级治理与服务开放能力不会出现在产品导航中。
+Aetheris 是一个**个人主导、AI 辅助**构建的数据平台项目。它的目标不是"又一个数据中台"，而是验证一件事：**一个工程师能否独立设计并实现一套企业级数据系统的核心闭环**。
 
-## 核心能力
+包含 10 个 Spring Boot 微服务 + 1 个 React 控制台，覆盖数据接入、五层数仓（ODS / DWD / DWS / ADS / DIM）、元数据与血缘、SQL 任务调度、数据质量、语义层与指标生命周期、可视化看板、NL2SQL 智能问数、统一权限模型。
 
-| 领域 | 能力 |
-| --- | --- |
-| 数据接入 | 数据源连接管理、库表浏览、跨数据源批量写入、Quartz 调度与执行记录 |
-| 数据开发 | SQL 加工任务、Quartz 调度、依赖管理、运行实例与重跑 |
-| 数据建模 | ODS / DWD / DWS / ADS / DIM 数仓分层、业务域、逻辑模型、语义维度、指标口径与发布版本 |
-| 数据治理 | 元数据目录、字段检索、表级血缘、质量规则执行与结果留痕 |
-| 数据服务 | 统一 API 入口、JWT 鉴权、角色权限与审计边界 |
-| 数据分析 | 安全即席查询、SQL/语义指标数据集、拖拽式看板、实时预览与版本发布 |
-| 智能中心 | 已发布指标优先、元数据检索、NL2SQL、只读查询、工具调用与会话持久化 |
-| 系统运维 | 服务探活、任务监控、失败待办、账号管理、系统配置与审计日志 |
+**它不是 demo**：所有功能建立在真实数据、真实执行、真实测试之上。数仓底座是 **130 万订单 / 320 万明细 / 180 个分区**的电商域数据集；ODS 层刻意注入 **11 类脏数据**（空值、重复行、非法枚举、负价格、逻辑删除未过滤等），DWD 逐条清洗——这些脏数据是质量规则与 DataAgent 的真实作用对象，不是装饰。
 
-### 可视化看板
+项目文档本身就是作品的一部分：[架构决策记录](docs/architecture.md)、[产品成熟度路线图](docs/roadmap.md)、[权限模型](docs/permission-model.md)、[数仓分层与测试数据设计](docs/warehouse-layers.md)、[迭代总结](docs/SUMMARY-2026-08-30.md)。
 
-- 将中台加工结果封装为可复用数据集，图表不直接接触数据源凭据。
-- 支持指标卡、折线图、柱状图、饼图、表格和文本组件。
-- 支持拖拽、缩放、复制、删除、字段映射和组件级刷新周期。
-- 内置空白画布、经营概览、数据质量驾驶舱和实时运营监控模板。
-- 支持独立预览页、编辑实时同步、草稿保存和发布版本。
+## 为什么值得看
 
-### 数据智能体
+如果你只挑三个点看，看这三个。
 
-- 优先检索并查询企业已发布指标，使智能问数与看板使用同一口径。
-- 根据自然语言问题自主检索元数据并选择相关表。
-- 生成并执行只读 SQL，基于真实查询结果组织回答。
-- 数据访问统一经过元数据服务的 SQL 安全检查和连接边界。
+### 1. NL2SQL 的三层防护：让 LLM 查数据库不出事
 
-产品成熟度、当前边界与分阶段计划见 [产品能力路线图](docs/roadmap.md)。
+市面上的 ChatBI 大多死在两个地方：模型乱猜表名、生成的 SQL 不安全。Aetheris 的 DataAgent 把这件事当成**安全工程**来做，不是接个 LLM API 就上线：
 
-## 系统架构
+| 层 | 机制 | 作用 |
+| --- | --- | --- |
+| 语句守卫 | `validateReadOnlySql` 白名单只放行 `SELECT / SHOW / DESCRIBE / EXPLAIN`，危险函数黑名单，拒绝多语句 | agent 生成的 SQL 与人工输入受同一套约束，未放宽任何限制 |
+| 账号隔离 | agent 使用只读数据库账号，仓库目录对其他用户为 `r-x` | 即便守卫被绕过也无法写入 |
+| 网络隔离 | 工具端点走 `/internal/**`，网关只路由 `/api/**` | 外部直接调用返回 404（实测验证） |
+
+工具链是**语义层指标优先、元数据检索兜底**：模型先调 `searchMetrics` 查企业已发布指标，没有匹配再回退到 `searchTables → describeTable → query` 三段式。系统提示固化四条纪律——必须先检索再看结构再查询、统计优先用 ADS/DWS、查询必须带 dt 分区条件、以字段注释为口径依据。实测"2026 年 8 月销售额最高的品类"，agent 自主选择 ADS 层、带上 `month_key` 过滤，回答正确并说明口径来源。
+
+详见 [docs/architecture.md 的 DataAgent 章节](docs/architecture.md)。
+
+### 2. 语义层不是 ORM，是指标资产生命周期管理
+
+Aetheris 的语义层实现了 OneData 方法论的核心：业务域 → 逻辑模型 → 语义维度 → 指标，全部绑定真实表与字段。关键在于**发布生命周期**：
+
+```text
+首次草稿 ──校验/试算──▶ 发布 v1 ──创建新版本──▶ v1 在线 + v2 草稿
+   │                         │                         ├──发布──▶ v2 在线
+   └──可删除                 └──可下线                 └──放弃──▶ 恢复 v1
+```
+
+- 编码是稳定身份，创建后不可修改
+- 每次发布生成**不可变快照**；线上版本和下一版草稿并行，编辑草稿不会中断现有消费者
+- 指标执行器只编译受控的 `SUM / COUNT / COUNT_DISTINCT / AVG / MIN / MAX`，标识符必须来自已采集的真实表结构
+- 消费者（看板、DataAgent、外部 API）只提交指标编码 + 维度 + 时间粒度 + 日期范围，不提交任意 SQL
+
+这套设计解决的是"开始编辑 v2 就让 v1 下线"的常见故障，以及"每个人都能写 SQL 导致口径爆炸"的治理问题。
+
+### 3. 企业级权限模型：RBAC + 资源授权 + 数据范围 + 权限版本
+
+不是简单的 admin / viewer 两级：
+
+- **资源层级**：组织 → 项目空间 → 业务域 → 表 / 字段 / 指标 / 数据集 / 看板 / 数据服务
+- **动作分离**：`view / query / create / update / delete / submit_review / approve / publish / grant / execute / export / manage`，读权限与写权限分离，写动作永不默认放行
+- **数据范围（DataScope）**：授权可叠加 `kind=domain/table/field/metric` 的取值范围，实现"有表权限但无字段权限时字段被拒绝"的细粒度控制
+- **权限版本**：每次授权变更递增 `permission_version`，业务服务不做长缓存，实时询问决策引擎，避免旧权限长期生效
+- **失败模式 fail-closed**：判定服务不可用一律拒绝
+
+详见 [docs/permission-model.md](docs/permission-model.md)。
+
+## 核心架构
 
 ```mermaid
 flowchart LR
     U[Browser] --> W[React Web]
     W --> G[API Gateway]
     G --> A[Auth]
-    G --> S[System]
     G --> M[Metadata]
-    G --> Q[Quality]
-    G --> I[Ingestion]
-    G --> V[Governance]
     G --> F[Workflow]
     G --> AI[AI Agent]
-    G --> BI[Serving / Analytics]
+    G --> BI[Serving]
+    G --> Q[Quality / Ingestion / Governance / System]
 
-    A & S & M & Q & I & V & F & AI & BI --> P[(PostgreSQL)]
-    M --> D[(External Data Sources)]
+    A & M & F & AI & BI & Q --> P[(PostgreSQL)]
+    M --> D[(External Sources<br/>Hive / Spark / MySQL / PG)]
     F -. internal API .-> M
     AI -. internal API .-> M
     BI -. internal API .-> M
 ```
 
+**关键决策：SQL 执行能力下沉到 metadata 服务，而不是分散在 workflow / ai-agent / serving**
+
+metadata 已持有数据源凭据、JDBC 驱动（含 hive-jdbc 的 12 处 exclusion）、`buildUrl` 的协议校验和危险连接参数黑名单。把这些复制到其他服务不只是重复代码，而是**复制一份安全边界**——两边任一处遗漏就是缺口。所有 SQL 执行走 `/internal/**` 路径，仅在 Compose 内部网络可达。
+
+两条 SQL 路径的守卫：
+
+| 路径 | 守卫 | 放行 | 用途 |
+| --- | --- | --- | --- |
+| 只读查询 | `validateReadOnlySql` | `SELECT / SHOW / DESCRIBE / EXPLAIN` | 数据源浏览、AI 助手、即席查询 |
+| 写入执行 | `SqlWriteGuard` | `INSERT INTO/OVERWRITE`、`CREATE ... AS SELECT` | 数仓加工任务 |
+
+两条路径都拒绝多语句、`DROP / TRUNCATE / ALTER / GRANT` 与可读服务器文件的函数。写入白名单刻意不含 `DROP`：`INSERT OVERWRITE` 覆盖分区已能满足重跑，不需要先删表。
+
 ### 服务清单
 
-| 服务 | 内部端口 | 职责 |
+| 服务 | 端口 | 职责 |
 | --- | ---: | --- |
-| `gateway` | 8080 | API 路由、JWT 校验、角色门禁与请求头注入 |
-| `system-service` | 8081 | 平台配置、系统信息与基础运维能力 |
-| `metadata-service` | 8082 | 数据源、元数据、数仓地图、血缘与受控 SQL 执行 |
-| `quality-service` | 8083 | 数据质量规则、真实查询检查与结果留痕 |
-| `ingestion-service` | 8084 | 跨关系型数据源批量接入、事务写入与运行记录 |
-| `governance-service` | 8085 | 数据治理策略管理 |
-| `ai-agent` | 8086 | 数据智能体、工具调用与会话管理 |
-| `auth-service` | 8087 | 账号、登录、密码管理与 JWT 签发 |
-| `workflow-service` | 8088 | SQL 任务、Quartz 调度、依赖和运行实例 |
-| `serving-service` | 8089 | 数据集、查询缓存、看板模板、草稿与发布版本 |
-| `web` | 80 | React 管理控制台，由宿主机 `5173` 端口访问 |
+| `gateway` | 8080 | API 路由、JWT 校验、角色门禁、请求头注入、限流 |
+| `auth-service` | 8087 | 账号、RBAC、资源授权、数据范围、权限版本、JWT 签发 |
+| `metadata-service` | 8082 | 数据源、元数据、数仓地图、血缘、SQL 双守卫、受控执行 |
+| `workflow-service` | 8088 | SQL 任务、Quartz JDBC JobStore 集群调度、依赖拓扑、幂等重跑 |
+| `ai-agent` | 8086 | DataAgent 工具调用循环、会话管理、Spring AI + DeepSeek |
+| `serving-service` | 8089 | 数据集、看板、查询缓存、语义指标消费 |
+| `quality-service` | 8083 | 质量规则（非空/范围/枚举/重复/自定义 SQL）、结果留痕 |
+| `ingestion-service` | 8084 | 跨数据源批量接入、事务写入、并发互斥 |
+| `governance-service` | 8085 | 治理策略、分类分级、问题记录 |
+| `system-service` | 8081 | 平台配置、审计日志、失败待办 |
+| `web` | 5173 | React 18 + Ant Design 5 控制台 |
 
-业务服务默认仅开放在 Compose 内部网络，对外访问统一经过网关。`/internal/**` 接口不会由网关转发。
+业务服务默认仅开放在 Compose 内部网络，对外统一经过网关。
+
+## 工程纪律
+
+这个项目用做产品的标准做个人项目。
+
+**成熟度分级**（[docs/roadmap.md](docs/roadmap.md)）：每个模块标记为 规划 / 可用 / 完整 / 企业级，"页面可点击"不等于"能力完成"。新能力至少要同时满足：真实数据、后端校验、角色边界、失败反馈、数据库迁移、自动化回归和 Docker 升级验证。
+
+**刻意注入的脏数据**（[docs/warehouse-layers.md](docs/warehouse-layers.md)）：ODS 层保留 11 类真实业务中会遇到的数据质量问题，DWD 逐条清洗。这是质量规则与 DataAgent 的真实训练场。
+
+**真实的踩坑记录**（[CHANGELOG.md](CHANGELOG.md)，10 轮迭代）：
+
+- Spark driver OOM：`local[N]` 下 driver 兼作 executor，1g 堆写百万订单即爆 → 默认 3g
+- 动态分区写耗尽堆：单个 task 同时持有全部分区的 Parquet writer → 写分区语句末尾统一补 `DISTRIBUTE BY dt`
+- Quartz 调度 misfire 策略选 `DoNothing`：停机期间错过的触发不补跑，避免用错误的业务日期执行
+- JSqlParser 4.9 解析不了 Hive 的 `INSERT OVERWRITE TABLE ... PARTITION` → 自研 Hive 方言提取器
+- SQL 守卫顺序缺陷：以注释开头的真实加工脚本被误拒 → 先剥离注释与字符串字面量再检查
+
+**版本选择依据**：升级前查询 Maven Central 实际发布的构件（而非二手资讯），确认 Spring AI 1.0.0 依赖 `spring-boot-starter 3.4.5`，因此 Boot 选 3.4.7 对齐。网络上"Spring AI 2.0 GA / Spring Boot 4.x 已发布"的说法与 Maven Central 事实不符。
+
+**测试覆盖**：`ai-agent` 20 个单测（controller + LLM 适配器 + 限流器），`auth` 18 个，`workflow` 覆盖任务执行幂等、并发拒绝、上游跳过、重试、占位符替换。CI 包含跨服务冒烟链路：真实验证登录、批量接入、工作流写入、质量检查、分析查询和 viewer 越权拦截。
+
+**减法的自觉**：不引入 Nacos（执行引擎未稳定时避免扩大运维复杂度）、不引入 pgvector（表数少时关键词够用，且 Alpine→Debian 的 collation 迁移成本）、不自动生成跨表 JOIN（跨表关系用于建模和校验，在已知边界里坦白写）。
 
 ## 技术栈
 
 | 层次 | 技术 |
 | --- | --- |
-| 前端 | React、TypeScript、Vite、Ant Design、ECharts、React Grid Layout、TanStack Query |
-| 后端 | Java 21、Spring Boot 3.4.7、Spring Cloud Gateway、MyBatis-Plus、JdbcTemplate |
-| 调度与智能 | Quartz JDBC JobStore、Spring AI、DeepSeek API |
+| 前端 | React 18、TypeScript、Vite、Ant Design 5、ECharts、React Grid Layout、TanStack Query |
+| 后端 | Java 21、Spring Boot 3.4.7、Spring Cloud Gateway 2024.0.1、MyBatis-Plus 3.5.7 |
+| 调度与智能 | Quartz JDBC JobStore（集群模式）、Spring AI 1.0.0、DeepSeek API |
 | 数据与迁移 | PostgreSQL 16、Flyway、Caffeine Cache |
-| 工程化 | Maven 多模块、npm、Docker Compose、Nginx |
+| 工程化 | Maven 多模块、Docker Compose、Nginx、GitHub Actions |
 
 ## 快速开始
 
@@ -124,15 +180,15 @@ cd Aetheris
 cp .env.example .env
 ```
 
-首次启动前至少应修改以下配置：
+首次启动前至少修改：
 
 ```dotenv
 JWT_SECRET=请替换为足够长的随机密钥
 INITIAL_ADMIN_PASSWORD=请设置初始管理员密码
-AETHERIS_DATASOURCE_MASTER_KEY=请填入 `openssl rand -base64 32` 生成的值
+AETHERIS_DATASOURCE_MASTER_KEY=请填入 openssl rand -base64 32 生成的值
 ```
 
-如需启用数据智能体，还应配置 `DEEPSEEK_API_KEY`。`.env` 已被 Git 忽略，不应提交真实密钥和口令。
+启用 DataAgent 还需配置 `DEEPSEEK_API_KEY`。
 
 ### 3. 启动完整环境
 
@@ -141,76 +197,37 @@ docker compose up --build -d
 docker compose ps
 ```
 
-启动完成后访问：
-
 | 地址 | 用途 |
 | --- | --- |
-| `http://localhost:5173` | Aetheris Web 控制台 |
+| `http://localhost:5173` | Web 控制台 |
 | `http://localhost:8080` | API Gateway |
-| `localhost:5433` | PostgreSQL 宿主机映射端口 |
+| `localhost:5433` | PostgreSQL 宿主机映射 |
 
-检查 Web 服务：
+### 4. 启动数仓测试环境（可选）
 
 ```bash
-curl http://localhost:5173/healthz
+bash scripts/wsl-hive-test-server.sh start     # WSL Spark Thrift Server
+bash scripts/gen-warehouse-data.sh              # 建库 + 造数 + 逐层加工 + 校验
+pwsh ./scripts/windows-wsl-hive-relay.ps1 start # 端口转发（Docker 访问 WSL）
 ```
 
-所有 Java 容器也通过各自的 `/actuator/health` 提供容器级健康探针；网关会等待依赖服务健康后再启动。
+然后在数据源管理页新建 `WSL · Spark Thrift` 数据源，采集元数据，即可看到五层数仓、17 条血缘、完整的语义层和 DataAgent 链路。
 
 ## 本地开发
 
-### 前端热更新
-
-后端继续运行在 Docker Compose 中，前端使用容器内 Vite 开发服务器：
-
 ```bash
+# 前端热更新（后端继续在 Docker 中）
 make dev
-```
 
-没有 `make` 时可直接运行：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build --no-deps web
-```
-
-切回 Nginx 生产构建：
-
-```bash
-docker compose up -d --build --no-deps web
-```
-
-### 本地运行
-
-```bash
-# 数据库
-docker compose up -d postgres
-
-# 后端示例
+# 本地运行单个后端服务
 mvn -f pom.xml -s scripts/maven-mirror-settings.xml -pl services/metadata spring-boot:run
 
-# 前端
-cd apps/web
-npm install
-npm run dev
-```
-
-### 构建与检查
-
-```bash
-# 全部后端模块
+# 全部测试
 mvn -f pom.xml -s scripts/maven-mirror-settings.xml test
+cd apps/web && npm test && npm run type-check && npm run build
 
-# 前端测试、类型检查与生产构建
-cd apps/web
-npm test
-npm run type-check
-npm run build
-
-# 已启动完整环境后，验证认证、接入、工作流、质量与分析的真实跨服务链路
+# 跨服务冒烟
 INITIAL_ADMIN_PASSWORD=... POSTGRES_PASSWORD=... make smoke
-
-# 构建全部镜像
-docker compose build
 ```
 
 ## 目录结构
@@ -218,60 +235,51 @@ docker compose build
 ```text
 Aetheris/
 ├── apps/
-│   ├── gateway/              # API 网关
+│   ├── gateway/              # API 网关（Spring Cloud Gateway）
 │   └── web/                  # React 控制台
 ├── services/
-│   ├── auth/                 # 认证与账号
-│   ├── system/               # 系统服务
-│   ├── metadata/             # 数据源与元数据
+│   ├── auth/                 # 认证、RBAC、资源授权
+│   ├── system/               # 系统配置、审计、待办
+│   ├── metadata/             # 数据源、元数据、血缘、SQL 守卫、受控执行
 │   ├── quality/              # 数据质量
 │   ├── ingestion/            # 数据接入
 │   ├── governance/           # 数据治理
-│   ├── workflow/             # 任务编排
-│   ├── ai-agent/             # 数据智能体
-│   └── serving/              # 数据集与可视化看板
-├── database/                 # 数据库脚本
-├── infrastructure/           # 基础设施配置
-├── packages/                 # 共享契约与公共代码
-├── scripts/                  # 开发、测试和环境脚本
-├── docs/                     # 架构与使用文档
+│   ├── workflow/             # 任务编排、Quartz 调度
+│   ├── ai-agent/             # DataAgent
+│   └── serving/              # 数据集、看板、指标消费
+├── scripts/                  # 数仓造数、WSL 环境、构建脚本
+├── docs/                     # 架构、权限、数仓、迭代文档
 ├── docker-compose.yml        # 生产式本地编排
-├── docker-compose.dev.yml    # 前端热更新覆盖配置
 └── pom.xml                   # Maven 多模块入口
 ```
 
-## 账号与安全
-
-- `admin`：管理平台资源、数据集、看板和登录账号。
-- `viewer`：查看平台资源并使用查询、分析和智能问答能力。
-- 权限变化后需要重新登录，以获取包含最新角色声明的 JWT。
-- 数据源凭据仅由元数据服务持有，不向前端或其他业务服务返回。
-- 数据源密码使用 AES-256-GCM 加密后落库；`AETHERIS_DATASOURCE_MASTER_KEY` 只从环境变量读取，首次升级会自动重加密历史明文密码。
-- 网关对 `/api/**` 写请求按用户和来源 IP 做 Caffeine 限流，超限返回 `429`；可用 `AETHERIS_RATE_LIMIT_CAPACITY` 与 `AETHERIS_RATE_LIMIT_WINDOW_SECONDS` 调整。
-- JWT 带唯一 `jti`；调用 `POST /api/auth/logout` 后，网关会在剩余有效期内拒绝该令牌。黑名单为单网关实例内存缓存，多实例部署应替换为共享 Redis 存储。
-- 数据查询执行只读限制与 SQL 安全检查；生产环境必须使用独立数据库账号和随机密钥。
-- 所有数据库结构变化应通过服务内的 Flyway 迁移管理，避免手工修改生产结构。
-
-## 数仓测试环境
-
-项目提供基于 WSL 的 Spark Thrift Server、Hive Metastore 与 HDFS 测试环境，以及包含业务数据和典型质量问题的造数脚本：
-
-```bash
-bash scripts/wsl-hive-test-server.sh start
-bash scripts/gen-warehouse-data.sh
-pwsh ./scripts/windows-wsl-hive-relay.ps1 start
-```
-
-测试数据覆盖五层数仓、中文元数据注释和多类脏数据，可用于验证采集、治理、调度与 NL2SQL 链路。
-
 ## 文档
 
-- [架构设计](docs/architecture.md)
-- [数仓分层与测试数据](docs/warehouse-layers.md)
-- [数据源连通性](docs/datasource-connectivity.md)
-- [前端设计规范](docs/frontend-style.md)
-- [Git 工作流](docs/git-workflow.md)
-- [变更记录](CHANGELOG.md)
+**核心设计**：
+
+- [架构设计](docs/architecture.md) — 关键决策、SQL 双守卫、DataAgent 三层防护、AI 能力分层
+- [权限模型](docs/permission-model.md) — RBAC + 资源授权 + 数据范围 + 权限版本
+- [产品能力路线图](docs/roadmap.md) — 成熟度定义、能力矩阵、已知边界
+
+**数据底座**：
+
+- [数仓分层与测试数据](docs/warehouse-layers.md) — 五层设计、11 类脏数据、口径定义
+- [数据源连通性](docs/datasource-connectivity.md) — WSL / Docker / Hive 网络拓扑
+
+**迭代记录**：
+
+- [迭代总结 2026-08-30](docs/SUMMARY-2026-08-30.md) — Phase 0-3 完整复盘
+- [CHANGELOG](CHANGELOG.md) — 10 轮迭代的踩坑与修复
+
+## 关于作者
+
+个人项目，用 Trae CN + Claude / DeepSeek 辅助开发。目标是用一套完整的作品证明：**独立工程师 + AI 协作，可以交付过去需要一个小团队才能完成的系统**。
+
+如果你对这个项目或数据中台 / NL2SQL / 语义层方向有兴趣，欢迎交流。
+
+## License
+
+待定。当前代码仅用于技术展示与学习交流。
 
 ---
 

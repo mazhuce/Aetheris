@@ -6,7 +6,8 @@ HIVE_HOME="${HIVE_HOME:-/usr/local/hive}"
 JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-8-openjdk-amd64}"
 SPARK_HOME="${SPARK_HOME:-/usr/local/spark-3.5.6-bin-hadoop3}"
 ENGINE="${AETHERIS_HIVE_ENGINE:-spark}"
-RUNTIME_DIR="${AETHERIS_HIVE_RUNTIME_DIR:-/tmp/aetheris-hive}"
+# Keep diagnostic evidence across WSL restarts. This is not an autostart policy.
+RUNTIME_DIR="${AETHERIS_HIVE_RUNTIME_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/aetheris-hive}"
 
 # Spark Thrift Server 资源配置。local[N] 模式下 driver 同时充当 executor，
 # 造数（百万级订单 + 多分区 Parquet 写入）会把 1g 堆打爆，因此默认给 3g。
@@ -22,6 +23,43 @@ HIVESERVER2_PID_FILE="$RUNTIME_DIR/hiveserver2.pid"
 NAMENODE_PID_FILE="$RUNTIME_DIR/namenode.pid"
 DATANODE_PID_FILE="$RUNTIME_DIR/datanode.pid"
 
+# Recovery must never silently create a new Derby catalog or format HDFS.
+# Parse the last occurrence, matching Hadoop Configuration's override semantics.
+preflight() {
+  command -v python3 >/dev/null || { echo "python3 is required for safe recovery checks" >&2; return 1; }
+  python3 - "$HIVE_HOME/conf/hive-site.xml" "$HADOOP_HOME/etc/hadoop/hdfs-site.xml" <<'PY'
+import pathlib
+import sys
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse, unquote
+
+def properties(path):
+    return {p.findtext('name'): (p.findtext('value') or '').strip()
+            for p in ET.parse(path).getroot().findall('property')}
+
+hive, hdfs = map(properties, sys.argv[1:])
+url = hive.get('javax.jdo.option.ConnectionURL', '')
+if not url:
+    sys.exit('Recovery refused: explicit Metastore ConnectionURL is required')
+if url.startswith('jdbc:derby:'):
+    location = next((s.split('=', 1)[1] for s in url.split(';')
+                     if s.startswith('databaseName=')), url[len('jdbc:derby:'):].split(';')[0])
+    path = pathlib.Path(location)
+    if not path.is_absolute() or not (path / 'service.properties').is_file() or not (path / 'seg0').is_dir():
+        sys.exit('Recovery refused: existing absolute Derby catalog not found; do not initialize a replacement')
+for key in ('dfs.namenode.name.dir', 'dfs.datanode.data.dir'):
+    entries = hdfs.get(key, '').split(',')
+    if not entries or not entries[0]:
+        sys.exit('Recovery refused: explicit HDFS storage directory is required')
+    for entry in entries:
+        parsed = urlparse(entry.strip())
+        path = pathlib.Path(unquote(parsed.path))
+        if parsed.scheme not in ('', 'file') or not path.is_absolute() or not (path / 'current' / 'VERSION').is_file():
+            sys.exit('Recovery refused: existing HDFS VERSION missing; no formatting is performed')
+print('Existing Metastore and HDFS storage verified; no initialization performed')
+PY
+}
+
 prepare() {
   mkdir -p "$HADOOP_CONF_DIR"
   cp "$HADOOP_HOME"/etc/hadoop/*.xml "$HADOOP_CONF_DIR"/
@@ -32,7 +70,19 @@ prepare() {
 
 is_running() {
   local pid_file="$1"
-  [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null
+  local service_pid command_line expected
+  [[ -f "$pid_file" ]] || return 1
+  service_pid="$(cat "$pid_file")"
+  [[ "$service_pid" =~ ^[0-9]+$ ]] && [[ -r "/proc/$service_pid/cmdline" ]] || return 1
+  command_line="$(tr '\0' ' ' < "/proc/$service_pid/cmdline")"
+  case "${pid_file##*/}" in
+    namenode.pid) expected='org.apache.hadoop.hdfs.server.namenode.NameNode' ;;
+    datanode.pid) expected='org.apache.hadoop.hdfs.server.datanode.DataNode' ;;
+    metastore.pid) expected='org.apache.hadoop.hive.metastore.HiveMetaStore' ;;
+    hiveserver2.pid) expected='org.apache.hive.service.server.HiveServer2' ;;
+    *) return 1 ;;
+  esac
+  [[ "$command_line" == *"$expected"* ]] && kill -0 "$service_pid" 2>/dev/null
 }
 
 wait_for_port() {
@@ -80,7 +130,7 @@ start_service() {
     HIVE_HOME="$HIVE_HOME" \
     HADOOP_CONF_DIR="$HADOOP_CONF_DIR" \
     PATH="$JAVA_HOME/bin:$HADOOP_HOME/bin:$HIVE_HOME/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    "$@" > "$log_file" 2>&1 < /dev/null &
+    "$@" >> "$log_file" 2>&1 < /dev/null &
   echo $! > "$pid_file"
 }
 
@@ -98,7 +148,7 @@ start_hdfs_service() {
     HADOOP_HOME="$HADOOP_HOME" \
     HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop" \
     PATH="/usr/lib/jvm/java-11-openjdk-amd64/bin:$HADOOP_HOME/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-    "$HADOOP_HOME/bin/hdfs" "$role" > "$log_file" 2>&1 < /dev/null &
+    "$HADOOP_HOME/bin/hdfs" "$role" >> "$log_file" 2>&1 < /dev/null &
   echo $! > "$pid_file"
 }
 
@@ -112,13 +162,14 @@ start_hdfs() {
     start_hdfs_service "HDFS NameNode" "$NAMENODE_PID_FILE" "$RUNTIME_DIR/namenode.log" namenode
     wait_for_port 9000 || { tail -80 "$RUNTIME_DIR/namenode.log"; exit 1; }
   fi
-  if ! wait_for_port 9864; then
+  if ! port_is_open 9864; then
     start_hdfs_service "HDFS DataNode" "$DATANODE_PID_FILE" "$RUNTIME_DIR/datanode.log" datanode
     wait_for_port 9864 || { tail -80 "$RUNTIME_DIR/datanode.log"; exit 1; }
   fi
 }
 
 start() {
+  preflight
   prepare
   start_hdfs
   start_service "Hive Metastore" "$METASTORE_PID_FILE" "$RUNTIME_DIR/metastore.log" \
@@ -141,7 +192,8 @@ start() {
       --conf spark.sql.parquet.compression.codec=snappy \
       --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
       --hiveconf hive.server2.thrift.port=10000 \
-      --hiveconf hive.metastore.uris=thrift://127.0.0.1:9083
+      --hiveconf hive.metastore.uris=thrift://127.0.0.1:9083 \
+      --hiveconf hive.server2.enable.doAs=false
   else
     start_service "HiveServer2" "$HIVESERVER2_PID_FILE" "$RUNTIME_DIR/hiveserver2.log" \
       "$HIVE_HOME/bin/hiveserver2" \
@@ -186,7 +238,24 @@ stop() {
 }
 
 status() {
+  echo "Runtime logs: $RUNTIME_DIR"
   ss -lntp 2>/dev/null | grep -E ':(9000|9083|9864|9870|10000)' || true
+}
+
+health() {
+  local failed=0
+  local dependency port
+  for dependency in 'HDFS_NameNode:9000' 'HDFS_DataNode:9864' 'Hive_Metastore:9083' 'Spark_SQL_Thrift:10000'; do
+    port="${dependency##*:}"
+    if port_is_open "$port"; then
+      echo "${dependency%:*}: reachable ($port)"
+    else
+      echo "${dependency%:*}: unavailable ($port)"
+      failed=1
+    fi
+  done
+  echo 'TCP checks only; run the platform Spark smoke test to verify JDBC, identity and SQL.'
+  return "$failed"
 }
 
 case "${1:-start}" in
@@ -194,5 +263,7 @@ case "${1:-start}" in
   stop) stop ;;
   restart) stop; start ;;
   status) status ;;
-  *) echo "Usage: $0 {start|stop|restart|status}"; exit 2 ;;
+  health) health ;;
+  preflight) preflight ;;
+  *) echo "Usage: $0 {start|stop|restart|status|health|preflight}"; exit 2 ;;
 esac

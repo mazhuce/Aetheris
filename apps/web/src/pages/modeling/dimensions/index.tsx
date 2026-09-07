@@ -138,7 +138,7 @@ export default function DimensionPage() {
       </Form>
     </Modal>
     <Modal title={`版本记录 · ${versions?.title || ''}`} open={Boolean(versions)} onCancel={() => setVersions(null)} footer={null} width={720}>
-      <Table rowKey="id" size="small" dataSource={versions?.rows || []} pagination={false} columns={[{ title: '版本', dataIndex: 'versionNo', render: (value) => `v${value}` }, { title: '发布人', dataIndex: 'publishedBy' }, { title: '发布时间', dataIndex: 'publishedAt', render: formatDateTime }]} />
+      <Table rowKey="id" size="small" dataSource={versions?.rows || []} pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 个版本` }} columns={[{ title: '版本', dataIndex: 'versionNo', render: (value) => `v${value}` }, { title: '发布人', dataIndex: 'publishedBy' }, { title: '发布时间', dataIndex: 'publishedAt', render: formatDateTime }]} />
     </Modal>
   </>
 }

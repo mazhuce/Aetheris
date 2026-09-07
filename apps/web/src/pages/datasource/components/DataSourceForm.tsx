@@ -162,7 +162,7 @@ export default function DataSourceForm({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="status" label="接入状态">
+            <Form.Item name="status" label="配置状态" extra="启用只表示配置状态；保存后请在列表测试连接以确认健康状态。">
               <Select options={[{ value: 'active', label: '启用' }, { value: 'inactive', label: '停用' }]} />
             </Form.Item>
           </Col>

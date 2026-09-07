@@ -70,6 +70,10 @@ junit/
 # Claude Code：本地个人配置不提交，团队共享配置（settings.json）正常跟踪
 .claude/settings.local.json
 
+# WorkBuddy：本地 AI 工作数据与临时构建上下文，不提交
+.workbuddy/
+.build-ctx/
+
 # Hive / Derby 本地运行产物（在仓库根执行 beeline 或 Hive 客户端时生成）
 metastore_db/
 derby.log

@@ -6,6 +6,7 @@
 | --- | --- |
 | `wsl-hive-test-server.sh` | 在 WSL 中启停 HDFS + Hive Metastore + Spark Thrift Server 测试栈 |
 | `windows-wsl-hive-relay.ps1` | 建立 Windows 到 WSL 的临时端口转发，供 Docker 内的服务访问 Hive |
+| `spark-smoke-test.py` | 通过真实平台身份验收 Spark 查询、权限和专用测试分区重跑，见 [验收说明](../docs/spark-sql-smoke.md) |
 | `gen-warehouse-data.sh` | 建立 ods/dwd/dws/ads/dim 五层库并生成电商域测试数据，详见 [warehouse-layers.md](../docs/warehouse-layers.md) |
 | `warehouse/*.sql` | 上述脚本调用的分层 DDL 与加工 SQL，按序号执行 |
 | `maven-mirror-settings.xml` | Maven 国内镜像源配置 |

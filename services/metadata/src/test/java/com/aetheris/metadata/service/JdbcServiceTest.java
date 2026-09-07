@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
@@ -22,6 +23,29 @@ import static org.mockito.Mockito.times;
 class JdbcServiceTest {
 
     private final JdbcService jdbcService = new JdbcService();
+
+    @Test
+    void healthProbeExecutesOnlySelectOneWithTimeoutAndClosesResources() throws Exception {
+        Connection connection = mock(Connection.class);
+        Statement statement = mock(Statement.class);
+        ResultSet rows = mock(ResultSet.class);
+        when(connection.createStatement()).thenReturn(statement);
+        when(statement.executeQuery("SELECT 1")).thenReturn(rows);
+        when(rows.next()).thenReturn(true);
+        when(rows.getInt(1)).thenReturn(1);
+        when(connection.getMetaData()).thenThrow(new SQLException("Unsupported"));
+        JdbcService service = new JdbcService() {
+            @Override Connection connect(DataSource dataSource) { return connection; }
+        };
+
+        service.probe(source("spark", "relay", "default"), 10);
+
+        verify(statement).setQueryTimeout(10);
+        verify(statement).executeQuery("SELECT 1");
+        verify(statement).close();
+        verify(rows).close();
+        verify(connection).close();
+    }
 
     @Test
     void buildsHiveUrlWithAuthenticationParameters() {
@@ -139,9 +163,46 @@ class JdbcServiceTest {
                 source, target, "SELECT id, name FROM orders", "ods.orders", "append", 100);
 
         assertEquals(2L, result.get("rowsWritten"));
+        verify(sourceConnection).setReadOnly(true);
         verify(targetConnection).setAutoCommit(false);
         verify(insert, times(2)).addBatch();
         verify(insert).executeBatch();
+        verify(targetConnection).commit();
+    }
+
+    @Test
+    void transfersFromSparkWithoutUnsupportedReadOnlyHint() throws Exception {
+        DataSource source = source("spark", "source", "default");
+        DataSource target = source("postgresql", "target", "warehouse");
+        Connection sourceConnection = mock(Connection.class);
+        Connection targetConnection = mock(Connection.class);
+        Statement query = mock(Statement.class);
+        ResultSet rows = mock(ResultSet.class);
+        ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        PreparedStatement insert = mock(PreparedStatement.class);
+
+        when(sourceConnection.createStatement()).thenReturn(query);
+        when(query.executeQuery("SELECT id FROM orders")).thenReturn(rows);
+        when(rows.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnCount()).thenReturn(1);
+        when(metadata.getColumnLabel(1)).thenReturn("id");
+        when(rows.next()).thenReturn(false);
+        when(targetConnection.prepareStatement(
+                "INSERT INTO \"ods\".\"orders\" (\"id\") VALUES (?)"))
+                .thenReturn(insert);
+
+        JdbcService service = new JdbcService() {
+            @Override
+            Connection connect(DataSource dataSource) {
+                return dataSource == source ? sourceConnection : targetConnection;
+            }
+        };
+
+        var result = service.transfer(
+                source, target, "SELECT id FROM orders", "ods.orders", "append", 100);
+
+        assertEquals(0L, result.get("rowsWritten"));
+        verify(sourceConnection, never()).setReadOnly(true);
         verify(targetConnection).commit();
     }
 

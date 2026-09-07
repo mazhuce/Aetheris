@@ -193,7 +193,7 @@ export default function AssetCatalogPage() {
             columns={columns}
             dataSource={activeDomain ? visibleTables : catalog.flatMap((entry) => entry.layerEntries.flatMap((layer) => layer.tables))}
             loading={loading}
-            pagination={{ pageSize: 15, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
             locale={{ emptyText: <Typography.Text type="secondary">暂无资产。先在元数据中心同步数据源，或在数据表页手工登记。</Typography.Text> }}
           />
         </DataSurface>
