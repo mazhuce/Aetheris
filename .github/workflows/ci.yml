@@ -75,6 +75,9 @@ jobs:
       DB_PASSWORD: smoke-db-password
       JWT_SECRET: smoke-jwt-secret-that-is-longer-than-32-bytes
       INITIAL_ADMIN_PASSWORD: smoke-admin-password
+      AETHERIS_INTERNAL_TOKEN: smoke-internal-token-that-is-longer-than-32-bytes
+      AETHERIS_DATASOURCE_MASTER_KEY: smoke-datasource-master-key-that-is-long-enough
+      REDIS_PASSWORD: smoke-redis-password
     steps:
       - name: Checkout
         uses: actions/checkout@v4

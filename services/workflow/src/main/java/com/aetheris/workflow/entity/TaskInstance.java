@@ -9,8 +9,8 @@ import java.time.OffsetDateTime;
 /**
  * 任务运行实例：描述「跑得如何」。
  *
- * <p>(task_id, biz_date) 唯一，重跑复用同一行而非新增，这样实例列表不会因反复重跑膨胀，
- * 也从库层排除了「同一业务日期被两个实例并发写入」。
+ * <p>(task_id, biz_date) 唯一；该行是逻辑实例摘要。每次物理执行保存在
+ * {@link ExecutionAttempt}，activeAttemptId 与 fencingToken 防止旧执行者覆盖新状态。
  */
 @TableName(value = "task_instance", schema = "workflow")
 public class TaskInstance {
@@ -30,6 +30,10 @@ public class TaskInstance {
     private Long affectedRows;
     private String errorMessage;
     private String triggeredBy;
+    private Long activeAttemptId;
+    private Long fencingToken;
+    private OffsetDateTime heartbeatAt;
+    private OffsetDateTime leaseExpiresAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -57,6 +61,14 @@ public class TaskInstance {
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public String getTriggeredBy() { return triggeredBy; }
     public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }
+    public Long getActiveAttemptId() { return activeAttemptId; }
+    public void setActiveAttemptId(Long activeAttemptId) { this.activeAttemptId = activeAttemptId; }
+    public Long getFencingToken() { return fencingToken; }
+    public void setFencingToken(Long fencingToken) { this.fencingToken = fencingToken; }
+    public OffsetDateTime getHeartbeatAt() { return heartbeatAt; }
+    public void setHeartbeatAt(OffsetDateTime heartbeatAt) { this.heartbeatAt = heartbeatAt; }
+    public OffsetDateTime getLeaseExpiresAt() { return leaseExpiresAt; }
+    public void setLeaseExpiresAt(OffsetDateTime leaseExpiresAt) { this.leaseExpiresAt = leaseExpiresAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

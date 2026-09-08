@@ -45,7 +45,7 @@ public class ServiceHealthController {
             new HttpTarget("ai-agent 智能服务", "http://ai-agent:8086/actuator/health"),
             new HttpTarget("workflow 任务调度", "http://workflow-service:8088/actuator/health"),
             new HttpTarget("serving 数据服务", "http://serving-service:8089/actuator/health"),
-            new HttpTarget("web 前端", "http://web:80/healthz"),
+            new HttpTarget("web 前端", "http://web:8080/healthz"),
             new TcpTarget("postgres 数据库", "postgres", 5432));
 
     private final HttpClient httpClient = HttpClient.newBuilder()

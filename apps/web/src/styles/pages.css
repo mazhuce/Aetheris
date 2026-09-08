@@ -292,7 +292,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
   gap: var(--page-section-gap);
-  align-items: start;
+  align-items: stretch;
 }
 
 .dashboard-grid > .data-surface,

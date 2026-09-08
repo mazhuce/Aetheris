@@ -21,11 +21,14 @@ import {
   addDependency,
   getTask,
   listDependencies,
+  listExecutionAttempts,
   listInstanceLogs,
   listInstances,
   listTasks,
   removeDependency,
   INSTANCE_STATUS_META,
+  ATTEMPT_STATUS_META,
+  type ExecutionAttempt,
   type TaskDependency,
   type TaskInstance,
   type TaskLog,
@@ -54,6 +57,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   const [dependencies, setDependencies] = useState<TaskDependency[]>([])
   const [allTasks, setAllTasks] = useState<TaskView[]>([])
   const [logs, setLogs] = useState<TaskLog[]>([])
+  const [attempts, setAttempts] = useState<ExecutionAttempt[]>([])
   const [selectedInstance, setSelectedInstance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [upstreamToAdd, setUpstreamToAdd] = useState<number | undefined>()
@@ -82,6 +86,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       setView(null)
       setInstances([])
       setLogs([])
+      setAttempts([])
       setSelectedInstance(null)
       return
     }
@@ -91,10 +96,16 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   const openLogs = async (instanceId: number) => {
     setSelectedInstance(instanceId)
     try {
-      setLogs(await listInstanceLogs(instanceId))
+      const [instanceLogs, executionAttempts] = await Promise.all([
+        listInstanceLogs(instanceId),
+        listExecutionAttempts(instanceId)
+      ])
+      setLogs(instanceLogs)
+      setAttempts(executionAttempts)
     } catch {
-      message.error('日志加载失败')
+      message.error('执行详情加载失败')
       setLogs([])
+      setAttempts([])
     }
   }
 
@@ -137,7 +148,9 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   const instanceTone = (status: TaskInstance['status']): StatusTone => {
     if (status === 'success') return 'success'
     if (status === 'failed') return 'danger'
+    if (status === 'timed_out') return 'danger'
     if (status === 'skipped') return 'warning'
+    if (status === 'unknown' || status === 'cancel_requested') return 'warning'
     if (status === 'running') return 'info'
     return 'neutral'
   }
@@ -296,8 +309,49 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                     {selectedInstance !== null && (
                       <div className="log-panel">
                         <div className="log-panel-title">
-                          实例 #{selectedInstance} 执行日志
+                          实例 #{selectedInstance} 执行尝试
                         </div>
+                        <Table<ExecutionAttempt>
+                          size="small"
+                          rowKey="id"
+                          dataSource={attempts}
+                          pagination={{ pageSize: 5, showSizeChanger: false }}
+                          locale={{ emptyText: '暂无 attempt 记录' }}
+                          columns={[
+                            { title: '序号', dataIndex: 'attemptNo', width: 64 },
+                            {
+                              title: '状态',
+                              dataIndex: 'status',
+                              width: 90,
+                              render: (status: ExecutionAttempt['status']) => (
+                                <Tag color={ATTEMPT_STATUS_META[status]?.color}>
+                                  {ATTEMPT_STATUS_META[status]?.label ?? status}
+                                </Tag>
+                              )
+                            },
+                            { title: '执行者', dataIndex: 'workerId', ellipsis: true },
+                            {
+                              title: '定义摘要',
+                              dataIndex: 'definitionDigest',
+                              ellipsis: true,
+                              render: (digest: string) => (
+                                <Tooltip title={digest}>{digest.slice(0, 12)}</Tooltip>
+                              )
+                            },
+                            {
+                              title: '开始时间',
+                              dataIndex: 'startedAt',
+                              render: (value?: string) => formatDateTime(value)
+                            },
+                            {
+                              title: '耗时',
+                              dataIndex: 'durationMs',
+                              width: 90,
+                              render: (value?: number) => value == null ? '—' : `${value} ms`
+                            }
+                          ]}
+                        />
+                        <div className="log-panel-title">执行日志</div>
                         {logs.length === 0 ? (
                           <Empty description="暂无日志" />
                         ) : (

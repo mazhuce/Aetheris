@@ -225,10 +225,17 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
+}
+
+/* 确保 DataSurface 在网格布局中正确填充 */
+.data-surface > .data-surface-content {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .data-surface.ant-card .ant-card-body {
@@ -237,6 +244,7 @@
 
 .data-surface-content {
   min-width: 0;
+  padding: var(--space-4) var(--space-5);
 }
 
 .section-header {

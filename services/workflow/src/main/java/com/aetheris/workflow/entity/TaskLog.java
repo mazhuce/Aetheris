@@ -13,6 +13,7 @@ public class TaskLog {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long instanceId;
+    private Long attemptId;
     private String level;
     private String message;
     private OffsetDateTime createdAt;
@@ -21,6 +22,8 @@ public class TaskLog {
     public void setId(Long id) { this.id = id; }
     public Long getInstanceId() { return instanceId; }
     public void setInstanceId(Long instanceId) { this.instanceId = instanceId; }
+    public Long getAttemptId() { return attemptId; }
+    public void setAttemptId(Long attemptId) { this.attemptId = attemptId; }
     public String getLevel() { return level; }
     public void setLevel(String level) { this.level = level; }
     public String getMessage() { return message; }

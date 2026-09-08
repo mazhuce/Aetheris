@@ -4,9 +4,11 @@ import com.aetheris.workflow.dto.TaskRunRequest;
 import com.aetheris.workflow.dto.TaskView;
 import com.aetheris.workflow.entity.Task;
 import com.aetheris.workflow.entity.TaskDependency;
+import com.aetheris.workflow.entity.ExecutionAttempt;
 import com.aetheris.workflow.entity.TaskInstance;
 import com.aetheris.workflow.entity.TaskLog;
 import com.aetheris.workflow.service.SqlExecutionClient;
+import com.aetheris.workflow.service.ExecutionAttemptService;
 import com.aetheris.workflow.service.TaskDependencyService;
 import com.aetheris.workflow.service.TaskExecutionService;
 import com.aetheris.workflow.service.TaskInstanceService;
@@ -52,6 +54,7 @@ public class TaskController {
     private final TaskService taskService;
     private final TaskInstanceService instanceService;
     private final TaskLogService logService;
+    private final ExecutionAttemptService attemptService;
     private final TaskDependencyService dependencyService;
     private final TaskExecutionService executionService;
     private final TaskSchedulerService schedulerService;
@@ -61,6 +64,7 @@ public class TaskController {
             TaskService taskService,
             TaskInstanceService instanceService,
             TaskLogService logService,
+            ExecutionAttemptService attemptService,
             TaskDependencyService dependencyService,
             TaskExecutionService executionService,
             TaskSchedulerService schedulerService,
@@ -68,6 +72,7 @@ public class TaskController {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
+        this.attemptService = attemptService;
         this.dependencyService = dependencyService;
         this.executionService = executionService;
         this.schedulerService = schedulerService;
@@ -229,6 +234,15 @@ public class TaskController {
                 new LambdaQueryWrapper<TaskLog>()
                         .eq(TaskLog::getInstanceId, instanceId)
                         .orderByAsc(TaskLog::getId));
+    }
+
+    /** Physical attempts are append-only audit records for retries and recovery. */
+    @GetMapping("/instances/{instanceId}/attempts")
+    public List<ExecutionAttempt> attempts(@PathVariable Long instanceId) {
+        return attemptService.list(
+                new LambdaQueryWrapper<ExecutionAttempt>()
+                        .eq(ExecutionAttempt::getInstanceId, instanceId)
+                        .orderByDesc(ExecutionAttempt::getAttemptNo));
     }
 
     @GetMapping("/{id}/dependencies")

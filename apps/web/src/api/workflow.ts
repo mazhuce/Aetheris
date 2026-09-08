@@ -43,7 +43,17 @@ export interface TaskView {
   upstreamCount: number
 }
 
-export type TaskInstanceStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped'
+export type TaskInstanceStatus =
+  | 'pending'
+  | 'submitting'
+  | 'running'
+  | 'cancel_requested'
+  | 'cancelled'
+  | 'success'
+  | 'failed'
+  | 'timed_out'
+  | 'unknown'
+  | 'skipped'
 
 export interface TaskInstance {
   id: number
@@ -60,14 +70,58 @@ export interface TaskInstance {
   affectedRows?: number
   errorMessage?: string
   triggeredBy?: string
+  activeAttemptId?: number
+  fencingToken?: number
+  heartbeatAt?: string
+  leaseExpiresAt?: string
 }
 
 export interface TaskLog {
   id: number
   instanceId: number
+  attemptId?: number
   level: 'info' | 'warn' | 'error'
   message: string
   createdAt?: string
+}
+
+export type ExecutionAttemptStatus =
+  | 'queued'
+  | 'submitting'
+  | 'running'
+  | 'cancel_requested'
+  | 'cancelled'
+  | 'succeeded'
+  | 'failed'
+  | 'timed_out'
+  | 'unknown'
+  | 'skipped'
+
+export interface ExecutionAttempt {
+  id: number
+  instanceId: number
+  attemptNo: number
+  status: ExecutionAttemptStatus
+  fencingToken: number
+  workerId: string
+  triggerType: 'manual' | 'schedule' | 'retry'
+  triggeredBy?: string
+  taskName: string
+  datasourceId: number
+  taskUpdatedAt?: string
+  definitionDigest: string
+  parametersJson: string
+  parameterDigest: string
+  remoteHandle?: string
+  applicationId?: string
+  startedAt?: string
+  heartbeatAt?: string
+  leaseExpiresAt?: string
+  finishedAt?: string
+  durationMs?: number
+  affectedRows?: number
+  errorCode?: string
+  errorMessage?: string
 }
 
 export interface TaskDependency {
@@ -82,12 +136,30 @@ export const INSTANCE_STATUS_META: Record<
   { label: string; color: string }
 > = {
   pending: { label: '等待中', color: 'default' },
+  submitting: { label: '提交中', color: 'processing' },
   running: { label: '执行中', color: 'processing' },
+  cancel_requested: { label: '取消中', color: 'warning' },
+  cancelled: { label: '已取消', color: 'default' },
   success: { label: '成功', color: 'success' },
   // skipped 是「依赖未就绪」而非故障，用 warning 与 failed 区分开，
   // 否则会让人误以为任务出错。
   skipped: { label: '已跳过', color: 'warning' },
-  failed: { label: '失败', color: 'error' }
+  failed: { label: '失败', color: 'error' },
+  timed_out: { label: '已超时', color: 'error' },
+  unknown: { label: '待核对', color: 'warning' }
+}
+
+export const ATTEMPT_STATUS_META: Record<ExecutionAttemptStatus, { label: string; color: string }> = {
+  queued: { label: '排队中', color: 'default' },
+  submitting: { label: '提交中', color: 'processing' },
+  running: { label: '执行中', color: 'processing' },
+  cancel_requested: { label: '取消中', color: 'warning' },
+  cancelled: { label: '已取消', color: 'default' },
+  succeeded: { label: '成功', color: 'success' },
+  failed: { label: '失败', color: 'error' },
+  timed_out: { label: '已超时', color: 'error' },
+  unknown: { label: '待核对', color: 'warning' },
+  skipped: { label: '已跳过', color: 'warning' }
 }
 
 export function listTasks(): Promise<TaskView[]> {
@@ -140,6 +212,12 @@ export function listAllInstances(status?: string, limit = 100): Promise<TaskInst
 export function listInstanceLogs(instanceId: number): Promise<TaskLog[]> {
   return http
     .get<TaskLog[]>(`/api/workflow/tasks/instances/${instanceId}/logs`)
+    .then((res) => res.data)
+}
+
+export function listExecutionAttempts(instanceId: number): Promise<ExecutionAttempt[]> {
+  return http
+    .get<ExecutionAttempt[]>(`/api/workflow/tasks/instances/${instanceId}/attempts`)
     .then((res) => res.data)
 }
 

@@ -4,29 +4,24 @@ import com.aetheris.workflow.entity.Task;
 import com.aetheris.workflow.entity.TaskDependency;
 import com.aetheris.workflow.entity.TaskInstance;
 import com.aetheris.workflow.entity.TaskLog;
+import com.aetheris.workflow.service.ExecutionClaimCoordinator.ExecutionClaim;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.OffsetDateTime;
 import java.util.List;
 
 /**
  * 任务执行器。
  *
- * <p>幂等策略：{@code (task_id, biz_date)} 唯一，同一业务日期复用同一实例行。重跑时把该行
- * 重置为 running 并累加 attempt，而不是新插一行——这样实例列表不会因反复重跑膨胀，
- * 也从库层排除了「同一业务日期被两个实例并发写入目标表」。
+ * <p>幂等策略：{@code (task_id, biz_date)} 唯一，同一业务日期复用逻辑实例；每次物理执行
+ * 新建 execution_attempt。抢占和结束由 {@link ExecutionClaimCoordinator} 在数据库中原子完成。
  *
  * <p>数据幂等则依赖加工语句本身用 {@code INSERT OVERWRITE ... PARTITION}：覆盖目标分区，
  * 因此重跑不会产生重复数据，也不需要先删表（{@code DROP}/{@code TRUNCATE} 被写入守卫拒绝）。
  *
- * <p>事务边界：状态流转各自独立提交（{@code REQUIRES_NEW}），不把长时间的 SQL 执行包在
- * 事务里。否则一个跑半小时的任务会持有数据库连接与事务半小时，且执行中的状态对外不可见，
- * 界面上会一直显示 pending。
+ * <p>长时间 SQL 不放在状态事务中。租约和 fencing token 让并发触发只能有一个有效执行者，
+ * 并阻止过期执行者覆盖新 attempt 的状态。
  */
 @Service
 public class TaskExecutionService {
@@ -38,6 +33,7 @@ public class TaskExecutionService {
     private final TaskInstanceService instanceService;
     private final TaskLogService logService;
     private final TaskDependencyService dependencyService;
+    private final ExecutionClaimCoordinator claimCoordinator;
     private final SqlExecutionClient executionClient;
     private final NotificationClient notificationClient;
 
@@ -46,12 +42,14 @@ public class TaskExecutionService {
             TaskInstanceService instanceService,
             TaskLogService logService,
             TaskDependencyService dependencyService,
+            ExecutionClaimCoordinator claimCoordinator,
             SqlExecutionClient executionClient,
             NotificationClient notificationClient) {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
         this.dependencyService = dependencyService;
+        this.claimCoordinator = claimCoordinator;
         this.executionClient = executionClient;
         this.notificationClient = notificationClient;
     }
@@ -74,93 +72,73 @@ public class TaskExecutionService {
             throw new IllegalStateException("任务已停用，无法执行");
         }
 
-        TaskInstance instance = claimInstance(task, bizDate, triggerType, triggeredBy);
+        int timeout = task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds();
+        ExecutionClaim claim = claimCoordinator.claim(
+                task, bizDate, triggerType, triggeredBy, timeout);
 
         // 依赖未就绪时标记 skipped 而非 failed：这不是错误，只是还没到时候，
         // 上游补跑完成后重跑本任务即可。用 failed 会让告警噪声掩盖真正的故障。
         String unmetDependency = findUnmetDependency(taskId, bizDate);
         if (unmetDependency != null) {
-            return finishSkipped(instance, unmetDependency);
+            TaskInstance skipped = claimCoordinator.skip(claim, unmetDependency);
+            writeLog(skipped.getId(), claim.attemptId(), "warn",
+                    "依赖未就绪，跳过执行：" + unmetDependency);
+            return skipped;
         }
 
-        return runWithRetry(task, instance);
+        return runWithRetry(task, claim, timeout);
     }
 
-    /**
-     * 抢占实例行并置为 running。
-     *
-     * <p>独立事务提交，让界面能立刻看到 running 状态；同时利用唯一索引判断是否已有实例在跑，
-     * 避免定时触发与人工触发同时执行同一任务同一日期。
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected TaskInstance claimInstance(Task task, String bizDate, String triggerType, String triggeredBy) {
-        TaskInstance existing = instanceService.getOne(
-                new LambdaQueryWrapper<TaskInstance>()
-                        .eq(TaskInstance::getTaskId, task.getId())
-                        .eq(TaskInstance::getBizDate, bizDate));
-
-        if (existing != null && "running".equals(existing.getStatus())) {
-            throw new IllegalStateException("该任务在此业务日期已有实例正在执行");
-        }
-
-        TaskInstance instance = existing == null ? new TaskInstance() : existing;
-        instance.setTaskId(task.getId());
-        instance.setBizDate(bizDate);
-        instance.setStatus("running");
-        instance.setTriggerType(triggerType);
-        instance.setAttempt(existing == null ? 1 : existing.getAttempt() + 1);
-        instance.setStartedAt(OffsetDateTime.now());
-        instance.setFinishedAt(null);
-        instance.setDurationMs(null);
-        instance.setAffectedRows(null);
-        instance.setErrorMessage(null);
-        instance.setTriggeredBy(triggeredBy);
-        instance.setUpdatedAt(OffsetDateTime.now());
-
-        if (existing == null) {
-            instanceService.save(instance);
-        } else {
-            instanceService.updateById(instance);
-        }
-        return instance;
-    }
-
-    /** 按 max_retries 重试；每次尝试都记日志，便于事后判断是偶发还是稳定失败。 */
-    private TaskInstance runWithRetry(Task task, TaskInstance instance) {
+    /** Each retry receives its own immutable attempt row and fencing token. */
+    private TaskInstance runWithRetry(Task task, ExecutionClaim initialClaim, int timeout) {
         int maxRetries = task.getMaxRetries() == null ? 0 : task.getMaxRetries();
-        int timeout = task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds();
-        long startedAt = System.currentTimeMillis();
+        long executionStartedAt = System.currentTimeMillis();
+        ExecutionClaim claim = initialClaim;
         SqlExecutionException lastError = null;
 
-        for (int attempt = 1; attempt <= maxRetries + 1; attempt++) {
+        for (int retryIndex = 0; retryIndex <= maxRetries; retryIndex++) {
+            long attemptStartedAt = System.currentTimeMillis();
             try {
-                writeLog(instance.getId(), "info", attempt == 1
-                        ? "开始执行，业务日期 " + instance.getBizDate()
-                        : "第 " + attempt + " 次尝试");
+                writeLog(claim.instance().getId(), claim.attemptId(), "info",
+                        "开始第 " + claim.attemptNo() + " 次执行，业务日期 "
+                                + claim.instance().getBizDate());
 
                 // 业务日期以参数形式注入 SQL：任务 SQL 里写 ${bizDate} 占位符，
                 // 由这里替换成实际日期，避免每天手改 SQL。
-                String sql = resolvePlaceholders(task.getTaskSql(), instance.getBizDate());
+                String sql = resolvePlaceholders(task.getTaskSql(), claim.instance().getBizDate());
                 SqlExecutionClient.ExecutionResult result =
                         executionClient.execute(task.getDatasourceId(), sql, timeout);
 
-                return finishSuccess(instance, result, System.currentTimeMillis() - startedAt);
+                long attemptDuration = System.currentTimeMillis() - attemptStartedAt;
+                TaskInstance succeeded = claimCoordinator.succeed(
+                        claim, result.affectedRows(), attemptDuration,
+                        System.currentTimeMillis() - executionStartedAt);
+                writeLog(succeeded.getId(), claim.attemptId(), "info",
+                        "执行成功，耗时 " + attemptDuration + "ms");
+                return succeeded;
             } catch (SqlExecutionException error) {
                 lastError = error;
-                writeLog(instance.getId(), "error",
-                        "第 " + attempt + " 次尝试失败：" + error.getMessage());
-                log.warn("Task {} attempt {} failed: {}", task.getId(), attempt, error.getMessage());
+                long attemptDuration = System.currentTimeMillis() - attemptStartedAt;
+                TaskInstance failed = claimCoordinator.fail(
+                        claim, error.getMessage(), attemptDuration,
+                        System.currentTimeMillis() - executionStartedAt);
+                writeLog(failed.getId(), claim.attemptId(), "error",
+                        "第 " + claim.attemptNo() + " 次执行失败：" + error.getMessage());
+                log.warn("Task {} attempt {} failed: {}",
+                        task.getId(), claim.attemptNo(), error.getMessage());
+
+                if (retryIndex == maxRetries) {
+                    notificationClient.notifyAdmin(task.getId(), failed.getBizDate(), "critical",
+                            "任务执行失败：" + task.getName(),
+                            "业务日期 " + failed.getBizDate() + "，重试耗尽后仍失败："
+                                    + truncate(lastError.getMessage()));
+                    return failed;
+                }
+                claim = claimCoordinator.claim(
+                        task, failed.getBizDate(), "retry", failed.getTriggeredBy(), timeout);
             }
         }
-
-        TaskInstance failed = finishFailed(instance, lastError, System.currentTimeMillis() - startedAt);
-        // 通知在 finishFailed 返回之后发：失败状态已落库（REQUIRES_NEW），
-        // 且网络调用不会延长落库事务的持锁时间。
-        notificationClient.notifyAdmin(task.getId(), instance.getBizDate(), "critical",
-                "任务执行失败：" + task.getName(),
-                "业务日期 " + instance.getBizDate() + "，重试耗尽后仍失败："
-                        + truncate(lastError == null ? "未知错误" : lastError.getMessage()));
-        return failed;
+        throw new IllegalStateException("任务执行循环异常结束", lastError);
     }
 
     /**
@@ -202,52 +180,12 @@ public class TaskExecutionService {
         return null;
     }
 
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected TaskInstance finishSuccess(
-            TaskInstance instance, SqlExecutionClient.ExecutionResult result, long durationMs) {
-        instance.setStatus("success");
-        instance.setFinishedAt(OffsetDateTime.now());
-        instance.setDurationMs(durationMs);
-        // Hive 驱动不返回行数时为 -1，保留原值并在界面上显示为「—」，
-        // 不要伪造成 0，否则会被误读为「没写入任何数据」。
-        instance.setAffectedRows(result.affectedRows());
-        instance.setErrorMessage(null);
-        instance.setUpdatedAt(OffsetDateTime.now());
-        instanceService.updateById(instance);
-        writeLog(instance.getId(), "info", "执行成功，耗时 " + durationMs + "ms");
-        return instance;
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected TaskInstance finishFailed(
-            TaskInstance instance, SqlExecutionException error, long durationMs) {
-        instance.setStatus("failed");
-        instance.setFinishedAt(OffsetDateTime.now());
-        instance.setDurationMs(durationMs);
-        instance.setErrorMessage(truncate(error == null ? "未知错误" : error.getMessage()));
-        instance.setUpdatedAt(OffsetDateTime.now());
-        instanceService.updateById(instance);
-        writeLog(instance.getId(), "error", "执行失败，耗时 " + durationMs + "ms");
-        return instance;
-    }
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected TaskInstance finishSkipped(TaskInstance instance, String reason) {
-        instance.setStatus("skipped");
-        instance.setFinishedAt(OffsetDateTime.now());
-        instance.setDurationMs(0L);
-        instance.setErrorMessage(truncate(reason));
-        instance.setUpdatedAt(OffsetDateTime.now());
-        instanceService.updateById(instance);
-        writeLog(instance.getId(), "warn", "依赖未就绪，跳过执行：" + reason);
-        return instance;
-    }
-
     /** 日志写入失败不应让任务本身失败，因此单独捕获。 */
-    private void writeLog(Long instanceId, String level, String message) {
+    private void writeLog(Long instanceId, Long attemptId, String level, String message) {
         try {
             TaskLog entry = new TaskLog();
             entry.setInstanceId(instanceId);
+            entry.setAttemptId(attemptId);
             entry.setLevel(level);
             entry.setMessage(message);
             logService.save(entry);
