@@ -3,6 +3,7 @@ package com.aetheris.workflow.controller;
 import com.aetheris.workflow.dto.ReleaseActionRequest;
 import com.aetheris.workflow.entity.ReleaseRecord;
 import com.aetheris.workflow.service.ReleaseRecordService;
+import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -12,13 +13,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -34,8 +34,6 @@ import java.util.function.Consumer;
 public class ReleaseRecordController {
 
     private static final Logger log = LoggerFactory.getLogger(ReleaseRecordController.class);
-    private static final String USER_HEADER = "X-User-Name";
-    private static final String ROLE_HEADER = "X-User-Role";
 
     private final ReleaseRecordService releaseRecordService;
 
@@ -65,9 +63,7 @@ public class ReleaseRecordController {
     @Transactional
     public ResponseEntity<?> create(
             @Valid @RequestBody ReleaseRecord record,
-            @RequestHeader(value = USER_HEADER, required = false) String username,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         record.setId(null);
         applyDefaults(record, username);
         releaseRecordService.save(record);
@@ -78,9 +74,7 @@ public class ReleaseRecordController {
     @Transactional
     public ResponseEntity<?> update(
             @PathVariable Long id,
-            @Valid @RequestBody ReleaseRecord record,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @Valid @RequestBody ReleaseRecord record) {
         ReleaseRecord existing = releaseRecordService.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
@@ -101,9 +95,7 @@ public class ReleaseRecordController {
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<Void> delete(
-            @PathVariable Long id,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @PathVariable Long id) {
         if (releaseRecordService.getById(id) == null) {
             return ResponseEntity.notFound().build();
         }
@@ -112,16 +104,14 @@ public class ReleaseRecordController {
     }
 
     /**
-     * 审批通过。审批人取网关透传的 X-User-Name 而非请求体：
+     * 审批通过。审批人取验签后的网关身份而非请求体：
      * 身份属于认证层的可信数据，客户端自报的名字不能作为审计依据。
      */
     @PostMapping("/{id}/approve")
     public ResponseEntity<?> approve(
             @PathVariable Long id,
             @RequestBody(required = false) ReleaseActionRequest request,
-            @RequestHeader(value = USER_HEADER, required = false) String username,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         if (request != null && StringUtils.hasText(request.remark())) {
             log.debug("Release {} approve remark: {}", id, request.remark());
         }
@@ -131,29 +121,20 @@ public class ReleaseRecordController {
 
     /** 审批拒绝：pending 的终态分支，只有待审批的单子可以拒绝。 */
     @PostMapping("/{id}/reject")
-    public ResponseEntity<?> reject(
-            @PathVariable Long id,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public ResponseEntity<?> reject(@PathVariable Long id) {
         return transition(id, "pending", "rejected", "拒绝", null);
     }
 
     /** 执行发布：审批通过不代表已上线，此处落实际发布时间。 */
     @PostMapping("/{id}/publish")
-    public ResponseEntity<?> publish(
-            @PathVariable Long id,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public ResponseEntity<?> publish(@PathVariable Long id) {
         return transition(id, "approved", "released", "发布",
                 record -> record.setReleasedAt(OffsetDateTime.now()));
     }
 
     /** 回滚：只有已发布的单子可回滚；released_at 保留，作为发布窗口的留痕。 */
     @PostMapping("/{id}/rollback")
-    public ResponseEntity<?> rollback(
-            @PathVariable Long id,
-            @RequestHeader(value = ROLE_HEADER, defaultValue = "viewer") String role) {
-        requireAdmin(role);
+    public ResponseEntity<?> rollback(@PathVariable Long id) {
         return transition(id, "released", "rolled_back", "回滚", null);
     }
 
@@ -196,17 +177,4 @@ public class ReleaseRecordController {
         }
     }
 
-    private void requireAdmin(String role) {
-        if (!"admin".equals(role)) {
-            throw new ForbiddenException();
-        }
-    }
-
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<Map<String, String>> forbidden() {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("message", "仅管理员可以修改或操作发布记录"));
-    }
-
-    public static class ForbiddenException extends RuntimeException { }
 }

@@ -50,6 +50,10 @@ mybatis-plus:
 
 aetheris:
   internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
   metadata:
     # SQL 执行下沉到 metadata 服务，因为凭据与驱动都在那边；走 /internal 路径，网关不暴露。
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
@@ -66,3 +70,9 @@ management:
   endpoint:
     health:
       show-details: never
+
+springdoc:
+  api-docs:
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}

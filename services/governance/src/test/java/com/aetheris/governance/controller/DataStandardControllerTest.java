@@ -12,10 +12,8 @@ import org.springframework.http.ResponseEntity;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +60,7 @@ class DataStandardControllerTest {
     void createSavesWithCreatedByFromHeader() {
         DataStandard input = standard(null, "DS-ENC-002", "币种编码标准");
         when(service.save(input)).thenReturn(true);
-        ResponseEntity<?> response = controller.create(input, "zhangsan", "admin");
+        ResponseEntity<?> response = controller.create(input, "zhangsan");
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ArgumentCaptor<DataStandard> captor = ArgumentCaptor.forClass(DataStandard.class);
         verify(service).save(captor.capture());
@@ -70,17 +68,10 @@ class DataStandardControllerTest {
     }
 
     @Test
-    void createRejectsNonAdmin() {
-        assertThrows(DataStandardController.ForbiddenException.class,
-                () -> controller.create(standard(null, "DS-ENC-002", "币种编码标准"), "zhangsan", "viewer"));
-        verify(service, never()).save(any(DataStandard.class));
-    }
-
-    @Test
     void createReturns409OnDuplicateCode() {
         when(service.save(any(DataStandard.class))).thenThrow(new DuplicateKeyException("duplicate"));
         ResponseEntity<?> response =
-                controller.create(standard(null, "DS-NAME-001", "字段命名规范-下划线小写"), "zhangsan", "admin");
+                controller.create(standard(null, "DS-NAME-001", "字段命名规范-下划线小写"), "zhangsan");
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
     }
 
@@ -91,7 +82,7 @@ class DataStandardControllerTest {
         when(service.updateById(input)).thenReturn(true);
         when(service.getById(4L)).thenReturn(standard(4L, "DS-VAL-001", "订单状态取值标准"));
 
-        ResponseEntity<?> response = controller.update(4L, input, "admin");
+        ResponseEntity<?> response = controller.update(4L, input);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(4L, input.getId());
@@ -100,41 +91,28 @@ class DataStandardControllerTest {
     }
 
     @Test
-    void updateRejectsNonAdmin() {
-        assertThrows(DataStandardController.ForbiddenException.class,
-                () -> controller.update(4L, standard(null, "DS-VAL-001", "订单状态取值标准"), "viewer"));
-        verify(service, never()).updateById(any(DataStandard.class));
-    }
-
-    @Test
     void updateReturns404WhenNothingChanged() {
         when(service.updateById(any(DataStandard.class))).thenReturn(false);
         assertEquals(HttpStatus.NOT_FOUND,
-                controller.update(99L, standard(null, "DS-VAL-001", "订单状态取值标准"), "admin").getStatusCode());
+                controller.update(99L, standard(null, "DS-VAL-001", "订单状态取值标准")).getStatusCode());
     }
 
     @Test
     void updateReturns409OnDuplicateCode() {
         when(service.updateById(any(DataStandard.class))).thenThrow(new DuplicateKeyException("duplicate"));
         assertEquals(HttpStatus.CONFLICT,
-                controller.update(4L, standard(null, "DS-NAME-001", "字段命名规范-下划线小写"), "admin").getStatusCode());
+                controller.update(4L, standard(null, "DS-NAME-001", "字段命名规范-下划线小写")).getStatusCode());
     }
 
     @Test
     void deleteReturns204WhenRemoved() {
         when(service.removeById(1L)).thenReturn(true);
-        assertEquals(HttpStatus.NO_CONTENT, controller.delete(1L, "admin").getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, controller.delete(1L).getStatusCode());
     }
 
     @Test
     void deleteReturns404WhenMissing() {
         when(service.removeById(99L)).thenReturn(false);
-        assertEquals(HttpStatus.NOT_FOUND, controller.delete(99L, "admin").getStatusCode());
-    }
-
-    @Test
-    void deleteRejectsNonAdmin() {
-        assertThrows(DataStandardController.ForbiddenException.class, () -> controller.delete(1L, "viewer"));
-        verify(service, never()).removeById(1L);
+        assertEquals(HttpStatus.NOT_FOUND, controller.delete(99L).getStatusCode());
     }
 }

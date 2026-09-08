@@ -2,19 +2,19 @@ package com.aetheris.governance.controller;
 
 import com.aetheris.governance.entity.DataStandard;
 import com.aetheris.governance.service.DataStandardService;
+import com.aetheris.governance.security.GatewayIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -70,9 +70,7 @@ public class DataStandardController {
     @PostMapping
     public ResponseEntity<?> create(
             @Valid @RequestBody DataStandard standard,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         standard.setId(null);
         standard.setCreatedBy(username);
         try {
@@ -86,9 +84,7 @@ public class DataStandardController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
             @PathVariable Long id,
-            @Valid @RequestBody DataStandard standard,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @Valid @RequestBody DataStandard standard) {
         standard.setId(id);
         // 创建人与创建时间只在新建时确定，更新接口不接受改写
         standard.setCreatedBy(null);
@@ -104,17 +100,9 @@ public class DataStandardController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @PathVariable Long id,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        requireAdmin(role);
+            @PathVariable Long id) {
         boolean removed = service.removeById(id);
         return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
-    }
-
-    private void requireAdmin(String role) {
-        if (!"admin".equals(role)) {
-            throw new ForbiddenException();
-        }
     }
 
     private ResponseEntity<Map<String, String>> conflict(String standardCode) {
@@ -122,11 +110,4 @@ public class DataStandardController {
                 .body(Map.of("message", "标准编码 " + standardCode + " 已存在"));
     }
 
-    @ExceptionHandler(ForbiddenException.class)
-    public ResponseEntity<Map<String, String>> forbidden() {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("message", "仅管理员可以修改数据标准"));
-    }
-
-    public static class ForbiddenException extends RuntimeException { }
 }

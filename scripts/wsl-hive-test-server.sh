@@ -16,12 +16,17 @@ SPARK_DRIVER_MEMORY="${AETHERIS_SPARK_DRIVER_MEMORY:-3g}"
 SPARK_LOCAL_CORES="${AETHERIS_SPARK_LOCAL_CORES:-2}"
 # 默认 200 个 shuffle 分区对单机造数来说过多，会产生大量小文件并抬高开销。
 SPARK_SHUFFLE_PARTITIONS="${AETHERIS_SPARK_SHUFFLE_PARTITIONS:-16}"
+THRIFT_BIND_HOST="${AETHERIS_THRIFT_BIND_HOST:-127.0.0.1}"
+THRIFT_RELAY_HOST="${AETHERIS_THRIFT_RELAY_HOST:-$(hostname -I | awk '{print $1}')}"
 
 HADOOP_CONF_DIR="$RUNTIME_DIR/hadoop-conf"
+HDFS_CONF_DIR="$RUNTIME_DIR/hdfs-conf"
+RUNTIME_HIVE_CONF_DIR="$RUNTIME_DIR/hive-conf"
 METASTORE_PID_FILE="$RUNTIME_DIR/metastore.pid"
 HIVESERVER2_PID_FILE="$RUNTIME_DIR/hiveserver2.pid"
 NAMENODE_PID_FILE="$RUNTIME_DIR/namenode.pid"
 DATANODE_PID_FILE="$RUNTIME_DIR/datanode.pid"
+THRIFT_RELAY_PID_FILE="$RUNTIME_DIR/thrift-relay.pid"
 
 # Recovery must never silently create a new Derby catalog or format HDFS.
 # Parse the last occurrence, matching Hadoop Configuration's override semantics.
@@ -61,11 +66,81 @@ PY
 }
 
 prepare() {
-  mkdir -p "$HADOOP_CONF_DIR"
+  mkdir -p "$HADOOP_CONF_DIR" "$HDFS_CONF_DIR" "$RUNTIME_HIVE_CONF_DIR"
   cp "$HADOOP_HOME"/etc/hadoop/*.xml "$HADOOP_CONF_DIR"/
+  cp "$HADOOP_HOME"/etc/hadoop/*.xml "$HDFS_CONF_DIR"/
+  cp "$HIVE_HOME"/conf/* "$RUNTIME_HIVE_CONF_DIR"/ 2>/dev/null || true
   sed -i 's#hdfs://localhost:9000#file:///#g' "$HADOOP_CONF_DIR/core-site.xml"
   printf 'export JAVA_HOME=%s\n' "$JAVA_HOME" > "$HADOOP_CONF_DIR/hadoop-env.sh"
   chmod 600 "$HADOOP_CONF_DIR/hadoop-env.sh"
+  python3 - "$HDFS_CONF_DIR/hdfs-site.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+path = sys.argv[1]
+tree = ET.parse(path)
+root = tree.getroot()
+overrides = {
+    'dfs.namenode.http-address': '127.0.0.1:9870',
+    'dfs.datanode.address': '127.0.0.1:9866',
+    'dfs.datanode.http.address': '127.0.0.1:9864',
+    'dfs.datanode.ipc.address': '127.0.0.1:9867',
+}
+for name, value in overrides.items():
+    prop = ET.SubElement(root, 'property')
+    ET.SubElement(prop, 'name').text = name
+    ET.SubElement(prop, 'value').text = value
+tree.write(path, encoding='utf-8', xml_declaration=True)
+PY
+  python3 - "$RUNTIME_HIVE_CONF_DIR/hive-site.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+path = sys.argv[1]
+tree = ET.parse(path)
+root = tree.getroot()
+for prop in list(root.findall('property')):
+    if (prop.findtext('name') == 'hive.metastore.uris'):
+        root.remove(prop)
+prop = ET.SubElement(root, 'property')
+ET.SubElement(prop, 'name').text = 'hive.metastore.uris'
+ET.SubElement(prop, 'value').text = 'thrift://127.0.0.1:9083'
+tree.write(path, encoding='utf-8', xml_declaration=True)
+PY
+  cat > "$RUNTIME_DIR/aetheris-thrift-relay.py" <<'PY'
+import socket
+import sys
+import threading
+
+listen_host, listen_port, target_host, target_port = sys.argv[1], int(sys.argv[2]), sys.argv[3], int(sys.argv[4])
+
+def copy(source, target):
+    try:
+        while data := source.recv(65536):
+            target.sendall(data)
+    except OSError:
+        pass
+    finally:
+        try:
+            target.shutdown(socket.SHUT_WR)
+        except OSError:
+            pass
+
+with socket.socket() as listener:
+    listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listener.bind((listen_host, listen_port))
+    listener.listen()
+    while True:
+        client, _ = listener.accept()
+        try:
+            target = socket.create_connection((target_host, target_port), timeout=10)
+        except OSError:
+            client.close()
+            continue
+        threading.Thread(target=copy, args=(client, target), daemon=True).start()
+        threading.Thread(target=copy, args=(target, client), daemon=True).start()
+PY
+  chmod 700 "$RUNTIME_DIR/aetheris-thrift-relay.py"
 }
 
 is_running() {
@@ -80,6 +155,7 @@ is_running() {
     datanode.pid) expected='org.apache.hadoop.hdfs.server.datanode.DataNode' ;;
     metastore.pid) expected='org.apache.hadoop.hive.metastore.HiveMetaStore' ;;
     hiveserver2.pid) expected='org.apache.hive.service.server.HiveServer2' ;;
+    thrift-relay.pid) expected='aetheris-thrift-relay.py' ;;
     *) return 1 ;;
   esac
   [[ "$command_line" == *"$expected"* ]] && kill -0 "$service_pid" 2>/dev/null
@@ -134,6 +210,38 @@ start_service() {
   echo $! > "$pid_file"
 }
 
+start_thrift_relay() {
+  if systemctl --user is-active --quiet aetheris-thrift-relay.service; then
+    echo "WSL Thrift relay already running"
+  else
+    systemd-run --user --unit=aetheris-thrift-relay \
+      --property=Restart=on-failure --property=RestartSec=1s \
+      python3 "$RUNTIME_DIR/aetheris-thrift-relay.py" \
+      "$THRIFT_RELAY_HOST" 10000 "$THRIFT_BIND_HOST" 10000
+  fi
+  systemctl --user show aetheris-thrift-relay.service -p MainPID --value > "$THRIFT_RELAY_PID_FILE"
+}
+
+start_metastore() {
+  if systemctl --user is-active --quiet aetheris-hive-metastore.service; then
+    echo "Hive Metastore already running"
+  else
+    systemctl --user reset-failed aetheris-hive-metastore.service >/dev/null 2>&1 || true
+    systemd-run --user --unit=aetheris-hive-metastore \
+      --property=Restart=on-failure --property=RestartSec=2s \
+      --property=IPAddressDeny=any --property=IPAddressAllow=localhost \
+      --setenv=JAVA_HOME="$JAVA_HOME" --setenv=HADOOP_HOME="$HADOOP_HOME" \
+      --setenv=HIVE_HOME="$HIVE_HOME" --setenv=HADOOP_CONF_DIR="$HADOOP_CONF_DIR" \
+      --setenv=HIVE_CONF_DIR="$RUNTIME_HIVE_CONF_DIR" \
+      "$HIVE_HOME/bin/hive" --service metastore -p 9083
+  fi
+  wait_for_port 9083 || {
+    journalctl --user -u aetheris-hive-metastore.service -n 80 --no-pager
+    return 1
+  }
+  systemctl --user show aetheris-hive-metastore.service -p MainPID --value > "$METASTORE_PID_FILE"
+}
+
 start_hdfs_service() {
   local name="$1"
   local pid_file="$2"
@@ -146,7 +254,7 @@ start_hdfs_service() {
   nohup env \
     JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \
     HADOOP_HOME="$HADOOP_HOME" \
-    HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop" \
+    HADOOP_CONF_DIR="$HDFS_CONF_DIR" \
     PATH="/usr/lib/jvm/java-11-openjdk-amd64/bin:$HADOOP_HOME/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     "$HADOOP_HOME/bin/hdfs" "$role" >> "$log_file" 2>&1 < /dev/null &
   echo $! > "$pid_file"
@@ -172,14 +280,22 @@ start() {
   preflight
   prepare
   start_hdfs
-  start_service "Hive Metastore" "$METASTORE_PID_FILE" "$RUNTIME_DIR/metastore.log" \
-    "$HIVE_HOME/bin/hive" --service metastore
-  wait_for_port 9083 || { tail -80 "$RUNTIME_DIR/metastore.log"; exit 1; }
+  # Hive 3 cannot bind the standalone Metastore to a specific interface. Run
+  # it behind a WSL firewall that permits loopback traffic only; Spark keeps
+  # the existing HiveCatalog while WSL/Windows/Docker peers cannot reach 9083.
+  start_metastore
+  if ! systemctl is-active --quiet aetheris-metastore-firewall.service; then
+    echo "Recovery refused: the WSL Metastore firewall service is not active." >&2
+    return 1
+  fi
   if [[ "$ENGINE" == "spark" ]]; then
-    env \
+    if port_is_open 10000; then
+      echo "Spark Thrift Server already running on $THRIFT_BIND_HOST:10000"
+    else
+      env \
       JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \
       HADOOP_CONF_DIR="$HADOOP_CONF_DIR" \
-      HIVE_CONF_DIR="$HIVE_HOME/conf" \
+      HIVE_CONF_DIR="$RUNTIME_HIVE_CONF_DIR" \
       SPARK_PID_DIR="$RUNTIME_DIR" \
       SPARK_LOG_DIR="$RUNTIME_DIR" \
       SPARK_IDENT_STRING=aetheris \
@@ -187,17 +303,23 @@ start() {
       --master "local[${SPARK_LOCAL_CORES}]" \
       --driver-memory "$SPARK_DRIVER_MEMORY" \
       --conf spark.sql.catalogImplementation=hive \
+      --conf spark.sql.catalog.hive_prod=org.apache.iceberg.spark.SparkCatalog \
+      --conf spark.sql.catalog.hive_prod.type=hive \
+      --conf spark.sql.catalog.hive_prod.uri=thrift://127.0.0.1:9083 \
+      --conf spark.sql.catalog.hive_prod.warehouse=hdfs://localhost:9000/user/hive/warehouse \
+      --conf spark.sql.defaultCatalog=hive_prod \
       --conf spark.sql.warehouse.dir=file:///usr/local/hive/warehouse \
       --conf spark.sql.shuffle.partitions="$SPARK_SHUFFLE_PARTITIONS" \
       --conf spark.sql.parquet.compression.codec=snappy \
-      --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
+      --hiveconf hive.server2.thrift.bind.host="$THRIFT_BIND_HOST" \
       --hiveconf hive.server2.thrift.port=10000 \
       --hiveconf hive.metastore.uris=thrift://127.0.0.1:9083 \
       --hiveconf hive.server2.enable.doAs=false
+    fi
   else
     start_service "HiveServer2" "$HIVESERVER2_PID_FILE" "$RUNTIME_DIR/hiveserver2.log" \
       "$HIVE_HOME/bin/hiveserver2" \
-      --hiveconf hive.server2.thrift.bind.host=0.0.0.0 \
+      --hiveconf hive.server2.thrift.bind.host="$THRIFT_BIND_HOST" \
       --hiveconf hive.server2.thrift.port=10000 \
       --hiveconf fs.defaultFS=file:/// \
       --hiveconf hive.exec.scratchdir=/tmp/hive \
@@ -213,10 +335,15 @@ start() {
     done
     exit 1
   fi
-  echo "$ENGINE thrift service ready on 0.0.0.0:10000"
+  if [[ -n "$THRIFT_RELAY_HOST" && "$THRIFT_RELAY_HOST" != "$THRIFT_BIND_HOST" ]]; then
+    start_thrift_relay
+  fi
+  echo "$ENGINE thrift service ready on $THRIFT_BIND_HOST:10000; Docker relay target $THRIFT_RELAY_HOST:10000"
 }
 
 stop() {
+  systemctl --user stop aetheris-thrift-relay.service >/dev/null 2>&1 || true
+  systemctl --user stop aetheris-hive-metastore.service >/dev/null 2>&1 || true
   if [[ -x "$SPARK_HOME/sbin/stop-thriftserver.sh" ]]; then
     env \
       JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 \
@@ -225,7 +352,7 @@ stop() {
       SPARK_IDENT_STRING=aetheris \
       "$SPARK_HOME/sbin/stop-thriftserver.sh" >/dev/null 2>&1 || true
   fi
-  for pid_file in "$HIVESERVER2_PID_FILE" "$METASTORE_PID_FILE" "$DATANODE_PID_FILE" "$NAMENODE_PID_FILE"; do
+  for pid_file in "$THRIFT_RELAY_PID_FILE" "$HIVESERVER2_PID_FILE" "$METASTORE_PID_FILE" "$DATANODE_PID_FILE" "$NAMENODE_PID_FILE"; do
     if is_running "$pid_file"; then
       kill "$(cat "$pid_file")"
     fi
@@ -239,7 +366,7 @@ stop() {
 
 status() {
   echo "Runtime logs: $RUNTIME_DIR"
-  ss -lntp 2>/dev/null | grep -E ':(9000|9083|9864|9870|10000)' || true
+  ss -lntp 2>/dev/null | grep -E ':(9000|9864|9870|9083|10000)' || true
 }
 
 health() {

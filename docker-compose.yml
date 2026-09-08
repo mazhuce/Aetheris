@@ -1,17 +1,56 @@
 name: aetheris
 
+x-java-runtime: &java-runtime
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 256
+  mem_limit: 768m
+  cpus: 1.0
+
 services:
+  redis:
+    image: docker.1panel.live/library/redis:7.4-alpine
+    user: "999:1000"
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
+
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1024m
+    cpus: 1.5
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-aetheris}
       POSTGRES_USER: ${POSTGRES_USER:-aetheris}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aetheris}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
     ports:
       # 宿主端口可用 POSTGRES_PORT 覆盖，原因同 web：5433 可能落入
       # Windows 的 Hyper-V 保留端口区间而无法绑定。容器间通信始终用 5432，不受影响。
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +60,8 @@ services:
       retries: 12
 
   system-service:
-    image: ghcr.io/mazhuce/aetheris-system:latest
+    <<: *java-runtime
+    image: aetheris-local/system:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/system/Dockerfile
@@ -31,8 +71,8 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
@@ -41,6 +81,8 @@ services:
         condition: service_healthy
 
   metadata-service:
+    <<: *java-runtime
+    image: aetheris-local/metadata:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/metadata/Dockerfile
@@ -50,9 +92,9 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
-      AETHERIS_DATASOURCE_MASTER_KEY: ${AETHERIS_DATASOURCE_MASTER_KEY:-}
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      AETHERIS_DATASOURCE_MASTER_KEY: ${AETHERIS_DATASOURCE_MASTER_KEY:?AETHERIS_DATASOURCE_MASTER_KEY must be set}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
@@ -61,7 +103,8 @@ services:
         condition: service_healthy
 
   serving-service:
-    image: ghcr.io/mazhuce/aetheris-serving:latest
+    <<: *java-runtime
+    image: aetheris-local/serving:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/serving/Dockerfile
@@ -71,12 +114,12 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       AETHERIS_SERVING_RATE_LIMIT_CAPACITY: ${AETHERIS_SERVING_RATE_LIMIT_CAPACITY:-60}
       AETHERIS_SERVING_RATE_LIMIT_WINDOW_MS: ${AETHERIS_SERVING_RATE_LIMIT_WINDOW_MS:-60000}
@@ -87,6 +130,8 @@ services:
         condition: service_healthy
 
   quality-service:
+    <<: *java-runtime
+    image: aetheris-local/quality:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/quality/Dockerfile
@@ -96,10 +141,13 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
       # 检查失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -110,7 +158,8 @@ services:
         condition: service_healthy
 
   ingestion-service:
-    image: ghcr.io/mazhuce/aetheris-ingestion:latest
+    <<: *java-runtime
+    image: aetheris-local/ingestion:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/ingestion/Dockerfile
@@ -120,10 +169,13 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
       # 检查失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -134,6 +186,8 @@ services:
         condition: service_healthy
 
   governance-service:
+    <<: *java-runtime
+    image: aetheris-local/governance:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/governance/Dockerfile
@@ -143,13 +197,18 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
     depends_on:
       postgres:
         condition: service_healthy
 
   workflow-service:
-    image: ghcr.io/mazhuce/aetheris-workflow:latest
+    <<: *java-runtime
+    image: aetheris-local/workflow:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/workflow/Dockerfile
@@ -159,11 +218,14 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       # 任务执行通过 metadata 的 /internal 端点，凭据与驱动都在那边，workflow 不直连数据源。
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
       # 任务失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -174,7 +236,8 @@ services:
         condition: service_healthy
 
   ai-agent:
-    image: ghcr.io/mazhuce/aetheris-ai-agent:latest
+    <<: *java-runtime
+    image: aetheris-local/ai-agent:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/ai-agent/Dockerfile
@@ -184,7 +247,7 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
@@ -193,7 +256,7 @@ services:
       # 表现为工具调用全部返回空、模型误以为仓库里没有任何表。
       METADATA_SERVICE_HOST: metadata-service
       METADATA_SERVICE_PORT: "8082"
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
     depends_on:
       postgres:
         condition: service_healthy
@@ -201,7 +264,8 @@ services:
         condition: service_healthy
 
   auth-service:
-    image: ghcr.io/mazhuce/aetheris-auth:latest
+    <<: *java-runtime
+    image: aetheris-local/auth:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/auth/Dockerfile
@@ -211,13 +275,13 @@ services:
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
-      DB_PASSWORD: ${DB_PASSWORD:-aetheris}
-      JWT_SECRET: ${JWT_SECRET:-}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
       INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
       INITIAL_ADMIN_NICKNAME: ${INITIAL_ADMIN_NICKNAME:-系统管理员}
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
     depends_on:
@@ -225,16 +289,20 @@ services:
         condition: service_healthy
 
   gateway:
-    image: ghcr.io/mazhuce/aetheris-gateway:latest
+    <<: *java-runtime
+    image: aetheris-local/gateway:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
     restart: unless-stopped
     environment:
-      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set}
       AETHERIS_RATE_LIMIT_CAPACITY: ${AETHERIS_RATE_LIMIT_CAPACITY:-60}
       AETHERIS_RATE_LIMIT_WINDOW_SECONDS: ${AETHERIS_RATE_LIMIT_WINDOW_SECONDS:-60}
-      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:-aetheris-internal-dev-token}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
@@ -273,11 +341,13 @@ services:
         condition: service_healthy
       serving-service:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
-      - "${GATEWAY_PORT:-8080}:8080"
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
 
   web:
-    image: ghcr.io/mazhuce/aetheris-web:latest
+    image: aetheris-local/web:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: ./apps/web
       dockerfile: Dockerfile
@@ -291,10 +361,21 @@ services:
       # 宿主端口可用 WEB_PORT 覆盖：Windows 上 Hyper-V 会随机保留端口区间，
       # 5173 若落入保留区间则无法绑定（报 ports are not available）。
       # 排查方法见 docs/datasource-connectivity.md。
-      - "${WEB_PORT:-5173}:80"
+      - "127.0.0.1:${WEB_PORT:-5173}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.5
 
 volumes:
   pgdata:
+  redisdata:
 
 networks:
   default:

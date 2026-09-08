@@ -4,6 +4,9 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -12,6 +15,9 @@ import java.security.MessageDigest;
 
 @Component
 public class TokenRevocationStore {
+
+    private static final String KEY_PREFIX = "aetheris:jwt:revoked:";
+    private final ReactiveStringRedisTemplate redis;
 
     private final Cache<String, Instant> revoked = Caffeine.newBuilder()
             .maximumSize(100_000)
@@ -33,19 +39,41 @@ public class TokenRevocationStore {
             })
             .build();
 
-    public void revoke(String jti, Instant expiresAt) {
-        if (jti == null || jti.isBlank() || expiresAt == null) {
-            return;
-        }
-        long ttlMillis = expiresAt.toEpochMilli() - System.currentTimeMillis();
-        if (ttlMillis > 0) {
-            revoked.put(jti, expiresAt);
-        }
+    public TokenRevocationStore(ObjectProvider<ReactiveStringRedisTemplate> redis) {
+        this.redis = redis.getIfAvailable();
     }
 
-    public boolean isRevoked(String jti) {
+    /** Unit-test constructor. Production always injects Redis through Spring. */
+    TokenRevocationStore() {
+        this.redis = null;
+    }
+
+    public Mono<Void> revoke(String jti, Instant expiresAt) {
+        if (jti == null || jti.isBlank() || expiresAt == null) {
+            return Mono.empty();
+        }
+        long ttlMillis = expiresAt.toEpochMilli() - System.currentTimeMillis();
+        if (ttlMillis <= 0) {
+            return Mono.empty();
+        }
+        if (redis == null) {
+            revoked.put(jti, expiresAt);
+            return Mono.empty();
+        }
+        return redis.opsForValue()
+                .set(KEY_PREFIX + jti, "1", Duration.ofMillis(ttlMillis))
+                .then();
+    }
+
+    public Mono<Boolean> isRevoked(String jti) {
+        if (jti == null || jti.isBlank()) {
+            return Mono.just(false);
+        }
+        if (redis != null) {
+            return redis.hasKey(KEY_PREFIX + jti);
+        }
         Instant expiresAt = jti == null ? null : revoked.getIfPresent(jti);
-        return expiresAt != null && expiresAt.isAfter(Instant.now());
+        return Mono.just(expiresAt != null && expiresAt.isAfter(Instant.now()));
     }
 
     public static String fingerprint(String token) {

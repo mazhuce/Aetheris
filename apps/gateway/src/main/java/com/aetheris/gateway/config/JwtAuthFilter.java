@@ -137,13 +137,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String rawToken = authorization.substring(7);
         String jti = claims.getId();
         String revocationKey = jti == null ? TokenRevocationStore.fingerprint(rawToken) : jti;
-        if (revocationStore.isRevoked(revocationKey)) {
-            return unauthorized(exchange);
-        }
-        if ("/api/auth/logout".equals(path)) {
-            revocationStore.revoke(revocationKey, claims.getExpiration() == null
-                    ? null : claims.getExpiration().toInstant());
-        }
+        return revocationStore.isRevoked(revocationKey)
+                .flatMap(revoked -> revoked
+                        ? unauthorized(exchange)
+                        : continueAuthenticated(exchange, chain, path, method, claims,
+                                revocationKey))
+                // Revocation state is an authentication boundary. If the shared
+                // store is unavailable, accepting tokens would silently undo logout.
+                .onErrorResume(error -> serviceUnavailable(exchange));
+    }
+
+    private Mono<Void> continueAuthenticated(
+            ServerWebExchange exchange, GatewayFilterChain chain, String path,
+            HttpMethod method, Claims claims, String revocationKey) {
+        Mono<Void> revoke = "/api/auth/logout".equals(path)
+                ? revocationStore.revoke(revocationKey, claims.getExpiration() == null
+                        ? null : claims.getExpiration().toInstant())
+                : Mono.empty();
 
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
@@ -170,22 +180,24 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 .build();
         ServerWebExchange authenticated = exchange.mutate().request(mutated).build();
 
-        String service = serviceOf(path, method);
-        if (service != null) {
-            return permissionGate.mayMutate(username, service)
+        return revoke.then(Mono.defer(() -> {
+            String service = serviceOf(path, method);
+            if (service != null) {
+                return permissionGate.mayMutate(username, service)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
                     .onErrorResume(error -> serviceUnavailable(exchange));
-        }
-        if (isSensitive(path)) {
-            return permissionGate.mayManage(username)
+            }
+            if (isSensitive(path)) {
+                return permissionGate.mayManage(username)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
                     .onErrorResume(error -> serviceUnavailable(exchange));
-        }
-        return chain.filter(authenticated);
+            }
+            return chain.filter(authenticated);
+        }));
     }
 
     private boolean isPublic(String path) {

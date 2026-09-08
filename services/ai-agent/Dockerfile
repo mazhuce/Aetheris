@@ -14,4 +14,5 @@ COPY --from=build /workspace/target/*.jar app.jar
 COPY --from=build /workspace/HealthCheck.class HealthCheck.class
 EXPOSE 8086
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=4 CMD ["java", "HealthCheck", "http://127.0.0.1:8086/actuator/health"]
+USER 10001:10001
 ENTRYPOINT ["java", "-jar", "app.jar"]

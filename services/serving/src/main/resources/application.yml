@@ -41,5 +41,7 @@ management:
 springdoc:
   api-docs:
     path: /v3/api-docs
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}
   swagger-ui:
     path: /swagger-ui.html
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}

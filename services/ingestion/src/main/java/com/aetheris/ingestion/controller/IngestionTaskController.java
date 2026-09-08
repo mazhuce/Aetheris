@@ -6,6 +6,7 @@ import com.aetheris.ingestion.service.IngestionExecutionService;
 import com.aetheris.ingestion.service.IngestionRunService;
 import com.aetheris.ingestion.service.IngestionSchedulerService;
 import com.aetheris.ingestion.service.IngestionTaskService;
+import com.aetheris.ingestion.security.GatewayIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -90,7 +91,7 @@ public class IngestionTaskController {
     @PostMapping("/{id}/run")
     public ResponseEntity<?> run(
             @PathVariable Long id,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         try {
             return ResponseEntity.ok(executionService.execute(id, username));
         } catch (IllegalArgumentException error) {

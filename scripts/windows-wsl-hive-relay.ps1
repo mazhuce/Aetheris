@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('start', 'stop', 'status', 'health', 'run')]
     [string]$Action = 'start',
     [string]$Distribution = 'Ubuntu',
@@ -83,7 +83,7 @@ public static class AetherisHiveRelay
         while (true)
         {
             var client = await listener.AcceptTcpClientAsync();
-            _ = RelayAsync(client, targetAddress, port);
+            var ignored = RelayAsync(client, targetAddress, port);
         }
     }
 
@@ -161,6 +161,9 @@ if ($Action -eq 'health') {
 
 $resolvedListenAddress = if ($ListenAddress) { $ListenAddress } else { Resolve-ListenAddress }
 $resolvedTargetAddress = if ($TargetAddress) { $TargetAddress } else { Resolve-WslAddress }
+if ($resolvedListenAddress -in @('0.0.0.0', '::')) {
+    throw '拒绝在通配地址启动 relay；必须绑定 WSL/Hyper-V 专用 IPv4 地址。'
+}
 if (-not (Test-RelayPort $resolvedTargetAddress $Port)) {
     throw "WSL 目标 $resolvedTargetAddress`:$Port 不可达，请先恢复 Spark Thrift Server。"
 }
