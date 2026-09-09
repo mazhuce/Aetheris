@@ -155,7 +155,11 @@ public class PipelineExecutionService {
                         """, runId, taskId);
                 TaskInstance instance = executionService.execute(taskId, bizDate, "pipeline", username);
                 instance = awaitTerminal(task, instance);
-                String nodeStatus = "success".equals(instance.getStatus()) ? "succeeded" : "failed";
+                String nodeStatus = switch (instance.getStatus()) {
+                    case "success" -> "succeeded";
+                    case "unknown" -> "unknown";
+                    default -> "failed";
+                };
                 Long waiverId = null;
                 if ("quality".equals(task.getTaskType()) && !"success".equals(instance.getStatus())) {
                     waiverId = activeWaiver(taskId, bizDate);
@@ -168,6 +172,10 @@ public class PipelineExecutionService {
                         """,
                         nodeStatus, instance.getId(), waiverId,
                         bounded(instance.getErrorMessage(), MAX_NODE_MESSAGE_LENGTH), runId, taskId);
+                if ("unknown".equals(nodeStatus)) {
+                    suspendRun(runId, "节点「" + task.getName() + "」结果待核对，流水线已停止");
+                    return;
+                }
                 if (!"succeeded".equals(nodeStatus) && !"waived".equals(nodeStatus)) {
                     throw new IllegalStateException("节点「" + task.getName() + "」执行失败");
                 }
@@ -207,6 +215,21 @@ public class PipelineExecutionService {
                     lease_expires_at=NULL,updated_at=now()
                 WHERE id=? AND status IN ('queued','running')
                 """, runMessage, runId);
+    }
+
+    /** Keeps an uncertain remote outcome distinct from an ordinary business failure. */
+    void suspendRun(long runId, String reason) {
+        jdbc.update("""
+                UPDATE workflow.pipeline_node_run
+                SET status='skipped',finished_at=now(),message='上游结果待核对，节点未执行'
+                WHERE pipeline_run_id=? AND status='queued'
+                """, runId);
+        jdbc.update("""
+                UPDATE workflow.pipeline_run
+                SET status='unknown',error_message=?,finished_at=now(),heartbeat_at=now(),
+                    lease_expires_at=NULL,updated_at=now()
+                WHERE id=? AND status='running'
+                """, bounded(reason, MAX_RUN_ERROR_LENGTH), runId);
     }
 
     private boolean refreshLease(long runId, long leaseSeconds) {
@@ -254,7 +277,7 @@ public class PipelineExecutionService {
         long timeout = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds()) * 1000L + 60_000;
         long deadline = System.currentTimeMillis() + timeout;
         TaskInstance current = initial;
-        while (Set.of("submitting", "running", "cancel_requested", "unknown").contains(current.getStatus())
+        while (awaitingRemoteResult(current)
                 && System.currentTimeMillis() < deadline) {
             try { Thread.sleep(1000); } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
@@ -262,10 +285,15 @@ public class PipelineExecutionService {
             }
             current = instanceService.getById(initial.getId());
         }
-        if (Set.of("submitting", "running", "cancel_requested", "unknown").contains(current.getStatus())) {
+        if (awaitingRemoteResult(current)) {
             throw new IllegalStateException("Spark 节点状态在等待窗口内未能确认");
         }
         return current;
+    }
+
+    private static boolean awaitingRemoteResult(TaskInstance instance) {
+        return Set.of("submitting", "running", "cancel_requested").contains(instance.getStatus())
+                || ("unknown".equals(instance.getStatus()) && instance.getFinishedAt() == null);
     }
 
     private Long activeWaiver(long taskId, String bizDate) {
