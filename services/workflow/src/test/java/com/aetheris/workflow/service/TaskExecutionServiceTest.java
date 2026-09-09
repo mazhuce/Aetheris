@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -123,6 +124,56 @@ class TaskExecutionServiceTest {
         TaskInstance result = f.service.execute(1L, "2026-08-28", "schedule", "scheduler");
 
         assertEquals("success", result.getStatus());
+    }
+
+    @Test
+    @DisplayName("流水线质量豁免允许下游继续执行")
+    void pipelineContinuesWhenFailedQualityDependencyHasActiveWaiver() {
+        Fixture f = new Fixture();
+        TaskDependency edge = new TaskDependency();
+        edge.setTaskId(1L);
+        edge.setUpstreamTaskId(2L);
+        Task quality = new Task();
+        quality.setId(2L);
+        quality.setName("订单质量门禁");
+        quality.setTaskType("quality");
+        when(f.dependencies.list(any(Wrapper.class))).thenReturn(List.of(edge));
+        when(f.instances.getOne(any()))
+                .thenReturn(instance(9L, "2026-08-28", "failed", 1));
+        when(f.tasks.getById(2L)).thenReturn(quality);
+        when(f.jdbc.queryForObject(org.mockito.ArgumentMatchers.contains("quality_waiver"),
+                org.mockito.ArgumentMatchers.eq(Integer.class), org.mockito.ArgumentMatchers.eq(2L),
+                org.mockito.ArgumentMatchers.eq("2026-08-28"))).thenReturn(1);
+        when(f.client.execute(anyLong(), anyString(), anyInt()))
+                .thenReturn(new SqlExecutionClient.ExecutionResult(5L, 10L));
+
+        TaskInstance result = f.service.execute(1L, "2026-08-28", "pipeline", "alice");
+
+        assertEquals("success", result.getStatus());
+    }
+
+    @Test
+    @DisplayName("质量豁免不放宽人工单任务依赖")
+    void qualityWaiverDoesNotApplyOutsidePipeline() {
+        Fixture f = new Fixture();
+        TaskDependency edge = new TaskDependency();
+        edge.setTaskId(1L);
+        edge.setUpstreamTaskId(2L);
+        Task quality = new Task();
+        quality.setId(2L);
+        quality.setName("订单质量门禁");
+        quality.setTaskType("quality");
+        when(f.dependencies.list(any(Wrapper.class))).thenReturn(List.of(edge));
+        when(f.instances.getOne(any()))
+                .thenReturn(instance(9L, "2026-08-28", "failed", 1));
+        when(f.tasks.getById(2L)).thenReturn(quality);
+
+        TaskInstance result = f.service.execute(1L, "2026-08-28", "manual", "alice");
+
+        assertEquals("skipped", result.getStatus());
+        verify(f.jdbc, never()).queryForObject(
+                org.mockito.ArgumentMatchers.contains("quality_waiver"),
+                org.mockito.ArgumentMatchers.eq(Integer.class), anyLong(), anyString());
     }
 
     @Test
@@ -248,6 +299,7 @@ class TaskExecutionServiceTest {
         final TaskDependencyService dependencies = mock(TaskDependencyService.class);
         final ExecutionClaimCoordinator coordinator = mock(ExecutionClaimCoordinator.class);
         final SqlExecutionClient client = mock(SqlExecutionClient.class);
+        final JdbcTemplate jdbc = mock(JdbcTemplate.class);
         final Task task = new Task();
         final AtomicInteger nextAttempt = new AtomicInteger(1);
         final TaskExecutionService service;
@@ -298,7 +350,7 @@ class TaskExecutionServiceTest {
                     });
             service = new TaskExecutionService(tasks, instances, logs, dependencies, coordinator, client,
                     mock(NotificationClient.class), mock(SparkBatchExecutionService.class),
-                    mock(QualityExecutionClient.class), mock(LineageEvidenceClient.class));
+                    mock(QualityExecutionClient.class), mock(LineageEvidenceClient.class), jdbc);
         }
     }
 

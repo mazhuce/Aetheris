@@ -8,6 +8,7 @@ import com.aetheris.workflow.service.ExecutionClaimCoordinator.ExecutionClaim;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -39,6 +40,7 @@ public class TaskExecutionService {
     private final SparkBatchExecutionService sparkExecutionService;
     private final QualityExecutionClient qualityExecutionClient;
     private final LineageEvidenceClient lineageEvidenceClient;
+    private final JdbcTemplate jdbc;
 
     public TaskExecutionService(
             TaskService taskService,
@@ -50,7 +52,8 @@ public class TaskExecutionService {
             NotificationClient notificationClient,
             SparkBatchExecutionService sparkExecutionService,
             QualityExecutionClient qualityExecutionClient,
-            LineageEvidenceClient lineageEvidenceClient) {
+            LineageEvidenceClient lineageEvidenceClient,
+            JdbcTemplate jdbc) {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
@@ -61,6 +64,7 @@ public class TaskExecutionService {
         this.sparkExecutionService = sparkExecutionService;
         this.qualityExecutionClient = qualityExecutionClient;
         this.lineageEvidenceClient = lineageEvidenceClient;
+        this.jdbc = jdbc;
     }
 
     /**
@@ -87,7 +91,7 @@ public class TaskExecutionService {
 
         // 依赖未就绪时标记 skipped 而非 failed：这不是错误，只是还没到时候，
         // 上游补跑完成后重跑本任务即可。用 failed 会让告警噪声掩盖真正的故障。
-        String unmetDependency = findUnmetDependency(taskId, bizDate);
+        String unmetDependency = findUnmetDependency(taskId, bizDate, triggerType);
         if (unmetDependency != null) {
             TaskInstance skipped = claimCoordinator.skip(claim, unmetDependency);
             writeLog(skipped.getId(), claim.attemptId(), "warn",
@@ -195,6 +199,10 @@ public class TaskExecutionService {
      * @return 未就绪的上游任务描述；全部就绪时返回 null
      */
     String findUnmetDependency(Long taskId, String bizDate) {
+        return findUnmetDependency(taskId, bizDate, null);
+    }
+
+    String findUnmetDependency(Long taskId, String bizDate, String triggerType) {
         List<TaskDependency> dependencies = dependencyService.list(
                 new LambdaQueryWrapper<TaskDependency>().eq(TaskDependency::getTaskId, taskId));
         if (dependencies.isEmpty()) {
@@ -208,6 +216,9 @@ public class TaskExecutionService {
                             .eq(TaskInstance::getBizDate, bizDate));
             if (upstream == null || !"success".equals(upstream.getStatus())) {
                 Task upstreamTask = taskService.getById(dependency.getUpstreamTaskId());
+                if ("pipeline".equals(triggerType) && activeQualityWaiver(upstreamTask, bizDate)) {
+                    continue;
+                }
                 String name = upstreamTask == null
                         ? "任务 " + dependency.getUpstreamTaskId()
                         : upstreamTask.getName();
@@ -216,6 +227,15 @@ public class TaskExecutionService {
             }
         }
         return null;
+    }
+
+    private boolean activeQualityWaiver(Task upstreamTask, String bizDate) {
+        if (upstreamTask == null || !"quality".equals(upstreamTask.getTaskType())) return false;
+        Integer count = jdbc.queryForObject("""
+                SELECT count(*) FROM workflow.quality_waiver
+                WHERE quality_task_id=? AND biz_date=? AND expires_at>now()
+                """, Integer.class, upstreamTask.getId(), bizDate);
+        return count != null && count > 0;
     }
 
     /** 日志写入失败不应让任务本身失败，因此单独捕获。 */
