@@ -63,6 +63,22 @@ public class PipelineController {
         }
     }
 
+    @PostMapping("/{id}/retry")
+    public ResponseEntity<?> retry(@PathVariable long id, @RequestBody RetryRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.canReadPipeline(username, id)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权操作该流水线"));
+        }
+        try {
+            return ResponseEntity.ok(pipelines.retry(id, request.resumeTaskId(), username));
+        } catch (IllegalArgumentException invalid) {
+            if ("流水线运行不存在".equals(invalid.getMessage())) return ResponseEntity.notFound().build();
+            return ResponseEntity.badRequest().body(Map.of("message", invalid.getMessage()));
+        } catch (IllegalStateException conflict) {
+            return ResponseEntity.status(409).body(Map.of("message", conflict.getMessage()));
+        }
+    }
+
     @PostMapping
     public ResponseEntity<?> start(@RequestBody StartRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
@@ -83,5 +99,6 @@ public class PipelineController {
     }
 
     public record StartRequest(long targetTaskId, String bizDate) { }
+    public record RetryRequest(long resumeTaskId) { }
     public record WaiverRequest(long qualityTaskId, String bizDate, String reason, OffsetDateTime expiresAt) { }
 }

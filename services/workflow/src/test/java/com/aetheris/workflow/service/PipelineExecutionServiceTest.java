@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -105,6 +106,36 @@ class PipelineExecutionServiceTest {
         String oversized = "x".repeat(800);
         assertEquals(512, PipelineExecutionService.bounded(oversized, 512).length());
         assertEquals("short", PipelineExecutionService.bounded("short", 512));
+    }
+
+    @Test
+    void retryRunsOnlyTheSelectedNodeAndItsDownstreamBranches() {
+        assertEquals(List.of(12L, 14L), PipelineExecutionService.resumeOrder(
+                List.of(10L, 11L, 12L, 13L, 14L), Set.of(12L, 14L), 12L));
+    }
+
+    @Test
+    void retryRejectsNodeRemovedFromCurrentDependencyGraph() {
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> PipelineExecutionService.resumeOrder(List.of(10L, 11L), Set.of(12L), 12L));
+
+        assertTrue(error.getMessage().contains("已不在当前任务依赖图"));
+    }
+
+    @Test
+    void retryRejectsUnknownOutcomeToPreventDuplicateRemoteSubmission() {
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> PipelineExecutionService.validateRetrySource("unknown", "unknown"));
+
+        assertTrue(error.getMessage().contains("确认远端执行结果"));
+    }
+
+    @Test
+    void retryRequiresAnActuallyFailedOrCancelledNode() {
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> PipelineExecutionService.validateRetrySource("failed", "skipped"));
+
+        assertTrue(error.getMessage().contains("失败或已确认取消的节点"));
     }
 
     @Test

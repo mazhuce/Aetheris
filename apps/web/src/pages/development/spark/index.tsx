@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Col, DatePicker, Descriptions, Drawer, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { App, Button, Card, Col, DatePicker, Descriptions, Drawer, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { CaretRightOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
-  cancelTaskInstance, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
+  cancelPipeline, cancelTaskInstance, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
   listSparkEnvironments, listSparkJobs, listTasks, runTask, startPipeline,
+  retryPipeline,
   type ManagedArtifact, type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
   type SparkRunnerHealth, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
+import { canCancelPipeline, canRetryPipelineNode } from './pipelineActions'
 
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
@@ -27,6 +29,7 @@ export default function SparkDevelopmentPage() {
   const [pipelineTargetId, setPipelineTargetId] = useState<number>()
   const [bizDate, setBizDate] = useState<Dayjs>(dayjs().subtract(1, 'day'))
   const [busy, setBusy] = useState(false)
+  const [pipelineAction, setPipelineAction] = useState<string>()
 
   const refresh = async () => {
     const settled = await Promise.allSettled([
@@ -73,6 +76,33 @@ export default function SparkDevelopmentPage() {
     try { setPipelineDetail(await getPipelineRun(id)) }
     catch { message.error('流水线详情加载失败') }
     finally { setDetailLoading(false) }
+  }
+
+  const cancelPipelineRun = async (id: number) => {
+    const action = `cancel-${id}`
+    setPipelineAction(action)
+    try {
+      const result = await cancelPipeline(id)
+      message.success(result.cancellation_requested ? '远端取消请求已提交，等待确认' : '流水线已取消')
+      if (pipelineDetail?.id === id) setPipelineDetail(await getPipelineRun(id))
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '流水线取消失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const retryFromNode = async (node: PipelineNodeRun) => {
+    if (!pipelineDetail) return
+    const action = `retry-${pipelineDetail.id}-${node.task_id}`
+    setPipelineAction(action)
+    try {
+      const result = await retryPipeline(pipelineDetail.id, node.task_id)
+      message.success(`已创建续跑流水线 #${result.id}`)
+      setPipelineDetail(null)
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '断点重跑失败')
+    } finally { setPipelineAction(undefined) }
   }
 
   const statusTag = (status: string) => {
@@ -131,7 +161,13 @@ export default function SparkDevelopmentPage() {
         { title: '运行', dataIndex: 'id' }, { title: '目标', dataIndex: 'target_task_name' }, { title: '业务日期', dataIndex: 'biz_date' },
         { title: '状态', dataIndex: 'status', render: statusTag }, { title: '触发人', dataIndex: 'triggered_by' },
         { title: '错误', dataIndex: 'error_message', ellipsis: true },
-        { title: '操作', render: (_, row: PipelineRun) => <Button size="small" loading={detailLoading} onClick={() => void showPipeline(row.id)}>节点详情</Button> }
+        { title: '操作', width: 190, render: (_, row: PipelineRun) => <Space size={6}>
+          <Button size="small" loading={detailLoading} onClick={() => void showPipeline(row.id)}>节点详情</Button>
+          {canCancelPipeline(row.status) && <Popconfirm title="确认取消此流水线？" description="仅能可靠取消排队任务或正在运行的 Spark 节点。"
+            onConfirm={() => void cancelPipelineRun(row.id)} okText="确认取消" cancelText="返回">
+            <Button danger size="small" icon={<StopOutlined />} loading={pipelineAction === `cancel-${row.id}`}>取消</Button>
+          </Popconfirm>}
+        </Space> }
       ]} /> }
     ]} />
     <Drawer title={pipelineDetail ? `流水线 #${pipelineDetail.id}` : '流水线详情'} width={760}
@@ -141,15 +177,22 @@ export default function SparkDevelopmentPage() {
           <Descriptions.Item label="业务日期">{pipelineDetail.biz_date}</Descriptions.Item>
           <Descriptions.Item label="状态">{statusTag(pipelineDetail.status)}</Descriptions.Item>
           <Descriptions.Item label="触发人">{pipelineDetail.triggered_by}</Descriptions.Item>
+          {pipelineDetail.retry_of_run_id && <Descriptions.Item label="来源运行">#{pipelineDetail.retry_of_run_id}</Descriptions.Item>}
+          {pipelineDetail.resume_from_task_id && <Descriptions.Item label="续跑起点">任务 #{pipelineDetail.resume_from_task_id}</Descriptions.Item>}
           {pipelineDetail.error_message && <Descriptions.Item label="错误" span={3}>{pipelineDetail.error_message}</Descriptions.Item>}
         </Descriptions>
-        <Table rowKey="id" size="small" pagination={false} dataSource={pipelineDetail.nodes} columns={[
+        <Table<PipelineNodeRun> rowKey="id" size="small" pagination={false} dataSource={pipelineDetail.nodes} columns={[
           { title: '#', dataIndex: 'sequence_no', width: 54 },
           { title: '节点', dataIndex: 'task_name' },
           { title: '类型', dataIndex: 'task_type', width: 90 },
           { title: '状态', dataIndex: 'status', width: 100, render: statusTag },
           { title: '实例', dataIndex: 'instance_id', width: 80, render: (value?: number) => value ?? '-' },
-          { title: '说明', dataIndex: 'message', ellipsis: true, render: (value?: string, row?: PipelineNodeRun) => value || (row?.waiver_id ? `豁免 #${row.waiver_id}` : '-') }
+          { title: '说明', dataIndex: 'message', ellipsis: true, render: (value: string | undefined, row: PipelineNodeRun) => value || (row.waiver_id ? `豁免 #${row.waiver_id}` : '-') },
+          { title: '操作', width: 126, render: (_, node: PipelineNodeRun) => canRetryPipelineNode(pipelineDetail.status, node.status)
+            ? <Popconfirm title={`从「${node.task_name}」继续？`} description="已成功或豁免的上游不会重复执行。unknown 节点禁止重跑。"
+                onConfirm={() => void retryFromNode(node)} okText="创建续跑" cancelText="返回">
+                <Button size="small" loading={pipelineAction === `retry-${pipelineDetail.id}-${node.task_id}`}>从此续跑</Button>
+              </Popconfirm> : null }
         ]} />
       </Space>}
     </Drawer>

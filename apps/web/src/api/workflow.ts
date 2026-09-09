@@ -66,7 +66,7 @@ export interface TaskInstance {
   /** 业务日期（数据日期），对应分区键 dt，不是执行时刻。 */
   bizDate: string
   status: TaskInstanceStatus
-  triggerType?: 'manual' | 'schedule' | 'retry'
+  triggerType?: 'manual' | 'schedule' | 'retry' | 'pipeline'
   attempt?: number
   startedAt?: string
   finishedAt?: string
@@ -109,7 +109,7 @@ export interface ExecutionAttempt {
   status: ExecutionAttemptStatus
   fencingToken: number
   workerId: string
-  triggerType: 'manual' | 'schedule' | 'retry'
+  triggerType: 'manual' | 'schedule' | 'retry' | 'pipeline'
   triggeredBy?: string
   taskName: string
   taskType?: 'sql' | 'spark' | 'quality'
@@ -267,6 +267,9 @@ export interface PipelineRun {
   started_at?: string
   finished_at?: string
   error_message?: string
+  retry_of_run_id?: number
+  resume_from_task_id?: number
+  cancellation_requested?: boolean
 }
 
 export interface PipelineNodeRun {
@@ -276,7 +279,7 @@ export interface PipelineNodeRun {
   task_name: string
   task_type: 'sql' | 'spark' | 'quality'
   sequence_no: number
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'waived' | 'unknown'
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'waived' | 'unknown' | 'cancelled'
   instance_id?: number
   waiver_id?: number
   started_at?: string
@@ -294,6 +297,10 @@ export const getPipelineRun = (id: number) =>
   http.get<PipelineDetail>(`/api/workflow/pipelines/${id}`).then((r) => r.data)
 export const startPipeline = (targetTaskId: number, bizDate: string) =>
   http.post<PipelineRun>('/api/workflow/pipelines', { targetTaskId, bizDate }).then((r) => r.data)
+export const cancelPipeline = (id: number) =>
+  http.post<PipelineRun>(`/api/workflow/pipelines/${id}/cancel`).then((r) => r.data)
+export const retryPipeline = (id: number, resumeTaskId: number) =>
+  http.post<PipelineRun>(`/api/workflow/pipelines/${id}/retry`, { resumeTaskId }).then((r) => r.data)
 
 export function listDependencies(id: number): Promise<TaskDependency[]> {
   return http

@@ -70,4 +70,33 @@ class PipelineControllerTest {
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(cancellations, never()).cancel(7L, "alice");
     }
+
+    @Test
+    void retryRejectsUsersWithoutObjectAccess() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.canReadPipeline("alice", 7L)).thenReturn(false);
+
+        ResponseEntity<?> response = new PipelineController(
+                pipelines, mock(PipelineCancellationService.class), authorization)
+                .retry(7L, new PipelineController.RetryRequest(11L), "alice");
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(pipelines, never()).retry(7L, 11L, "alice");
+    }
+
+    @Test
+    void retryReturnsConflictForUnsafeSourceState() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.canReadPipeline("alice", 7L)).thenReturn(true);
+        when(pipelines.retry(7L, 11L, "alice"))
+                .thenThrow(new IllegalStateException("结果待核对的流水线禁止重跑"));
+
+        ResponseEntity<?> response = new PipelineController(
+                pipelines, mock(PipelineCancellationService.class), authorization)
+                .retry(7L, new PipelineController.RetryRequest(11L), "alice");
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+    }
 }

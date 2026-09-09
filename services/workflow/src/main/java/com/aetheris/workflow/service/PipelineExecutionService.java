@@ -59,13 +59,49 @@ public class PipelineExecutionService {
         validateBizDate(bizDate);
         List<Long> order = topologicalOrder(targetTaskId);
         validateRunnableTasks(order);
+        return createRun(targetTaskId, bizDate, username, order, null, null);
+    }
+
+    /**
+     * Resumes a failed or confirmed-cancelled pipeline from one terminal node.
+     * Unknown outcomes are deliberately excluded because repeating a remote Spark
+     * submission before reconciliation could duplicate side effects.
+     */
+    @Transactional
+    public Map<String, Object> retry(long sourceRunId, long resumeTaskId, String username) {
+        Map<String, Object> source = run(sourceRunId);
+        String sourceStatus = String.valueOf(source.get("status"));
+        List<Map<String, Object>> nodes = jdbc.queryForList("""
+                SELECT task_id,status FROM workflow.pipeline_node_run
+                WHERE pipeline_run_id=? AND task_id=?
+                """, sourceRunId, resumeTaskId);
+        if (nodes.isEmpty()) throw new IllegalArgumentException("续跑节点不属于来源流水线");
+        String nodeStatus = String.valueOf(nodes.getFirst().get("status"));
+        validateRetrySource(sourceStatus, nodeStatus);
+
+        long targetTaskId = ((Number) source.get("target_task_id")).longValue();
+        String bizDate = String.valueOf(source.get("biz_date"));
+        List<Long> fullOrder = topologicalOrder(targetTaskId);
+        validateRunnableTasks(fullOrder);
+        List<Long> resumeOrder = resumeOrder(fullOrder, downstreamOf(resumeTaskId), resumeTaskId);
+        String unmetDependency = executionService.findUnmetDependency(resumeTaskId, bizDate, "pipeline");
+        if (unmetDependency != null) {
+            throw new IllegalStateException("续跑前置条件不满足：" + unmetDependency);
+        }
+        return createRun(targetTaskId, bizDate, username, resumeOrder, sourceRunId, resumeTaskId);
+    }
+
+    private Map<String, Object> createRun(long targetTaskId, String bizDate, String username,
+                                           List<Long> order, Long retryOfRunId, Long resumeFromTaskId) {
         Long runId;
         try {
             runId = jdbc.queryForObject("""
                     INSERT INTO workflow.pipeline_run
-                        (target_task_id,biz_date,status,triggered_by,heartbeat_at,lease_expires_at)
-                    VALUES (?,?,'queued',?,now(),now() + (? * interval '1 second')) RETURNING id
-                    """, Long.class, targetTaskId, bizDate, username, dispatchLeaseSeconds);
+                        (target_task_id,biz_date,status,triggered_by,heartbeat_at,lease_expires_at,
+                         retry_of_run_id,resume_from_task_id)
+                    VALUES (?,?,'queued',?,now(),now() + (? * interval '1 second'),?,?) RETURNING id
+                    """, Long.class, targetTaskId, bizDate, username, dispatchLeaseSeconds,
+                    retryOfRunId, resumeFromTaskId);
         } catch (DuplicateKeyException duplicate) {
             throw new IllegalStateException("该目标在此业务日期已有运行中的流水线", duplicate);
         }
@@ -301,6 +337,29 @@ public class PipelineExecutionService {
         return value.substring(0, limit);
     }
 
+    static void validateRetrySource(String runStatus, String nodeStatus) {
+        if ("unknown".equals(runStatus) || "unknown".equals(nodeStatus)) {
+            throw new IllegalStateException("结果待核对的流水线禁止重跑，请先确认远端执行结果");
+        }
+        if (!Set.of("failed", "cancelled").contains(runStatus)) {
+            throw new IllegalStateException("只有失败或已取消的流水线可以断点重跑");
+        }
+        if (!Set.of("failed", "cancelled").contains(nodeStatus)) {
+            throw new IllegalStateException("只能从失败或已确认取消的节点继续");
+        }
+    }
+
+    static List<Long> resumeOrder(List<Long> fullOrder, Set<Long> downstream, long resumeTaskId) {
+        if (!fullOrder.contains(resumeTaskId)) {
+            throw new IllegalStateException("续跑节点已不在当前任务依赖图中");
+        }
+        List<Long> order = fullOrder.stream().filter(downstream::contains).toList();
+        if (order.isEmpty() || order.getFirst() != resumeTaskId) {
+            throw new IllegalStateException("无法生成安全的续跑依赖链");
+        }
+        return order;
+    }
+
     private TaskInstance awaitTerminal(Task task, TaskInstance initial) {
         if (!"spark".equals(task.getTaskType())) return initial;
         long timeout = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds()) * 1000L + 60_000;
@@ -340,6 +399,19 @@ public class PipelineExecutionService {
         LinkedHashSet<Long> ordered = new LinkedHashSet<>();
         visit(target, upstream, new HashSet<>(), new HashSet<>(), ordered);
         return new ArrayList<>(ordered);
+    }
+
+    private Set<Long> downstreamOf(long taskId) {
+        return new HashSet<>(jdbc.query("""
+                WITH RECURSIVE downstream(task_id) AS (
+                    VALUES (CAST(? AS BIGINT))
+                    UNION
+                    SELECT dependency.task_id
+                    FROM workflow.task_dependency dependency
+                    JOIN downstream ON dependency.upstream_task_id=downstream.task_id
+                )
+                SELECT task_id FROM downstream
+                """, (rs, row) -> rs.getLong(1), taskId));
     }
 
     /** Rejects an invalid dependency closure before creating any pipeline audit rows. */
