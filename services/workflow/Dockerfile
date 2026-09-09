@@ -1,6 +1,9 @@
-# 说明：FROM 使用国内镜像前缀；若网络可直连 Docker Hub，可改回 docker.io/library/...。
+# 默认使用国内镜像；构建时可通过参数切换到官方源，避免单一镜像站故障阻塞升级。
+ARG MAVEN_IMAGE=docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21
+ARG JAVA_IMAGE=docker.1panel.live/library/eclipse-temurin:21-jre
+
 # build stage
-FROM docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21 AS build
+FROM ${MAVEN_IMAGE} AS build
 WORKDIR /workspace
 COPY scripts/maven-mirror-settings.xml ./settings.xml
 COPY services/workflow/pom.xml ./pom.xml
@@ -11,7 +14,7 @@ COPY services/workflow/src ./src
 RUN --mount=type=cache,target=/root/.m2 mvn -s settings.xml -q -DskipTests package
 
 # runtime stage
-FROM docker.1panel.live/library/eclipse-temurin:21-jre
+FROM ${JAVA_IMAGE}
 WORKDIR /app
 COPY --from=build /workspace/target/*.jar app.jar
 COPY --from=build /workspace/HealthCheck.class HealthCheck.class

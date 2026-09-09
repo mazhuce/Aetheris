@@ -11,3 +11,7 @@ export function canRetryPipelineNode(
   return (runStatus === 'failed' || runStatus === 'cancelled')
     && (nodeStatus === 'failed' || nodeStatus === 'cancelled')
 }
+
+export function canResolveUnknownInstance(status: string, instanceId?: number): boolean {
+  return status === 'unknown' && typeof instanceId === 'number'
+}

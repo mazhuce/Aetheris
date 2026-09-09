@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App, Button, Card, Col, DatePicker, Descriptions, Drawer, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
 import { CaretRightOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
   cancelPipeline, cancelTaskInstance, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
-  listSparkEnvironments, listSparkJobs, listTasks, runTask, startPipeline,
+  listSparkEnvironments, listSparkJobs, listTasks, resolveTaskInstance, runTask, startPipeline,
   retryPipeline,
+  type ExecutionResolutionInput,
   type ManagedArtifact, type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
   type SparkRunnerHealth, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
-import { canCancelPipeline, canRetryPipelineNode } from './pipelineActions'
+import { canCancelPipeline, canResolveUnknownInstance, canRetryPipelineNode } from './pipelineActions'
 
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
@@ -30,6 +31,8 @@ export default function SparkDevelopmentPage() {
   const [bizDate, setBizDate] = useState<Dayjs>(dayjs().subtract(1, 'day'))
   const [busy, setBusy] = useState(false)
   const [pipelineAction, setPipelineAction] = useState<string>()
+  const [resolutionTarget, setResolutionTarget] = useState<{ instanceId: number; label: string; pipeline: boolean }>()
+  const [resolutionForm] = Form.useForm<ExecutionResolutionInput>()
 
   const refresh = async () => {
     const settled = await Promise.allSettled([
@@ -105,6 +108,29 @@ export default function SparkDevelopmentPage() {
     } finally { setPipelineAction(undefined) }
   }
 
+  const openResolution = (instanceId: number, label: string, pipeline = false) => {
+    resolutionForm.resetFields()
+    setResolutionTarget({ instanceId, label, pipeline })
+  }
+
+  const submitResolution = async () => {
+    if (!resolutionTarget) return
+    let values: ExecutionResolutionInput
+    try { values = await resolutionForm.validateFields() }
+    catch { return }
+    const action = `resolve-${resolutionTarget.instanceId}`
+    setPipelineAction(action)
+    try {
+      await resolveTaskInstance(resolutionTarget.instanceId, values)
+      message.success('核对结果已登记；关联流水线将按该结果自动恢复或终止')
+      if (resolutionTarget.pipeline) setPipelineDetail(null)
+      setResolutionTarget(undefined)
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '结果认领失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
   const statusTag = (status: string) => {
     const color = status === 'succeeded' || status === 'success' ? 'success'
       : status === 'failed' ? 'error'
@@ -138,8 +164,10 @@ export default function SparkDevelopmentPage() {
       { key: 'runs', label: '运行记录', children: <DataSurface label="Spark 运行记录"><Table rowKey="id" size="small" dataSource={sparkInstances} pagination={{ pageSize: 10 }} columns={[
         { title: '实例', dataIndex: 'id', width: 80 }, { title: '任务', dataIndex: 'taskId', width: 80 },
         { title: '业务日期', dataIndex: 'bizDate' }, { title: '状态', dataIndex: 'status', render: (v: string) => <Tag>{v}</Tag> },
-        { title: '耗时(ms)', dataIndex: 'durationMs' }, { title: '操作', render: (_, row: TaskInstance) =>
-          ['submitting', 'running', 'cancel_requested'].includes(row.status) ? <Button danger size="small" icon={<StopOutlined />} onClick={() => void cancel(row.id)}>取消</Button> : null }
+        { title: '耗时(ms)', dataIndex: 'durationMs' }, { title: '操作', width: 150, render: (_, row: TaskInstance) => <Space size={6}>
+          {['submitting', 'running', 'cancel_requested'].includes(row.status) && <Button danger size="small" icon={<StopOutlined />} onClick={() => void cancel(row.id)}>取消</Button>}
+          {canResolveUnknownInstance(row.status, row.id) && <Button size="small" onClick={() => openResolution(row.id, `Spark 实例 #${row.id}`)}>确认结果</Button>}
+        </Space> }
       ]} /></DataSurface> },
       { key: 'jobs', label: '作业定义', children: <Table rowKey="id" size="small" dataSource={jobs} pagination={{ pageSize: 10 }} columns={[
         { title: '名称', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '制品', dataIndex: 'artifactKey' },
@@ -188,13 +216,42 @@ export default function SparkDevelopmentPage() {
           { title: '状态', dataIndex: 'status', width: 100, render: statusTag },
           { title: '实例', dataIndex: 'instance_id', width: 80, render: (value?: number) => value ?? '-' },
           { title: '说明', dataIndex: 'message', ellipsis: true, render: (value: string | undefined, row: PipelineNodeRun) => value || (row.waiver_id ? `豁免 #${row.waiver_id}` : '-') },
-          { title: '操作', width: 126, render: (_, node: PipelineNodeRun) => canRetryPipelineNode(pipelineDetail.status, node.status)
-            ? <Popconfirm title={`从「${node.task_name}」继续？`} description="已成功或豁免的上游不会重复执行。unknown 节点禁止重跑。"
+          { title: '操作', width: 164, render: (_, node: PipelineNodeRun) => <Space size={6}>
+            {canRetryPipelineNode(pipelineDetail.status, node.status) && <Popconfirm title={`从「${node.task_name}」继续？`} description="已成功或豁免的上游不会重复执行。unknown 节点禁止重跑。"
                 onConfirm={() => void retryFromNode(node)} okText="创建续跑" cancelText="返回">
                 <Button size="small" loading={pipelineAction === `retry-${pipelineDetail.id}-${node.task_id}`}>从此续跑</Button>
-              </Popconfirm> : null }
+              </Popconfirm>}
+            {canResolveUnknownInstance(node.status, node.instance_id) && <Button size="small"
+              loading={pipelineAction === `resolve-${node.instance_id}`}
+              onClick={() => openResolution(node.instance_id!, `流水线节点「${node.task_name}」`, true)}>确认结果</Button>}
+          </Space> }
         ]} />
       </Space>}
     </Drawer>
+    <Modal title={resolutionTarget ? `确认 ${resolutionTarget.label} 的远端结果` : '确认远端结果'}
+      open={resolutionTarget !== undefined} onCancel={() => setResolutionTarget(undefined)}
+      onOk={() => void submitResolution()} okText="写入不可变核对记录" cancelText="返回"
+      confirmLoading={resolutionTarget ? pipelineAction === `resolve-${resolutionTarget.instanceId}` : false}
+      destroyOnClose>
+      <Alert type="warning" showIcon style={{ marginBottom: 16 }}
+        message="仅用于没有受管句柄、且已通过外部系统确认结果的 unknown Spark 执行。提交后不可修改或删除。" />
+      <Form form={resolutionForm} layout="vertical" preserve={false}>
+        <Form.Item name="status" label="确认结果" rules={[{ required: true, message: '请选择确认结果' }]}>
+          <Select placeholder="选择外部系统确认的最终状态" options={[
+            { value: 'success', label: '成功（流水线继续）' },
+            { value: 'failed', label: '失败（流水线终止，可断点续跑）' },
+            { value: 'cancelled', label: '已取消（流水线终止，可断点续跑）' }
+          ]} />
+        </Form.Item>
+        <Form.Item name="evidenceRef" label="外部证据引用" rules={[{ required: true, whitespace: true, max: 512,
+          message: '请填写 application ID、日志地址或工单编号（最多 512 字）' }]}>
+          <Input placeholder="例如 application_... / 日志 URL / 工单编号" maxLength={512} />
+        </Form.Item>
+        <Form.Item name="reason" label="核对说明" rules={[{ required: true, whitespace: true, max: 512,
+          message: '请说明核对依据和结论（最多 512 字）' }]}>
+          <Input.TextArea rows={4} maxLength={512} showCount placeholder="说明在哪里核对、由什么证据得出该结论" />
+        </Form.Item>
+      </Form>
+    </Modal>
   </div>
 }

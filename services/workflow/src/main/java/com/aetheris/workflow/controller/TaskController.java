@@ -9,6 +9,7 @@ import com.aetheris.workflow.entity.TaskInstance;
 import com.aetheris.workflow.entity.TaskLog;
 import com.aetheris.workflow.service.SqlExecutionClient;
 import com.aetheris.workflow.service.ExecutionAttemptService;
+import com.aetheris.workflow.service.ExecutionResolutionService;
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.SparkBatchExecutionService;
 import com.aetheris.workflow.service.TaskDependencyService;
@@ -58,6 +59,7 @@ public class TaskController {
     private final TaskInstanceService instanceService;
     private final TaskLogService logService;
     private final ExecutionAttemptService attemptService;
+    private final ExecutionResolutionService resolutionService;
     private final TaskDependencyService dependencyService;
     private final TaskExecutionService executionService;
     private final TaskSchedulerService schedulerService;
@@ -71,6 +73,7 @@ public class TaskController {
             TaskInstanceService instanceService,
             TaskLogService logService,
             ExecutionAttemptService attemptService,
+            ExecutionResolutionService resolutionService,
             TaskDependencyService dependencyService,
             TaskExecutionService executionService,
             TaskSchedulerService schedulerService,
@@ -82,6 +85,7 @@ public class TaskController {
         this.instanceService = instanceService;
         this.logService = logService;
         this.attemptService = attemptService;
+        this.resolutionService = resolutionService;
         this.dependencyService = dependencyService;
         this.executionService = executionService;
         this.schedulerService = schedulerService;
@@ -294,6 +298,45 @@ public class TaskController {
                         .eq(ExecutionAttempt::getInstanceId, instanceId)
                         .orderByDesc(ExecutionAttempt::getAttemptNo)));
     }
+
+    /** Returns the immutable manual resolution record, when this instance needed one. */
+    @GetMapping("/instances/{instanceId}/resolution")
+    public ResponseEntity<?> resolution(@PathVariable long instanceId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该实例核对记录"));
+        }
+        return resolutionService.find(instanceId)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Resolves a handle-less unknown Spark result from externally verified evidence.
+     * Gateway authorization already protects mutations; the explicit manager check is
+     * defense in depth for direct service calls and future routing changes.
+     */
+    @PostMapping("/instances/{instanceId}/resolve")
+    public ResponseEntity<?> resolve(
+            @PathVariable long instanceId,
+            @RequestBody ResolutionRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以认领未知执行结果"));
+        }
+        try {
+            return ResponseEntity.ok(resolutionService.resolve(
+                    instanceId, request.status(), request.reason(), request.evidenceRef(), username));
+        } catch (ExecutionResolutionService.ResolutionNotFoundException error) {
+            return ResponseEntity.status(404).body(Map.of("message", error.getMessage()));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    public record ResolutionRequest(String status, String reason, String evidenceRef) { }
 
     @GetMapping("/instances/{instanceId}/spark-logs")
     public ResponseEntity<?> sparkLogs(@PathVariable long instanceId,

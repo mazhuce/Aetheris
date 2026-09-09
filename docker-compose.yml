@@ -212,6 +212,9 @@ services:
     build:
       context: .
       dockerfile: services/workflow/Dockerfile
+      args:
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21}
+        JAVA_IMAGE: ${JAVA_IMAGE:-docker.1panel.live/library/eclipse-temurin:21-jre}
     restart: unless-stopped
     environment:
       DB_HOST: postgres
@@ -365,6 +368,8 @@ services:
       dockerfile: Dockerfile
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
+        NODE_IMAGE: ${NODE_IMAGE:-docker.1panel.live/library/node:22-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-docker.1panel.live/library/nginx:1.27-alpine}
     restart: unless-stopped
     depends_on:
       gateway:

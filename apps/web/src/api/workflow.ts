@@ -133,6 +133,26 @@ export interface ExecutionAttempt {
   errorMessage?: string
 }
 
+export type ExecutionResolutionStatus = 'success' | 'failed' | 'cancelled'
+
+export interface ExecutionResolution {
+  id: number
+  instanceId: number
+  attemptId: number
+  fromStatus: 'unknown'
+  resolvedStatus: ExecutionResolutionStatus
+  reason: string
+  evidenceRef: string
+  resolvedBy: string
+  createdAt: string
+}
+
+export interface ExecutionResolutionInput {
+  status: ExecutionResolutionStatus
+  reason: string
+  evidenceRef: string
+}
+
 export interface TaskDependency {
   id: number
   taskId: number
@@ -232,6 +252,21 @@ export function listExecutionAttempts(instanceId: number): Promise<ExecutionAtte
 
 export function cancelTaskInstance(instanceId: number): Promise<TaskInstance> {
   return http.post<TaskInstance>(`/api/workflow/tasks/instances/${instanceId}/cancel`).then((res) => res.data)
+}
+
+export function resolveTaskInstance(
+  instanceId: number,
+  payload: ExecutionResolutionInput
+): Promise<ExecutionResolution> {
+  return http
+    .post<ExecutionResolution>(`/api/workflow/tasks/instances/${instanceId}/resolve`, payload)
+    .then((res) => res.data)
+}
+
+export function getExecutionResolution(instanceId: number): Promise<ExecutionResolution> {
+  return http
+    .get<ExecutionResolution>(`/api/workflow/tasks/instances/${instanceId}/resolution`)
+    .then((res) => res.data)
 }
 
 export interface SparkEnvironment {
