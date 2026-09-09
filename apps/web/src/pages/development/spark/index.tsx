@@ -10,6 +10,7 @@ import {
   type ManagedArtifact, type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
   type SparkRunnerHealth, type TaskInstance, type TaskView
 } from '@/api/workflow'
+import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
 
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
@@ -22,7 +23,8 @@ export default function SparkDevelopmentPage() {
   const [pipelines, setPipelines] = useState<PipelineRun[]>([])
   const [pipelineDetail, setPipelineDetail] = useState<PipelineDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
-  const [taskId, setTaskId] = useState<number>()
+  const [sparkTaskId, setSparkTaskId] = useState<number>()
+  const [pipelineTargetId, setPipelineTargetId] = useState<number>()
   const [bizDate, setBizDate] = useState<Dayjs>(dayjs().subtract(1, 'day'))
   const [busy, setBusy] = useState(false)
 
@@ -36,21 +38,24 @@ export default function SparkDevelopmentPage() {
     if (settled[1].status === 'fulfilled') setEnvironments(settled[1].value)
     if (settled[2].status === 'fulfilled') setArtifacts(settled[2].value)
     if (settled[3].status === 'fulfilled') setJobs(settled[3].value)
-    if (settled[4].status === 'fulfilled') setTasks(settled[4].value.filter((v) => v.task.taskType === 'spark'))
+    if (settled[4].status === 'fulfilled') setTasks(settled[4].value)
     if (settled[5].status === 'fulfilled') setInstances(settled[5].value)
     if (settled[6].status === 'fulfilled') setPipelines(settled[6].value)
   }
 
   useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 5000); return () => window.clearInterval(timer) }, [])
-  const sparkTaskIds = useMemo(() => new Set(tasks.map((v) => v.task.id)), [tasks])
+  const individualTaskOptions = useMemo(() => sparkTaskOptions(tasks), [tasks])
+  const pipelineOptions = useMemo(() => pipelineTargetOptions(tasks), [tasks])
+  const sparkTaskIds = useMemo(() => new Set(individualTaskOptions.map((option) => option.value)), [individualTaskOptions])
   const sparkInstances = instances.filter((item) => sparkTaskIds.has(item.taskId))
 
   const execute = async (pipeline: boolean) => {
-    if (!taskId) return message.warning('请选择任务')
+    const selectedId = pipeline ? pipelineTargetId : sparkTaskId
+    if (!selectedId) return message.warning(pipeline ? '请选择流水线目标任务' : '请选择 Spark 任务')
     setBusy(true)
     try {
-      if (pipeline) await startPipeline(taskId, bizDate.format('YYYY-MM-DD'))
-      else await runTask(taskId, bizDate.format('YYYY-MM-DD'))
+      if (pipeline) await startPipeline(selectedId, bizDate.format('YYYY-MM-DD'))
+      else await runTask(selectedId, bizDate.format('YYYY-MM-DD'))
       message.success(pipeline ? '流水线已开始' : 'Spark 任务已提交')
       await refresh()
     } catch (error) {
@@ -86,12 +91,16 @@ export default function SparkDevelopmentPage() {
         <Descriptions.Item label="活动 / 上限">{health?.activeJobs ?? '-'} / {health?.maxConcurrency ?? '-'}</Descriptions.Item>
       </Descriptions></Card></Col>
       <Col span={16}><Card size="small" title="提交">
-        <Space wrap><Select value={taskId} onChange={setTaskId} placeholder="选择 Spark 或流水线目标任务" style={{ width: 280 }}
-          options={tasks.map((v) => ({ value: v.task.id, label: v.task.name }))} />
+        <Space wrap><Select value={sparkTaskId} onChange={setSparkTaskId} placeholder="选择单个 Spark 任务" style={{ width: 260 }}
+          options={individualTaskOptions} />
           <DatePicker value={bizDate} onChange={(value) => value && setBizDate(value)} allowClear={false} />
           <Button type="primary" icon={<CaretRightOutlined />} loading={busy} onClick={() => void execute(false)}>运行任务</Button>
-          <Button loading={busy} onClick={() => void execute(true)}>运行完整依赖链</Button>
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
+        </Space>
+        <Space wrap style={{ marginTop: 12 }}>
+          <Select value={pipelineTargetId} onChange={setPipelineTargetId} placeholder="选择 SQL / Spark / 质量流水线终点" style={{ width: 360 }}
+            showSearch optionFilterProp="label" options={pipelineOptions} />
+          <Button loading={busy} onClick={() => void execute(true)}>运行完整依赖链</Button>
         </Space>
       </Card></Col>
     </Row>
