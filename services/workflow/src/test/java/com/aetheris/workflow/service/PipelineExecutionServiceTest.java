@@ -10,6 +10,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
@@ -19,6 +21,41 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 class PipelineExecutionServiceTest {
+
+    @Test
+    void rejectsDisabledDependencyBeforeCreatingPipelineRows() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        TaskService tasks = mock(TaskService.class);
+        Task target = task(11L, "指标汇总", "sql", "enabled");
+        Task disabled = task(12L, "订单清洗", "spark", "disabled");
+        when(tasks.getById(11L)).thenReturn(target);
+        when(tasks.getById(12L)).thenReturn(disabled);
+        PipelineExecutionService service = new PipelineExecutionService(
+                jdbc, tasks, mock(TaskInstanceService.class), mock(TaskExecutionService.class),
+                new SyncTaskExecutor(), 120, 120);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.validateRunnableTasks(List.of(12L, 11L)));
+
+        assertTrue(error.getMessage().contains("订单清洗"));
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
+
+    @Test
+    void rejectsUnsupportedTaskTypeBeforeCreatingPipelineRows() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        TaskService tasks = mock(TaskService.class);
+        when(tasks.getById(11L)).thenReturn(task(11L, "遗留任务", "shell", "enabled"));
+        PipelineExecutionService service = new PipelineExecutionService(
+                jdbc, tasks, mock(TaskInstanceService.class), mock(TaskExecutionService.class),
+                new SyncTaskExecutor(), 120, 120);
+
+        IllegalStateException error = assertThrows(IllegalStateException.class,
+                () -> service.validateRunnableTasks(List.of(11L)));
+
+        assertTrue(error.getMessage().contains("类型不受支持"));
+        verify(jdbc, never()).update(any(String.class), any(Object[].class));
+    }
 
     @Test
     void listScopesOrdinaryUsersAndBoundsLimit() {
@@ -120,5 +157,14 @@ class PipelineExecutionServiceTest {
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='skipped'"),
                 org.mockito.ArgumentMatchers.eq(7L));
         verify(executions, never()).execute(12L, "2026-09-09", "pipeline", "admin");
+    }
+
+    private static Task task(long id, String name, String type, String status) {
+        Task task = new Task();
+        task.setId(id);
+        task.setName(name);
+        task.setTaskType(type);
+        task.setStatus(status);
+        return task;
     }
 }

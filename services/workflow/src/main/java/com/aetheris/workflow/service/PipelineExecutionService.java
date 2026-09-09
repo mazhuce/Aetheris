@@ -58,6 +58,7 @@ public class PipelineExecutionService {
         if (taskService.getById(targetTaskId) == null) throw new IllegalArgumentException("目标任务不存在");
         validateBizDate(bizDate);
         List<Long> order = topologicalOrder(targetTaskId);
+        validateRunnableTasks(order);
         Long runId;
         try {
             runId = jdbc.queryForObject("""
@@ -320,6 +321,23 @@ public class PipelineExecutionService {
         LinkedHashSet<Long> ordered = new LinkedHashSet<>();
         visit(target, upstream, new HashSet<>(), new HashSet<>(), ordered);
         return new ArrayList<>(ordered);
+    }
+
+    /** Rejects an invalid dependency closure before creating any pipeline audit rows. */
+    void validateRunnableTasks(List<Long> order) {
+        for (Long taskId : order) {
+            Task task = taskService.getById(taskId);
+            if (task == null) {
+                throw new IllegalStateException("流水线节点任务不存在：" + taskId);
+            }
+            if (!"enabled".equals(task.getStatus())) {
+                throw new IllegalStateException("流水线节点「" + task.getName() + "」已停用");
+            }
+            String taskType = task.getTaskType() == null ? "sql" : task.getTaskType();
+            if (!Set.of("sql", "spark", "quality").contains(taskType)) {
+                throw new IllegalStateException("流水线节点「" + task.getName() + "」类型不受支持");
+            }
+        }
     }
 
     private void collect(long taskId, Map<Long, List<Long>> upstream, Set<Long> seen) {
