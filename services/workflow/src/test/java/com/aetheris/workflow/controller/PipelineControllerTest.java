@@ -1,6 +1,7 @@
 package com.aetheris.workflow.controller;
 
 import com.aetheris.workflow.service.PipelineExecutionService;
+import com.aetheris.workflow.service.PipelineCancellationService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,8 @@ class PipelineControllerTest {
         when(authorization.mayManage("alice")).thenReturn(false);
         when(pipelines.list(30, "alice", false)).thenReturn(List.of());
 
-        Object result = new PipelineController(pipelines, authorization).list(30, "alice");
+        Object result = new PipelineController(pipelines, mock(PipelineCancellationService.class), authorization)
+                .list(30, "alice");
 
         assertEquals(List.of(), result);
         verify(pipelines).list(30, "alice", false);
@@ -35,7 +37,8 @@ class PipelineControllerTest {
         WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
         when(authorization.canReadPipeline("alice", 7L)).thenReturn(false);
 
-        ResponseEntity<?> response = new PipelineController(pipelines, authorization).detail(7L, "alice");
+        ResponseEntity<?> response = new PipelineController(
+                pipelines, mock(PipelineCancellationService.class), authorization).detail(7L, "alice");
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(pipelines, never()).detail(7L);
@@ -48,8 +51,23 @@ class PipelineControllerTest {
         when(authorization.canReadPipeline("admin", 99L)).thenReturn(true);
         when(pipelines.detail(99L)).thenThrow(new IllegalArgumentException("流水线运行不存在"));
 
-        ResponseEntity<?> response = new PipelineController(pipelines, authorization).detail(99L, "admin");
+        ResponseEntity<?> response = new PipelineController(
+                pipelines, mock(PipelineCancellationService.class), authorization).detail(99L, "admin");
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void cancelRejectsUsersWithoutObjectAccess() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        PipelineCancellationService cancellations = mock(PipelineCancellationService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.canReadPipeline("alice", 7L)).thenReturn(false);
+
+        ResponseEntity<?> response = new PipelineController(pipelines, cancellations, authorization)
+                .cancel(7L, "alice");
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(cancellations, never()).cancel(7L, "alice");
     }
 }

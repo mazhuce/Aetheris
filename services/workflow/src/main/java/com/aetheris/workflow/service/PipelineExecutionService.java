@@ -168,6 +168,7 @@ public class PipelineExecutionService {
                 String nodeStatus = switch (instance.getStatus()) {
                     case "success" -> "succeeded";
                     case "unknown" -> "unknown";
+                    case "cancelled" -> "cancelled";
                     default -> "failed";
                 };
                 Long waiverId = null;
@@ -184,6 +185,10 @@ public class PipelineExecutionService {
                         bounded(instance.getErrorMessage(), MAX_NODE_MESSAGE_LENGTH), runId, taskId);
                 if ("unknown".equals(nodeStatus)) {
                     suspendRun(runId, "节点「" + task.getName() + "」结果待核对，流水线已停止");
+                    return;
+                }
+                if ("cancelled".equals(nodeStatus)) {
+                    cancelRun(runId, "节点「" + task.getName() + "」已确认取消");
                     return;
                 }
                 if (!"succeeded".equals(nodeStatus) && !"waived".equals(nodeStatus)) {
@@ -237,6 +242,20 @@ public class PipelineExecutionService {
         jdbc.update("""
                 UPDATE workflow.pipeline_run
                 SET status='unknown',error_message=?,finished_at=now(),heartbeat_at=now(),
+                    lease_expires_at=NULL,updated_at=now()
+                WHERE id=? AND status='running'
+                """, bounded(reason, MAX_RUN_ERROR_LENGTH), runId);
+    }
+
+    void cancelRun(long runId, String reason) {
+        jdbc.update("""
+                UPDATE workflow.pipeline_node_run
+                SET status='skipped',finished_at=now(),message='流水线已取消，节点未执行'
+                WHERE pipeline_run_id=? AND status='queued'
+                """, runId);
+        jdbc.update("""
+                UPDATE workflow.pipeline_run
+                SET status='cancelled',error_message=?,finished_at=now(),heartbeat_at=now(),
                     lease_expires_at=NULL,updated_at=now()
                 WHERE id=? AND status='running'
                 """, bounded(reason, MAX_RUN_ERROR_LENGTH), runId);

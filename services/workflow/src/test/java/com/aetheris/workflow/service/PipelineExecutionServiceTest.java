@@ -159,6 +159,37 @@ class PipelineExecutionServiceTest {
         verify(executions, never()).execute(12L, "2026-09-09", "pipeline", "admin");
     }
 
+    @Test
+    void confirmedSparkCancellationCancelsPipelineAndSkipsDownstream() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        TaskService tasks = mock(TaskService.class);
+        TaskExecutionService executions = mock(TaskExecutionService.class);
+        Task spark = task(11L, "订单清洗", "spark", "enabled");
+        spark.setTimeoutSeconds(120);
+        TaskInstance cancelled = new TaskInstance();
+        cancelled.setId(21L);
+        cancelled.setStatus("cancelled");
+        cancelled.setFinishedAt(OffsetDateTime.now());
+        when(tasks.getById(11L)).thenReturn(spark);
+        when(executions.execute(11L, "2026-09-09", "pipeline", "admin")).thenReturn(cancelled);
+        doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
+        PipelineExecutionService service = new PipelineExecutionService(
+                jdbc, tasks, mock(TaskInstanceService.class), executions,
+                new SyncTaskExecutor(), 120, 120);
+
+        service.executeRun(7L, "2026-09-09", "admin", List.of(11L, 12L));
+
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status=?,instance_id=?"),
+                org.mockito.ArgumentMatchers.eq("cancelled"), org.mockito.ArgumentMatchers.eq(21L),
+                org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(11L));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='cancelled',error_message=?"),
+                org.mockito.ArgumentMatchers.contains("已确认取消"), org.mockito.ArgumentMatchers.eq(7L));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='skipped'"),
+                org.mockito.ArgumentMatchers.eq(7L));
+        verify(executions, never()).execute(12L, "2026-09-09", "pipeline", "admin");
+    }
+
     private static Task task(long id, String name, String type, String status) {
         Task task = new Task();
         task.setId(id);
