@@ -2,6 +2,7 @@ package com.aetheris.workflow.controller;
 
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.aetheris.workflow.service.PipelineExecutionService;
+import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,14 +13,31 @@ import java.util.Map;
 @RequestMapping("/api/workflow/pipelines")
 public class PipelineController {
     private final PipelineExecutionService pipelines;
+    private final WorkflowAuthorizationService authorization;
 
-    public PipelineController(PipelineExecutionService pipelines) { this.pipelines = pipelines; }
+    public PipelineController(PipelineExecutionService pipelines, WorkflowAuthorizationService authorization) {
+        this.pipelines = pipelines;
+        this.authorization = authorization;
+    }
 
     @GetMapping
-    public Object list(@RequestParam(defaultValue = "30") int limit) { return pipelines.list(limit); }
+    public Object list(@RequestParam(defaultValue = "30") int limit,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        return pipelines.list(limit, username, authorization.mayManage(username));
+    }
 
     @GetMapping("/{id}")
-    public Object detail(@PathVariable long id) { return pipelines.detail(id); }
+    public ResponseEntity<?> detail(@PathVariable long id,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.canReadPipeline(username, id)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该流水线"));
+        }
+        try {
+            return ResponseEntity.ok(pipelines.detail(id));
+        } catch (IllegalArgumentException missing) {
+            return ResponseEntity.notFound().build();
+        }
+    }
 
     @PostMapping
     public ResponseEntity<?> start(@RequestBody StartRequest request,

@@ -87,12 +87,21 @@ public class PipelineExecutionService {
         return run(runId);
     }
 
-    public List<Map<String, Object>> list(int limit) {
+    public List<Map<String, Object>> list(int limit, String username, boolean includeAll) {
+        int boundedLimit = Math.clamp(limit, 1, 100);
+        if (!includeAll) {
+            return jdbc.queryForList("""
+                    SELECT run.*, task.name target_task_name
+                    FROM workflow.pipeline_run run JOIN workflow.task task ON task.id=run.target_task_id
+                    WHERE run.triggered_by=? OR task.owner=?
+                    ORDER BY run.id DESC LIMIT ?
+                    """, username, username, boundedLimit);
+        }
         return jdbc.queryForList("""
                 SELECT run.*, task.name target_task_name
                 FROM workflow.pipeline_run run JOIN workflow.task task ON task.id=run.target_task_id
                 ORDER BY run.id DESC LIMIT ?
-                """, Math.clamp(limit, 1, 100));
+                """, boundedLimit);
     }
 
     public Map<String, Object> detail(long id) {

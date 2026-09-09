@@ -34,7 +34,18 @@ public class WorkflowAuthorizationService {
         return owned != null && owned > 0 || mayManage(username);
     }
 
-    private boolean mayManage(String username) {
+    public boolean canReadPipeline(String username, long pipelineId) {
+        if (username == null) return false;
+        Integer owned = jdbc.queryForObject("""
+                SELECT count(*) FROM workflow.pipeline_run run
+                JOIN workflow.task task ON task.id=run.target_task_id
+                WHERE run.id=? AND (run.triggered_by=? OR task.owner=?)
+                """, Integer.class, pipelineId, username, username);
+        return owned != null && owned > 0 || mayManage(username);
+    }
+
+    public boolean mayManage(String username) {
+        if (username == null) return false;
         try {
             Permission response = auth.post().uri("/internal/permissions/may-manage")
                     .body(Map.of("username", username)).retrieve().body(Permission.class);

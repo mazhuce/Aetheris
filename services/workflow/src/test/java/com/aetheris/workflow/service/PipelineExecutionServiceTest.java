@@ -21,6 +21,21 @@ import static org.mockito.Mockito.when;
 class PipelineExecutionServiceTest {
 
     @Test
+    void listScopesOrdinaryUsersAndBoundsLimit() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        PipelineExecutionService service = new PipelineExecutionService(
+                jdbc, mock(TaskService.class), mock(TaskInstanceService.class),
+                mock(TaskExecutionService.class), new SyncTaskExecutor(), 120, 120);
+
+        service.list(500, "alice", false);
+
+        verify(jdbc).queryForList(
+                org.mockito.ArgumentMatchers.contains("WHERE run.triggered_by=? OR task.owner=?"),
+                org.mockito.ArgumentMatchers.eq("alice"), org.mockito.ArgumentMatchers.eq("alice"),
+                org.mockito.ArgumentMatchers.eq(100));
+    }
+
+    @Test
     void executionFailureFinalizesCurrentAndPendingNodes() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         TaskService tasks = mock(TaskService.class);

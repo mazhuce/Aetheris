@@ -1,0 +1,55 @@
+package com.aetheris.workflow.controller;
+
+import com.aetheris.workflow.service.PipelineExecutionService;
+import com.aetheris.workflow.service.WorkflowAuthorizationService;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+class PipelineControllerTest {
+
+    @Test
+    void listScopesOrdinaryUsersToOwnedOrTriggeredPipelines() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.mayManage("alice")).thenReturn(false);
+        when(pipelines.list(30, "alice", false)).thenReturn(List.of());
+
+        Object result = new PipelineController(pipelines, authorization).list(30, "alice");
+
+        assertEquals(List.of(), result);
+        verify(pipelines).list(30, "alice", false);
+    }
+
+    @Test
+    void detailRejectsUsersWithoutObjectAccess() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.canReadPipeline("alice", 7L)).thenReturn(false);
+
+        ResponseEntity<?> response = new PipelineController(pipelines, authorization).detail(7L, "alice");
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(pipelines, never()).detail(7L);
+    }
+
+    @Test
+    void detailReturnsNotFoundForAuthorizedMissingPipeline() {
+        PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.canReadPipeline("admin", 99L)).thenReturn(true);
+        when(pipelines.detail(99L)).thenThrow(new IllegalArgumentException("流水线运行不存在"));
+
+        ResponseEntity<?> response = new PipelineController(pipelines, authorization).detail(99L, "admin");
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+}
