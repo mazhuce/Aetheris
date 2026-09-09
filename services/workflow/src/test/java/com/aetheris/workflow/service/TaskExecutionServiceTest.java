@@ -297,7 +297,8 @@ class TaskExecutionServiceTest {
                         return value;
                     });
             service = new TaskExecutionService(tasks, instances, logs, dependencies, coordinator, client,
-                    mock(NotificationClient.class));
+                    mock(NotificationClient.class), mock(SparkBatchExecutionService.class),
+                    mock(QualityExecutionClient.class), mock(LineageEvidenceClient.class));
         }
     }
 

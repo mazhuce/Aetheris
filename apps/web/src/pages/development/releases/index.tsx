@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Form, Input, Modal, Row, Select, Table, Tag, Typography } from 'antd'
+import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Select, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CloudUploadOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -23,6 +23,7 @@ import {
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { listRules, type QualityRule } from '@/api/quality'
 
 const typeMeta: Record<string, { label: string; color: string }> = {
   table: { label: '数据表', color: 'blue' },
@@ -51,6 +52,7 @@ export default function ReleasePage() {
   const [editing, setEditing] = useState<ReleaseRecord | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [form] = Form.useForm<ReleaseRecordInput>()
+  const [qualityRules, setQualityRules] = useState<QualityRule[]>([])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -65,6 +67,7 @@ export default function ReleasePage() {
 
   useEffect(() => {
     void refresh()
+    void listRules().then((rules) => setQualityRules(rules.filter((rule) => rule.status === 'enabled'))).catch(() => undefined)
   }, [refresh])
 
   useEffect(() => {
@@ -184,20 +187,18 @@ export default function ReleasePage() {
           })
       })
     }
-    items.push({ key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } })
-    items.push({
-      key: 'delete',
-      label: '删除',
-      danger: true,
-      onClick: () =>
-        modal.confirm({
-          title: `删除发布单“${record.title}”？`,
-          content: '删除后该发布记录将不可恢复。',
-          okText: '确认删除',
-          okButtonProps: { danger: true },
-          onOk: () => handleDelete(record)
+    if (record.status === 'pending' || record.status === 'rejected') {
+      if (record.status === 'pending') {
+        items.push({ key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } })
+      }
+      items.push({
+        key: 'delete', label: '删除', danger: true,
+        onClick: () => modal.confirm({
+          title: `删除发布单“${record.title}”？`, content: '删除后该发布记录将不可恢复。',
+          okText: '确认删除', okButtonProps: { danger: true }, onOk: () => handleDelete(record)
         })
-    })
+      })
+    }
     return items
   }
 
@@ -234,6 +235,10 @@ export default function ReleasePage() {
     },
     { title: '申请人', dataIndex: 'requestedBy', key: 'requestedBy', width: 100, render: (v?: string) => v || '—' },
     { title: '审批人', dataIndex: 'approvedBy', key: 'approvedBy', width: 100, render: (v?: string) => v || '—' },
+    {
+      title: '审批摘要', dataIndex: 'approvedDigest', key: 'approvedDigest', width: 130,
+      render: (v?: string) => v ? <Typography.Text code copyable={{ text: v }}>{v.slice(0, 10)}…</Typography.Text> : '—'
+    },
     { title: '上线时间', dataIndex: 'releasedAt', key: 'releasedAt', width: 170, render: (v?: string) => formatDateTime(v) },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (v?: string) => formatDateTime(v) }
   ]
@@ -336,6 +341,19 @@ export default function ReleasePage() {
           <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
             <Input placeholder="如 用户画像标签包 v2 上线" />
           </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="targetRefId" label="目标定义 ID">
+                <InputNumber min={1} className="full-width-control" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="qualityRuleId" label="发布质量门禁">
+                <Select allowClear placeholder="可选；审批后必须重新通过"
+                  options={qualityRules.map((rule) => ({ value: rule.id, label: rule.name }))} />
+              </Form.Item>
+            </Col>
+          </Row>
           <Row gutter={12}>
             <Col span={16}>
               <Form.Item name="targetName" label="发布对象" rules={[{ required: true, message: '请输入发布对象' }]}>

@@ -61,6 +61,14 @@ aetheris:
   system:
     # 任务失败时写入 system 服务的通知表（我的待办）；走 /internal 路径，网关不暴露。
     base-url: http://${SYSTEM_SERVICE_HOST:localhost}:${SYSTEM_SERVICE_PORT:8081}
+  quality:
+    base-url: http://${QUALITY_SERVICE_HOST:localhost}:${QUALITY_SERVICE_PORT:8083}
+  spark-runner:
+    enabled: ${AETHERIS_SPARK_RUNNER_ENABLED:false}
+    base-url: ${AETHERIS_SPARK_RUNNER_BASE_URL:http://127.0.0.1:18081}
+    token: ${AETHERIS_SPARK_RUNNER_TOKEN:}
+    connect-timeout: ${AETHERIS_SPARK_RUNNER_CONNECT_TIMEOUT:PT3S}
+    poll-interval-ms: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:5000}
   execution:
     worker-id: ${AETHERIS_EXECUTION_WORKER_ID:${HOSTNAME:local}}
     lease-grace-seconds: ${AETHERIS_EXECUTION_LEASE_GRACE_SECONDS:60}

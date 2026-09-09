@@ -3,6 +3,7 @@ package com.aetheris.workflow.controller;
 import com.aetheris.workflow.dto.ReleaseActionRequest;
 import com.aetheris.workflow.entity.ReleaseRecord;
 import com.aetheris.workflow.service.ReleaseRecordService;
+import com.aetheris.workflow.service.ReleaseGovernanceService;
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
@@ -36,9 +37,12 @@ public class ReleaseRecordController {
     private static final Logger log = LoggerFactory.getLogger(ReleaseRecordController.class);
 
     private final ReleaseRecordService releaseRecordService;
+    private final ReleaseGovernanceService governanceService;
 
-    public ReleaseRecordController(ReleaseRecordService releaseRecordService) {
+    public ReleaseRecordController(ReleaseRecordService releaseRecordService,
+                                   ReleaseGovernanceService governanceService) {
         this.releaseRecordService = releaseRecordService;
+        this.governanceService = governanceService;
     }
 
     /** 发布单列表，可按状态与发布物类型过滤，按创建时间倒序（最新申请在前）。 */
@@ -64,10 +68,8 @@ public class ReleaseRecordController {
     public ResponseEntity<?> create(
             @Valid @RequestBody ReleaseRecord record,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        record.setId(null);
         applyDefaults(record, username);
-        releaseRecordService.save(record);
-        return ResponseEntity.ok(record);
+        return ResponseEntity.ok(governanceService.create(record, username));
     }
 
     @PutMapping("/{id}")
@@ -75,32 +77,25 @@ public class ReleaseRecordController {
     public ResponseEntity<?> update(
             @PathVariable Long id,
             @Valid @RequestBody ReleaseRecord record) {
-        ReleaseRecord existing = releaseRecordService.getById(id);
-        if (existing == null) {
+        try {
+            return ResponseEntity.ok(governanceService.update(id, record));
+        } catch (IllegalArgumentException error) {
             return ResponseEntity.notFound().build();
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
         }
-        // 编辑只改定义信息（标题/对象/摘要等）；状态、审批人、发布时间等流转字段
-        // 以库内为准，否则一个 PUT 就能绕过 approve/publish 的状态机校验。
-        record.setId(id);
-        record.setStatus(existing.getStatus());
-        record.setRequestedBy(existing.getRequestedBy());
-        record.setApprovedBy(existing.getApprovedBy());
-        record.setReleasedAt(existing.getReleasedAt());
-        record.setCreatedAt(existing.getCreatedAt());
-        record.setUpdatedAt(OffsetDateTime.now());
-        releaseRecordService.updateById(record);
-        return ResponseEntity.ok(releaseRecordService.getById(id));
     }
 
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<Void> delete(
             @PathVariable Long id) {
-        if (releaseRecordService.getById(id) == null) {
-            return ResponseEntity.notFound().build();
+        try {
+            governanceService.delete(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
-        releaseRecordService.removeById(id);
-        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -115,8 +110,13 @@ public class ReleaseRecordController {
         if (request != null && StringUtils.hasText(request.remark())) {
             log.debug("Release {} approve remark: {}", id, request.remark());
         }
-        return transition(id, "pending", "approved", "审批通过",
-                record -> record.setApprovedBy(username == null ? "unknown" : username));
+        try {
+            return ResponseEntity.ok(governanceService.approve(id, username == null ? "unknown" : username));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
+        }
     }
 
     /** 审批拒绝：pending 的终态分支，只有待审批的单子可以拒绝。 */
@@ -128,8 +128,13 @@ public class ReleaseRecordController {
     /** 执行发布：审批通过不代表已上线，此处落实际发布时间。 */
     @PostMapping("/{id}/publish")
     public ResponseEntity<?> publish(@PathVariable Long id) {
-        return transition(id, "approved", "released", "发布",
-                record -> record.setReleasedAt(OffsetDateTime.now()));
+        try {
+            return ResponseEntity.ok(governanceService.publish(id));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
+        }
     }
 
     /** 回滚：只有已发布的单子可回滚；released_at 保留，作为发布窗口的留痕。 */

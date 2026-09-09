@@ -229,10 +229,19 @@ services:
       # 任务失败时写通知（我的待办）。
       SYSTEM_SERVICE_HOST: system-service
       SYSTEM_SERVICE_PORT: "8081"
+      QUALITY_SERVICE_HOST: quality-service
+      QUALITY_SERVICE_PORT: "8083"
+      # 本机开发的唯一受管 Spark 提交后端；默认关闭，令牌必须与 WSL runner 独立配置一致。
+      AETHERIS_SPARK_RUNNER_ENABLED: ${AETHERIS_SPARK_RUNNER_ENABLED:-false}
+      AETHERIS_SPARK_RUNNER_BASE_URL: ${AETHERIS_SPARK_RUNNER_BASE_URL:-http://host.docker.internal:18081}
+      AETHERIS_SPARK_RUNNER_TOKEN: ${AETHERIS_SPARK_RUNNER_TOKEN:-}
+      AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:-5000}
     depends_on:
       postgres:
         condition: service_healthy
       metadata-service:
+        condition: service_healthy
+      quality-service:
         condition: service_healthy
 
   ai-agent:

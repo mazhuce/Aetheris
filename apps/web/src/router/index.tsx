@@ -43,6 +43,7 @@ const OperationsOverviewPage = lazy(() => import('@/pages/workbench/operations')
 const TableBrowserPage = lazy(() => import('@/pages/assets/tables'))
 const DataSyncPage = lazy(() => import('@/pages/integration/sync'))
 const SqlDevelopmentPage = lazy(() => import('@/pages/development/sql'))
+const SparkDevelopmentPage = lazy(() => import('@/pages/development/spark'))
 const AssetCatalogPage = lazy(() => import('@/pages/assets/catalog'))
 const DomainPage = lazy(() => import('@/pages/modeling/domains'))
 const GovernanceIssuesPage = lazy(() => import('@/pages/governance/issues'))
@@ -152,6 +153,7 @@ export const router = createBrowserRouter([
       { path: 'assets/tables', element: <TableBrowserPage /> },
       { path: 'integration/sync', element: <DataSyncPage /> },
       { path: 'development/sql', element: <SqlDevelopmentPage /> },
+      { path: 'development/spark', element: <SparkDevelopmentPage /> },
       { path: 'assets/catalog', element: <AssetCatalogPage /> },
       { path: 'modeling/domains', element: <DomainPage /> },
       { path: 'governance/issues', element: <GovernanceIssuesPage /> },

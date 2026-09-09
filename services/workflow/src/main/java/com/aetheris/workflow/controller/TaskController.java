@@ -9,12 +9,15 @@ import com.aetheris.workflow.entity.TaskInstance;
 import com.aetheris.workflow.entity.TaskLog;
 import com.aetheris.workflow.service.SqlExecutionClient;
 import com.aetheris.workflow.service.ExecutionAttemptService;
+import com.aetheris.workflow.service.ManagedSparkCatalogService;
+import com.aetheris.workflow.service.SparkBatchExecutionService;
 import com.aetheris.workflow.service.TaskDependencyService;
 import com.aetheris.workflow.service.TaskExecutionService;
 import com.aetheris.workflow.service.TaskInstanceService;
 import com.aetheris.workflow.service.TaskLogService;
 import com.aetheris.workflow.service.TaskSchedulerService;
 import com.aetheris.workflow.service.TaskService;
+import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
@@ -59,6 +62,9 @@ public class TaskController {
     private final TaskExecutionService executionService;
     private final TaskSchedulerService schedulerService;
     private final SqlExecutionClient executionClient;
+    private final ManagedSparkCatalogService sparkCatalog;
+    private final SparkBatchExecutionService sparkExecutionService;
+    private final WorkflowAuthorizationService authorizationService;
 
     public TaskController(
             TaskService taskService,
@@ -68,7 +74,10 @@ public class TaskController {
             TaskDependencyService dependencyService,
             TaskExecutionService executionService,
             TaskSchedulerService schedulerService,
-            SqlExecutionClient executionClient) {
+            SqlExecutionClient executionClient,
+            ManagedSparkCatalogService sparkCatalog,
+            SparkBatchExecutionService sparkExecutionService,
+            WorkflowAuthorizationService authorizationService) {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
@@ -77,6 +86,9 @@ public class TaskController {
         this.executionService = executionService;
         this.schedulerService = schedulerService;
         this.executionClient = executionClient;
+        this.sparkCatalog = sparkCatalog;
+        this.sparkExecutionService = sparkExecutionService;
+        this.authorizationService = authorizationService;
     }
 
     /** 任务列表，附带调度状态与最近一次运行结果，避免界面为每行再发请求。 */
@@ -108,7 +120,7 @@ public class TaskController {
         }
 
         task.setId(null);
-        task.setTaskType("sql");
+        if (!StringUtils.hasText(task.getTaskType())) task.setTaskType("sql");
         applyDefaults(task, username);
         taskService.save(task);
         schedulerService.sync(task);
@@ -130,8 +142,38 @@ public class TaskController {
         } catch (IllegalArgumentException error) {
             return error.getMessage();
         }
-        // SQL 白名单校验委托给 metadata，与执行路径共用同一份守卫，避免两处规则漂移。
-        return executionClient.validateWrite(task.getTaskSql());
+        String type = StringUtils.hasText(task.getTaskType()) ? task.getTaskType() : "sql";
+        return switch (type) {
+            case "sql" -> {
+                if (task.getDatasourceId() == null || !StringUtils.hasText(task.getTaskSql())) {
+                    yield "SQL 任务必须选择数据源并填写加工 SQL";
+                }
+                if (task.getJobDefinitionId() != null || task.getQualityRuleId() != null) {
+                    yield "SQL 任务不能引用 Spark 作业或质量规则";
+                }
+                yield executionClient.validateWrite(task.getTaskSql());
+            }
+            case "spark" -> {
+                if (task.getJobDefinitionId() == null || task.getDatasourceId() != null
+                        || StringUtils.hasText(task.getTaskSql()) || task.getQualityRuleId() != null) {
+                    yield "Spark 任务必须且只能引用一个已发布受管作业";
+                }
+                try {
+                    sparkCatalog.runnableJob(task.getJobDefinitionId());
+                    yield null;
+                } catch (RuntimeException error) {
+                    yield error.getMessage();
+                }
+            }
+            case "quality" -> {
+                if (task.getQualityRuleId() == null || task.getDatasourceId() != null
+                        || StringUtils.hasText(task.getTaskSql()) || task.getJobDefinitionId() != null) {
+                    yield "质量节点必须且只能引用一个质量规则";
+                }
+                yield null;
+            }
+            default -> "不支持的任务类型";
+        };
     }
 
     @PutMapping("/{id}")
@@ -143,13 +185,13 @@ public class TaskController {
         if (existing == null) {
             return ResponseEntity.notFound().build();
         }
+        if (!StringUtils.hasText(task.getTaskType())) task.setTaskType(existing.getTaskType());
         String rejection = validateDefinition(task);
         if (rejection != null) {
             return ResponseEntity.badRequest().body(Map.of("message", rejection));
         }
 
         task.setId(id);
-        task.setTaskType("sql");
         task.setUpdatedAt(OffsetDateTime.now());
         taskService.updateById(task);
 
@@ -229,20 +271,58 @@ public class TaskController {
 
     /** 某次运行的日志。 */
     @GetMapping("/instances/{instanceId}/logs")
-    public List<TaskLog> logs(@PathVariable Long instanceId) {
-        return logService.list(
+    public ResponseEntity<?> logs(@PathVariable Long instanceId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该实例日志"));
+        }
+        return ResponseEntity.ok(logService.list(
                 new LambdaQueryWrapper<TaskLog>()
                         .eq(TaskLog::getInstanceId, instanceId)
-                        .orderByAsc(TaskLog::getId));
+                        .orderByAsc(TaskLog::getId)));
     }
 
     /** Physical attempts are append-only audit records for retries and recovery. */
     @GetMapping("/instances/{instanceId}/attempts")
-    public List<ExecutionAttempt> attempts(@PathVariable Long instanceId) {
-        return attemptService.list(
+    public ResponseEntity<?> attempts(@PathVariable Long instanceId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该实例执行记录"));
+        }
+        return ResponseEntity.ok(attemptService.list(
                 new LambdaQueryWrapper<ExecutionAttempt>()
                         .eq(ExecutionAttempt::getInstanceId, instanceId)
-                        .orderByDesc(ExecutionAttempt::getAttemptNo));
+                        .orderByDesc(ExecutionAttempt::getAttemptNo)));
+    }
+
+    @GetMapping("/instances/{instanceId}/spark-logs")
+    public ResponseEntity<?> sparkLogs(@PathVariable long instanceId,
+                                       @RequestParam(defaultValue = "0") long offset,
+                                       @RequestParam(defaultValue = "32768") int limit,
+                                       @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该实例日志"));
+        }
+        try {
+            return ResponseEntity.ok(sparkExecutionService.remoteLogs(instanceId, offset, limit));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    @PostMapping("/instances/{instanceId}/cancel")
+    public ResponseEntity<?> cancel(@PathVariable long instanceId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权操作该实例"));
+        }
+        try {
+            return ResponseEntity.ok(sparkExecutionService.cancel(instanceId));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
     }
 
     @GetMapping("/{id}/dependencies")

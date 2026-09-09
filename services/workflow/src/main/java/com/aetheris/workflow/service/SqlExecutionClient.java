@@ -131,10 +131,10 @@ public class SqlExecutionClient {
             Object message = body.get("message");
             return message instanceof String text ? text : "SQL 不符合任务执行的语句要求";
         } catch (RuntimeException error) {
-            // 校验服务不可用时不阻断保存：执行路径仍有同一份守卫兜底，
-            // 拿不到校验结果就放行，比让用户完全无法保存任务更合理。
-            log.warn("SQL validation unavailable, allowing save", error);
-            return null;
+            // Validation is a security boundary. Saving an unvalidated write task
+            // makes an outage a bypass, so definition changes fail closed.
+            log.warn("SQL validation unavailable, rejecting save", error);
+            return "SQL 安全校验服务不可用，当前不能保存任务定义";
         }
     }
 

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 import java.time.OffsetDateTime;
 
@@ -20,16 +19,20 @@ public class Task {
     @NotBlank(message = "任务名称不能为空")
     private String name;
 
-    /** 当前只支持 sql；预留以便后续扩展。 */
+    /** sql / spark / quality; concrete fields are validated by task type. */
     private String taskType;
 
-    @NotNull(message = "请选择数据源")
     private Long datasourceId;
 
     private String datasourceName;
 
-    @NotBlank(message = "任务 SQL 不能为空")
     private String taskSql;
+
+    /** Published managed Spark job definition for spark tasks. */
+    private Long jobDefinitionId;
+
+    /** Quality-service rule id for quality gate tasks. */
+    private Long qualityRuleId;
 
     /** Quartz cron 表达式；为空表示仅手动触发。 */
     private String cronExpression;
@@ -62,6 +65,10 @@ public class Task {
     public void setDatasourceName(String datasourceName) { this.datasourceName = datasourceName; }
     public String getTaskSql() { return taskSql; }
     public void setTaskSql(String taskSql) { this.taskSql = taskSql; }
+    public Long getJobDefinitionId() { return jobDefinitionId; }
+    public void setJobDefinitionId(Long jobDefinitionId) { this.jobDefinitionId = jobDefinitionId; }
+    public Long getQualityRuleId() { return qualityRuleId; }
+    public void setQualityRuleId(Long qualityRuleId) { this.qualityRuleId = qualityRuleId; }
     public String getCronExpression() { return cronExpression; }
     public void setCronExpression(String cronExpression) { this.cronExpression = cronExpression; }
     public String getTargetTable() { return targetTable; }

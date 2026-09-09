@@ -71,7 +71,7 @@ export const navModules: NavModule[] = [
     icon: <CodeOutlined />,
     children: [
       { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'available' },
-      { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'comingSoon', description: '提交与管理 Spark 作业，支持大数据量离线计算。' },
+      { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'available', description: '受管制品、执行恢复与混合流水线。' },
       { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'available' },
       { key: 'scheduling', label: '任务调度', path: '/development/scheduling', status: 'available' },
       { key: 'releases', label: '发布管理', path: '/development/releases', status: 'available' }

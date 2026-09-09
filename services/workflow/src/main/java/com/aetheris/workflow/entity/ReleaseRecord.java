@@ -48,6 +48,14 @@ public class ReleaseRecord {
     /** 审批人。 */
     private String approvedBy;
 
+    /** Optional immutable target id and quality gate selected for this release. */
+    private Long targetRefId;
+    private String snapshotDigest;
+    private String approvedDigest;
+    private OffsetDateTime approvedAt;
+    private Long qualityRuleId;
+    private Long qualityResultId;
+
     /** 实际发布时间；仅发布过（released 及 rolled_back）才有值。 */
     private OffsetDateTime releasedAt;
 
@@ -74,6 +82,18 @@ public class ReleaseRecord {
     public void setRequestedBy(String requestedBy) { this.requestedBy = requestedBy; }
     public String getApprovedBy() { return approvedBy; }
     public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
+    public Long getTargetRefId() { return targetRefId; }
+    public void setTargetRefId(Long targetRefId) { this.targetRefId = targetRefId; }
+    public String getSnapshotDigest() { return snapshotDigest; }
+    public void setSnapshotDigest(String snapshotDigest) { this.snapshotDigest = snapshotDigest; }
+    public String getApprovedDigest() { return approvedDigest; }
+    public void setApprovedDigest(String approvedDigest) { this.approvedDigest = approvedDigest; }
+    public OffsetDateTime getApprovedAt() { return approvedAt; }
+    public void setApprovedAt(OffsetDateTime approvedAt) { this.approvedAt = approvedAt; }
+    public Long getQualityRuleId() { return qualityRuleId; }
+    public void setQualityRuleId(Long qualityRuleId) { this.qualityRuleId = qualityRuleId; }
+    public Long getQualityResultId() { return qualityResultId; }
+    public void setQualityResultId(Long qualityResultId) { this.qualityResultId = qualityResultId; }
     public OffsetDateTime getReleasedAt() { return releasedAt; }
     public void setReleasedAt(OffsetDateTime releasedAt) { this.releasedAt = releasedAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

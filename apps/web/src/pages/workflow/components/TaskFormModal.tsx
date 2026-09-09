@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { App, AutoComplete, Form, Input, InputNumber, Modal, Select } from 'antd'
-import { createTask, updateTask, type TaskInput, type TaskView } from '@/api/workflow'
+import { createTask, listSparkJobs, updateTask, type SparkJobDefinition, type TaskInput, type TaskView } from '@/api/workflow'
 import { listDataSources, type DataSource } from '@/api/metadata'
+import { listRules, type QualityRule } from '@/api/quality'
 
 interface Props {
   open: boolean
@@ -24,6 +25,9 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
   const [form] = Form.useForm<TaskInput>()
   const [submitting, setSubmitting] = useState(false)
   const [dataSources, setDataSources] = useState<DataSource[]>([])
+  const [sparkJobs, setSparkJobs] = useState<SparkJobDefinition[]>([])
+  const [qualityRules, setQualityRules] = useState<QualityRule[]>([])
+  const taskType = Form.useWatch('taskType', form) || 'sql'
 
   useEffect(() => {
     if (!open) return
@@ -32,11 +36,14 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
     } else {
       form.resetFields()
       // 给出可用的默认值，减少新建时的必填项。
-      form.setFieldsValue({ timeoutSeconds: 1800, maxRetries: 0, status: 'enabled' })
+      form.setFieldsValue({ taskType: 'sql', timeoutSeconds: 1800, maxRetries: 0, status: 'enabled' })
     }
     void (async () => {
       try {
-        setDataSources(await listDataSources())
+        const [sources, jobs, rules] = await Promise.all([listDataSources(), listSparkJobs(), listRules()])
+        setDataSources(sources)
+        setSparkJobs(jobs.filter((job) => job.status === 'published'))
+        setQualityRules(rules.filter((rule) => rule.status === 'enabled'))
       } catch {
         message.error('数据源列表加载失败')
       }
@@ -48,7 +55,14 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
     try {
       // 冗余存一份数据源名称，任务列表就不必再联查 metadata。
       const selected = dataSources.find((d) => d.id === values.datasourceId)
-      const payload = { ...values, datasourceName: selected?.name }
+      const payload: TaskInput = { ...values, datasourceName: selected?.name }
+      if (values.taskType === 'spark') {
+        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.qualityRuleId
+      } else if (values.taskType === 'quality') {
+        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.jobDefinitionId
+      } else {
+        delete payload.jobDefinitionId; delete payload.qualityRuleId
+      }
 
       if (editing) {
         await updateTask(editing.task.id, payload)
@@ -89,6 +103,19 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         </Form.Item>
 
         <Form.Item
+          name="taskType"
+          label="任务类型"
+          rules={[{ required: true }]}
+          extra={editing ? '已有任务的类型保持不变，避免历史执行口径被改写。' : undefined}
+        >
+          <Select disabled={!!editing} options={[
+            { value: 'sql', label: 'SQL 加工' },
+            { value: 'spark', label: '受管 Spark' },
+            { value: 'quality', label: '质量门禁' }
+          ]} />
+        </Form.Item>
+
+        {taskType === 'sql' && <><Form.Item
           name="datasourceId"
           label="执行数据源"
           rules={[{ required: true, message: '请选择数据源' }]}
@@ -117,6 +144,19 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
             className="code-input"
           />
         </Form.Item>
+
+        </>}
+
+        {taskType === 'spark' && <Form.Item name="jobDefinitionId" label="受管 Spark 作业"
+          rules={[{ required: true, message: '请选择已发布作业' }]}
+          extra="只允许执行审批制品与固定参数架构；不能上传或输入任意代码。">
+          <Select options={sparkJobs.map((job) => ({ value: job.id, label: `${job.name} v${job.version}` }))} />
+        </Form.Item>}
+
+        {taskType === 'quality' && <Form.Item name="qualityRuleId" label="质量规则"
+          rules={[{ required: true, message: '请选择启用中的质量规则' }]}>
+          <Select options={qualityRules.map((rule) => ({ value: rule.id, label: rule.name }))} />
+        </Form.Item>}
 
         <Form.Item
           name="targetTable"

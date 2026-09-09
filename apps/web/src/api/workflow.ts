@@ -4,10 +4,12 @@ import http from './http'
 export interface Task {
   id: number
   name: string
-  taskType?: string
-  datasourceId: number
+  taskType?: 'sql' | 'spark' | 'quality'
+  datasourceId?: number
   datasourceName?: string
-  taskSql: string
+  taskSql?: string
+  jobDefinitionId?: number
+  qualityRuleId?: number
   /** Quartz cron（6 或 7 段）；为空表示仅手动触发。 */
   cronExpression?: string
   targetTable?: string
@@ -22,9 +24,12 @@ export interface Task {
 
 export interface TaskInput {
   name: string
-  datasourceId: number
+  taskType?: 'sql' | 'spark' | 'quality'
+  datasourceId?: number
   datasourceName?: string
-  taskSql: string
+  taskSql?: string
+  jobDefinitionId?: number
+  qualityRuleId?: number
   cronExpression?: string
   targetTable?: string
   timeoutSeconds?: number
@@ -107,7 +112,11 @@ export interface ExecutionAttempt {
   triggerType: 'manual' | 'schedule' | 'retry'
   triggeredBy?: string
   taskName: string
-  datasourceId: number
+  taskType?: 'sql' | 'spark' | 'quality'
+  datasourceId?: number
+  jobDefinitionId?: number
+  jobVersion?: number
+  qualityRuleId?: number
   taskUpdatedAt?: string
   definitionDigest: string
   parametersJson: string
@@ -221,6 +230,71 @@ export function listExecutionAttempts(instanceId: number): Promise<ExecutionAtte
     .then((res) => res.data)
 }
 
+export function cancelTaskInstance(instanceId: number): Promise<TaskInstance> {
+  return http.post<TaskInstance>(`/api/workflow/tasks/instances/${instanceId}/cancel`).then((res) => res.data)
+}
+
+export interface SparkEnvironment {
+  id: number; environmentKey: string; name: string; adapterType: string; sparkVersion: string
+  javaVersion: string; pythonVersion: string; master: string; maxCores: number
+  maxMemoryMb: number; maxTimeoutSeconds: number; maxConcurrency: number; status: string
+}
+export interface ManagedArtifact {
+  id: number; name: string; version: string; artifactKey: string; sha256: string; status: string
+  createdBy?: string; approvedBy?: string; approvedAt?: string
+}
+export interface SparkJobDefinition {
+  id: number; name: string; version: number; environmentId: number; environmentName: string
+  artifactId: number; artifactName: string; artifactKey: string; artifactDigest: string
+  artifactStatus: string; inputTables: string[]; outputTable?: string; outputUri: string
+  driverCores: number; driverMemoryMb: number; timeoutSeconds: number; maxRetries: number
+  status: string; definitionDigest?: string; owner: string; description?: string
+}
+export interface SparkRunnerHealth { status: string; version?: string; activeJobs: number; maxConcurrency: number; message?: string }
+
+export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
+export const listSparkEnvironments = () => http.get<SparkEnvironment[]>('/api/workflow/spark/environments').then((r) => r.data)
+export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
+export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)
+
+export interface PipelineRun {
+  id: number
+  target_task_id: number
+  target_task_name?: string
+  biz_date: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'unknown'
+  triggered_by: string
+  started_at?: string
+  finished_at?: string
+  error_message?: string
+}
+
+export interface PipelineNodeRun {
+  id: number
+  pipeline_run_id: number
+  task_id: number
+  task_name: string
+  task_type: 'sql' | 'spark' | 'quality'
+  sequence_no: number
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'waived' | 'unknown'
+  instance_id?: number
+  waiver_id?: number
+  started_at?: string
+  finished_at?: string
+  message?: string
+}
+
+export interface PipelineDetail extends PipelineRun {
+  nodes: PipelineNodeRun[]
+}
+
+export const listPipelineRuns = (limit = 30) =>
+  http.get<PipelineRun[]>('/api/workflow/pipelines', { params: { limit } }).then((r) => r.data)
+export const getPipelineRun = (id: number) =>
+  http.get<PipelineDetail>(`/api/workflow/pipelines/${id}`).then((r) => r.data)
+export const startPipeline = (targetTaskId: number, bizDate: string) =>
+  http.post<PipelineRun>('/api/workflow/pipelines', { targetTaskId, bizDate }).then((r) => r.data)
+
 export function listDependencies(id: number): Promise<TaskDependency[]> {
   return http
     .get<TaskDependency[]>(`/api/workflow/tasks/${id}/dependencies`)
@@ -256,6 +330,12 @@ export interface ReleaseRecord {
   status?: ReleaseStatus
   requestedBy?: string
   approvedBy?: string
+  targetRefId?: number
+  snapshotDigest?: string
+  approvedDigest?: string
+  approvedAt?: string
+  qualityRuleId?: number
+  qualityResultId?: number
   releasedAt?: string
   createdAt?: string
   updatedAt?: string
@@ -268,6 +348,8 @@ export interface ReleaseRecordInput {
   targetName: string
   targetVersion?: string
   changeSummary?: string
+  targetRefId?: number
+  qualityRuleId?: number
 }
 
 export function listReleases(status?: string, releaseType?: string): Promise<ReleaseRecord[]> {

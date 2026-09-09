@@ -20,8 +20,12 @@ public class ExecutionAttempt {
     private String triggerType;
     private String triggeredBy;
     private String taskName;
+    private String taskType;
     private String taskSql;
     private Long datasourceId;
+    private Long jobDefinitionId;
+    private Integer jobVersion;
+    private Long qualityRuleId;
     private OffsetDateTime taskUpdatedAt;
     private String definitionDigest;
     private String parametersJson;
@@ -29,6 +33,11 @@ public class ExecutionAttempt {
     private String artifactDigest;
     private String remoteHandle;
     private String applicationId;
+    private String inputPartitionsJson;
+    private String outputPartitionsJson;
+    private String resultMetadataJson;
+    private Long logCursor;
+    private OffsetDateTime cancellationConfirmedAt;
     private OffsetDateTime queuedAt;
     private OffsetDateTime submittedAt;
     private OffsetDateTime startedAt;
@@ -58,10 +67,18 @@ public class ExecutionAttempt {
     public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }
     public String getTaskName() { return taskName; }
     public void setTaskName(String taskName) { this.taskName = taskName; }
+    public String getTaskType() { return taskType; }
+    public void setTaskType(String taskType) { this.taskType = taskType; }
     public String getTaskSql() { return taskSql; }
     public void setTaskSql(String taskSql) { this.taskSql = taskSql; }
     public Long getDatasourceId() { return datasourceId; }
     public void setDatasourceId(Long datasourceId) { this.datasourceId = datasourceId; }
+    public Long getJobDefinitionId() { return jobDefinitionId; }
+    public void setJobDefinitionId(Long jobDefinitionId) { this.jobDefinitionId = jobDefinitionId; }
+    public Integer getJobVersion() { return jobVersion; }
+    public void setJobVersion(Integer jobVersion) { this.jobVersion = jobVersion; }
+    public Long getQualityRuleId() { return qualityRuleId; }
+    public void setQualityRuleId(Long qualityRuleId) { this.qualityRuleId = qualityRuleId; }
     public OffsetDateTime getTaskUpdatedAt() { return taskUpdatedAt; }
     public void setTaskUpdatedAt(OffsetDateTime taskUpdatedAt) { this.taskUpdatedAt = taskUpdatedAt; }
     public String getDefinitionDigest() { return definitionDigest; }
@@ -76,6 +93,16 @@ public class ExecutionAttempt {
     public void setRemoteHandle(String remoteHandle) { this.remoteHandle = remoteHandle; }
     public String getApplicationId() { return applicationId; }
     public void setApplicationId(String applicationId) { this.applicationId = applicationId; }
+    public String getInputPartitionsJson() { return inputPartitionsJson; }
+    public void setInputPartitionsJson(String inputPartitionsJson) { this.inputPartitionsJson = inputPartitionsJson; }
+    public String getOutputPartitionsJson() { return outputPartitionsJson; }
+    public void setOutputPartitionsJson(String outputPartitionsJson) { this.outputPartitionsJson = outputPartitionsJson; }
+    public String getResultMetadataJson() { return resultMetadataJson; }
+    public void setResultMetadataJson(String resultMetadataJson) { this.resultMetadataJson = resultMetadataJson; }
+    public Long getLogCursor() { return logCursor; }
+    public void setLogCursor(Long logCursor) { this.logCursor = logCursor; }
+    public OffsetDateTime getCancellationConfirmedAt() { return cancellationConfirmedAt; }
+    public void setCancellationConfirmedAt(OffsetDateTime cancellationConfirmedAt) { this.cancellationConfirmedAt = cancellationConfirmedAt; }
     public OffsetDateTime getQueuedAt() { return queuedAt; }
     public void setQueuedAt(OffsetDateTime queuedAt) { this.queuedAt = queuedAt; }
     public OffsetDateTime getSubmittedAt() { return submittedAt; }

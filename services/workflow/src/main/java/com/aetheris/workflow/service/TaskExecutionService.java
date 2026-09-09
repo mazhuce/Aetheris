@@ -36,6 +36,9 @@ public class TaskExecutionService {
     private final ExecutionClaimCoordinator claimCoordinator;
     private final SqlExecutionClient executionClient;
     private final NotificationClient notificationClient;
+    private final SparkBatchExecutionService sparkExecutionService;
+    private final QualityExecutionClient qualityExecutionClient;
+    private final LineageEvidenceClient lineageEvidenceClient;
 
     public TaskExecutionService(
             TaskService taskService,
@@ -44,7 +47,10 @@ public class TaskExecutionService {
             TaskDependencyService dependencyService,
             ExecutionClaimCoordinator claimCoordinator,
             SqlExecutionClient executionClient,
-            NotificationClient notificationClient) {
+            NotificationClient notificationClient,
+            SparkBatchExecutionService sparkExecutionService,
+            QualityExecutionClient qualityExecutionClient,
+            LineageEvidenceClient lineageEvidenceClient) {
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.logService = logService;
@@ -52,6 +58,9 @@ public class TaskExecutionService {
         this.claimCoordinator = claimCoordinator;
         this.executionClient = executionClient;
         this.notificationClient = notificationClient;
+        this.sparkExecutionService = sparkExecutionService;
+        this.qualityExecutionClient = qualityExecutionClient;
+        this.lineageEvidenceClient = lineageEvidenceClient;
     }
 
     /**
@@ -86,7 +95,35 @@ public class TaskExecutionService {
             return skipped;
         }
 
-        return runWithRetry(task, claim, timeout);
+        String taskType = task.getTaskType() == null ? "sql" : task.getTaskType();
+        return switch (taskType) {
+            case "spark" -> sparkExecutionService.submit(task, claim);
+            case "quality" -> runQuality(task, claim);
+            case "sql" -> runWithRetry(task, claim, timeout);
+            default -> claimCoordinator.fail(claim, "不支持的任务类型", 0, 0);
+        };
+    }
+
+    private TaskInstance runQuality(Task task, ExecutionClaim claim) {
+        long startedAt = System.currentTimeMillis();
+        try {
+            QualityExecutionClient.QualityResult result = qualityExecutionClient.execute(
+                    task.getQualityRuleId(), claim.instance().getTriggeredBy());
+            long duration = System.currentTimeMillis() - startedAt;
+            if ("passed".equals(result.status())) {
+                writeLog(claim.instance().getId(), claim.attemptId(), "info",
+                        "质量门禁通过，违规数 " + result.violationCount());
+                return claimCoordinator.succeed(claim,
+                        result.violationCount() == null ? 0 : result.violationCount(), duration, duration);
+            }
+            String message = "质量门禁未通过：" + (result.message() == null ? result.status() : result.message());
+            writeLog(claim.instance().getId(), claim.attemptId(), "error", message);
+            return claimCoordinator.fail(claim, message, duration, duration);
+        } catch (RuntimeException error) {
+            long duration = System.currentTimeMillis() - startedAt;
+            writeLog(claim.instance().getId(), claim.attemptId(), "error", error.getMessage());
+            return claimCoordinator.fail(claim, error.getMessage(), duration, duration);
+        }
     }
 
     /** Each retry receives its own immutable attempt row and fencing token. */
@@ -115,6 +152,7 @@ public class TaskExecutionService {
                         System.currentTimeMillis() - executionStartedAt);
                 writeLog(succeeded.getId(), claim.attemptId(), "info",
                         "执行成功，耗时 " + attemptDuration + "ms");
+                lineageEvidenceClient.sql(task, claim, sql);
                 return succeeded;
             } catch (SqlExecutionException error) {
                 lastError = error;
