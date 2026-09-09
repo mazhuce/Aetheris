@@ -26,6 +26,7 @@ import {
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function MetadataTablePage() {
   const { message, modal } = App.useApp()
@@ -45,6 +46,7 @@ export default function MetadataTablePage() {
   const [syncing, setSyncing] = useState(false)
   const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [syncForm] = Form.useForm<{ datasourceId: number; schemaName?: string }>()
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -233,7 +235,7 @@ export default function MetadataTablePage() {
         </div>
       </PageToolbar>
       <DataSurface label="元数据表列表">
-        <Table<MetadataTable> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1220 }} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无元数据' }} />
+        <Table<MetadataTable> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1220 }} pagination={{ pageSize, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无元数据' }} />
       </DataSurface>
       <Modal title={editing ? '编辑表信息' : '登记表'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={560}>
         <Form form={form} layout="vertical" initialValues={{ status: 'active' }} onFinish={(v) => void handleSubmit(v)}>

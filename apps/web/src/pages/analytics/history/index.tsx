@@ -8,6 +8,7 @@ import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import { clearQueryHistory, deleteQueryHistory, listQueryHistory, type QueryHistoryRecord } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function QueryHistoryPage() {
   const { message } = App.useApp()
@@ -15,6 +16,7 @@ export default function QueryHistoryPage() {
   const [records, setRecords] = useState<QueryHistoryRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -186,7 +188,7 @@ export default function QueryHistoryPage() {
           dataSource={records}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary"><HistoryOutlined /> 暂无查询记录。去即席查询执行一条 SQL，历史会出现在这里。</Typography.Text> }}
         />
       </DataSurface>

@@ -45,7 +45,7 @@ export default function ConnectionHealthStatus({ health, now, testing = false }:
           <span>{detail}</span>
         </Space>
       )}>
-        <Typography.Text type={status === 'unavailable' ? 'danger' : 'secondary'} style={{ maxWidth: 300 }} ellipsis>
+        <Typography.Text type={status === 'unavailable' ? 'danger' : 'secondary'} style={{ maxWidth: 200 }} ellipsis>
           {detail}
         </Typography.Text>
       </Tooltip>

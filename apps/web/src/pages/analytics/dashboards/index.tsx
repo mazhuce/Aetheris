@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, RocketOutlined } from '@ant-design/icons'
-import { Button, Form, Input, Modal, Popconfirm, Tag, message } from 'antd'
+import { Button, Form, Input, Modal, Pagination, Popconfirm, Tag, message } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
 import {
@@ -14,6 +14,7 @@ import {
 } from '@/api/analytics'
 import { getCurrentRole } from '@/utils/access'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function DashboardListPage() {
   const navigate = useNavigate()
@@ -23,6 +24,17 @@ export default function DashboardListPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [form] = Form.useForm<{ name: string; description?: string }>()
   const isAdmin = getCurrentRole() === 'admin'
+  const [page, setPage] = useState(1)
+  const pageSize = useResponsivePageSize(6, 3, 3, 3)
+
+  const pagedDashboards = useMemo(
+    () => dashboards.slice((page - 1) * pageSize, page * pageSize),
+    [dashboards, page, pageSize]
+  )
+
+  useEffect(() => {
+    setPage(1)
+  }, [pageSize])
 
   const reload = async () => {
     setLoading(true)
@@ -104,7 +116,7 @@ export default function DashboardListPage() {
         </div>
         <div className="dashboard-library-grid">
           {!loading && dashboards.length === 0 && <div className="dashboard-library-empty">选择上方模板，创建第一张数据看板。</div>}
-          {dashboards.map((dashboard) => (
+          {pagedDashboards.map((dashboard) => (
             <article className="dashboard-library-card" key={dashboard.id}>
               <div className="dashboard-card-preview">
                 {dashboard.draftSpec.layouts.lg?.slice(0, 8).map((item) => (
@@ -135,6 +147,16 @@ export default function DashboardListPage() {
             </article>
           ))}
         </div>
+        {dashboards.length > pageSize && (
+          <Pagination
+            className="dashboard-library-pagination"
+            current={page}
+            pageSize={pageSize}
+            total={dashboards.length}
+            showSizeChanger={false}
+            onChange={setPage}
+          />
+        )}
       </section>
 
       <Modal

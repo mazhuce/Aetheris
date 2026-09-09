@@ -16,6 +16,7 @@ import {
   type PlatformNotification
 } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 const levelMeta: Record<string, { label: string; color: string }> = {
   critical: { label: '严重', color: 'red' },
@@ -39,6 +40,7 @@ export default function AlertCenterPage() {
   const [level, setLevel] = useState<string>()
   const [source, setSource] = useState<string>()
   const [unreadOnly, setUnreadOnly] = useState(false)
+  const pageSize = useResponsivePageSize(6, 5, 4, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -215,7 +217,7 @@ export default function AlertCenterPage() {
           dataSource={alerts}
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary">暂无告警。任务执行失败或质量检查未通过时，事件会出现在这里。</Typography.Text> }}
         />
       </DataSurface>

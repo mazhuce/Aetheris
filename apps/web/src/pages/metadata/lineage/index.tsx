@@ -17,6 +17,7 @@ import {
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function LineagePage() {
   const { message, modal } = App.useApp()
@@ -31,6 +32,7 @@ export default function LineagePage() {
   const [parseOpen, setParseOpen] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [parseForm] = Form.useForm<{ sql: string; relationType?: string }>()
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -137,7 +139,7 @@ export default function LineagePage() {
         </div>
       </PageToolbar>
       <DataSurface label="数据血缘列表">
-        <Table<LineageRelation> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无血缘关系' }} />
+        <Table<LineageRelation> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} pagination={{ pageSize, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无血缘关系' }} />
       </DataSurface>
       <Modal title={editing ? '编辑血缘关系' : '新增血缘关系'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting}>
         <Form form={form} layout="vertical" onFinish={(v) => void handleSubmit(v)}>

@@ -67,7 +67,7 @@ export default function DataSourcePage() {
   const [status, setStatus] = useState<string>()
   const [range, setRange] = useState<[Dayjs | null, Dayjs | null] | null>(null)
   const [page, setPage] = useState(1)
-  const pageSize = useResponsivePageSize()
+  const pageSize = useResponsivePageSize(5, 3, 3, 2)
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<DataSource | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -221,7 +221,7 @@ export default function DataSourcePage() {
       title: '名称',
       dataIndex: 'name',
       key: 'name',
-      width: 190,
+      width: 160,
       render: (value: string, record) => (
         <Space size={6}>
           <span className="entity-name" title={value}>{value}</span>
@@ -233,21 +233,21 @@ export default function DataSourcePage() {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      width: 145,
+      width: 130,
       render: (value: string) => {
         const definition = getDataSourceDefinition(value)
         return <Tag>{definition.label}</Tag>
       }
     },
-    { title: '主机地址', dataIndex: 'host', key: 'host', width: 140 },
-    { title: '端口', dataIndex: 'port', key: 'port', width: 80, render: (value?: number) => value ?? '—' },
-    { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 120, render: (value?: string) => value || '—' },
-    { title: '用户名', dataIndex: 'username', key: 'username', width: 110, render: (value?: string) => value || '—' },
+    { title: '主机地址', dataIndex: 'host', key: 'host', width: 120 },
+    { title: '端口', dataIndex: 'port', key: 'port', width: 70, render: (value?: number) => value ?? '—' },
+    { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 90, render: (value?: string) => value || '—' },
+    { title: '用户名', dataIndex: 'username', key: 'username', width: 90, render: (value?: string) => value || '—' },
     {
       title: '配置状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 90,
       render: (value?: string) => {
         const meta = statusMeta[value ?? ''] ?? { color: 'default', text: value ?? '—' }
         return <StatusBadge tone="neutral" dot={false}>{meta.text}</StatusBadge>
@@ -256,17 +256,17 @@ export default function DataSourcePage() {
     {
       title: '连接健康',
       key: 'connectionHealth',
-      width: 320,
+      width: 210,
       render: (_, record) => <ConnectionHealthStatus health={record.connectionHealth} now={healthNow} testing={testingIds.has(record.id)} />
     },
-    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value?: string) => formatDateTime(value) },
-    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (value?: string) => formatDateTime(value) }
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 150, render: (value?: string) => formatDateTime(value) },
+    { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 150, render: (value?: string) => formatDateTime(value) }
   ]
 
   columns.push({
       title: '操作',
       key: 'action',
-      width: 140,
+      width: 130,
       align: 'right',
       fixed: 'right',
       render: (_, record) => (
@@ -401,7 +401,7 @@ export default function DataSourcePage() {
           columns={columns}
           dataSource={paged}
           loading={loading}
-          scroll={{ x: 1740 }}
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: page,
             pageSize,

@@ -7,6 +7,7 @@ import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { EmptyState } from '@/components/FeedbackState'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import {
   getWarehouseMap,
   listDataSources,
@@ -33,6 +34,7 @@ export default function WarehouseMapPage() {
   const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [datasourceName, setDatasourceName] = useState<string | undefined>()
   const [selectedLayer, setSelectedLayer] = useState<string | undefined>()
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -144,7 +146,7 @@ export default function WarehouseMapPage() {
                 rowKey="id"
                 columns={columns}
                 dataSource={selected ? selected.tables : activeLayers.flatMap((l) => l.tables)}
-                pagination={{ pageSize: 10, showTotal: (t) => `共 ${t} 条` }}
+                pagination={{ pageSize, showTotal: (t) => `共 ${t} 条` }}
                 locale={{ emptyText: '该层暂无表' }}
               />
             </DataSurface>

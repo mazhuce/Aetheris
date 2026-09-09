@@ -105,7 +105,7 @@
 .dashboard-card-preview {
   position: relative;
   overflow: hidden;
-  height: 128px;
+  height: 96px;
   border-bottom: 1px solid var(--border-subtle);
   background:
     linear-gradient(var(--dashboard-grid-line) 1px, transparent 1px),
@@ -150,8 +150,8 @@
 
 .template-card-copy {
   display: grid;
-  min-height: 120px;
-  padding: var(--space-5);
+  min-height: 88px;
+  padding: var(--space-4);
 }
 
 .template-card-copy span {
@@ -181,6 +181,12 @@
   gap: var(--space-4);
 }
 
+.dashboard-library-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}
+
 .dashboard-library-card {
   overflow: hidden;
   border: 1px solid var(--border-default);
@@ -189,11 +195,11 @@
 }
 
 .dashboard-card-preview {
-  height: 150px;
+  height: 108px;
 }
 
 .dashboard-card-body {
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 .dashboard-card-title {

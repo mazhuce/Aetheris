@@ -164,7 +164,7 @@ export default function ChatPage() {
   )
 
   return (
-    <>
+    <div className="assistant-page">
       <PageHeader
         description="提供基于大语言模型的数据问答能力，对话记录自动保存，回复支持 Markdown 格式。"
         extra={
@@ -275,6 +275,6 @@ export default function ChatPage() {
       >
         <div className="conversation-drawer-list">{conversationList}</div>
       </Drawer>
-    </>
+    </div>
   )
 }

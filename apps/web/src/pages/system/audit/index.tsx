@@ -9,6 +9,7 @@ import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { listAuditLogs, type AuditLog } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function AuditLogPage() {
   const { message } = App.useApp()
@@ -17,6 +18,7 @@ export default function AuditLogPage() {
   const [username, setUsername] = useState('')
   const [method, setMethod] = useState<string>()
   const [success, setSuccess] = useState<boolean>()
+  const pageSize = useResponsivePageSize(6, 5, 4, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -99,7 +101,7 @@ export default function AuditLogPage() {
           dataSource={logs}
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无审计记录，平台写操作会自动出现在这里' }}
         />
       </DataSurface>

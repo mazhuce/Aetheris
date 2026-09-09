@@ -310,6 +310,12 @@
   min-height: 100%;
 }
 
+/* 数据助手页需要确定的高度链，让对话区占满剩余高度并贴近页面底部。 */
+.content-frame:has(.assistant-page) {
+  height: 100%;
+  min-height: 0;
+}
+
 .route-stage {
   display: flex;
   flex-direction: column;

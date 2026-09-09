@@ -8,6 +8,7 @@ import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import { listAllInstances, listTasks, INSTANCE_STATUS_META, type TaskInstance, type TaskView } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function TaskMonitorPage() {
   const { message } = App.useApp()
@@ -15,6 +16,7 @@ export default function TaskMonitorPage() {
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
+  const pageSize = useResponsivePageSize(6, 5, 4, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -143,7 +145,7 @@ export default function TaskMonitorPage() {
           dataSource={instances}
           loading={loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: '暂无运行记录，任务触发后会自动出现在这里' }}
         />
       </DataSurface>

@@ -27,6 +27,8 @@ out/
 # Node / 前端
 node_modules/
 dist/
+apps/web/dist-probe/
+apps/web/.probe/
 out/
 .next/
 .nuxt/

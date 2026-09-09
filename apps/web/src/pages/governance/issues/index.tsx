@@ -9,6 +9,7 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { getAlertStats, listAlerts, markNotificationRead, type AlertStats, type PlatformNotification } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 const sourceMeta: Record<string, { label: string; path: string }> = {
   quality: { label: '数据质量', path: '/governance/quality' },
@@ -31,6 +32,7 @@ export default function GovernanceIssuesPage() {
   const [loading, setLoading] = useState(false)
   const [source, setSource] = useState<string>()
   const [unreadOnly, setUnreadOnly] = useState(false)
+  const pageSize = useResponsivePageSize(6, 5, 4, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -192,7 +194,7 @@ export default function GovernanceIssuesPage() {
           dataSource={issues}
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary">暂无治理问题。质量检查全部通过、接入任务运行平稳时，这里会是空的。</Typography.Text> }}
         />
       </DataSurface>

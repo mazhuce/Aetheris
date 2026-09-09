@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import { listTables, WAREHOUSE_LAYERS, warehouseLayerLabel, type MetadataTable } from '@/api/metadata'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 const layerColor: Record<string, string> = {
   ods: 'default',
@@ -25,6 +26,7 @@ export default function AssetCatalogPage() {
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [selectedDomain, setSelectedDomain] = useState<string>()
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -193,7 +195,7 @@ export default function AssetCatalogPage() {
             columns={columns}
             dataSource={activeDomain ? visibleTables : catalog.flatMap((entry) => entry.layerEntries.flatMap((layer) => layer.tables))}
             loading={loading}
-            pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+            pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
             locale={{ emptyText: <Typography.Text type="secondary">暂无资产。先在元数据中心同步数据源，或在数据表页手工登记。</Typography.Text> }}
           />
         </DataSurface>

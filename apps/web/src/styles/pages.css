@@ -562,14 +562,26 @@
 }
 
 /* Assistant */
+.assistant-page {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+/* 让数据助手页占满可用高度，对话区自然贴近页面底部。
+   仅当路由阶段包含 assistant-page 时才把 min-height 收紧为固定高度，
+   不影响其他页面的自然流式滚动。 */
+.route-stage:has(.assistant-page) {
+  height: 100%;
+}
+
 .assistant-shell {
   display: grid;
   grid-template-columns: 228px minmax(0, 1fr);
-  /* 扣除 200px：顶栏48 + 子导航40 + 页头84 + 上内边距20 + 外壳边框2
-     + 浏览器渲染/缩放舍入余量6。192px 时用户仍反馈差几像素显示不全，
-     逐像素猜不准（边框与亚像素舍入参与其中），一次留足余量定稿。 */
-  height: calc(100dvh - 200px);
+  /* 撑满 PageHeader 之后的剩余高度，让对话区贴近页面底部。 */
   min-height: 480px;
+  flex: 1 1 auto;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);

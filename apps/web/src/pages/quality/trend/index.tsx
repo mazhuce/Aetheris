@@ -15,6 +15,7 @@ import {
   type QualitySummary
 } from '@/api/quality'
 import { formatDateTime } from '@/utils/format'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 const statusMeta: Record<string, { label: string; color: string }> = {
   passed: { label: '通过', color: 'success' },
@@ -31,6 +32,7 @@ export default function QualityTrendPage() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
   const [ruleId, setRuleId] = useState<number>()
+  const pageSize = useResponsivePageSize(6, 5, 4, 3)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -158,7 +160,7 @@ export default function QualityTrendPage() {
           dataSource={results}
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary">暂无检查记录。在数据质量页创建并运行规则，或配置定时调度后，历史会出现在这里。</Typography.Text> }}
         />
       </DataSurface>
