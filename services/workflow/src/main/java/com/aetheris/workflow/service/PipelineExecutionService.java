@@ -3,8 +3,10 @@ package com.aetheris.workflow.service;
 import com.aetheris.workflow.entity.Task;
 import com.aetheris.workflow.entity.TaskInstance;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -30,16 +32,25 @@ public class PipelineExecutionService {
     private final TaskInstanceService instanceService;
     private final TaskExecutionService executionService;
     private final TaskExecutor taskExecutor;
+    private final long dispatchLeaseSeconds;
+    private final long leaseGraceSeconds;
 
     public PipelineExecutionService(JdbcTemplate jdbc, TaskService taskService,
                                     TaskInstanceService instanceService,
                                     TaskExecutionService executionService,
-                                    TaskExecutor taskExecutor) {
+                                    TaskExecutor taskExecutor,
+                                    @Value("${aetheris.pipeline.dispatch-lease-seconds:120}") long dispatchLeaseSeconds,
+                                    @Value("${aetheris.pipeline.lease-grace-seconds:120}") long leaseGraceSeconds) {
+        if (dispatchLeaseSeconds < 30 || leaseGraceSeconds < 1) {
+            throw new IllegalStateException("流水线租约配置无效");
+        }
         this.jdbc = jdbc;
         this.taskService = taskService;
         this.instanceService = instanceService;
         this.executionService = executionService;
         this.taskExecutor = taskExecutor;
+        this.dispatchLeaseSeconds = dispatchLeaseSeconds;
+        this.leaseGraceSeconds = leaseGraceSeconds;
     }
 
     @Transactional
@@ -50,9 +61,10 @@ public class PipelineExecutionService {
         Long runId;
         try {
             runId = jdbc.queryForObject("""
-                    INSERT INTO workflow.pipeline_run(target_task_id,biz_date,status,triggered_by)
-                    VALUES (?,?,'queued',?) RETURNING id
-                    """, Long.class, targetTaskId, bizDate, username);
+                    INSERT INTO workflow.pipeline_run
+                        (target_task_id,biz_date,status,triggered_by,heartbeat_at,lease_expires_at)
+                    VALUES (?,?,'queued',?,now(),now() + (? * interval '1 second')) RETURNING id
+                    """, Long.class, targetTaskId, bizDate, username, dispatchLeaseSeconds);
         } catch (DuplicateKeyException duplicate) {
             throw new IllegalStateException("该目标在此业务日期已有运行中的流水线", duplicate);
         }
@@ -122,13 +134,21 @@ public class PipelineExecutionService {
     }
 
     void executeRun(long runId, String bizDate, String username, List<Long> order) {
-        jdbc.update("UPDATE workflow.pipeline_run SET status='running',started_at=now(),updated_at=now() WHERE id=?", runId);
+        int started = jdbc.update("""
+                UPDATE workflow.pipeline_run
+                SET status='running',started_at=now(),heartbeat_at=now(),updated_at=now()
+                WHERE id=? AND status='queued'
+                """, runId);
+        if (started != 1) return;
         Long currentTaskId = null;
         try {
             for (Long taskId : order) {
                 currentTaskId = taskId;
                 Task task = taskService.getById(taskId);
                 if (task == null) throw new IllegalStateException("流水线节点任务不存在：" + taskId);
+                long taskLease = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds())
+                        + leaseGraceSeconds;
+                if (!refreshLease(runId, taskLease)) return;
                 jdbc.update("""
                         UPDATE workflow.pipeline_node_run SET status='running',started_at=now()
                         WHERE pipeline_run_id=? AND task_id=?
@@ -153,8 +173,10 @@ public class PipelineExecutionService {
                 }
             }
             jdbc.update("""
-                    UPDATE workflow.pipeline_run SET status='succeeded',finished_at=now(),updated_at=now()
-                    WHERE id=?
+                    UPDATE workflow.pipeline_run
+                    SET status='succeeded',finished_at=now(),heartbeat_at=now(),
+                        lease_expires_at=NULL,updated_at=now()
+                    WHERE id=? AND status='running'
                     """, runId);
         } catch (RuntimeException error) {
             failRun(runId, currentTaskId,
@@ -181,9 +203,45 @@ public class PipelineExecutionService {
                 """, runId);
         jdbc.update("""
                 UPDATE workflow.pipeline_run
-                SET status='failed',error_message=?,finished_at=now(),updated_at=now()
-                WHERE id=? AND status IN ('queued','running','unknown')
+                SET status='failed',error_message=?,finished_at=now(),heartbeat_at=now(),
+                    lease_expires_at=NULL,updated_at=now()
+                WHERE id=? AND status IN ('queued','running')
                 """, runMessage, runId);
+    }
+
+    private boolean refreshLease(long runId, long leaseSeconds) {
+        return jdbc.update("""
+                UPDATE workflow.pipeline_run
+                SET heartbeat_at=now(),lease_expires_at=now() + (? * interval '1 second'),updated_at=now()
+                WHERE id=? AND status='running'
+                """, leaseSeconds, runId) == 1;
+    }
+
+    /** Releases stale active rows after a worker crash without guessing node outcomes. */
+    @Scheduled(fixedDelayString = "${aetheris.pipeline.reconcile-interval-ms:30000}")
+    public void reconcileStaleRuns() {
+        List<Long> stale = jdbc.queryForList("""
+                UPDATE workflow.pipeline_run
+                SET status='unknown',error_message='流水线执行心跳超时，需要核对后重跑',
+                    finished_at=now(),lease_expires_at=NULL,updated_at=now()
+                WHERE status IN ('queued','running')
+                  AND lease_expires_at IS NOT NULL AND lease_expires_at < now()
+                RETURNING id
+                """, Long.class);
+        for (Long runId : stale) {
+            jdbc.update("""
+                    UPDATE workflow.pipeline_node_run
+                    SET status='unknown',finished_at=COALESCE(finished_at,now()),
+                        message=COALESCE(message,'执行心跳超时，节点结果待核对')
+                    WHERE pipeline_run_id=? AND status='running'
+                    """, runId);
+            jdbc.update("""
+                    UPDATE workflow.pipeline_node_run
+                    SET status='skipped',finished_at=now(),
+                        message=COALESCE(message,'流水线已中断，节点未执行')
+                    WHERE pipeline_run_id=? AND status='queued'
+                    """, runId);
+        }
     }
 
     static String bounded(String value, int limit) {

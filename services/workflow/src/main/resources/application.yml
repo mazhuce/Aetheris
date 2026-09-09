@@ -73,6 +73,10 @@ aetheris:
     worker-id: ${AETHERIS_EXECUTION_WORKER_ID:${HOSTNAME:local}}
     lease-grace-seconds: ${AETHERIS_EXECUTION_LEASE_GRACE_SECONDS:60}
     reconcile-interval-ms: ${AETHERIS_EXECUTION_RECONCILE_INTERVAL_MS:30000}
+  pipeline:
+    dispatch-lease-seconds: ${AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS:120}
+    lease-grace-seconds: ${AETHERIS_PIPELINE_LEASE_GRACE_SECONDS:120}
+    reconcile-interval-ms: ${AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS:30000}
 
 management:
   endpoints:
