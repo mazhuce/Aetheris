@@ -93,12 +93,15 @@ public class ManagedSparkCatalogService {
         if (!"draft".equals(artifact.status())) {
             throw new IllegalStateException("只有草稿制品可以审批");
         }
+        if (artifact.createdBy().equals(username)) {
+            throw new IllegalStateException("制品提交人不能审批自己的变更");
+        }
         adapter.validate(artifact.artifactKey(), artifact.sha256());
         int changed = jdbc.update("""
                 UPDATE workflow.managed_artifact
                 SET status='approved', approved_by=?, approved_at=now(), updated_at=now()
-                WHERE id=? AND status='draft'
-                """, username, id);
+                WHERE id=? AND status='draft' AND created_by<>?
+                """, username, id, username);
         if (changed != 1) throw new IllegalStateException("制品状态已变化，请刷新后重试");
         return artifact(id);
     }
@@ -168,6 +171,7 @@ public class ManagedSparkCatalogService {
     public SparkJobView publishJob(long id, String username) {
         SparkJobView job = job(id);
         if (!"draft".equals(job.status())) throw new IllegalStateException("只有草稿作业可以发布");
+        if (job.owner().equals(username)) throw new IllegalStateException("作业创建人不能发布自己的变更");
         if (!"approved".equals(job.artifactStatus())) throw new IllegalStateException("制品审批通过后才能发布作业");
         adapter.validate(job.artifactKey(), job.artifactDigest());
         String digest = definitionDigest(job);
@@ -175,8 +179,8 @@ public class ManagedSparkCatalogService {
                 UPDATE workflow.spark_job_definition
                 SET status='published', definition_digest=?, published_by=?, published_at=now(),
                     updated_at=now()
-                WHERE id=? AND status='draft'
-                """, digest, username, id);
+                WHERE id=? AND status='draft' AND owner<>?
+                """, digest, username, id, username);
         if (changed != 1) throw new IllegalStateException("作业状态已变化，请刷新后重试");
         return job(id);
     }

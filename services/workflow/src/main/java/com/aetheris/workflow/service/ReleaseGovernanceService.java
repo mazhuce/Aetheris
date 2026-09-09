@@ -57,6 +57,9 @@ public class ReleaseGovernanceService {
     @Transactional
     public ReleaseRecord approve(long id, String username) {
         ReleaseRecord record = required(id);
+        if (username.equals(record.getRequestedBy())) {
+            throw new IllegalStateException("发布申请人不能审批自己的变更");
+        }
         Map<String, Object> impactSummary = "table".equals(record.getReleaseType())
                 ? impact.impact(record.getTargetName()) : Map.of("status", "not_applicable");
         int changed = jdbc.update("""
@@ -64,7 +67,8 @@ public class ReleaseGovernanceService {
                 SET status='approved',approved_by=?,approved_at=now(),approved_digest=snapshot_digest,
                     impact_summary=?::jsonb,updated_at=now()
                 WHERE id=? AND status='pending' AND snapshot_digest IS NOT NULL
-                """, username, json(impactSummary), id);
+                  AND requested_by<>?
+                """, username, json(impactSummary), id, username);
         if (changed != 1) throw new IllegalStateException("发布单状态已变化或快照尚未生成");
         return records.getById(id);
     }

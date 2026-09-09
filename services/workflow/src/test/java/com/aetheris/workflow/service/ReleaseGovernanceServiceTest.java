@@ -31,7 +31,7 @@ class ReleaseGovernanceServiceTest {
         existing.setReleaseType("table"); existing.setTargetName("dwd.dwd_order");
         when(records.getById(1L)).thenReturn(existing);
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.update(anyString(), any(), any(), any())).thenReturn(1);
+        when(jdbc.update(anyString(), any(), any(), any(), any())).thenReturn(1);
         MetadataImpactClient impact = mock(MetadataImpactClient.class);
         when(impact.impact("dwd.dwd_order")).thenReturn(Map.of("downstream", 2));
         ReleaseGovernanceService service = service(records, jdbc, impact);
@@ -39,7 +39,24 @@ class ReleaseGovernanceServiceTest {
         service.approve(1L, "alice");
 
         verify(impact).impact("dwd.dwd_order");
-        verify(jdbc).update(contains("status='approved'"), eq("alice"), anyString(), eq(1L));
+        verify(jdbc).update(contains("status='approved'"), eq("alice"), anyString(), eq(1L), eq("alice"));
+    }
+
+    @Test
+    void requesterCannotApproveOwnRelease() {
+        ReleaseRecordService records = mock(ReleaseRecordService.class);
+        ReleaseRecord existing = new ReleaseRecord(); existing.setId(1L); existing.setStatus("pending");
+        existing.setRequestedBy("alice"); existing.setReleaseType("table");
+        existing.setTargetName("dwd.dwd_order");
+        when(records.getById(1L)).thenReturn(existing);
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        MetadataImpactClient impact = mock(MetadataImpactClient.class);
+        ReleaseGovernanceService service = service(records, jdbc, impact);
+
+        assertThrows(IllegalStateException.class, () -> service.approve(1L, "alice"));
+
+        verifyNoInteractions(impact);
+        verify(jdbc, never()).update(anyString(), any(Object[].class));
     }
 
     private static ReleaseGovernanceService service(ReleaseRecordService records, JdbcTemplate jdbc,
