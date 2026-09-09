@@ -111,6 +111,11 @@ public class PipelineExecutionService {
                     VALUES (?,?,?)
                     """, runId, order.get(index), index + 1);
         }
+        dispatchAfterCommit(runId, bizDate, username, order);
+        return run(runId);
+    }
+
+    private void dispatchAfterCommit(long runId, String bizDate, String username, List<Long> order) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
@@ -121,7 +126,6 @@ public class PipelineExecutionService {
                 }
             }
         });
-        return run(runId);
     }
 
     public List<Map<String, Object>> list(int limit, String username, boolean includeAll) {
@@ -182,7 +186,7 @@ public class PipelineExecutionService {
     void executeRun(long runId, String bizDate, String username, List<Long> order) {
         int started = jdbc.update("""
                 UPDATE workflow.pipeline_run
-                SET status='running',started_at=now(),heartbeat_at=now(),updated_at=now()
+                SET status='running',started_at=COALESCE(started_at,now()),heartbeat_at=now(),updated_at=now()
                 WHERE id=? AND status='queued'
                 """, runId);
         if (started != 1) return;
@@ -192,6 +196,7 @@ public class PipelineExecutionService {
                 currentTaskId = taskId;
                 Task task = taskService.getById(taskId);
                 if (task == null) throw new IllegalStateException("流水线节点任务不存在：" + taskId);
+                validateRunnableTask(task);
                 long taskLease = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds())
                         + leaseGraceSeconds;
                 if (!refreshLease(runId, taskLease)) return;
@@ -252,7 +257,7 @@ public class PipelineExecutionService {
                     UPDATE workflow.pipeline_node_run
                     SET status='failed',finished_at=COALESCE(finished_at,now()),
                         message=COALESCE(message,?)
-                    WHERE pipeline_run_id=? AND task_id=? AND status='running'
+                    WHERE pipeline_run_id=? AND task_id=? AND status IN ('queued','running')
                     """, nodeMessage, runId, currentTaskId);
         }
         jdbc.update("""
@@ -332,6 +337,85 @@ public class PipelineExecutionService {
         }
     }
 
+    /** Continues a suspended pipeline after the Spark reconciler proves its terminal result. */
+    @Scheduled(fixedDelayString = "${aetheris.pipeline.result-reconcile-interval-ms:5000}")
+    @Transactional
+    public void reconcileResolvedNodes() {
+        List<ResolvedUnknownNode> resolved = jdbc.query("""
+                SELECT run.id run_id,run.biz_date,run.triggered_by,
+                       node.id node_id,node.sequence_no,
+                       instance.status instance_status,instance.error_message
+                FROM workflow.pipeline_run run
+                JOIN workflow.pipeline_node_run node
+                  ON node.pipeline_run_id=run.id AND node.status='unknown'
+                JOIN workflow.task_instance instance ON instance.id=node.instance_id
+                WHERE run.status='unknown'
+                  AND instance.status IN ('success','failed','timed_out','cancelled')
+                ORDER BY run.id LIMIT 100
+                """, (rs, row) -> new ResolvedUnknownNode(
+                rs.getLong("run_id"), rs.getLong("node_id"), rs.getInt("sequence_no"),
+                rs.getString("biz_date"), rs.getString("triggered_by"),
+                rs.getString("instance_status"), rs.getString("error_message")));
+        for (ResolvedUnknownNode node : resolved) reconcileResolvedNode(node);
+    }
+
+    void reconcileResolvedNode(ResolvedUnknownNode node) {
+        String nodeStatus = reconciledNodeStatus(node.instanceStatus());
+        if ("succeeded".equals(nodeStatus)) {
+            List<Long> remaining = jdbc.query("""
+                    SELECT task_id FROM workflow.pipeline_node_run
+                    WHERE pipeline_run_id=? AND sequence_no>? AND status='skipped'
+                      AND message='上游结果待核对，节点未执行'
+                    ORDER BY sequence_no
+                    """, (rs, row) -> rs.getLong(1), node.runId(), node.sequenceNo());
+            int claimed = jdbc.update("""
+                    UPDATE workflow.pipeline_run
+                    SET status='queued',finished_at=NULL,error_message=NULL,heartbeat_at=now(),
+                        lease_expires_at=now() + (? * interval '1 second'),updated_at=now()
+                    WHERE id=? AND status='unknown'
+                    """, dispatchLeaseSeconds, node.runId());
+            if (claimed != 1) return;
+            jdbc.update("""
+                    UPDATE workflow.pipeline_node_run
+                    SET status='succeeded',message='远端执行结果已自动核对为成功'
+                    WHERE id=? AND status='unknown'
+                    """, node.nodeId());
+            if (remaining.isEmpty()) {
+                jdbc.update("""
+                        UPDATE workflow.pipeline_run
+                        SET status='succeeded',finished_at=now(),heartbeat_at=now(),
+                            lease_expires_at=NULL,updated_at=now()
+                        WHERE id=? AND status='queued'
+                        """, node.runId());
+                return;
+            }
+            jdbc.update("""
+                    UPDATE workflow.pipeline_node_run
+                    SET status='queued',started_at=NULL,finished_at=NULL,message=NULL
+                    WHERE pipeline_run_id=? AND sequence_no>? AND status='skipped'
+                      AND message='上游结果待核对，节点未执行'
+                    """, node.runId(), node.sequenceNo());
+            dispatchAfterCommit(node.runId(), node.bizDate(), node.username(), remaining);
+            return;
+        }
+
+        String reason = bounded(node.errorMessage() == null
+                ? "远端执行结果已核对为" + node.instanceStatus() : node.errorMessage(), MAX_RUN_ERROR_LENGTH);
+        String runStatus = "cancelled".equals(nodeStatus) ? "cancelled" : "failed";
+        int claimed = jdbc.update("""
+                UPDATE workflow.pipeline_run
+                SET status=?,error_message=?,finished_at=now(),heartbeat_at=now(),
+                    lease_expires_at=NULL,updated_at=now()
+                WHERE id=? AND status='unknown'
+                """, runStatus, reason, node.runId());
+        if (claimed != 1) return;
+        jdbc.update("""
+                UPDATE workflow.pipeline_node_run
+                SET status=?,message=?,finished_at=COALESCE(finished_at,now())
+                WHERE id=? AND status='unknown'
+                """, nodeStatus, bounded(reason, MAX_NODE_MESSAGE_LENGTH), node.nodeId());
+    }
+
     static String bounded(String value, int limit) {
         if (value == null || value.length() <= limit) return value;
         return value.substring(0, limit);
@@ -358,6 +442,15 @@ public class PipelineExecutionService {
             throw new IllegalStateException("无法生成安全的续跑依赖链");
         }
         return order;
+    }
+
+    static String reconciledNodeStatus(String instanceStatus) {
+        return switch (instanceStatus) {
+            case "success" -> "succeeded";
+            case "cancelled" -> "cancelled";
+            case "failed", "timed_out" -> "failed";
+            default -> throw new IllegalArgumentException("任务实例结果尚未完成核对");
+        };
     }
 
     private TaskInstance awaitTerminal(Task task, TaskInstance initial) {
@@ -421,13 +514,17 @@ public class PipelineExecutionService {
             if (task == null) {
                 throw new IllegalStateException("流水线节点任务不存在：" + taskId);
             }
-            if (!"enabled".equals(task.getStatus())) {
-                throw new IllegalStateException("流水线节点「" + task.getName() + "」已停用");
-            }
-            String taskType = task.getTaskType() == null ? "sql" : task.getTaskType();
-            if (!Set.of("sql", "spark", "quality").contains(taskType)) {
-                throw new IllegalStateException("流水线节点「" + task.getName() + "」类型不受支持");
-            }
+            validateRunnableTask(task);
+        }
+    }
+
+    private static void validateRunnableTask(Task task) {
+        if (!"enabled".equals(task.getStatus())) {
+            throw new IllegalStateException("流水线节点「" + task.getName() + "」已停用");
+        }
+        String taskType = task.getTaskType() == null ? "sql" : task.getTaskType();
+        if (!Set.of("sql", "spark", "quality").contains(taskType)) {
+            throw new IllegalStateException("流水线节点「" + task.getName() + "」类型不受支持");
         }
     }
 
@@ -458,4 +555,7 @@ public class PipelineExecutionService {
         try { java.time.LocalDate.parse(value); }
         catch (RuntimeException error) { throw new IllegalArgumentException("业务日期必须为 yyyy-MM-dd"); }
     }
+
+    record ResolvedUnknownNode(long runId, long nodeId, int sequenceNo, String bizDate,
+                               String username, String instanceStatus, String errorMessage) { }
 }
