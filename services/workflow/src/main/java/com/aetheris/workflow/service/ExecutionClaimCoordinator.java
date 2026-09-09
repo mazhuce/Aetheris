@@ -26,6 +26,7 @@ import java.util.Map;
 public class ExecutionClaimCoordinator {
 
     private static final String ACTIVE_STATES = "'queued','submitting','running','cancel_requested'";
+    private static final String BLOCKING_STATES = ACTIVE_STATES + ",'unknown'";
     private static final int MAX_ERROR_LENGTH = 1000;
 
     private final JdbcTemplate jdbc;
@@ -73,8 +74,11 @@ public class ExecutionClaimCoordinator {
                     triggered_by = EXCLUDED.triggered_by, updated_at = now(),
                     fencing_token = task_instance.fencing_token + 1, heartbeat_at = now(),
                     lease_expires_at = EXCLUDED.lease_expires_at
-                WHERE task_instance.status NOT IN (""" + ACTIVE_STATES + """
-                    ) OR (task_instance.lease_expires_at IS NOT NULL
+                -- Unknown may still represent a live remote Spark application. It is
+                -- never reclaimed by lease expiry; the reconciler must resolve it first.
+                WHERE task_instance.status NOT IN (""" + BLOCKING_STATES + """
+                    ) OR (task_instance.status IN (""" + ACTIVE_STATES + """
+                       ) AND task_instance.lease_expires_at IS NOT NULL
                           AND task_instance.lease_expires_at < now())
                 RETURNING id, task_id, biz_date, status, trigger_type, attempt, started_at,
                           finished_at, duration_ms, affected_rows, error_message, triggered_by,
@@ -85,7 +89,7 @@ public class ExecutionClaimCoordinator {
         List<TaskInstance> claimed = jdbc.query(claimSql, (rs, rowNum) -> instance(rs),
                 task.getId(), bizDate, initialStatus, triggerType, triggeredBy, leaseExpiresAt);
         if (claimed.isEmpty()) {
-            throw new IllegalStateException("该任务在此业务日期已有有效租约，不能重复执行");
+            throw new IllegalStateException("该任务在此业务日期已有活动执行或待核对结果，不能重复执行");
         }
 
         TaskInstance instance = claimed.getFirst();
