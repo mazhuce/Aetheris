@@ -136,10 +136,15 @@ public class ExecutionClaimCoordinator {
                 UPDATE workflow.execution_attempt
                 SET job_definition_id=?, job_version=?, artifact_digest=?, definition_digest=?,
                     source_repository_id=?,source_commit_sha=?,source_path=?,
+                    source_blob_id=?,source_blob_sha256=?,source_signature_status=?,
+                    source_signer_fingerprint=?,source_verified_at=?,
                     input_partitions_json=?::jsonb, output_partitions_json=?::jsonb
                 WHERE id=? AND fencing_token=? AND status='queued'
                 """, job.id(), job.version(), job.artifactDigest(), definition,
-                job.sourceRepositoryId(), job.sourceCommitSha(), job.sourcePath(), inputs, outputs,
+                job.sourceRepositoryId(), job.sourceCommitSha(), job.sourcePath(),
+                job.sourceBlobId(), job.sourceBlobSha256(), job.sourceSignatureStatus(),
+                job.sourceSignerFingerprint(), job.sourceVerifiedAt(),
+                inputs, outputs,
                 claim.attemptId(), claim.fencingToken());
         if (updated != 1) throw new StaleExecutionException("Spark attempt 在准备提交时已失效");
     }

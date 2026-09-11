@@ -227,6 +227,11 @@ services:
         MAVEN_IMAGE: ${MAVEN_IMAGE:-docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21}
         JAVA_IMAGE: ${JAVA_IMAGE:-docker.1panel.live/library/eclipse-temurin:21-jre}
     restart: unless-stopped
+    volumes:
+      - type: bind
+        source: ${AETHERIS_GIT_GPG_HOME:-./configs/git-gnupg}
+        target: /run/secrets/aetheris-git-gnupg
+        read_only: true
     environment:
       <<: *database-pool
       DB_HOST: postgres
@@ -254,6 +259,9 @@ services:
       AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:-2000}
       AETHERIS_GIT_ALLOWED_HOSTS: ${AETHERIS_GIT_ALLOWED_HOSTS:-github.com,gitee.com}
       AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS: ${AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS:-8}
+      AETHERIS_GIT_FETCH_DEPTH: ${AETHERIS_GIT_FETCH_DEPTH:-64}
+      AETHERIS_GIT_MAX_BLOB_BYTES: ${AETHERIS_GIT_MAX_BLOB_BYTES:-1048576}
+      JAVA_TOOL_OPTIONS: -Djgit.gpg.home=/run/secrets/aetheris-git-gnupg
       AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS: ${AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS:-120}
       AETHERIS_PIPELINE_LEASE_GRACE_SECONDS: ${AETHERIS_PIPELINE_LEASE_GRACE_SECONDS:-120}
       AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS: ${AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS:-30000}

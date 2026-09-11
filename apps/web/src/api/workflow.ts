@@ -122,6 +122,15 @@ export interface ExecutionAttempt {
   definitionDigest: string
   parametersJson: string
   parameterDigest: string
+  artifactDigest?: string
+  sourceRepositoryId?: number
+  sourceCommitSha?: string
+  sourcePath?: string
+  sourceBlobId?: string
+  sourceBlobSha256?: string
+  sourceSignatureStatus?: 'verified' | 'unsigned'
+  sourceSignerFingerprint?: string
+  sourceVerifiedAt?: string
   remoteHandle?: string
   applicationId?: string
   startedAt?: string
@@ -280,10 +289,13 @@ export interface ManagedArtifact {
   id: number; name: string; version: string; artifactKey: string; sha256: string; status: string
   sourceRepositoryId?: number; sourceRepositoryKey?: string; sourceRepositoryStatus?: string
   commitSha?: string; sourcePath?: string
+  sourceBlobId?: string; sourceBlobSha256?: string; sourceBlobSize?: number
+  sourceSignatureStatus?: 'verified' | 'unsigned'; sourceSignerFingerprint?: string
+  sourceVerifiedBy?: string; sourceVerifiedAt?: string
   createdBy?: string; approvedBy?: string; approvedAt?: string
 }
 export interface ManagedArtifactInput {
-  name: string; version: string; artifactKey: string; sha256: string
+  name: string; version: string; artifactKey: string; sha256?: string
   repositoryId: number; commitSha: string; sourcePath: string
 }
 export interface SparkJobDefinition {
@@ -311,15 +323,28 @@ export interface SparkRunnerInput {
 export interface GitRepository {
   id: number; repositoryKey: string; name: string; remoteUrl: string; defaultBranch: string
   credentialConfigured: boolean; status: 'active' | 'disabled'; currentCommitSha: string
+  signaturePolicy: 'required' | 'optional'; trustedSignerFingerprints: string[]
   lastSyncedAt: string; createdBy: string; createdAt: string; updatedAt: string
 }
 export interface GitRepositoryInput {
   repositoryKey: string; name: string; remoteUrl: string; defaultBranch: string
   credentialUsername?: string; credentialRef?: string
+  signaturePolicy: 'required' | 'optional'; trustedSignerFingerprints?: string[]
+}
+export interface GitRepositoryTrustInput {
+  signaturePolicy: 'required' | 'optional'; trustedSignerFingerprints?: string[]
 }
 export interface GitRevision {
   id: number; repositoryId: number; branchName: string; commitSha: string
+  signatureStatus: 'not_checked' | 'verified' | 'unsigned'; signerFingerprint?: string
+  signatureVerifiedAt?: string
   discoveredBy: string; discoveredAt: string
+}
+export interface SourceVerification {
+  id: number; artifactId: number; repositoryId: number; commitSha: string; sourcePath: string
+  blobId: string; blobSha256: string; blobSize: number; signatureStatus: 'verified' | 'unsigned'
+  signerFingerprint?: string; purpose: 'registration' | 'manual' | 'approval' | 'publication'
+  verifiedBy: string; verifiedAt: string
 }
 
 export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
@@ -335,6 +360,8 @@ export const synchronizeGitRepository = (id: number) =>
   http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/sync`).then((r) => r.data)
 export const changeGitRepositoryStatus = (id: number, status: GitRepository['status']) =>
   http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/status`, { status }).then((r) => r.data)
+export const changeGitRepositoryTrust = (id: number, input: GitRepositoryTrustInput) =>
+  http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/trust`, input).then((r) => r.data)
 export const listGitRevisions = (id: number) =>
   http.get<GitRevision[]>(`/api/workflow/spark/repositories/${id}/revisions`).then((r) => r.data)
 export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
@@ -342,6 +369,10 @@ export const registerSparkArtifact = (input: ManagedArtifactInput) =>
   http.post<ManagedArtifact>('/api/workflow/spark/artifacts', input).then((r) => r.data)
 export const approveSparkArtifact = (id: number) =>
   http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/approve`).then((r) => r.data)
+export const verifySparkArtifact = (id: number) =>
+  http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/verify`).then((r) => r.data)
+export const listSparkArtifactVerifications = (id: number) =>
+  http.get<SourceVerification[]>(`/api/workflow/spark/artifacts/${id}/verifications`).then((r) => r.data)
 export const revokeSparkArtifact = (id: number) =>
   http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/revoke`).then((r) => r.data)
 export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)

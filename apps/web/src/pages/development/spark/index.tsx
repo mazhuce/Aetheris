@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
-import { BranchesOutlined, CaretRightOutlined, PlusOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
+import { BranchesOutlined, CaretRightOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
-  approveSparkArtifact, cancelPipeline, cancelTaskInstance, changeGitRepositoryStatus, changeSparkRunnerStatus,
-  getPipelineRun, getSparkHealth, listAllInstances, listGitRepositories, listGitRevisions, listPipelineRuns, listSparkArtifacts,
+  approveSparkArtifact, cancelPipeline, cancelTaskInstance, changeGitRepositoryStatus, changeGitRepositoryTrust, changeSparkRunnerStatus,
+  getPipelineRun, getSparkHealth, listAllInstances, listGitRepositories, listGitRevisions, listPipelineRuns,
+  listSparkArtifactVerifications, listSparkArtifacts,
   listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, registerGitRepository, registerSparkArtifact,
-  resolveTaskInstance, revokeSparkArtifact, runTask, startPipeline, synchronizeGitRepository, registerSparkRunner, retryPipeline,
+  resolveTaskInstance, revokeSparkArtifact, runTask, startPipeline, synchronizeGitRepository, registerSparkRunner,
+  retryPipeline, verifySparkArtifact,
   type ExecutionResolutionInput,
-  type GitRepository, type GitRepositoryInput, type GitRevision, type ManagedArtifact, type ManagedArtifactInput,
-  type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
+  type GitRepository, type GitRepositoryInput, type GitRepositoryTrustInput, type GitRevision, type ManagedArtifact, type ManagedArtifactInput,
+  type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SourceVerification,
+  type SparkEnvironment, type SparkJobDefinition,
   type SparkRunner, type SparkRunnerHealth, type SparkRunnerInput, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
@@ -26,6 +29,8 @@ export default function SparkDevelopmentPage() {
   const [repositories, setRepositories] = useState<GitRepository[]>([])
   const [revisions, setRevisions] = useState<GitRevision[]>([])
   const [revisionRepository, setRevisionRepository] = useState<GitRepository>()
+  const [verifications, setVerifications] = useState<SourceVerification[]>([])
+  const [verificationArtifact, setVerificationArtifact] = useState<ManagedArtifact>()
   const [artifacts, setArtifacts] = useState<ManagedArtifact[]>([])
   const [jobs, setJobs] = useState<SparkJobDefinition[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -40,11 +45,13 @@ export default function SparkDevelopmentPage() {
   const [pipelineAction, setPipelineAction] = useState<string>()
   const [runnerEditorOpen, setRunnerEditorOpen] = useState(false)
   const [repositoryEditorOpen, setRepositoryEditorOpen] = useState(false)
+  const [trustRepository, setTrustRepository] = useState<GitRepository>()
   const [artifactEditorOpen, setArtifactEditorOpen] = useState(false)
   const [resolutionTarget, setResolutionTarget] = useState<{ instanceId: number; label: string; pipeline: boolean }>()
   const [resolutionForm] = Form.useForm<ExecutionResolutionInput>()
   const [runnerForm] = Form.useForm<SparkRunnerInput>()
-  const [repositoryForm] = Form.useForm<GitRepositoryInput>()
+  const [repositoryForm] = Form.useForm<GitRepositoryInput & { trustedSignerText?: string }>()
+  const [trustForm] = Form.useForm<GitRepositoryTrustInput & { trustedSignerText?: string }>()
   const [artifactForm] = Form.useForm<ManagedArtifactInput>()
   const isAdmin = getCurrentRole() === 'admin'
 
@@ -120,13 +127,15 @@ export default function SparkDevelopmentPage() {
   }
 
   const createRepository = async () => {
-    let values: GitRepositoryInput
+    let values: GitRepositoryInput & { trustedSignerText?: string }
     try { values = await repositoryForm.validateFields() }
     catch { return }
     setPipelineAction('repository-create')
     try {
-      await registerGitRepository(values)
-      message.success('仓库远端分支已验证并固定当前 commit')
+      const { trustedSignerText, ...repository } = values
+      await registerGitRepository({ ...repository, trustedSignerFingerprints: trustedSignerText
+        ? trustedSignerText.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean) : [] })
+      message.success('仓库分支、commit 签名策略和可信指纹已验证')
       setRepositoryEditorOpen(false)
       repositoryForm.resetFields()
       await refresh()
@@ -170,6 +179,31 @@ export default function SparkDevelopmentPage() {
     } finally { setPipelineAction(undefined) }
   }
 
+  const openTrustEditor = (repository: GitRepository) => {
+    trustForm.setFieldsValue({ signaturePolicy: repository.signaturePolicy,
+      trustedSignerText: repository.trustedSignerFingerprints.join('\n') })
+    setTrustRepository(repository)
+  }
+
+  const updateRepositoryTrust = async () => {
+    if (!trustRepository) return
+    let values: GitRepositoryTrustInput & { trustedSignerText?: string }
+    try { values = await trustForm.validateFields() }
+    catch { return }
+    const { trustedSignerText, ...trust } = values
+    setPipelineAction(`repository-${trustRepository.id}-trust`)
+    try {
+      await changeGitRepositoryTrust(trustRepository.id, { ...trust, trustedSignerFingerprints: trustedSignerText
+        ? trustedSignerText.split(/[\s,]+/).map((value) => value.trim()).filter(Boolean) : [] })
+      message.success('可信签名策略已验证并完成轮换')
+      setTrustRepository(undefined)
+      trustForm.resetFields()
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '信任策略更新失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
   const createArtifact = async () => {
     let values: ManagedArtifactInput
     try { values = await artifactForm.validateFields() }
@@ -196,6 +230,29 @@ export default function SparkDevelopmentPage() {
       await refresh()
     } catch (error) {
       message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '制品状态修改失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const verifyArtifact = async (artifact: ManagedArtifact) => {
+    const key = `artifact-${artifact.id}-verify`
+    setPipelineAction(key)
+    try {
+      await verifySparkArtifact(artifact.id)
+      message.success('Git blob、commit 签名和运行器文件摘要均已重新验证')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '制品验证失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const showVerifications = async (artifact: ManagedArtifact) => {
+    const key = `artifact-${artifact.id}-history`
+    setPipelineAction(key)
+    try {
+      setVerifications(await listSparkArtifactVerifications(artifact.id))
+      setVerificationArtifact(artifact)
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '验证证据加载失败')
     } finally { setPipelineAction(undefined) }
   }
 
@@ -257,10 +314,10 @@ export default function SparkDevelopmentPage() {
   }
 
   const statusTag = (status: string) => {
-    const color = status === 'succeeded' || status === 'success' ? 'success'
+    const color = status === 'succeeded' || status === 'success' || status === 'verified' ? 'success'
       : status === 'failed' ? 'error'
         : status === 'running' ? 'processing'
-          : status === 'waived' || status === 'skipped' || status === 'unknown' ? 'warning' : 'default'
+          : status === 'waived' || status === 'skipped' || status === 'unknown' || status === 'unsigned' || status === 'not_checked' ? 'warning' : 'default'
     return <Tag color={color}>{status}</Tag>
   }
 
@@ -301,10 +358,10 @@ export default function SparkDevelopmentPage() {
       ]} /> },
       { key: 'artifacts', label: '制品与环境', children: <Space direction="vertical" className="full-width-control">
         <Space className="full-width-control" style={{ justifyContent: 'space-between' }}>
-          <Typography.Text type="secondary">制品固定到已发现的 Git commit；运行器继续按 SHA-256 校验白名单文件。</Typography.Text>
+          <Typography.Text type="secondary">源码从固定 commit 自动计算摘要；审批、发布和执行均保留不可变验证证据。</Typography.Text>
           {isAdmin && <Space wrap>
             <Button icon={<BranchesOutlined />} onClick={() => {
-              repositoryForm.setFieldsValue({ defaultBranch: 'main' })
+              repositoryForm.setFieldsValue({ defaultBranch: 'main', signaturePolicy: 'required' })
               setRepositoryEditorOpen(true)
             }}>注册仓库</Button>
             <Button icon={<PlusOutlined />} disabled={!repositories.some((item) => item.status === 'active')} onClick={() => {
@@ -323,10 +380,12 @@ export default function SparkDevelopmentPage() {
           { title: '远端', dataIndex: 'remoteUrl', ellipsis: true, width: 260 },
           { title: '分支', dataIndex: 'defaultBranch', width: 120 },
           { title: '当前 commit', dataIndex: 'currentCommitSha', width: 190, render: (value: string) => <Typography.Text code copyable>{value.slice(0, 12)}</Typography.Text> },
+          { title: '签名策略', dataIndex: 'signaturePolicy', width: 100, render: (value: string) => <Tag color={value === 'required' ? 'success' : 'warning'}>{value === 'required' ? '强制' : '可选'}</Tag> },
           { title: '凭据', dataIndex: 'credentialConfigured', width: 76, render: (value: boolean) => value ? '环境引用' : '公开' },
           { title: '状态', dataIndex: 'status', width: 90, render: statusTag },
-          { title: '操作', fixed: 'right', width: 230, render: (_, value) => <Space size={6}>
+          { title: '操作', fixed: 'right', width: 290, render: (_, value) => <Space size={6}>
             <Button size="small" loading={pipelineAction === `repository-${value.id}-history`} onClick={() => void showRevisions(value)}>历史</Button>
+            <Button size="small" loading={pipelineAction === `repository-${value.id}-trust`} onClick={() => openTrustEditor(value)}>信任</Button>
             {value.status === 'active' ? <>
               <Button size="small" loading={pipelineAction === `repository-${value.id}-sync`} onClick={() => void syncRepository(value)}>同步</Button>
               <Popconfirm title="停用此 Git 仓库？" description="已发布作业保留，但新的制品审批和作业发布会被阻止。"
@@ -357,13 +416,19 @@ export default function SparkDevelopmentPage() {
             </Popconfirm>}
           </Space> }] : [])
         ]} />
-        <Table<ManagedArtifact> rowKey="id" size="small" dataSource={artifacts} pagination={false} scroll={{ x: 1000 }} columns={[
+        <Table<ManagedArtifact> rowKey="id" size="small" dataSource={artifacts} pagination={false} scroll={{ x: 1280 }} columns={[
           { title: '制品', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '文件', dataIndex: 'artifactKey' },
           { title: 'Git 来源', width: 230, render: (_, value) => value.sourceRepositoryKey
             ? `${value.sourceRepositoryKey}@${value.commitSha?.slice(0, 10)}` : '历史制品' },
           { title: '源码路径', dataIndex: 'sourcePath', ellipsis: true },
-          { title: 'SHA-256', dataIndex: 'sha256', ellipsis: true }, { title: '状态', dataIndex: 'status', render: statusTag },
-          ...(isAdmin ? [{ title: '操作', fixed: 'right' as const, width: 150, render: (_: unknown, value: ManagedArtifact) => <Space size={6}>
+          { title: 'Blob SHA-256', dataIndex: 'sourceBlobSha256', ellipsis: true, render: (value?: string) => value ? <Typography.Text code>{value.slice(0, 12)}</Typography.Text> : <Tag color="warning">待验证</Tag> },
+          { title: 'Commit 签名', dataIndex: 'sourceSignatureStatus', width: 110, render: (value?: string) => value ? statusTag(value) : <Tag color="warning">待验证</Tag> },
+          { title: '状态', dataIndex: 'status', render: statusTag },
+          ...(isAdmin ? [{ title: '操作', fixed: 'right' as const, width: 250, render: (_: unknown, value: ManagedArtifact) => <Space size={6}>
+            {value.sourceRepositoryId && <Button size="small" icon={<SafetyCertificateOutlined />}
+              loading={pipelineAction === `artifact-${value.id}-history`} onClick={() => void showVerifications(value)}>证据</Button>}
+            {value.sourceRepositoryId && value.status !== 'revoked' && <Button size="small"
+              loading={pipelineAction === `artifact-${value.id}-verify`} onClick={() => void verifyArtifact(value)}>复验</Button>}
             {value.status === 'draft' && <Button size="small" loading={pipelineAction === `artifact-${value.id}-approve`}
               onClick={() => void updateArtifact(value, 'approve')}>复核</Button>}
             {value.status === 'approved' && <Popconfirm title="撤销此制品？" description="引用它的已发布作业不会被改写，但新发布会被阻止。"
@@ -390,15 +455,32 @@ export default function SparkDevelopmentPage() {
         </Space> }
       ]} /> }
     ]} />
-    <Drawer title={revisionRepository ? `${revisionRepository.name} · 修订历史` : 'Git 修订历史'} width={660}
+    <Drawer title={revisionRepository ? `${revisionRepository.name} · 修订历史` : 'Git 修订历史'} width={820}
       open={revisionRepository !== undefined} onClose={() => setRevisionRepository(undefined)}>
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
         message="每次注册、同步或重新启用只追加远端分支当时的完整 commit SHA；历史记录不会被覆盖。" />
       <Table<GitRevision> rowKey="id" size="small" pagination={false} dataSource={revisions} columns={[
         { title: '分支', dataIndex: 'branchName', width: 130 },
         { title: 'commit', dataIndex: 'commitSha', render: (value: string) => <Typography.Text code copyable>{value}</Typography.Text> },
+        { title: '签名', dataIndex: 'signatureStatus', width: 100, render: statusTag },
+        { title: '签名指纹', dataIndex: 'signerFingerprint', ellipsis: true, render: (value?: string) => value ? <Typography.Text code copyable>{value.slice(0, 16)}</Typography.Text> : '-' },
         { title: '发现人', dataIndex: 'discoveredBy', width: 110 },
         { title: '发现时间', dataIndex: 'discoveredAt', width: 180, render: (value: string) => dayjs(value).format('YYYY-MM-DD HH:mm:ss') }
+      ]} />
+    </Drawer>
+    <Drawer title={verificationArtifact ? `${verificationArtifact.name} · 供应链验证证据` : '供应链验证证据'} width={920}
+      open={verificationArtifact !== undefined} onClose={() => setVerificationArtifact(undefined)}>
+      <Alert type="success" showIcon style={{ marginBottom: 16 }}
+        message="每次登记、人工复验、审批和发布都会重新读取固定 Git blob，并追加不可修改的摘要与签名证据。" />
+      <Table<SourceVerification> rowKey="id" size="small" pagination={false} dataSource={verifications} scroll={{ x: 1050 }} columns={[
+        { title: '用途', dataIndex: 'purpose', width: 100 },
+        { title: 'commit', dataIndex: 'commitSha', width: 130, render: (value: string) => <Typography.Text code>{value.slice(0, 12)}</Typography.Text> },
+        { title: 'blob', dataIndex: 'blobId', width: 130, render: (value: string) => <Typography.Text code>{value.slice(0, 12)}</Typography.Text> },
+        { title: 'SHA-256', dataIndex: 'blobSha256', width: 160, render: (value: string) => <Typography.Text code copyable>{value.slice(0, 16)}</Typography.Text> },
+        { title: '大小', dataIndex: 'blobSize', width: 90, render: (value: number) => `${value} B` },
+        { title: '签名', dataIndex: 'signatureStatus', width: 100, render: statusTag },
+        { title: '验证人', dataIndex: 'verifiedBy', width: 110 },
+        { title: '验证时间', dataIndex: 'verifiedAt', width: 180, render: (value: string) => dayjs(value).format('YYYY-MM-DD HH:mm:ss') }
       ]} />
     </Drawer>
     <Drawer title={pipelineDetail ? `流水线 #${pipelineDetail.id}` : '流水线详情'} width={760}
@@ -460,7 +542,7 @@ export default function SparkDevelopmentPage() {
       onOk={() => void createRepository()} okText="验证远端并注册" cancelText="返回"
       confirmLoading={pipelineAction === 'repository-create'} destroyOnClose>
       <Alert type="info" showIcon style={{ marginBottom: 16 }}
-        message="仅允许配置白名单主机上的无凭据 HTTPS 地址。私有仓库只填写专用环境变量引用，页面和数据库都不保存 token。" />
+        message="强制签名仓库要求 commit 由可信 OpenPGP 指纹签署，公钥由 workflow 服务的只读 GnuPG keyring 提供；token 和私钥都不会写入平台。" />
       <Form form={repositoryForm} layout="vertical" preserve={false}>
         <Row gutter={12}>
           <Col span={10}><Form.Item name="repositoryKey" label="仓库标识" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9_-]{0,63}$/, message: '使用小写字母、数字、下划线或连字符' }]}>
@@ -479,6 +561,20 @@ export default function SparkDevelopmentPage() {
           <Input maxLength={128} placeholder="main" />
         </Form.Item>
         <Row gutter={12}>
+          <Col span={9}><Form.Item name="signaturePolicy" label="Commit 签名策略" rules={[{ required: true }]}>
+            <Select options={[{ value: 'required', label: '强制可信签名' }, { value: 'optional', label: '允许未签名' }]} />
+          </Form.Item></Col>
+          <Col span={15}><Form.Item name="trustedSignerText" label="可信 OpenPGP 指纹" dependencies={['signaturePolicy']}
+            rules={[({ getFieldValue }) => ({ validator: (_, value?: string) => {
+              const entries = value?.split(/[\s,]+/).filter(Boolean) || []
+              if (getFieldValue('signaturePolicy') === 'required' && entries.length === 0) return Promise.reject(new Error('强制签名至少需要一个可信指纹'))
+              return entries.every((item) => /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/.test(item)) ? Promise.resolve()
+                : Promise.reject(new Error('每个指纹必须为 40 或 64 位十六进制值'))
+            } })]}>
+            <Input.TextArea rows={2} maxLength={4096} placeholder="多个指纹使用逗号或换行分隔" />
+          </Form.Item></Col>
+        </Row>
+        <Row gutter={12}>
           <Col span={10}><Form.Item name="credentialUsername" label="凭据用户名（私有仓库）" dependencies={['credentialRef']}
             rules={[({ getFieldValue }) => ({ validator: (_, value?: string) => !getFieldValue('credentialRef') || value?.trim()
               ? Promise.resolve() : Promise.reject(new Error('填写凭据引用时必须填写用户名')) })]}>
@@ -493,11 +589,32 @@ export default function SparkDevelopmentPage() {
         </Row>
       </Form>
     </Modal>
+    <Modal title={trustRepository ? `${trustRepository.name} · 信任策略轮换` : '信任策略轮换'}
+      open={trustRepository !== undefined} onCancel={() => setTrustRepository(undefined)}
+      onOk={() => void updateRepositoryTrust()} okText="验证当前 commit 并更新" cancelText="返回"
+      confirmLoading={trustRepository ? pipelineAction === `repository-${trustRepository.id}-trust` : false} destroyOnClose>
+      <Alert type="warning" showIcon style={{ marginBottom: 16 }}
+        message="新策略会先对当前远端 commit 做密码学验证；验证失败或仓库配置并发变化时不会写入。策略变更将追加到不可修改的审计历史。" />
+      <Form form={trustForm} layout="vertical" preserve={false}>
+        <Form.Item name="signaturePolicy" label="Commit 签名策略" rules={[{ required: true }]}>
+          <Select options={[{ value: 'required', label: '强制可信签名' }, { value: 'optional', label: '允许未签名' }]} />
+        </Form.Item>
+        <Form.Item name="trustedSignerText" label="可信 OpenPGP 指纹" dependencies={['signaturePolicy']}
+          rules={[({ getFieldValue }) => ({ validator: (_, value?: string) => {
+            const entries = value?.split(/[\s,]+/).filter(Boolean) || []
+            if (getFieldValue('signaturePolicy') === 'required' && entries.length === 0) return Promise.reject(new Error('强制签名至少需要一个可信指纹'))
+            return entries.every((item) => /^(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})$/.test(item)) ? Promise.resolve()
+              : Promise.reject(new Error('每个指纹必须为 40 或 64 位十六进制值'))
+          } })]}>
+          <Input.TextArea rows={4} maxLength={4096} placeholder="多个指纹使用逗号或换行分隔" />
+        </Form.Item>
+      </Form>
+    </Modal>
     <Modal title="登记 Git 绑定制品" open={artifactEditorOpen} onCancel={() => setArtifactEditorOpen(false)}
       onOk={() => void createArtifact()} okText="登记草稿" cancelText="返回"
       confirmLoading={pipelineAction === 'artifact-create'} destroyOnClose>
       <Alert type="warning" showIcon style={{ marginBottom: 16 }}
-        message="commit 必须来自仓库同步记录；源码文件名必须与运行器白名单中的制品键一致。SHA-256 仍由运行器在执行前复核。" />
+        message="服务端将从固定 commit 读取源码并自动计算 SHA-256，再与运行器白名单文件比对；填写预期摘要时不一致会直接拒绝。" />
       <Form form={artifactForm} layout="vertical" preserve={false}>
         <Row gutter={12}>
           <Col span={14}><Form.Item name="name" label="制品名称" rules={[{ required: true, whitespace: true, max: 128 }]}>
@@ -522,8 +639,9 @@ export default function SparkDevelopmentPage() {
             <Input maxLength={512} placeholder="spark/order_daily.py" />
           </Form.Item></Col>
         </Row>
-        <Form.Item name="sha256" label="运行器文件 SHA-256" rules={[{ required: true, pattern: /^[0-9a-f]{64}$/, message: '请输入 64 位小写 SHA-256' }]}>
-          <Input maxLength={64} />
+        <Form.Item name="sha256" label="预期 SHA-256（可选）" rules={[{ pattern: /^[0-9a-f]{64}$/, message: '请输入 64 位小写 SHA-256' }]}
+          extra="留空时完全使用 Git blob 自动计算结果；填写后用于额外防误选。">
+          <Input maxLength={64} placeholder="由服务端自动计算" />
         </Form.Item>
       </Form>
     </Modal>

@@ -73,6 +73,8 @@ aetheris:
   git:
     allowed-hosts: ${AETHERIS_GIT_ALLOWED_HOSTS:github.com,gitee.com}
     connect-timeout-seconds: ${AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS:8}
+    fetch-depth: ${AETHERIS_GIT_FETCH_DEPTH:64}
+    max-blob-bytes: ${AETHERIS_GIT_MAX_BLOB_BYTES:1048576}
   execution:
     worker-id: ${AETHERIS_EXECUTION_WORKER_ID:${HOSTNAME:local}}
     lease-grace-seconds: ${AETHERIS_EXECUTION_LEASE_GRACE_SECONDS:60}

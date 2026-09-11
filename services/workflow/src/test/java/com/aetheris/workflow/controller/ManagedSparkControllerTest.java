@@ -65,4 +65,28 @@ class ManagedSparkControllerTest {
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(repositories, never()).register(input, "alice");
     }
+
+    @Test
+    void sourceTrustAndVerificationEvidenceAreRestrictedToManagers() {
+        ManagedSparkCatalogService catalog = mock(ManagedSparkCatalogService.class);
+        GitRepositoryService repositories = mock(GitRepositoryService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.mayManage("alice")).thenReturn(false);
+        ManagedSparkController controller = new ManagedSparkController(
+                catalog, mock(SparkBatchExecutionAdapter.class),
+                mock(SparkResourceQueueService.class), repositories, authorization);
+        GitRepositoryService.RepositoryTrustInput trust =
+                new GitRepositoryService.RepositoryTrustInput("required", java.util.List.of("a".repeat(40)));
+
+        assertEquals(HttpStatus.FORBIDDEN,
+                controller.changeRepositoryTrust(1L, trust, "alice").getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                controller.verifyArtifact(2L, "alice").getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN,
+                controller.artifactVerifications(2L, "alice").getStatusCode());
+
+        verify(repositories, never()).changeTrust(1L, trust, "alice");
+        verify(catalog, never()).verifyArtifact(2L, "alice");
+        verify(catalog, never()).verifications(2L);
+    }
 }

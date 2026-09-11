@@ -1,5 +1,6 @@
 package com.aetheris.workflow.service;
 
+import com.aetheris.workflow.service.GitRemoteInspector.SourceEvidence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,12 +36,15 @@ public class ManagedSparkCatalogService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
     private final ExecutionAdapter adapter;
+    private final GitRepositoryService gitRepositories;
 
     public ManagedSparkCatalogService(JdbcTemplate jdbc, ObjectMapper objectMapper,
-                                      SparkBatchExecutionAdapter adapter) {
+                                      SparkBatchExecutionAdapter adapter,
+                                      GitRepositoryService gitRepositories) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.adapter = adapter;
+        this.gitRepositories = gitRepositories;
     }
 
     public List<ComputeEnvironmentView> environments() {
@@ -65,21 +69,34 @@ public class ManagedSparkCatalogService {
     @Transactional
     public ManagedArtifactView registerArtifact(ArtifactInput input, String username) {
         String key = required(input.artifactKey(), "制品键不能为空").toLowerCase(Locale.ROOT);
-        String digest = required(input.sha256(), "制品摘要不能为空").toLowerCase(Locale.ROOT);
-        if (!ARTIFACT_KEY.matcher(key).matches() || !SHA256.matcher(digest).matches()) {
-            throw new IllegalArgumentException("制品键或 SHA-256 格式不合法");
-        }
+        if (!ARTIFACT_KEY.matcher(key).matches()) throw new IllegalArgumentException("制品键格式不合法");
         SourceBinding source = sourceBinding(input, key);
+        String requestedDigest = blankToNull(input.sha256());
+        if (requestedDigest != null) requestedDigest = requestedDigest.toLowerCase(Locale.ROOT);
+        if (requestedDigest != null && !SHA256.matcher(requestedDigest).matches()) {
+            throw new IllegalArgumentException("SHA-256 格式不合法");
+        }
+        String digest = source.evidence().blobSha256();
+        if (requestedDigest != null && !requestedDigest.equals(digest)) {
+            throw new IllegalStateException("填写的摘要与固定 Git blob 的自动计算结果不一致");
+        }
         adapter.validate(key, digest);
+        gitRepositories.assertEvidenceStillTrusted(source.repositoryId(), source.evidence());
         try {
             Long id = jdbc.queryForObject("""
                     INSERT INTO workflow.managed_artifact
                         (name, version, artifact_type, artifact_key, sha256, status,
-                         repository_id,commit_sha,source_path,created_by,created_at,updated_at)
-                    VALUES (?, ?, 'pyspark', ?, ?, 'draft', ?,?,?,?,now(),now()) RETURNING id
+                         repository_id,commit_sha,source_path,source_blob_id,source_blob_sha256,
+                         source_blob_size,source_signature_status,source_signer_fingerprint,
+                         source_verified_by,source_verified_at,created_by,created_at,updated_at)
+                    VALUES (?, ?, 'pyspark', ?, ?, 'draft', ?,?,?,?,?,?,?,?,?,now(),?,now(),now()) RETURNING id
                     """, Long.class, required(input.name(), "制品名称不能为空"),
                     required(input.version(), "制品版本不能为空"), key, digest,
-                    source.repositoryId(), source.commitSha(), source.sourcePath(), username);
+                    source.repositoryId(), source.commitSha(), source.sourcePath(),
+                    source.evidence().blobId(), digest, source.evidence().blobSize(),
+                    source.evidence().revision().signatureStatus(),
+                    source.evidence().revision().signerFingerprint(), username, username);
+            recordVerification(id, source, "registration", username);
             return artifact(id);
         } catch (DataIntegrityViolationException conflict) {
             throw new IllegalStateException("同名制品版本已经存在");
@@ -98,13 +115,37 @@ public class ManagedSparkCatalogService {
         if (artifact.sourceRepositoryId() == null || !"active".equals(artifact.sourceRepositoryStatus())) {
             throw new IllegalStateException("制品必须绑定活动 Git 仓库中的已发现修订");
         }
+        SourceEvidence evidence = verifyArtifactSource(artifact);
         adapter.validate(artifact.artifactKey(), artifact.sha256());
+        gitRepositories.assertEvidenceStillTrusted(artifact.sourceRepositoryId(), evidence);
         int changed = jdbc.update("""
                 UPDATE workflow.managed_artifact
-                SET status='approved', approved_by=?, approved_at=now(), updated_at=now()
+                SET status='approved', approved_by=?, approved_at=now(), updated_at=now(),
+                    source_blob_id=?,source_blob_sha256=?,source_blob_size=?,
+                    source_signature_status=?,source_signer_fingerprint=?,
+                    source_verified_by=?,source_verified_at=now()
                 WHERE id=? AND status='draft' AND created_by<>?
-                """, username, id, username);
+                """, username, evidence.blobId(), evidence.blobSha256(), evidence.blobSize(),
+                evidence.revision().signatureStatus(), evidence.revision().signerFingerprint(),
+                username, id, username);
         if (changed != 1) throw new IllegalStateException("制品状态已变化，请刷新后重试");
+        recordVerification(id, new SourceBinding(artifact.sourceRepositoryId(), artifact.commitSha(),
+                artifact.sourcePath(), evidence), "approval", username);
+        return artifact(id);
+    }
+
+    @Transactional
+    public ManagedArtifactView verifyArtifact(long id, String username) {
+        ManagedArtifactView artifact = artifact(id);
+        if ("revoked".equals(artifact.status())) throw new IllegalStateException("已撤销制品不能重新验证");
+        if (artifact.sourceRepositoryId() == null) throw new IllegalStateException("历史制品没有 Git 来源，不能自动验证");
+        SourceEvidence evidence = verifyArtifactSource(artifact);
+        adapter.validate(artifact.artifactKey(), artifact.sha256());
+        gitRepositories.assertEvidenceStillTrusted(artifact.sourceRepositoryId(), evidence);
+        int changed = updateArtifactEvidence(id, evidence, username);
+        if (changed != 1) throw new IllegalStateException("制品状态已变化，请刷新后重试");
+        recordVerification(id, new SourceBinding(artifact.sourceRepositoryId(), artifact.commitSha(),
+                artifact.sourcePath(), evidence), "manual", username);
         return artifact(id);
     }
 
@@ -137,6 +178,11 @@ public class ManagedSparkCatalogService {
         if (!"published".equals(job.status())) throw new IllegalStateException("Spark 作业尚未发布");
         if (!"approved".equals(job.artifactStatus())) throw new IllegalStateException("作业制品未获批准");
         if (!"active".equals(job.environmentStatus())) throw new IllegalStateException("计算环境已停用");
+        if (job.sourceRepositoryId() != null
+                && (job.sourceVerifiedAt() == null || job.sourceBlobId() == null
+                || !job.artifactDigest().equals(job.sourceBlobSha256()))) {
+            throw new IllegalStateException("作业制品缺少有效的 Git blob 验证证据");
+        }
         return job;
     }
 
@@ -177,8 +223,13 @@ public class ManagedSparkCatalogService {
         if (job.sourceRepositoryId() == null || !"active".equals(job.sourceRepositoryStatus())) {
             throw new IllegalStateException("制品来源 Git 仓库已停用或未绑定");
         }
+        ManagedArtifactView artifact = artifact(job.artifactId());
+        SourceEvidence evidence = verifyArtifactSource(artifact);
         adapter.validate(job.artifactKey(), job.artifactDigest());
+        gitRepositories.assertEvidenceStillTrusted(artifact.sourceRepositoryId(), evidence);
         String digest = definitionDigest(job);
+        int evidenceChanged = updateArtifactEvidence(artifact.id(), evidence, username);
+        if (evidenceChanged != 1) throw new IllegalStateException("制品状态已变化，请刷新后重试");
         int changed = jdbc.update("""
                 UPDATE workflow.spark_job_definition
                 SET status='published', definition_digest=?, published_by=?, published_at=now(),
@@ -186,6 +237,8 @@ public class ManagedSparkCatalogService {
                 WHERE id=? AND status='draft' AND owner<>?
                 """, digest, username, id, username);
         if (changed != 1) throw new IllegalStateException("作业状态已变化，请刷新后重试");
+        recordVerification(artifact.id(), new SourceBinding(artifact.sourceRepositoryId(), artifact.commitSha(),
+                artifact.sourcePath(), evidence), "publication", username);
         return job(id);
     }
 
@@ -211,6 +264,21 @@ public class ManagedSparkCatalogService {
                        max_concurrency, status, created_at, updated_at
                 FROM workflow.compute_environment WHERE id=?
                 """, this::mapEnvironment, id), "计算环境不存在");
+    }
+
+    public List<SourceVerificationView> verifications(long artifactId) {
+        artifact(artifactId);
+        return jdbc.query("""
+                SELECT id,artifact_id,repository_id,commit_sha,source_path,blob_id,blob_sha256,
+                       blob_size,signature_status,signer_fingerprint,purpose,verified_by,verified_at
+                FROM workflow.source_verification WHERE artifact_id=?
+                ORDER BY verified_at DESC,id DESC
+                """, (rs, row) -> new SourceVerificationView(rs.getLong("id"),
+                rs.getLong("artifact_id"), rs.getLong("repository_id"), rs.getString("commit_sha"),
+                rs.getString("source_path"), rs.getString("blob_id"), rs.getString("blob_sha256"),
+                rs.getLong("blob_size"), rs.getString("signature_status"),
+                rs.getString("signer_fingerprint"), rs.getString("purpose"),
+                rs.getString("verified_by"), rs.getObject("verified_at", OffsetDateTime.class)), artifactId);
     }
 
     private void validateJobInput(SparkJobInput input) {
@@ -262,7 +330,10 @@ public class ManagedSparkCatalogService {
                        artifact.artifact_key, artifact.sha256 artifact_digest, artifact.status artifact_status,
                        artifact.repository_id source_repository_id,repository.repository_key source_repository_key,
                        repository.status source_repository_status,artifact.commit_sha source_commit_sha,
-                       artifact.source_path,
+                       artifact.source_path,artifact.source_blob_id,artifact.source_blob_sha256,
+                       artifact.source_blob_size,artifact.source_signature_status,
+                       artifact.source_signer_fingerprint,artifact.source_verified_by,
+                       artifact.source_verified_at,
                        job.parameter_schema, job.default_parameters, job.input_tables, job.output_table,
                        job.output_uri, job.write_mode, job.driver_cores, job.driver_memory_mb,
                        job.timeout_seconds, job.max_retries, job.status, job.definition_digest,
@@ -281,6 +352,9 @@ public class ManagedSparkCatalogService {
                        artifact.artifact_key,artifact.sha256,artifact.status,artifact.repository_id,
                        repository.repository_key source_repository_key,
                        repository.status source_repository_status,artifact.commit_sha,artifact.source_path,
+                       artifact.source_blob_id,artifact.source_blob_sha256,artifact.source_blob_size,
+                       artifact.source_signature_status,artifact.source_signer_fingerprint,
+                       artifact.source_verified_by,artifact.source_verified_at,
                        artifact.created_by,artifact.approved_by,artifact.approved_at,artifact.revoked_at,
                        artifact.created_at,artifact.updated_at
                 FROM workflow.managed_artifact artifact
@@ -302,7 +376,11 @@ public class ManagedSparkCatalogService {
                 rs.getString("artifact_type"), rs.getString("artifact_key"), rs.getString("sha256"),
                 (Long) rs.getObject("repository_id"), rs.getString("source_repository_key"),
                 rs.getString("source_repository_status"), rs.getString("commit_sha"),
-                rs.getString("source_path"), rs.getString("status"), rs.getString("created_by"), rs.getString("approved_by"),
+                rs.getString("source_path"), rs.getString("source_blob_id"),
+                rs.getString("source_blob_sha256"), (Long) rs.getObject("source_blob_size"),
+                rs.getString("source_signature_status"), rs.getString("source_signer_fingerprint"),
+                rs.getString("source_verified_by"), rs.getObject("source_verified_at", OffsetDateTime.class),
+                rs.getString("status"), rs.getString("created_by"), rs.getString("approved_by"),
                 rs.getObject("approved_at", OffsetDateTime.class), rs.getObject("revoked_at", OffsetDateTime.class),
                 rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class));
     }
@@ -314,7 +392,10 @@ public class ManagedSparkCatalogService {
                 rs.getString("artifact_digest"), rs.getString("artifact_status"),
                 (Long) rs.getObject("source_repository_id"), rs.getString("source_repository_key"),
                 rs.getString("source_repository_status"), rs.getString("source_commit_sha"),
-                rs.getString("source_path"),
+                rs.getString("source_path"), rs.getString("source_blob_id"),
+                rs.getString("source_blob_sha256"), (Long) rs.getObject("source_blob_size"),
+                rs.getString("source_signature_status"), rs.getString("source_signer_fingerprint"),
+                rs.getString("source_verified_by"), rs.getObject("source_verified_at", OffsetDateTime.class),
                 tree(rs.getString("parameter_schema")), tree(rs.getString("default_parameters")),
                 objectMapper.convertValue(tree(rs.getString("input_tables")),
                         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)),
@@ -351,6 +432,40 @@ public class ManagedSparkCatalogService {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
+    private SourceEvidence verifyArtifactSource(ManagedArtifactView artifact) {
+        SourceEvidence evidence = gitRepositories.verifySource(artifact.sourceRepositoryId(),
+                artifact.commitSha(), artifact.sourcePath());
+        if (!artifact.sha256().equals(evidence.blobSha256())) {
+            throw new IllegalStateException("固定 Git blob 摘要与制品登记摘要不一致，已拒绝继续");
+        }
+        return evidence;
+    }
+
+    private int updateArtifactEvidence(long artifactId, SourceEvidence evidence, String username) {
+        return jdbc.update("""
+                UPDATE workflow.managed_artifact
+                SET source_blob_id=?,source_blob_sha256=?,source_blob_size=?,
+                    source_signature_status=?,source_signer_fingerprint=?,
+                    source_verified_by=?,source_verified_at=now(),updated_at=now()
+                WHERE id=? AND status<>'revoked'
+                """, evidence.blobId(), evidence.blobSha256(), evidence.blobSize(),
+                evidence.revision().signatureStatus(), evidence.revision().signerFingerprint(),
+                username, artifactId);
+    }
+
+    private void recordVerification(long artifactId, SourceBinding source, String purpose, String username) {
+        SourceEvidence evidence = source.evidence();
+        jdbc.update("""
+                INSERT INTO workflow.source_verification
+                    (artifact_id,repository_id,commit_sha,source_path,blob_id,blob_sha256,
+                     blob_size,signature_status,signer_fingerprint,purpose,verified_by)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """, artifactId, source.repositoryId(), source.commitSha(), source.sourcePath(),
+                evidence.blobId(), evidence.blobSha256(), evidence.blobSize(),
+                evidence.revision().signatureStatus(), evidence.revision().signerFingerprint(),
+                purpose, username);
+    }
+
     private SourceBinding sourceBinding(ArtifactInput input, String artifactKey) {
         if (input.repositoryId() == null || !StringUtils.hasText(input.commitSha())
                 || !StringUtils.hasText(input.sourcePath())) {
@@ -364,13 +479,8 @@ public class ManagedSparkCatalogService {
                 || !path.substring(path.lastIndexOf('/') + 1).equals(artifactKey)) {
             throw new IllegalArgumentException("Git commit 或源码路径不合法，文件名必须与制品键一致");
         }
-        Integer known = jdbc.queryForObject("""
-                SELECT count(*) FROM workflow.source_revision revision
-                JOIN workflow.source_repository repository ON repository.id=revision.repository_id
-                WHERE repository.id=? AND revision.commit_sha=? AND repository.status='active'
-                """, Integer.class, input.repositoryId(), commit);
-        if (known == null || known != 1) throw new IllegalStateException("Git 修订未发现或仓库已停用");
-        return new SourceBinding(input.repositoryId(), commit, path);
+        SourceEvidence evidence = gitRepositories.verifySource(input.repositoryId(), commit, path);
+        return new SourceBinding(input.repositoryId(), commit, path, evidence);
     }
 
     private static String safe(String value) { return value == null ? "" : value; }
@@ -390,6 +500,9 @@ public class ManagedSparkCatalogService {
             Long id, String name, String version, String artifactType, String artifactKey,
             String sha256, Long sourceRepositoryId, String sourceRepositoryKey,
             String sourceRepositoryStatus, String commitSha, String sourcePath,
+            String sourceBlobId, String sourceBlobSha256, Long sourceBlobSize,
+            String sourceSignatureStatus, String sourceSignerFingerprint,
+            String sourceVerifiedBy, OffsetDateTime sourceVerifiedAt,
             String status, String createdBy, String approvedBy,
             OffsetDateTime approvedAt, OffsetDateTime revokedAt,
             OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
@@ -407,12 +520,21 @@ public class ManagedSparkCatalogService {
             String environmentStatus, Long artifactId, String artifactName, String artifactKey,
             String artifactDigest, String artifactStatus, Long sourceRepositoryId,
             String sourceRepositoryKey, String sourceRepositoryStatus, String sourceCommitSha,
-            String sourcePath, JsonNode parameterSchema,
+            String sourcePath, String sourceBlobId, String sourceBlobSha256, Long sourceBlobSize,
+            String sourceSignatureStatus, String sourceSignerFingerprint,
+            String sourceVerifiedBy, OffsetDateTime sourceVerifiedAt, JsonNode parameterSchema,
             JsonNode defaultParameters, List<String> inputTables, String outputTable,
             String outputUri, String writeMode, int driverCores, int driverMemoryMb,
             int timeoutSeconds, int maxRetries, String status, String definitionDigest,
             String owner, String description, String publishedBy, OffsetDateTime publishedAt,
             OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
 
-    private record SourceBinding(Long repositoryId, String commitSha, String sourcePath) { }
+    public record SourceVerificationView(
+            Long id, Long artifactId, Long repositoryId, String commitSha, String sourcePath,
+            String blobId, String blobSha256, long blobSize, String signatureStatus,
+            String signerFingerprint, String purpose, String verifiedBy,
+            OffsetDateTime verifiedAt) { }
+
+    private record SourceBinding(Long repositoryId, String commitSha, String sourcePath,
+                                 SourceEvidence evidence) { }
 }

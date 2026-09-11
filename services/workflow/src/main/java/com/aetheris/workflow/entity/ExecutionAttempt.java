@@ -34,6 +34,11 @@ public class ExecutionAttempt {
     private Long sourceRepositoryId;
     private String sourceCommitSha;
     private String sourcePath;
+    private String sourceBlobId;
+    private String sourceBlobSha256;
+    private String sourceSignatureStatus;
+    private String sourceSignerFingerprint;
+    private OffsetDateTime sourceVerifiedAt;
     private String remoteHandle;
     private String applicationId;
     private String inputPartitionsJson;
@@ -98,6 +103,16 @@ public class ExecutionAttempt {
     public void setSourceCommitSha(String sourceCommitSha) { this.sourceCommitSha = sourceCommitSha; }
     public String getSourcePath() { return sourcePath; }
     public void setSourcePath(String sourcePath) { this.sourcePath = sourcePath; }
+    public String getSourceBlobId() { return sourceBlobId; }
+    public void setSourceBlobId(String sourceBlobId) { this.sourceBlobId = sourceBlobId; }
+    public String getSourceBlobSha256() { return sourceBlobSha256; }
+    public void setSourceBlobSha256(String sourceBlobSha256) { this.sourceBlobSha256 = sourceBlobSha256; }
+    public String getSourceSignatureStatus() { return sourceSignatureStatus; }
+    public void setSourceSignatureStatus(String sourceSignatureStatus) { this.sourceSignatureStatus = sourceSignatureStatus; }
+    public String getSourceSignerFingerprint() { return sourceSignerFingerprint; }
+    public void setSourceSignerFingerprint(String sourceSignerFingerprint) { this.sourceSignerFingerprint = sourceSignerFingerprint; }
+    public OffsetDateTime getSourceVerifiedAt() { return sourceVerifiedAt; }
+    public void setSourceVerifiedAt(OffsetDateTime sourceVerifiedAt) { this.sourceVerifiedAt = sourceVerifiedAt; }
     public String getRemoteHandle() { return remoteHandle; }
     public void setRemoteHandle(String remoteHandle) { this.remoteHandle = remoteHandle; }
     public String getApplicationId() { return applicationId; }

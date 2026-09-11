@@ -339,6 +339,17 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                               )
                             },
                             {
+                              title: '源码证据',
+                              width: 150,
+                              render: (_: unknown, attempt: ExecutionAttempt) => attempt.sourceBlobSha256 ? (
+                                <Tooltip title={`${attempt.sourceCommitSha ?? ''} · ${attempt.sourceBlobSha256}`}>
+                                  <Space size={4}><Tag color={attempt.sourceSignatureStatus === 'verified' ? 'success' : 'warning'}>
+                                    {attempt.sourceSignatureStatus === 'verified' ? '已签名' : '未签名'}
+                                  </Tag><span>{attempt.sourceBlobSha256.slice(0, 8)}</span></Space>
+                                </Tooltip>
+                              ) : '—'
+                            },
+                            {
                               title: '开始时间',
                               dataIndex: 'startedAt',
                               render: (value?: string) => formatDateTime(value)

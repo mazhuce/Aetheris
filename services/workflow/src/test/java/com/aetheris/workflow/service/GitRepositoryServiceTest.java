@@ -36,6 +36,9 @@ class GitRepositoryServiceTest {
         when(inspector.inspect("https://github.com/acme/jobs.git", "main", null, null))
                 .thenReturn(new GitRemoteInspector.RemoteHead(
                         "https://github.com/acme/jobs.git", "main", "b".repeat(40)));
+        when(inspector.inspectRevision(any(), any(), any(), any(), any()))
+                .thenReturn(new GitRemoteInspector.RevisionEvidence(
+                        "b".repeat(40), "unsigned", null, null));
         GitRepositoryService service = new GitRepositoryService(jdbc, noOpTransactions(), inspector);
 
         assertThrows(IllegalStateException.class, () -> service.synchronize(9L, "admin"));
@@ -44,7 +47,37 @@ class GitRepositoryServiceTest {
         verify(jdbc, never()).update(anyString(), any(Object[].class));
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void synchronizationCannotCommitEvidenceFromAnOldTrustPolicy() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        GitRemoteInspector inspector = mock(GitRemoteInspector.class);
+        ResultSet observed = repositoryRow("active", "optional", null);
+        ResultSet locked = repositoryRow("active", "required", "c".repeat(40));
+        when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class))).thenAnswer(invocation -> {
+            String sql = invocation.getArgument(0);
+            RowMapper<Object> mapper = invocation.getArgument(1);
+            return List.of(mapper.mapRow(sql.contains("FOR UPDATE") ? locked : observed, 0));
+        });
+        when(inspector.inspect("https://github.com/acme/jobs.git", "main", null, null))
+                .thenReturn(new GitRemoteInspector.RemoteHead(
+                        "https://github.com/acme/jobs.git", "main", "b".repeat(40)));
+        when(inspector.inspectRevision(any(), any(), any(), any(), any()))
+                .thenReturn(new GitRemoteInspector.RevisionEvidence(
+                        "b".repeat(40), "unsigned", null, null));
+        GitRepositoryService service = new GitRepositoryService(jdbc, noOpTransactions(), inspector);
+
+        assertThrows(IllegalStateException.class, () -> service.synchronize(9L, "admin"));
+
+        verify(jdbc, never()).update(anyString(), any(Object[].class));
+    }
+
     private static ResultSet repositoryRow(String status) throws Exception {
+        return repositoryRow(status, "optional", null);
+    }
+
+    private static ResultSet repositoryRow(String status, String signaturePolicy,
+                                           String trustedFingerprints) throws Exception {
         ResultSet row = mock(ResultSet.class);
         when(row.getLong("id")).thenReturn(9L);
         when(row.getString("remote_url")).thenReturn("https://github.com/acme/jobs.git");
@@ -53,6 +86,8 @@ class GitRepositoryServiceTest {
         when(row.getString("credential_ref")).thenReturn(null);
         when(row.getString("status")).thenReturn(status);
         when(row.getString("current_commit_sha")).thenReturn("a".repeat(40));
+        when(row.getString("signature_policy")).thenReturn(signaturePolicy);
+        when(row.getString("trusted_signer_fingerprints")).thenReturn(trustedFingerprints);
         return row;
     }
 

@@ -2,8 +2,9 @@ import type { AxiosResponse } from 'axios'
 import type { Mock } from 'vitest'
 import http from './http'
 import {
-  changeGitRepositoryStatus, changeSparkRunnerStatus, listExecutionAttempts, listGitRevisions,
-  registerGitRepository, registerSparkArtifact, registerSparkRunner, synchronizeGitRepository,
+  changeGitRepositoryStatus, changeGitRepositoryTrust, changeSparkRunnerStatus, listExecutionAttempts, listGitRevisions,
+  listSparkArtifactVerifications, registerGitRepository, registerSparkArtifact, registerSparkRunner,
+  synchronizeGitRepository, verifySparkArtifact,
   type ExecutionAttempt, type GitRepository, type ManagedArtifact, type SparkRunner
 } from './workflow'
 
@@ -58,10 +59,15 @@ describe('workflow api', () => {
       .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
       .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
       .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
+      .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
       .mockResolvedValueOnce({ data: artifact } as AxiosResponse<ManagedArtifact>)
-    mockedHttp.get.mockResolvedValueOnce({ data: [] } as AxiosResponse<[]>)
+      .mockResolvedValueOnce({ data: artifact } as AxiosResponse<ManagedArtifact>)
+    mockedHttp.get
+      .mockResolvedValueOnce({ data: [] } as AxiosResponse<[]>)
+      .mockResolvedValueOnce({ data: [] } as AxiosResponse<[]>)
     const repositoryInput = {
-      repositoryKey: 'jobs', name: 'Jobs', remoteUrl: 'https://github.com/acme/jobs.git', defaultBranch: 'main'
+      repositoryKey: 'jobs', name: 'Jobs', remoteUrl: 'https://github.com/acme/jobs.git', defaultBranch: 'main',
+      signaturePolicy: 'optional' as const, trustedSignerFingerprints: []
     }
     const artifactInput = {
       name: 'Daily', version: '1.0.0', artifactKey: 'daily.py', sha256: 'a'.repeat(64),
@@ -71,13 +77,19 @@ describe('workflow api', () => {
     await registerGitRepository(repositoryInput)
     await synchronizeGitRepository(4)
     await changeGitRepositoryStatus(4, 'disabled')
+    await changeGitRepositoryTrust(4, { signaturePolicy: 'optional', trustedSignerFingerprints: [] })
     await listGitRevisions(4)
     await registerSparkArtifact(artifactInput)
+    await verifySparkArtifact(7)
+    await listSparkArtifactVerifications(7)
 
     expect(mockedHttp.post).toHaveBeenNthCalledWith(1, '/api/workflow/spark/repositories', repositoryInput)
     expect(mockedHttp.post).toHaveBeenNthCalledWith(2, '/api/workflow/spark/repositories/4/sync')
     expect(mockedHttp.post).toHaveBeenNthCalledWith(3, '/api/workflow/spark/repositories/4/status', { status: 'disabled' })
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(4, '/api/workflow/spark/repositories/4/trust', { signaturePolicy: 'optional', trustedSignerFingerprints: [] })
     expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/repositories/4/revisions')
-    expect(mockedHttp.post).toHaveBeenNthCalledWith(4, '/api/workflow/spark/artifacts', artifactInput)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(5, '/api/workflow/spark/artifacts', artifactInput)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(6, '/api/workflow/spark/artifacts/7/verify')
+    expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/artifacts/7/verifications')
   })
 })

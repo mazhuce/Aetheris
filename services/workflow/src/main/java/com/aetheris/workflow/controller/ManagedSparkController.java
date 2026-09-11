@@ -5,6 +5,7 @@ import com.aetheris.workflow.service.ExecutionAdapter;
 import com.aetheris.workflow.service.GitRepositoryService;
 import com.aetheris.workflow.service.GitRepositoryService.RepositoryInput;
 import com.aetheris.workflow.service.GitRepositoryService.RepositoryStatusInput;
+import com.aetheris.workflow.service.GitRepositoryService.RepositoryTrustInput;
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.ArtifactInput;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobInput;
@@ -139,6 +140,16 @@ public class ManagedSparkController {
         return action(() -> gitRepositories.revisions(id));
     }
 
+    @PostMapping("/repositories/{id}/trust")
+    public ResponseEntity<?> changeRepositoryTrust(
+            @PathVariable long id, @RequestBody RepositoryTrustInput input,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权修改 Git 仓库信任策略"));
+        }
+        return action(() -> gitRepositories.changeTrust(id, input, username));
+    }
+
     @GetMapping("/artifacts")
     public Object artifacts() { return catalog.artifacts(); }
 
@@ -154,6 +165,26 @@ public class ManagedSparkController {
             @PathVariable long id,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         return action(() -> catalog.approveArtifact(id, username));
+    }
+
+    @PostMapping("/artifacts/{id}/verify")
+    public ResponseEntity<?> verifyArtifact(
+            @PathVariable long id,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权重新验证 Git 制品"));
+        }
+        return action(() -> catalog.verifyArtifact(id, username));
+    }
+
+    @GetMapping("/artifacts/{id}/verifications")
+    public ResponseEntity<?> artifactVerifications(
+            @PathVariable long id,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看制品验证证据"));
+        }
+        return action(() -> catalog.verifications(id));
     }
 
     @PostMapping("/artifacts/{id}/revoke")
