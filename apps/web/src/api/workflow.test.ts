@@ -1,7 +1,11 @@
 import type { AxiosResponse } from 'axios'
 import type { Mock } from 'vitest'
 import http from './http'
-import { changeSparkRunnerStatus, listExecutionAttempts, registerSparkRunner, type ExecutionAttempt, type SparkRunner } from './workflow'
+import {
+  changeGitRepositoryStatus, changeSparkRunnerStatus, listExecutionAttempts, listGitRevisions,
+  registerGitRepository, registerSparkArtifact, registerSparkRunner, synchronizeGitRepository,
+  type ExecutionAttempt, type GitRepository, type ManagedArtifact, type SparkRunner
+} from './workflow'
 
 vi.mock('./http', () => ({
   default: { get: vi.fn(), post: vi.fn() }
@@ -10,6 +14,8 @@ vi.mock('./http', () => ({
 const mockedHttp = http as unknown as { get: Mock; post: Mock }
 
 describe('workflow api', () => {
+  beforeEach(() => vi.clearAllMocks())
+
   it('loads immutable execution attempts for one logical instance', async () => {
     const attempts = [{
       id: 12,
@@ -43,5 +49,35 @@ describe('workflow api', () => {
     await expect(changeSparkRunnerStatus(3, 'draining')).resolves.toBe(runner)
     expect(mockedHttp.post).toHaveBeenNthCalledWith(1, '/api/workflow/spark/runners', input)
     expect(mockedHttp.post).toHaveBeenNthCalledWith(2, '/api/workflow/spark/runners/3/status', { status: 'draining' })
+  })
+
+  it('uses repository lifecycle and immutable source binding endpoints', async () => {
+    const repository = { id: 4, status: 'active' } as GitRepository
+    const artifact = { id: 7, status: 'draft' } as ManagedArtifact
+    mockedHttp.post
+      .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
+      .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
+      .mockResolvedValueOnce({ data: repository } as AxiosResponse<GitRepository>)
+      .mockResolvedValueOnce({ data: artifact } as AxiosResponse<ManagedArtifact>)
+    mockedHttp.get.mockResolvedValueOnce({ data: [] } as AxiosResponse<[]>)
+    const repositoryInput = {
+      repositoryKey: 'jobs', name: 'Jobs', remoteUrl: 'https://github.com/acme/jobs.git', defaultBranch: 'main'
+    }
+    const artifactInput = {
+      name: 'Daily', version: '1.0.0', artifactKey: 'daily.py', sha256: 'a'.repeat(64),
+      repositoryId: 4, commitSha: 'b'.repeat(40), sourcePath: 'spark/daily.py'
+    }
+
+    await registerGitRepository(repositoryInput)
+    await synchronizeGitRepository(4)
+    await changeGitRepositoryStatus(4, 'disabled')
+    await listGitRevisions(4)
+    await registerSparkArtifact(artifactInput)
+
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(1, '/api/workflow/spark/repositories', repositoryInput)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(2, '/api/workflow/spark/repositories/4/sync')
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(3, '/api/workflow/spark/repositories/4/status', { status: 'disabled' })
+    expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/repositories/4/revisions')
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(4, '/api/workflow/spark/artifacts', artifactInput)
   })
 })

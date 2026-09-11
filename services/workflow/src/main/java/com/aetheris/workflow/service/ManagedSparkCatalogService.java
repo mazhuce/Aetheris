@@ -15,6 +15,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -26,6 +27,8 @@ public class ManagedSparkCatalogService {
 
     private static final Pattern ARTIFACT_KEY = Pattern.compile("^[a-z0-9][a-z0-9_-]{0,63}\\.py$");
     private static final Pattern SHA256 = Pattern.compile("^[0-9a-f]{64}$");
+    private static final Pattern COMMIT_SHA = Pattern.compile("^[0-9a-f]{40}$");
+    private static final Pattern SOURCE_PATH = Pattern.compile("^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\\.py$");
     private static final Pattern TABLE = Pattern.compile("^[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*){1,2}$");
     private static final String OUTPUT_PREFIX = "hdfs://localhost:9000/user/aetheris/managed/";
 
@@ -50,19 +53,13 @@ public class ManagedSparkCatalogService {
     }
 
     public List<ManagedArtifactView> artifacts() {
-        return jdbc.query("""
-                SELECT id, name, version, artifact_type, artifact_key, sha256, status,
-                       created_by, approved_by, approved_at, revoked_at, created_at, updated_at
-                FROM workflow.managed_artifact ORDER BY updated_at DESC, id DESC
-                """, this::mapArtifact);
+        return jdbc.query(artifactSelect() + " ORDER BY artifact.updated_at DESC, artifact.id DESC",
+                this::mapArtifact);
     }
 
     public ManagedArtifactView artifact(long id) {
-        return single(jdbc.query("""
-                SELECT id, name, version, artifact_type, artifact_key, sha256, status,
-                       created_by, approved_by, approved_at, revoked_at, created_at, updated_at
-                FROM workflow.managed_artifact WHERE id = ?
-                """, this::mapArtifact, id), "受管制品不存在");
+        return single(jdbc.query(artifactSelect() + " WHERE artifact.id=?", this::mapArtifact, id),
+                "受管制品不存在");
     }
 
     @Transactional
@@ -72,15 +69,17 @@ public class ManagedSparkCatalogService {
         if (!ARTIFACT_KEY.matcher(key).matches() || !SHA256.matcher(digest).matches()) {
             throw new IllegalArgumentException("制品键或 SHA-256 格式不合法");
         }
+        SourceBinding source = sourceBinding(input, key);
         adapter.validate(key, digest);
         try {
             Long id = jdbc.queryForObject("""
                     INSERT INTO workflow.managed_artifact
                         (name, version, artifact_type, artifact_key, sha256, status,
-                         created_by, created_at, updated_at)
-                    VALUES (?, ?, 'pyspark', ?, ?, 'draft', ?, now(), now()) RETURNING id
+                         repository_id,commit_sha,source_path,created_by,created_at,updated_at)
+                    VALUES (?, ?, 'pyspark', ?, ?, 'draft', ?,?,?,?,now(),now()) RETURNING id
                     """, Long.class, required(input.name(), "制品名称不能为空"),
-                    required(input.version(), "制品版本不能为空"), key, digest, username);
+                    required(input.version(), "制品版本不能为空"), key, digest,
+                    source.repositoryId(), source.commitSha(), source.sourcePath(), username);
             return artifact(id);
         } catch (DataIntegrityViolationException conflict) {
             throw new IllegalStateException("同名制品版本已经存在");
@@ -95,6 +94,9 @@ public class ManagedSparkCatalogService {
         }
         if (artifact.createdBy().equals(username)) {
             throw new IllegalStateException("制品提交人不能审批自己的变更");
+        }
+        if (artifact.sourceRepositoryId() == null || !"active".equals(artifact.sourceRepositoryStatus())) {
+            throw new IllegalStateException("制品必须绑定活动 Git 仓库中的已发现修订");
         }
         adapter.validate(artifact.artifactKey(), artifact.sha256());
         int changed = jdbc.update("""
@@ -172,6 +174,9 @@ public class ManagedSparkCatalogService {
         if (!"draft".equals(job.status())) throw new IllegalStateException("只有草稿作业可以发布");
         if (job.owner().equals(username)) throw new IllegalStateException("作业创建人不能发布自己的变更");
         if (!"approved".equals(job.artifactStatus())) throw new IllegalStateException("制品审批通过后才能发布作业");
+        if (job.sourceRepositoryId() == null || !"active".equals(job.sourceRepositoryStatus())) {
+            throw new IllegalStateException("制品来源 Git 仓库已停用或未绑定");
+        }
         adapter.validate(job.artifactKey(), job.artifactDigest());
         String digest = definitionDigest(job);
         int changed = jdbc.update("""
@@ -238,7 +243,8 @@ public class ManagedSparkCatalogService {
 
     private String definitionDigest(SparkJobView job) {
         String canonical = String.join("|", job.name(), String.valueOf(job.version()),
-                job.artifactDigest(), json(job.inputTables()), job.outputUri(),
+                job.artifactDigest(), String.valueOf(job.sourceRepositoryId()),
+                safe(job.sourceCommitSha()), safe(job.sourcePath()), json(job.inputTables()), job.outputUri(),
                 String.valueOf(job.driverCores()), String.valueOf(job.driverMemoryMb()),
                 String.valueOf(job.timeoutSeconds()), "overwrite_partition");
         try {
@@ -254,6 +260,9 @@ public class ManagedSparkCatalogService {
                 SELECT job.id, job.name, job.version, job.environment_id, environment.name environment_name,
                        environment.status environment_status, job.artifact_id, artifact.name artifact_name,
                        artifact.artifact_key, artifact.sha256 artifact_digest, artifact.status artifact_status,
+                       artifact.repository_id source_repository_id,repository.repository_key source_repository_key,
+                       repository.status source_repository_status,artifact.commit_sha source_commit_sha,
+                       artifact.source_path,
                        job.parameter_schema, job.default_parameters, job.input_tables, job.output_table,
                        job.output_uri, job.write_mode, job.driver_cores, job.driver_memory_mb,
                        job.timeout_seconds, job.max_retries, job.status, job.definition_digest,
@@ -262,6 +271,20 @@ public class ManagedSparkCatalogService {
                 FROM workflow.spark_job_definition job
                 JOIN workflow.compute_environment environment ON environment.id=job.environment_id
                 JOIN workflow.managed_artifact artifact ON artifact.id=job.artifact_id
+                LEFT JOIN workflow.source_repository repository ON repository.id=artifact.repository_id
+                """;
+    }
+
+    private String artifactSelect() {
+        return """
+                SELECT artifact.id,artifact.name,artifact.version,artifact.artifact_type,
+                       artifact.artifact_key,artifact.sha256,artifact.status,artifact.repository_id,
+                       repository.repository_key source_repository_key,
+                       repository.status source_repository_status,artifact.commit_sha,artifact.source_path,
+                       artifact.created_by,artifact.approved_by,artifact.approved_at,artifact.revoked_at,
+                       artifact.created_at,artifact.updated_at
+                FROM workflow.managed_artifact artifact
+                LEFT JOIN workflow.source_repository repository ON repository.id=artifact.repository_id
                 """;
     }
 
@@ -277,7 +300,9 @@ public class ManagedSparkCatalogService {
     private ManagedArtifactView mapArtifact(ResultSet rs, int row) throws SQLException {
         return new ManagedArtifactView(rs.getLong("id"), rs.getString("name"), rs.getString("version"),
                 rs.getString("artifact_type"), rs.getString("artifact_key"), rs.getString("sha256"),
-                rs.getString("status"), rs.getString("created_by"), rs.getString("approved_by"),
+                (Long) rs.getObject("repository_id"), rs.getString("source_repository_key"),
+                rs.getString("source_repository_status"), rs.getString("commit_sha"),
+                rs.getString("source_path"), rs.getString("status"), rs.getString("created_by"), rs.getString("approved_by"),
                 rs.getObject("approved_at", OffsetDateTime.class), rs.getObject("revoked_at", OffsetDateTime.class),
                 rs.getObject("created_at", OffsetDateTime.class), rs.getObject("updated_at", OffsetDateTime.class));
     }
@@ -287,6 +312,9 @@ public class ManagedSparkCatalogService {
                 rs.getLong("environment_id"), rs.getString("environment_name"), rs.getString("environment_status"),
                 rs.getLong("artifact_id"), rs.getString("artifact_name"), rs.getString("artifact_key"),
                 rs.getString("artifact_digest"), rs.getString("artifact_status"),
+                (Long) rs.getObject("source_repository_id"), rs.getString("source_repository_key"),
+                rs.getString("source_repository_status"), rs.getString("source_commit_sha"),
+                rs.getString("source_path"),
                 tree(rs.getString("parameter_schema")), tree(rs.getString("default_parameters")),
                 objectMapper.convertValue(tree(rs.getString("input_tables")),
                         objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)),
@@ -323,6 +351,30 @@ public class ManagedSparkCatalogService {
         return StringUtils.hasText(value) ? value.trim() : null;
     }
 
+    private SourceBinding sourceBinding(ArtifactInput input, String artifactKey) {
+        if (input.repositoryId() == null || !StringUtils.hasText(input.commitSha())
+                || !StringUtils.hasText(input.sourcePath())) {
+            throw new IllegalArgumentException("新制品必须绑定 Git 仓库、完整 commit SHA 和源码路径");
+        }
+        String commit = input.commitSha().trim().toLowerCase(Locale.ROOT);
+        String path = input.sourcePath().trim();
+        if (!COMMIT_SHA.matcher(commit).matches() || !SOURCE_PATH.matcher(path).matches()
+                || path.contains("\\") || Arrays.stream(path.split("/", -1))
+                        .anyMatch(segment -> ".".equals(segment) || "..".equals(segment))
+                || !path.substring(path.lastIndexOf('/') + 1).equals(artifactKey)) {
+            throw new IllegalArgumentException("Git commit 或源码路径不合法，文件名必须与制品键一致");
+        }
+        Integer known = jdbc.queryForObject("""
+                SELECT count(*) FROM workflow.source_revision revision
+                JOIN workflow.source_repository repository ON repository.id=revision.repository_id
+                WHERE repository.id=? AND revision.commit_sha=? AND repository.status='active'
+                """, Integer.class, input.repositoryId(), commit);
+        if (known == null || known != 1) throw new IllegalStateException("Git 修订未发现或仓库已停用");
+        return new SourceBinding(input.repositoryId(), commit, path);
+    }
+
+    private static String safe(String value) { return value == null ? "" : value; }
+
     private static <T> T single(List<T> values, String message) {
         if (values.isEmpty()) throw new IllegalArgumentException(message);
         return values.getFirst();
@@ -336,11 +388,14 @@ public class ManagedSparkCatalogService {
 
     public record ManagedArtifactView(
             Long id, String name, String version, String artifactType, String artifactKey,
-            String sha256, String status, String createdBy, String approvedBy,
+            String sha256, Long sourceRepositoryId, String sourceRepositoryKey,
+            String sourceRepositoryStatus, String commitSha, String sourcePath,
+            String status, String createdBy, String approvedBy,
             OffsetDateTime approvedAt, OffsetDateTime revokedAt,
             OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
 
-    public record ArtifactInput(String name, String version, String artifactKey, String sha256) { }
+    public record ArtifactInput(String name, String version, String artifactKey, String sha256,
+                                Long repositoryId, String commitSha, String sourcePath) { }
 
     public record SparkJobInput(
             String name, Long environmentId, Long artifactId, List<String> inputTables,
@@ -350,10 +405,14 @@ public class ManagedSparkCatalogService {
     public record SparkJobView(
             Long id, String name, int version, Long environmentId, String environmentName,
             String environmentStatus, Long artifactId, String artifactName, String artifactKey,
-            String artifactDigest, String artifactStatus, JsonNode parameterSchema,
+            String artifactDigest, String artifactStatus, Long sourceRepositoryId,
+            String sourceRepositoryKey, String sourceRepositoryStatus, String sourceCommitSha,
+            String sourcePath, JsonNode parameterSchema,
             JsonNode defaultParameters, List<String> inputTables, String outputTable,
             String outputUri, String writeMode, int driverCores, int driverMemoryMb,
             int timeoutSeconds, int maxRetries, String status, String definitionDigest,
             String owner, String description, String publishedBy, OffsetDateTime publishedAt,
             OffsetDateTime createdAt, OffsetDateTime updatedAt) { }
+
+    private record SourceBinding(Long repositoryId, String commitSha, String sourcePath) { }
 }

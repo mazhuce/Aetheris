@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
-import { CaretRightOutlined, PlusOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
+import { BranchesOutlined, CaretRightOutlined, PlusOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
-  cancelPipeline, cancelTaskInstance, changeSparkRunnerStatus, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
-  listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, resolveTaskInstance, runTask, startPipeline,
-  registerSparkRunner, retryPipeline,
+  approveSparkArtifact, cancelPipeline, cancelTaskInstance, changeGitRepositoryStatus, changeSparkRunnerStatus,
+  getPipelineRun, getSparkHealth, listAllInstances, listGitRepositories, listGitRevisions, listPipelineRuns, listSparkArtifacts,
+  listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, registerGitRepository, registerSparkArtifact,
+  resolveTaskInstance, revokeSparkArtifact, runTask, startPipeline, synchronizeGitRepository, registerSparkRunner, retryPipeline,
   type ExecutionResolutionInput,
-  type ManagedArtifact, type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
+  type GitRepository, type GitRepositoryInput, type GitRevision, type ManagedArtifact, type ManagedArtifactInput,
+  type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
   type SparkRunner, type SparkRunnerHealth, type SparkRunnerInput, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
@@ -21,6 +23,9 @@ export default function SparkDevelopmentPage() {
   const [health, setHealth] = useState<SparkRunnerHealth | null>(null)
   const [environments, setEnvironments] = useState<SparkEnvironment[]>([])
   const [runners, setRunners] = useState<SparkRunner[]>([])
+  const [repositories, setRepositories] = useState<GitRepository[]>([])
+  const [revisions, setRevisions] = useState<GitRevision[]>([])
+  const [revisionRepository, setRevisionRepository] = useState<GitRepository>()
   const [artifacts, setArtifacts] = useState<ManagedArtifact[]>([])
   const [jobs, setJobs] = useState<SparkJobDefinition[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -34,25 +39,31 @@ export default function SparkDevelopmentPage() {
   const [busy, setBusy] = useState(false)
   const [pipelineAction, setPipelineAction] = useState<string>()
   const [runnerEditorOpen, setRunnerEditorOpen] = useState(false)
+  const [repositoryEditorOpen, setRepositoryEditorOpen] = useState(false)
+  const [artifactEditorOpen, setArtifactEditorOpen] = useState(false)
   const [resolutionTarget, setResolutionTarget] = useState<{ instanceId: number; label: string; pipeline: boolean }>()
   const [resolutionForm] = Form.useForm<ExecutionResolutionInput>()
   const [runnerForm] = Form.useForm<SparkRunnerInput>()
+  const [repositoryForm] = Form.useForm<GitRepositoryInput>()
+  const [artifactForm] = Form.useForm<ManagedArtifactInput>()
   const isAdmin = getCurrentRole() === 'admin'
 
   const refresh = async () => {
     const settled = await Promise.allSettled([
-      getSparkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]), listSparkArtifacts(), listSparkJobs(),
+      getSparkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]),
+      isAdmin ? listGitRepositories() : Promise.resolve([]), listSparkArtifacts(), listSparkJobs(),
       listTasks(), listAllInstances(undefined, 100), listPipelineRuns()
     ])
     if (settled[0].status === 'fulfilled') setHealth(settled[0].value)
     else setHealth({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0 })
     if (settled[1].status === 'fulfilled') setEnvironments(settled[1].value)
     if (settled[2].status === 'fulfilled') setRunners(settled[2].value)
-    if (settled[3].status === 'fulfilled') setArtifacts(settled[3].value)
-    if (settled[4].status === 'fulfilled') setJobs(settled[4].value)
-    if (settled[5].status === 'fulfilled') setTasks(settled[5].value)
-    if (settled[6].status === 'fulfilled') setInstances(settled[6].value)
-    if (settled[7].status === 'fulfilled') setPipelines(settled[7].value)
+    if (settled[3].status === 'fulfilled') setRepositories(settled[3].value)
+    if (settled[4].status === 'fulfilled') setArtifacts(settled[4].value)
+    if (settled[5].status === 'fulfilled') setJobs(settled[5].value)
+    if (settled[6].status === 'fulfilled') setTasks(settled[6].value)
+    if (settled[7].status === 'fulfilled') setInstances(settled[7].value)
+    if (settled[8].status === 'fulfilled') setPipelines(settled[8].value)
   }
 
   useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 5000); return () => window.clearInterval(timer) }, [])
@@ -105,6 +116,86 @@ export default function SparkDevelopmentPage() {
       await refresh()
     } catch (error) {
       message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Runner 状态修改失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const createRepository = async () => {
+    let values: GitRepositoryInput
+    try { values = await repositoryForm.validateFields() }
+    catch { return }
+    setPipelineAction('repository-create')
+    try {
+      await registerGitRepository(values)
+      message.success('仓库远端分支已验证并固定当前 commit')
+      setRepositoryEditorOpen(false)
+      repositoryForm.resetFields()
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Git 仓库注册失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const updateRepositoryStatus = async (repository: GitRepository, status: GitRepository['status']) => {
+    const action = `repository-${repository.id}-${status}`
+    setPipelineAction(action)
+    try {
+      await changeGitRepositoryStatus(repository.id, status)
+      message.success(status === 'active' ? 'Git 仓库已重新验证并启用' : 'Git 仓库已停用')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Git 仓库状态修改失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const syncRepository = async (repository: GitRepository) => {
+    const action = `repository-${repository.id}-sync`
+    setPipelineAction(action)
+    try {
+      await synchronizeGitRepository(repository.id)
+      message.success('远端分支已同步，修订记录已保存')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Git 仓库同步失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const showRevisions = async (repository: GitRepository) => {
+    const action = `repository-${repository.id}-history`
+    setPipelineAction(action)
+    try {
+      setRevisions(await listGitRevisions(repository.id))
+      setRevisionRepository(repository)
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Git 修订历史加载失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const createArtifact = async () => {
+    let values: ManagedArtifactInput
+    try { values = await artifactForm.validateFields() }
+    catch { return }
+    setPipelineAction('artifact-create')
+    try {
+      await registerSparkArtifact(values)
+      message.success('制品已绑定不可变 Git 修订，等待其他管理员复核')
+      setArtifactEditorOpen(false)
+      artifactForm.resetFields()
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '制品登记失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const updateArtifact = async (artifact: ManagedArtifact, action: 'approve' | 'revoke') => {
+    const key = `artifact-${artifact.id}-${action}`
+    setPipelineAction(key)
+    try {
+      if (action === 'approve') await approveSparkArtifact(artifact.id)
+      else await revokeSparkArtifact(artifact.id)
+      message.success(action === 'approve' ? '制品已复核通过' : '制品已撤销')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '制品状态修改失败')
     } finally { setPipelineAction(undefined) }
   }
 
@@ -210,12 +301,42 @@ export default function SparkDevelopmentPage() {
       ]} /> },
       { key: 'artifacts', label: '制品与环境', children: <Space direction="vertical" className="full-width-control">
         <Space className="full-width-control" style={{ justifyContent: 'space-between' }}>
-          <Typography.Text type="secondary">运行器只接受仓库白名单中的 PySpark 文件，并在提交前核对 SHA-256。</Typography.Text>
-          {isAdmin && <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-            runnerForm.setFieldsValue({ maxCores: 2, maxMemoryMb: 2048, maxConcurrency: 1 })
-            setRunnerEditorOpen(true)
-          }}>注册 Runner</Button>}
+          <Typography.Text type="secondary">制品固定到已发现的 Git commit；运行器继续按 SHA-256 校验白名单文件。</Typography.Text>
+          {isAdmin && <Space wrap>
+            <Button icon={<BranchesOutlined />} onClick={() => {
+              repositoryForm.setFieldsValue({ defaultBranch: 'main' })
+              setRepositoryEditorOpen(true)
+            }}>注册仓库</Button>
+            <Button icon={<PlusOutlined />} disabled={!repositories.some((item) => item.status === 'active')} onClick={() => {
+              const repository = repositories.find((item) => item.status === 'active')
+              artifactForm.setFieldsValue({ repositoryId: repository?.id, commitSha: repository?.currentCommitSha })
+              setArtifactEditorOpen(true)
+            }}>登记制品</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              runnerForm.setFieldsValue({ maxCores: 2, maxMemoryMb: 2048, maxConcurrency: 1 })
+              setRunnerEditorOpen(true)
+            }}>注册 Runner</Button>
+          </Space>}
         </Space>
+        {isAdmin && <Table<GitRepository> rowKey="id" size="small" dataSource={repositories} pagination={false} scroll={{ x: 1080 }} columns={[
+          { title: 'Git 仓库', dataIndex: 'name', width: 150 },
+          { title: '远端', dataIndex: 'remoteUrl', ellipsis: true, width: 260 },
+          { title: '分支', dataIndex: 'defaultBranch', width: 120 },
+          { title: '当前 commit', dataIndex: 'currentCommitSha', width: 190, render: (value: string) => <Typography.Text code copyable>{value.slice(0, 12)}</Typography.Text> },
+          { title: '凭据', dataIndex: 'credentialConfigured', width: 76, render: (value: boolean) => value ? '环境引用' : '公开' },
+          { title: '状态', dataIndex: 'status', width: 90, render: statusTag },
+          { title: '操作', fixed: 'right', width: 230, render: (_, value) => <Space size={6}>
+            <Button size="small" loading={pipelineAction === `repository-${value.id}-history`} onClick={() => void showRevisions(value)}>历史</Button>
+            {value.status === 'active' ? <>
+              <Button size="small" loading={pipelineAction === `repository-${value.id}-sync`} onClick={() => void syncRepository(value)}>同步</Button>
+              <Popconfirm title="停用此 Git 仓库？" description="已发布作业保留，但新的制品审批和作业发布会被阻止。"
+                onConfirm={() => void updateRepositoryStatus(value, 'disabled')} okText="确认停用" cancelText="返回">
+                <Button danger size="small" loading={pipelineAction === `repository-${value.id}-disabled`}>停用</Button>
+              </Popconfirm>
+            </> : <Button size="small" loading={pipelineAction === `repository-${value.id}-active`}
+              onClick={() => void updateRepositoryStatus(value, 'active')}>验证并启用</Button>}
+          </Space> }
+        ]} />}
         <Table<SparkRunner> rowKey="id" size="small" dataSource={runners} pagination={false} columns={[
           { title: 'Runner', dataIndex: 'name' }, { title: '环境', dataIndex: 'environmentName' },
           { title: '状态', dataIndex: 'status', render: statusTag },
@@ -236,9 +357,20 @@ export default function SparkDevelopmentPage() {
             </Popconfirm>}
           </Space> }] : [])
         ]} />
-        <Table rowKey="id" size="small" dataSource={artifacts} pagination={false} columns={[
+        <Table<ManagedArtifact> rowKey="id" size="small" dataSource={artifacts} pagination={false} scroll={{ x: 1000 }} columns={[
           { title: '制品', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '文件', dataIndex: 'artifactKey' },
-          { title: 'SHA-256', dataIndex: 'sha256', ellipsis: true }, { title: '状态', dataIndex: 'status' }
+          { title: 'Git 来源', width: 230, render: (_, value) => value.sourceRepositoryKey
+            ? `${value.sourceRepositoryKey}@${value.commitSha?.slice(0, 10)}` : '历史制品' },
+          { title: '源码路径', dataIndex: 'sourcePath', ellipsis: true },
+          { title: 'SHA-256', dataIndex: 'sha256', ellipsis: true }, { title: '状态', dataIndex: 'status', render: statusTag },
+          ...(isAdmin ? [{ title: '操作', fixed: 'right' as const, width: 150, render: (_: unknown, value: ManagedArtifact) => <Space size={6}>
+            {value.status === 'draft' && <Button size="small" loading={pipelineAction === `artifact-${value.id}-approve`}
+              onClick={() => void updateArtifact(value, 'approve')}>复核</Button>}
+            {value.status === 'approved' && <Popconfirm title="撤销此制品？" description="引用它的已发布作业不会被改写，但新发布会被阻止。"
+              onConfirm={() => void updateArtifact(value, 'revoke')} okText="确认撤销" cancelText="返回">
+              <Button danger size="small" loading={pipelineAction === `artifact-${value.id}-revoke`}>撤销</Button>
+            </Popconfirm>}
+          </Space> }] : [])
         ]} />
         <Table rowKey="id" size="small" dataSource={environments} pagination={false} columns={[
           { title: '环境', dataIndex: 'name' }, { title: 'Spark', dataIndex: 'sparkVersion' }, { title: 'Master', dataIndex: 'master' },
@@ -258,6 +390,17 @@ export default function SparkDevelopmentPage() {
         </Space> }
       ]} /> }
     ]} />
+    <Drawer title={revisionRepository ? `${revisionRepository.name} · 修订历史` : 'Git 修订历史'} width={660}
+      open={revisionRepository !== undefined} onClose={() => setRevisionRepository(undefined)}>
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+        message="每次注册、同步或重新启用只追加远端分支当时的完整 commit SHA；历史记录不会被覆盖。" />
+      <Table<GitRevision> rowKey="id" size="small" pagination={false} dataSource={revisions} columns={[
+        { title: '分支', dataIndex: 'branchName', width: 130 },
+        { title: 'commit', dataIndex: 'commitSha', render: (value: string) => <Typography.Text code copyable>{value}</Typography.Text> },
+        { title: '发现人', dataIndex: 'discoveredBy', width: 110 },
+        { title: '发现时间', dataIndex: 'discoveredAt', width: 180, render: (value: string) => dayjs(value).format('YYYY-MM-DD HH:mm:ss') }
+      ]} />
+    </Drawer>
     <Drawer title={pipelineDetail ? `流水线 #${pipelineDetail.id}` : '流水线详情'} width={760}
       open={pipelineDetail !== null} onClose={() => setPipelineDetail(null)}>
       {pipelineDetail && <Space direction="vertical" size="middle" className="full-width-control">
@@ -310,6 +453,77 @@ export default function SparkDevelopmentPage() {
         <Form.Item name="reason" label="核对说明" rules={[{ required: true, whitespace: true, max: 512,
           message: '请说明核对依据和结论（最多 512 字）' }]}>
           <Input.TextArea rows={4} maxLength={512} showCount placeholder="说明在哪里核对、由什么证据得出该结论" />
+        </Form.Item>
+      </Form>
+    </Modal>
+    <Modal title="注册 Git 仓库" open={repositoryEditorOpen} onCancel={() => setRepositoryEditorOpen(false)}
+      onOk={() => void createRepository()} okText="验证远端并注册" cancelText="返回"
+      confirmLoading={pipelineAction === 'repository-create'} destroyOnClose>
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+        message="仅允许配置白名单主机上的无凭据 HTTPS 地址。私有仓库只填写专用环境变量引用，页面和数据库都不保存 token。" />
+      <Form form={repositoryForm} layout="vertical" preserve={false}>
+        <Row gutter={12}>
+          <Col span={10}><Form.Item name="repositoryKey" label="仓库标识" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9_-]{0,63}$/, message: '使用小写字母、数字、下划线或连字符' }]}>
+            <Input maxLength={64} placeholder="spark-jobs" />
+          </Form.Item></Col>
+          <Col span={14}><Form.Item name="name" label="仓库名称" rules={[{ required: true, whitespace: true, max: 128 }]}>
+            <Input maxLength={128} placeholder="生产 PySpark 作业" />
+          </Form.Item></Col>
+        </Row>
+        <Form.Item name="remoteUrl" label="HTTPS 远端地址" rules={[{ required: true, type: 'url', message: '请输入合法 HTTPS 地址' }, {
+          validator: (_, value?: string) => !value || value.startsWith('https://') ? Promise.resolve() : Promise.reject(new Error('只允许 HTTPS'))
+        }]}>
+          <Input placeholder="https://github.com/organization/jobs.git" />
+        </Form.Item>
+        <Form.Item name="defaultBranch" label="默认分支" rules={[{ required: true, pattern: /^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$/, message: '请输入合法 Git 分支名称' }]}>
+          <Input maxLength={128} placeholder="main" />
+        </Form.Item>
+        <Row gutter={12}>
+          <Col span={10}><Form.Item name="credentialUsername" label="凭据用户名（私有仓库）" dependencies={['credentialRef']}
+            rules={[({ getFieldValue }) => ({ validator: (_, value?: string) => !getFieldValue('credentialRef') || value?.trim()
+              ? Promise.resolve() : Promise.reject(new Error('填写凭据引用时必须填写用户名')) })]}>
+            <Input maxLength={128} placeholder="git" />
+          </Form.Item></Col>
+          <Col span={14}><Form.Item name="credentialRef" label="凭据环境变量引用" rules={[{
+            pattern: /^env:\/\/AETHERIS_GIT_CREDENTIAL_[A-Z0-9_]{1,64}$/,
+            message: '格式：env://AETHERIS_GIT_CREDENTIAL_*'
+          }]}>
+            <Input maxLength={128} placeholder="env://AETHERIS_GIT_CREDENTIAL_JOBS" />
+          </Form.Item></Col>
+        </Row>
+      </Form>
+    </Modal>
+    <Modal title="登记 Git 绑定制品" open={artifactEditorOpen} onCancel={() => setArtifactEditorOpen(false)}
+      onOk={() => void createArtifact()} okText="登记草稿" cancelText="返回"
+      confirmLoading={pipelineAction === 'artifact-create'} destroyOnClose>
+      <Alert type="warning" showIcon style={{ marginBottom: 16 }}
+        message="commit 必须来自仓库同步记录；源码文件名必须与运行器白名单中的制品键一致。SHA-256 仍由运行器在执行前复核。" />
+      <Form form={artifactForm} layout="vertical" preserve={false}>
+        <Row gutter={12}>
+          <Col span={14}><Form.Item name="name" label="制品名称" rules={[{ required: true, whitespace: true, max: 128 }]}>
+            <Input maxLength={128} />
+          </Form.Item></Col>
+          <Col span={10}><Form.Item name="version" label="版本" rules={[{ required: true, whitespace: true, max: 32 }]}>
+            <Input maxLength={32} placeholder="1.0.0" />
+          </Form.Item></Col>
+        </Row>
+        <Form.Item name="repositoryId" label="Git 仓库" rules={[{ required: true, message: '请选择活动仓库' }]}>
+          <Select options={repositories.filter((item) => item.status === 'active').map((item) => ({ value: item.id, label: `${item.name} · ${item.defaultBranch}` }))}
+            onChange={(id: number) => artifactForm.setFieldValue('commitSha', repositories.find((item) => item.id === id)?.currentCommitSha)} />
+        </Form.Item>
+        <Form.Item name="commitSha" label="完整 commit SHA" rules={[{ required: true, pattern: /^[0-9a-f]{40}$/, message: '请输入仓库已发现的 40 位小写 commit SHA' }]}>
+          <Input maxLength={40} />
+        </Form.Item>
+        <Row gutter={12}>
+          <Col span={10}><Form.Item name="artifactKey" label="运行器制品键" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9_-]{0,63}\.py$/, message: '例如 order_daily.py' }]}>
+            <Input maxLength={67} placeholder="order_daily.py" />
+          </Form.Item></Col>
+          <Col span={14}><Form.Item name="sourcePath" label="仓库源码路径" rules={[{ required: true, pattern: /^[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*\.py$/, message: '请输入仓库内相对 .py 路径' }]}>
+            <Input maxLength={512} placeholder="spark/order_daily.py" />
+          </Form.Item></Col>
+        </Row>
+        <Form.Item name="sha256" label="运行器文件 SHA-256" rules={[{ required: true, pattern: /^[0-9a-f]{64}$/, message: '请输入 64 位小写 SHA-256' }]}>
+          <Input maxLength={64} />
         </Form.Item>
       </Form>
     </Modal>

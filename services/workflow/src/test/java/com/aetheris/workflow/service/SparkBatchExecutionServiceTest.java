@@ -75,6 +75,7 @@ class SparkBatchExecutionServiceTest {
     private static SparkJobView job() {
         return new SparkJobView(9L, "job", 1, 1L, "local", "active", 2L, "artifact",
                 "order_daily_profile.py", "a".repeat(64), "approved",
+                8L, "jobs", "active", "b".repeat(40), "spark/order_daily_profile.py",
                 JsonNodeFactory.instance.objectNode(), JsonNodeFactory.instance.objectNode(),
                 List.of("hive_prod.dwd.dwd_order"), null,
                 "hdfs://localhost:9000/user/aetheris/managed/order_daily_profile",

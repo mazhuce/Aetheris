@@ -70,6 +70,9 @@ aetheris:
     connect-timeout: ${AETHERIS_SPARK_RUNNER_CONNECT_TIMEOUT:PT3S}
     poll-interval-ms: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:5000}
     queue-dispatch-interval-ms: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:2000}
+  git:
+    allowed-hosts: ${AETHERIS_GIT_ALLOWED_HOSTS:github.com,gitee.com}
+    connect-timeout-seconds: ${AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS:8}
   execution:
     worker-id: ${AETHERIS_EXECUTION_WORKER_ID:${HOSTNAME:local}}
     lease-grace-seconds: ${AETHERIS_EXECUTION_LEASE_GRACE_SECONDS:60}

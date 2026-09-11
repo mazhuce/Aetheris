@@ -135,9 +135,11 @@ public class ExecutionClaimCoordinator {
         int updated = jdbc.update("""
                 UPDATE workflow.execution_attempt
                 SET job_definition_id=?, job_version=?, artifact_digest=?, definition_digest=?,
+                    source_repository_id=?,source_commit_sha=?,source_path=?,
                     input_partitions_json=?::jsonb, output_partitions_json=?::jsonb
                 WHERE id=? AND fencing_token=? AND status='queued'
-                """, job.id(), job.version(), job.artifactDigest(), definition, inputs, outputs,
+                """, job.id(), job.version(), job.artifactDigest(), definition,
+                job.sourceRepositoryId(), job.sourceCommitSha(), job.sourcePath(), inputs, outputs,
                 claim.attemptId(), claim.fencingToken());
         if (updated != 1) throw new StaleExecutionException("Spark attempt 在准备提交时已失效");
     }

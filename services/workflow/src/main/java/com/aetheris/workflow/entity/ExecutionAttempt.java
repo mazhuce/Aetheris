@@ -31,6 +31,9 @@ public class ExecutionAttempt {
     private String parametersJson;
     private String parameterDigest;
     private String artifactDigest;
+    private Long sourceRepositoryId;
+    private String sourceCommitSha;
+    private String sourcePath;
     private String remoteHandle;
     private String applicationId;
     private String inputPartitionsJson;
@@ -89,6 +92,12 @@ public class ExecutionAttempt {
     public void setParameterDigest(String parameterDigest) { this.parameterDigest = parameterDigest; }
     public String getArtifactDigest() { return artifactDigest; }
     public void setArtifactDigest(String artifactDigest) { this.artifactDigest = artifactDigest; }
+    public Long getSourceRepositoryId() { return sourceRepositoryId; }
+    public void setSourceRepositoryId(Long sourceRepositoryId) { this.sourceRepositoryId = sourceRepositoryId; }
+    public String getSourceCommitSha() { return sourceCommitSha; }
+    public void setSourceCommitSha(String sourceCommitSha) { this.sourceCommitSha = sourceCommitSha; }
+    public String getSourcePath() { return sourcePath; }
+    public void setSourcePath(String sourcePath) { this.sourcePath = sourcePath; }
     public String getRemoteHandle() { return remoteHandle; }
     public void setRemoteHandle(String remoteHandle) { this.remoteHandle = remoteHandle; }
     public String getApplicationId() { return applicationId; }

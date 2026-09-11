@@ -2,6 +2,9 @@ package com.aetheris.workflow.controller;
 
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.aetheris.workflow.service.ExecutionAdapter;
+import com.aetheris.workflow.service.GitRepositoryService;
+import com.aetheris.workflow.service.GitRepositoryService.RepositoryInput;
+import com.aetheris.workflow.service.GitRepositoryService.RepositoryStatusInput;
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.ArtifactInput;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobInput;
@@ -30,15 +33,18 @@ public class ManagedSparkController {
     private final ManagedSparkCatalogService catalog;
     private final ExecutionAdapter adapter;
     private final SparkResourceQueueService resourceQueue;
+    private final GitRepositoryService gitRepositories;
     private final WorkflowAuthorizationService authorization;
 
     public ManagedSparkController(ManagedSparkCatalogService catalog,
                                   com.aetheris.workflow.service.SparkBatchExecutionAdapter adapter,
                                   SparkResourceQueueService resourceQueue,
+                                  GitRepositoryService gitRepositories,
                                   WorkflowAuthorizationService authorization) {
         this.catalog = catalog;
         this.adapter = adapter;
         this.resourceQueue = resourceQueue;
+        this.gitRepositories = gitRepositories;
         this.authorization = authorization;
     }
 
@@ -82,6 +88,55 @@ public class ManagedSparkController {
             return ResponseEntity.status(403).body(Map.of("message", "无权修改 Runner 状态"));
         }
         return action(() -> resourceQueue.changeStatus(id, input.status()));
+    }
+
+    @GetMapping("/repositories")
+    public ResponseEntity<?> repositories(
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看 Git 仓库"));
+        }
+        return ResponseEntity.ok(gitRepositories.repositories());
+    }
+
+    @PostMapping("/repositories")
+    public ResponseEntity<?> registerRepository(
+            @RequestBody RepositoryInput input,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权注册 Git 仓库"));
+        }
+        return action(() -> gitRepositories.register(input, username));
+    }
+
+    @PostMapping("/repositories/{id}/sync")
+    public ResponseEntity<?> synchronizeRepository(
+            @PathVariable long id,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权同步 Git 仓库"));
+        }
+        return action(() -> gitRepositories.synchronize(id, username));
+    }
+
+    @PostMapping("/repositories/{id}/status")
+    public ResponseEntity<?> changeRepositoryStatus(
+            @PathVariable long id, @RequestBody RepositoryStatusInput input,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权修改 Git 仓库状态"));
+        }
+        return action(() -> gitRepositories.changeStatus(id, input.status(), username));
+    }
+
+    @GetMapping("/repositories/{id}/revisions")
+    public ResponseEntity<?> revisions(
+            @PathVariable long id,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看 Git 修订历史"));
+        }
+        return action(() -> gitRepositories.revisions(id));
     }
 
     @GetMapping("/artifacts")

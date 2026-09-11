@@ -278,12 +278,20 @@ export interface SparkEnvironment {
 }
 export interface ManagedArtifact {
   id: number; name: string; version: string; artifactKey: string; sha256: string; status: string
+  sourceRepositoryId?: number; sourceRepositoryKey?: string; sourceRepositoryStatus?: string
+  commitSha?: string; sourcePath?: string
   createdBy?: string; approvedBy?: string; approvedAt?: string
+}
+export interface ManagedArtifactInput {
+  name: string; version: string; artifactKey: string; sha256: string
+  repositoryId: number; commitSha: string; sourcePath: string
 }
 export interface SparkJobDefinition {
   id: number; name: string; version: number; environmentId: number; environmentName: string
   artifactId: number; artifactName: string; artifactKey: string; artifactDigest: string
-  artifactStatus: string; inputTables: string[]; outputTable?: string; outputUri: string
+  artifactStatus: string; sourceRepositoryId?: number; sourceRepositoryKey?: string
+  sourceRepositoryStatus?: string; sourceCommitSha?: string; sourcePath?: string
+  inputTables: string[]; outputTable?: string; outputUri: string
   driverCores: number; driverMemoryMb: number; timeoutSeconds: number; maxRetries: number
   status: string; definitionDigest?: string; owner: string; description?: string
 }
@@ -300,13 +308,42 @@ export interface SparkRunnerInput {
   maxCores: number; maxMemoryMb: number; maxConcurrency: number
 }
 
+export interface GitRepository {
+  id: number; repositoryKey: string; name: string; remoteUrl: string; defaultBranch: string
+  credentialConfigured: boolean; status: 'active' | 'disabled'; currentCommitSha: string
+  lastSyncedAt: string; createdBy: string; createdAt: string; updatedAt: string
+}
+export interface GitRepositoryInput {
+  repositoryKey: string; name: string; remoteUrl: string; defaultBranch: string
+  credentialUsername?: string; credentialRef?: string
+}
+export interface GitRevision {
+  id: number; repositoryId: number; branchName: string; commitSha: string
+  discoveredBy: string; discoveredAt: string
+}
+
 export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
 export const listSparkEnvironments = () => http.get<SparkEnvironment[]>('/api/workflow/spark/environments').then((r) => r.data)
 export const listSparkRunners = () => http.get<SparkRunner[]>('/api/workflow/spark/runners').then((r) => r.data)
 export const registerSparkRunner = (input: SparkRunnerInput) => http.post<SparkRunner>('/api/workflow/spark/runners', input).then((r) => r.data)
 export const changeSparkRunnerStatus = (id: number, status: SparkRunner['status']) =>
   http.post<SparkRunner>(`/api/workflow/spark/runners/${id}/status`, { status }).then((r) => r.data)
+export const listGitRepositories = () => http.get<GitRepository[]>('/api/workflow/spark/repositories').then((r) => r.data)
+export const registerGitRepository = (input: GitRepositoryInput) =>
+  http.post<GitRepository>('/api/workflow/spark/repositories', input).then((r) => r.data)
+export const synchronizeGitRepository = (id: number) =>
+  http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/sync`).then((r) => r.data)
+export const changeGitRepositoryStatus = (id: number, status: GitRepository['status']) =>
+  http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/status`, { status }).then((r) => r.data)
+export const listGitRevisions = (id: number) =>
+  http.get<GitRevision[]>(`/api/workflow/spark/repositories/${id}/revisions`).then((r) => r.data)
 export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
+export const registerSparkArtifact = (input: ManagedArtifactInput) =>
+  http.post<ManagedArtifact>('/api/workflow/spark/artifacts', input).then((r) => r.data)
+export const approveSparkArtifact = (id: number) =>
+  http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/approve`).then((r) => r.data)
+export const revokeSparkArtifact = (id: number) =>
+  http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/revoke`).then((r) => r.data)
 export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)
 
 export interface PipelineRun {

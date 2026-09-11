@@ -1,6 +1,7 @@
 package com.aetheris.workflow.controller;
 
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
+import com.aetheris.workflow.service.GitRepositoryService;
 import com.aetheris.workflow.service.SparkBatchExecutionAdapter;
 import com.aetheris.workflow.service.SparkResourceQueueService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
@@ -23,7 +24,7 @@ class ManagedSparkControllerTest {
         when(authorization.mayManage("alice")).thenReturn(false);
         ManagedSparkController controller = new ManagedSparkController(
                 mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionAdapter.class),
-                queue, authorization);
+                queue, mock(GitRepositoryService.class), authorization);
 
         ResponseEntity<?> response = controller.runners("alice");
 
@@ -38,7 +39,7 @@ class ManagedSparkControllerTest {
         when(authorization.mayManage("alice")).thenReturn(false);
         ManagedSparkController controller = new ManagedSparkController(
                 mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionAdapter.class),
-                queue, authorization);
+                queue, mock(GitRepositoryService.class), authorization);
         SparkResourceQueueService.RunnerInput input = new SparkResourceQueueService.RunnerInput(
                 1L, "runner-a", "Runner A", "http://runner-a:18081", 4, 4096, 2);
 
@@ -46,5 +47,22 @@ class ManagedSparkControllerTest {
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         verify(queue, never()).register(input, "alice");
+    }
+
+    @Test
+    void repositoryRegistryHasDefenseInDepthAuthorization() {
+        GitRepositoryService repositories = mock(GitRepositoryService.class);
+        WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
+        when(authorization.mayManage("alice")).thenReturn(false);
+        ManagedSparkController controller = new ManagedSparkController(
+                mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionAdapter.class),
+                mock(SparkResourceQueueService.class), repositories, authorization);
+        GitRepositoryService.RepositoryInput input = new GitRepositoryService.RepositoryInput(
+                "jobs", "Jobs", "https://github.com/acme/jobs.git", "main", null, null);
+
+        ResponseEntity<?> response = controller.registerRepository(input, "alice");
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        verify(repositories, never()).register(input, "alice");
     }
 }
