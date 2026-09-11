@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SparkBatchExecutionAdapterContextTest {
 
@@ -26,6 +28,18 @@ class SparkBatchExecutionAdapterContextTest {
             assertThat(context.getBean(SparkBatchExecutionAdapter.class).health().status())
                     .isEqualTo("DISABLED");
         });
+    }
+
+    @Test
+    void runnerEndpointRejectsCredentialsPathsQueriesAndNonHttpSchemes() {
+        assertEquals("http://runner.local:18081",
+                SparkBatchExecutionAdapter.normalizeBaseUrl("HTTP://RUNNER.LOCAL:18081/"));
+        assertThrows(IllegalArgumentException.class,
+                () -> SparkBatchExecutionAdapter.normalizeBaseUrl("http://user:secret@runner:18081"));
+        assertThrows(IllegalArgumentException.class,
+                () -> SparkBatchExecutionAdapter.normalizeBaseUrl("http://runner:18081/jobs"));
+        assertThrows(IllegalArgumentException.class,
+                () -> SparkBatchExecutionAdapter.normalizeBaseUrl("file:///tmp/runner"));
     }
 
     @Configuration(proxyBeanMethods = false)

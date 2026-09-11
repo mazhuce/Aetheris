@@ -4,6 +4,7 @@ import com.aetheris.workflow.entity.Task;
 import com.aetheris.workflow.entity.TaskInstance;
 import com.aetheris.workflow.service.ExecutionClaimCoordinator.ExecutionClaim;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobView;
+import com.aetheris.workflow.service.SparkResourceQueueService.Admission;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -16,23 +17,46 @@ import static org.mockito.Mockito.*;
 
 class SparkBatchExecutionServiceTest {
     @Test
+    void unavailableCapacityKeepsAttemptQueuedWithoutRemoteSubmission() {
+        ManagedSparkCatalogService catalog = mock(ManagedSparkCatalogService.class);
+        SparkBatchExecutionAdapter adapter = mock(SparkBatchExecutionAdapter.class);
+        ExecutionClaimCoordinator coordinator = mock(ExecutionClaimCoordinator.class);
+        TaskLogService logs = mock(TaskLogService.class);
+        SparkResourceQueueService queue = mock(SparkResourceQueueService.class);
+        SparkBatchExecutionService service = new SparkBatchExecutionService(catalog, adapter, coordinator,
+                logs, mock(JdbcTemplate.class), mock(LineageEvidenceClient.class), queue);
+        Task task = task();
+        ExecutionClaim claim = claim();
+        when(catalog.runnableJob(9L)).thenReturn(job());
+
+        assertEquals("queued", service.submit(task, claim).getStatus());
+        verify(coordinator).prepareSparkAttempt(claim, task, job());
+        verify(queue).enqueue(claim, job());
+        verify(queue).tryAdmit(5L);
+        verifyNoInteractions(adapter);
+    }
+
+    @Test
     void unknownSubmitIsRecordedAndNeverRetriedInline() {
         ManagedSparkCatalogService catalog = mock(ManagedSparkCatalogService.class);
         SparkBatchExecutionAdapter adapter = mock(SparkBatchExecutionAdapter.class);
         ExecutionClaimCoordinator coordinator = mock(ExecutionClaimCoordinator.class);
         TaskLogService logs = mock(TaskLogService.class);
+        SparkResourceQueueService queue = mock(SparkResourceQueueService.class);
         SparkBatchExecutionService service = new SparkBatchExecutionService(catalog, adapter, coordinator,
-                logs, mock(JdbcTemplate.class), mock(LineageEvidenceClient.class));
+                logs, mock(JdbcTemplate.class), mock(LineageEvidenceClient.class), queue);
         Task task = task();
         ExecutionClaim claim = claim();
         when(catalog.runnableJob(9L)).thenReturn(job());
-        when(adapter.submit(any())).thenThrow(new SparkRunnerException("unknown", 503, true));
-        TaskInstance unknown = claim.instance(); unknown.setStatus("unknown");
+        when(queue.tryAdmit(5L)).thenReturn(new Admission(5L, 2L, "runner-1", "config://default"));
+        when(adapter.submit(eq("config://default"), any())).thenThrow(new SparkRunnerException("unknown", 503, true));
+        TaskInstance unknown = new TaskInstance(); unknown.setId(claim.instance().getId()); unknown.setStatus("unknown");
         when(coordinator.submissionUnknown(claim, "unknown")).thenReturn(unknown);
 
         assertEquals("unknown", service.submit(task, claim).getStatus());
-        verify(adapter, times(1)).submit(any());
-        verify(adapter, never()).reconcile(anyString());
+        verify(queue).enqueue(claim, job());
+        verify(adapter, times(1)).submit(eq("config://default"), any());
+        verify(adapter, never()).reconcile(anyString(), anyString());
         verify(coordinator).submissionUnknown(claim, "unknown");
     }
 
@@ -43,7 +67,7 @@ class SparkBatchExecutionServiceTest {
 
     private static ExecutionClaim claim() {
         TaskInstance instance = new TaskInstance(); instance.setId(4L); instance.setTaskId(3L);
-        instance.setBizDate("2026-09-08"); instance.setStatus("submitting");
+        instance.setBizDate("2026-09-08"); instance.setStatus("queued");
         instance.setAttempt(1); instance.setFencingToken(7L); instance.setActiveAttemptId(5L);
         return new ExecutionClaim(instance, 5L, 1, 7L, null);
     }

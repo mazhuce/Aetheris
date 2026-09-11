@@ -50,6 +50,7 @@ export interface TaskView {
 
 export type TaskInstanceStatus =
   | 'pending'
+  | 'queued'
   | 'submitting'
   | 'running'
   | 'cancel_requested'
@@ -165,6 +166,7 @@ export const INSTANCE_STATUS_META: Record<
   { label: string; color: string }
 > = {
   pending: { label: '等待中', color: 'default' },
+  queued: { label: '资源排队', color: 'default' },
   submitting: { label: '提交中', color: 'processing' },
   running: { label: '执行中', color: 'processing' },
   cancel_requested: { label: '取消中', color: 'warning' },
@@ -287,8 +289,23 @@ export interface SparkJobDefinition {
 }
 export interface SparkRunnerHealth { status: string; version?: string; activeJobs: number; maxConcurrency: number; message?: string }
 
+export interface SparkRunner {
+  id: number; environmentId: number; environmentName: string; runnerKey: string; name: string
+  baseUrl: string; maxCores: number; maxMemoryMb: number; maxConcurrency: number
+  status: 'active' | 'draining' | 'disabled'; activeJobs: number; usedCores: number
+  usedMemoryMb: number; queuedJobs: number; createdBy: string; createdAt: string; updatedAt: string
+}
+export interface SparkRunnerInput {
+  environmentId: number; runnerKey: string; name: string; baseUrl: string
+  maxCores: number; maxMemoryMb: number; maxConcurrency: number
+}
+
 export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
 export const listSparkEnvironments = () => http.get<SparkEnvironment[]>('/api/workflow/spark/environments').then((r) => r.data)
+export const listSparkRunners = () => http.get<SparkRunner[]>('/api/workflow/spark/runners').then((r) => r.data)
+export const registerSparkRunner = (input: SparkRunnerInput) => http.post<SparkRunner>('/api/workflow/spark/runners', input).then((r) => r.data)
+export const changeSparkRunnerStatus = (id: number, status: SparkRunner['status']) =>
+  http.post<SparkRunner>(`/api/workflow/spark/runners/${id}/status`, { status }).then((r) => r.data)
 export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
 export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)
 

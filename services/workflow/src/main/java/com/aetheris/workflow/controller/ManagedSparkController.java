@@ -5,6 +5,10 @@ import com.aetheris.workflow.service.ExecutionAdapter;
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.ArtifactInput;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobInput;
+import com.aetheris.workflow.service.SparkResourceQueueService;
+import com.aetheris.workflow.service.SparkResourceQueueService.RunnerInput;
+import com.aetheris.workflow.service.SparkResourceQueueService.RunnerStatusInput;
+import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,11 +29,17 @@ public class ManagedSparkController {
 
     private final ManagedSparkCatalogService catalog;
     private final ExecutionAdapter adapter;
+    private final SparkResourceQueueService resourceQueue;
+    private final WorkflowAuthorizationService authorization;
 
     public ManagedSparkController(ManagedSparkCatalogService catalog,
-                                  com.aetheris.workflow.service.SparkBatchExecutionAdapter adapter) {
+                                  com.aetheris.workflow.service.SparkBatchExecutionAdapter adapter,
+                                  SparkResourceQueueService resourceQueue,
+                                  WorkflowAuthorizationService authorization) {
         this.catalog = catalog;
         this.adapter = adapter;
+        this.resourceQueue = resourceQueue;
+        this.authorization = authorization;
     }
 
     @GetMapping("/health")
@@ -44,6 +54,35 @@ public class ManagedSparkController {
 
     @GetMapping("/environments")
     public Object environments() { return catalog.environments(); }
+
+    @GetMapping("/runners")
+    public ResponseEntity<?> runners(
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看 Runner 资源容量"));
+        }
+        return ResponseEntity.ok(resourceQueue.runners());
+    }
+
+    @PostMapping("/runners")
+    public ResponseEntity<?> registerRunner(
+            @RequestBody RunnerInput input,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权注册 Runner"));
+        }
+        return action(() -> resourceQueue.register(input, username));
+    }
+
+    @PostMapping("/runners/{id}/status")
+    public ResponseEntity<?> changeRunnerStatus(
+            @PathVariable long id, @RequestBody RunnerStatusInput input,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权修改 Runner 状态"));
+        }
+        return action(() -> resourceQueue.changeStatus(id, input.status()));
+    }
 
     @GetMapping("/artifacts")
     public Object artifacts() { return catalog.artifacts(); }

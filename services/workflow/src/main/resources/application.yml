@@ -69,6 +69,7 @@ aetheris:
     token: ${AETHERIS_SPARK_RUNNER_TOKEN:}
     connect-timeout: ${AETHERIS_SPARK_RUNNER_CONNECT_TIMEOUT:PT3S}
     poll-interval-ms: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:5000}
+    queue-dispatch-interval-ms: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:2000}
   execution:
     worker-id: ${AETHERIS_EXECUTION_WORKER_ID:${HOSTNAME:local}}
     lease-grace-seconds: ${AETHERIS_EXECUTION_LEASE_GRACE_SECONDS:60}

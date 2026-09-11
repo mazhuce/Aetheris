@@ -1,24 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
-import { CaretRightOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
+import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { CaretRightOutlined, PlusOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
-  cancelPipeline, cancelTaskInstance, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
-  listSparkEnvironments, listSparkJobs, listTasks, resolveTaskInstance, runTask, startPipeline,
-  retryPipeline,
+  cancelPipeline, cancelTaskInstance, changeSparkRunnerStatus, getPipelineRun, getSparkHealth, listAllInstances, listPipelineRuns, listSparkArtifacts,
+  listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, resolveTaskInstance, runTask, startPipeline,
+  registerSparkRunner, retryPipeline,
   type ExecutionResolutionInput,
   type ManagedArtifact, type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SparkEnvironment, type SparkJobDefinition,
-  type SparkRunnerHealth, type TaskInstance, type TaskView
+  type SparkRunner, type SparkRunnerHealth, type SparkRunnerInput, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
 import { canCancelPipeline, canResolveUnknownInstance, canRetryPipelineNode } from './pipelineActions'
+import { getCurrentRole } from '@/utils/access'
 
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
   const [health, setHealth] = useState<SparkRunnerHealth | null>(null)
   const [environments, setEnvironments] = useState<SparkEnvironment[]>([])
+  const [runners, setRunners] = useState<SparkRunner[]>([])
   const [artifacts, setArtifacts] = useState<ManagedArtifact[]>([])
   const [jobs, setJobs] = useState<SparkJobDefinition[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -31,22 +33,26 @@ export default function SparkDevelopmentPage() {
   const [bizDate, setBizDate] = useState<Dayjs>(dayjs().subtract(1, 'day'))
   const [busy, setBusy] = useState(false)
   const [pipelineAction, setPipelineAction] = useState<string>()
+  const [runnerEditorOpen, setRunnerEditorOpen] = useState(false)
   const [resolutionTarget, setResolutionTarget] = useState<{ instanceId: number; label: string; pipeline: boolean }>()
   const [resolutionForm] = Form.useForm<ExecutionResolutionInput>()
+  const [runnerForm] = Form.useForm<SparkRunnerInput>()
+  const isAdmin = getCurrentRole() === 'admin'
 
   const refresh = async () => {
     const settled = await Promise.allSettled([
-      getSparkHealth(), listSparkEnvironments(), listSparkArtifacts(), listSparkJobs(),
+      getSparkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]), listSparkArtifacts(), listSparkJobs(),
       listTasks(), listAllInstances(undefined, 100), listPipelineRuns()
     ])
     if (settled[0].status === 'fulfilled') setHealth(settled[0].value)
     else setHealth({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0 })
     if (settled[1].status === 'fulfilled') setEnvironments(settled[1].value)
-    if (settled[2].status === 'fulfilled') setArtifacts(settled[2].value)
-    if (settled[3].status === 'fulfilled') setJobs(settled[3].value)
-    if (settled[4].status === 'fulfilled') setTasks(settled[4].value)
-    if (settled[5].status === 'fulfilled') setInstances(settled[5].value)
-    if (settled[6].status === 'fulfilled') setPipelines(settled[6].value)
+    if (settled[2].status === 'fulfilled') setRunners(settled[2].value)
+    if (settled[3].status === 'fulfilled') setArtifacts(settled[3].value)
+    if (settled[4].status === 'fulfilled') setJobs(settled[4].value)
+    if (settled[5].status === 'fulfilled') setTasks(settled[5].value)
+    if (settled[6].status === 'fulfilled') setInstances(settled[6].value)
+    if (settled[7].status === 'fulfilled') setPipelines(settled[7].value)
   }
 
   useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 5000); return () => window.clearInterval(timer) }, [])
@@ -72,6 +78,34 @@ export default function SparkDevelopmentPage() {
   const cancel = async (id: number) => {
     try { await cancelTaskInstance(id); message.success('取消请求已确认'); await refresh() }
     catch (error) { message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || '取消失败') }
+  }
+
+  const createRunner = async () => {
+    let values: SparkRunnerInput
+    try { values = await runnerForm.validateFields() }
+    catch { return }
+    setPipelineAction('runner-create')
+    try {
+      await registerSparkRunner(values)
+      message.success('Runner 已完成健康校验并注册')
+      setRunnerEditorOpen(false)
+      runnerForm.resetFields()
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Runner 注册失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const updateRunnerStatus = async (runner: SparkRunner, status: SparkRunner['status']) => {
+    const action = `runner-${runner.id}-${status}`
+    setPipelineAction(action)
+    try {
+      await changeSparkRunnerStatus(runner.id, status)
+      message.success(status === 'active' ? 'Runner 已启用' : status === 'draining' ? 'Runner 已进入排空状态' : 'Runner 已停用')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Runner 状态修改失败')
+    } finally { setPipelineAction(undefined) }
   }
 
   const showPipeline = async (id: number) => {
@@ -165,7 +199,7 @@ export default function SparkDevelopmentPage() {
         { title: '实例', dataIndex: 'id', width: 80 }, { title: '任务', dataIndex: 'taskId', width: 80 },
         { title: '业务日期', dataIndex: 'bizDate' }, { title: '状态', dataIndex: 'status', render: (v: string) => <Tag>{v}</Tag> },
         { title: '耗时(ms)', dataIndex: 'durationMs' }, { title: '操作', width: 150, render: (_, row: TaskInstance) => <Space size={6}>
-          {['submitting', 'running', 'cancel_requested'].includes(row.status) && <Button danger size="small" icon={<StopOutlined />} onClick={() => void cancel(row.id)}>取消</Button>}
+          {['queued', 'submitting', 'running', 'cancel_requested'].includes(row.status) && <Button danger size="small" icon={<StopOutlined />} onClick={() => void cancel(row.id)}>取消</Button>}
           {canResolveUnknownInstance(row.status, row.id) && <Button size="small" onClick={() => openResolution(row.id, `Spark 实例 #${row.id}`)}>确认结果</Button>}
         </Space> }
       ]} /></DataSurface> },
@@ -175,7 +209,33 @@ export default function SparkDevelopmentPage() {
         { title: '资源', render: (_, v: SparkJobDefinition) => `${v.driverCores}C / ${v.driverMemoryMb}MB` }, { title: '状态', dataIndex: 'status' }
       ]} /> },
       { key: 'artifacts', label: '制品与环境', children: <Space direction="vertical" className="full-width-control">
-        <Typography.Text type="secondary">运行器只接受仓库白名单中的 PySpark 文件，并在提交前核对 SHA-256。</Typography.Text>
+        <Space className="full-width-control" style={{ justifyContent: 'space-between' }}>
+          <Typography.Text type="secondary">运行器只接受仓库白名单中的 PySpark 文件，并在提交前核对 SHA-256。</Typography.Text>
+          {isAdmin && <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            runnerForm.setFieldsValue({ maxCores: 2, maxMemoryMb: 2048, maxConcurrency: 1 })
+            setRunnerEditorOpen(true)
+          }}>注册 Runner</Button>}
+        </Space>
+        <Table<SparkRunner> rowKey="id" size="small" dataSource={runners} pagination={false} columns={[
+          { title: 'Runner', dataIndex: 'name' }, { title: '环境', dataIndex: 'environmentName' },
+          { title: '状态', dataIndex: 'status', render: statusTag },
+          { title: '作业', render: (_, value) => `${value.activeJobs} / ${value.maxConcurrency}` },
+          { title: '核心', render: (_, value) => `${value.usedCores} / ${value.maxCores}` },
+          { title: '内存', render: (_, value) => `${value.usedMemoryMb} / ${value.maxMemoryMb} MB` },
+          { title: '排队', dataIndex: 'queuedJobs' },
+          ...(isAdmin ? [{ title: '操作', width: 190, render: (_: unknown, value: SparkRunner) => <Space size={6}>
+            {value.status === 'active' && <Popconfirm title="将 Runner 置为排空状态？" description="不再接收新任务，现有任务继续运行。"
+              onConfirm={() => void updateRunnerStatus(value, 'draining')} okText="开始排空" cancelText="返回">
+              <Button size="small" loading={pipelineAction === `runner-${value.id}-draining`}>排空</Button>
+            </Popconfirm>}
+            {value.status !== 'active' && <Button size="small" loading={pipelineAction === `runner-${value.id}-active`}
+              onClick={() => void updateRunnerStatus(value, 'active')}>启用</Button>}
+            {value.status === 'draining' && <Popconfirm title="确认停用 Runner？" description="仍有活动作业时服务端会拒绝停用。"
+              onConfirm={() => void updateRunnerStatus(value, 'disabled')} okText="确认停用" cancelText="返回">
+              <Button danger size="small" loading={pipelineAction === `runner-${value.id}-disabled`}>停用</Button>
+            </Popconfirm>}
+          </Space> }] : [])
+        ]} />
         <Table rowKey="id" size="small" dataSource={artifacts} pagination={false} columns={[
           { title: '制品', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '文件', dataIndex: 'artifactKey' },
           { title: 'SHA-256', dataIndex: 'sha256', ellipsis: true }, { title: '状态', dataIndex: 'status' }
@@ -251,6 +311,37 @@ export default function SparkDevelopmentPage() {
           message: '请说明核对依据和结论（最多 512 字）' }]}>
           <Input.TextArea rows={4} maxLength={512} showCount placeholder="说明在哪里核对、由什么证据得出该结论" />
         </Form.Item>
+      </Form>
+    </Modal>
+    <Modal title="注册 Spark Runner" open={runnerEditorOpen} onCancel={() => setRunnerEditorOpen(false)}
+      onOk={() => void createRunner()} okText="健康校验并注册" cancelText="返回"
+      confirmLoading={pipelineAction === 'runner-create'} destroyOnClose>
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+        message="地址仅允许无凭据、无路径的 HTTP(S) 基础地址；注册前会执行健康检查。所有 Runner 使用独立的受管令牌。" />
+      <Form form={runnerForm} layout="vertical" preserve={false}>
+        <Form.Item name="environmentId" label="计算环境" rules={[{ required: true, message: '请选择计算环境' }]}>
+          <Select options={environments.filter((item) => item.status === 'active').map((item) => ({ value: item.id, label: item.name }))} />
+        </Form.Item>
+        <Form.Item name="runnerKey" label="Runner 标识" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9_-]{0,63}$/, message: '使用小写字母、数字、下划线或连字符，最长 64 位' }]}>
+          <Input maxLength={64} placeholder="例如 spark-runner-02" />
+        </Form.Item>
+        <Form.Item name="name" label="Runner 名称" rules={[{ required: true, whitespace: true, max: 128 }]}>
+          <Input maxLength={128} />
+        </Form.Item>
+        <Form.Item name="baseUrl" label="基础地址" rules={[{ required: true, type: 'url', message: '请输入 HTTP(S) 地址' }]}>
+          <Input placeholder="http://spark-runner-02:18081" />
+        </Form.Item>
+        <Row gutter={12}>
+          <Col span={8}><Form.Item name="maxCores" label="核心上限" rules={[{ required: true }]}>
+            <InputNumber min={1} max={256} precision={0} className="full-width-control" />
+          </Form.Item></Col>
+          <Col span={8}><Form.Item name="maxMemoryMb" label="内存上限 MB" rules={[{ required: true }]}>
+            <InputNumber min={512} max={1048576} precision={0} className="full-width-control" />
+          </Form.Item></Col>
+          <Col span={8}><Form.Item name="maxConcurrency" label="并发上限" rules={[{ required: true }]}>
+            <InputNumber min={1} max={256} precision={0} className="full-width-control" />
+          </Form.Item></Col>
+        </Row>
       </Form>
     </Modal>
   </div>

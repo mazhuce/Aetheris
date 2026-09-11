@@ -473,7 +473,7 @@ public class PipelineExecutionService {
     }
 
     private static boolean awaitingRemoteResult(TaskInstance instance) {
-        return Set.of("submitting", "running", "cancel_requested").contains(instance.getStatus())
+        return Set.of("queued", "submitting", "running", "cancel_requested").contains(instance.getStatus())
                 || ("unknown".equals(instance.getStatus()) && instance.getFinishedAt() == null);
     }
 

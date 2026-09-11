@@ -9,6 +9,7 @@ import com.aetheris.workflow.service.ExecutionAdapter.RemoteExecution;
 import com.aetheris.workflow.service.ExecutionAdapter.Submission;
 import com.aetheris.workflow.service.ExecutionClaimCoordinator.ExecutionClaim;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobView;
+import com.aetheris.workflow.service.SparkResourceQueueService.Admission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -28,7 +29,8 @@ public class SparkBatchExecutionService {
     private static final int LOG_PAGE_BYTES = 32 * 1024;
 
     private final ManagedSparkCatalogService catalog;
-    private final ExecutionAdapter adapter;
+    private final SparkBatchExecutionAdapter adapter;
+    private final SparkResourceQueueService resourceQueue;
     private final ExecutionClaimCoordinator coordinator;
     private final TaskLogService logService;
     private final JdbcTemplate jdbc;
@@ -39,9 +41,11 @@ public class SparkBatchExecutionService {
                                       ExecutionClaimCoordinator coordinator,
                                       TaskLogService logService,
                                       JdbcTemplate jdbc,
-                                      LineageEvidenceClient lineage) {
+                                      LineageEvidenceClient lineage,
+                                      SparkResourceQueueService resourceQueue) {
         this.catalog = catalog;
         this.adapter = adapter;
+        this.resourceQueue = resourceQueue;
         this.coordinator = coordinator;
         this.logService = logService;
         this.jdbc = jdbc;
@@ -51,13 +55,32 @@ public class SparkBatchExecutionService {
     public TaskInstance submit(Task task, ExecutionClaim claim) {
         SparkJobView job = catalog.runnableJob(task.getJobDefinitionId());
         coordinator.prepareSparkAttempt(claim, task, job);
+        resourceQueue.enqueue(claim, job);
+        Admission admission = resourceQueue.tryAdmit(claim.attemptId());
+        if (admission == null) {
+            writeLog(claim, "info", "Spark 作业已进入资源队列，等待可用 Runner 容量");
+            return claim.instance();
+        }
+        claim.instance().setStatus("submitting");
+        return dispatch(job, claim, admission);
+    }
+
+    private TaskInstance dispatch(SparkJobView job, ExecutionClaim claim, Admission admission) {
         String requestKey = requestKey(claim);
         try {
-            ManagedHandle handle = adapter.submit(new Submission(requestKey, job.artifactKey(),
+            adapter.validate(admission.baseUrl(), job.artifactKey(), job.artifactDigest());
+            ManagedHandle handle = adapter.submit(admission.baseUrl(), new Submission(requestKey, job.artifactKey(),
                     job.artifactDigest(), Map.of("bizDate", claim.instance().getBizDate(),
                             "attemptId", claim.attemptId()), job.driverCores(),
                     job.driverMemoryMb(), job.timeoutSeconds()));
-            TaskInstance instance = coordinator.submitted(claim, handle);
+            TaskInstance instance;
+            try {
+                instance = coordinator.submitted(claim, handle);
+            } catch (ExecutionClaimCoordinator.StaleExecutionException concurrentReconcile) {
+                TrackedAttempt current = trackedByAttempt(claim.attemptId());
+                if (current == null || !"running".equals(current.status())) throw concurrentReconcile;
+                instance = current.claim().instance();
+            }
             writeLog(claim, "info", "Spark 作业已提交，受管句柄 " + handle.id());
             return instance;
         } catch (SparkRunnerException error) {
@@ -66,7 +89,29 @@ public class SparkBatchExecutionService {
                 return coordinator.submissionUnknown(claim, error.getMessage());
             }
             writeLog(claim, "error", error.getMessage());
-            return coordinator.fail(claim, error.getMessage(), 0, 0);
+            TaskInstance failed = coordinator.fail(claim, error.getMessage(), 0, 0);
+            resourceQueue.release(claim.attemptId(), "submission_failed");
+            return failed;
+        }
+    }
+
+    /** Admits queued work after any workflow replica or runner releases capacity. */
+    @Scheduled(fixedDelayString = "${aetheris.spark-runner.queue-dispatch-interval-ms:2000}")
+    public void dispatchQueuedAttempts() {
+        resourceQueue.releaseTerminalAllocations();
+        for (Admission admission : resourceQueue.admitQueued(32)) {
+            TrackedAttempt attempt = trackedByAttempt(admission.attemptId());
+            if (attempt == null || attempt.jobDefinitionId() == null) {
+                resourceQueue.release(admission.attemptId(), "attempt_missing");
+                continue;
+            }
+            try {
+                dispatch(catalog.job(attempt.jobDefinitionId()), attempt.claim(), admission);
+            } catch (ExecutionClaimCoordinator.StaleExecutionException stale) {
+                resourceQueue.release(admission.attemptId(), "stale_attempt");
+            } catch (RuntimeException error) {
+                log.warn("Queued Spark attempt {} dispatch failed: {}", admission.attemptId(), error.getMessage());
+            }
         }
     }
 
@@ -86,13 +131,23 @@ public class SparkBatchExecutionService {
 
     public TaskInstance cancel(long instanceId) {
         TrackedAttempt attempt = tracked(instanceId);
+        if (attempt != null && "queued".equals(attempt.status()) && attempt.remoteHandle() == null) {
+            TaskInstance cancelled = coordinator.completeRemote(attempt.claim(), new RemoteExecution(
+                    null, "cancelled", null, null, null, null, Map.of(), OffsetDateTime.now().toString()));
+            resourceQueue.release(attempt.claim().attemptId(), "cancelled_while_queued");
+            return cancelled;
+        }
         if (attempt == null || attempt.remoteHandle() == null) {
             throw new IllegalStateException("该实例没有可取消的 Spark 运行句柄");
         }
         coordinator.requestCancel(attempt.claim());
-        RemoteExecution remote = adapter.cancel(attempt.remoteHandle());
+        RemoteExecution remote = adapter.cancel(attempt.runnerBaseUrl(), attempt.remoteHandle());
         syncLogs(attempt.withStatus("cancel_requested"));
-        if (remote.terminal()) return coordinator.completeRemote(attempt.claim(), remote);
+        if (remote.terminal()) {
+            TaskInstance completed = coordinator.completeRemote(attempt.claim(), remote);
+            resourceQueue.release(attempt.claim().attemptId(), remote.status());
+            return completed;
+        }
         coordinator.heartbeat(attempt.claim(), remote.applicationId());
         return attempt.claim().instance();
     }
@@ -102,13 +157,13 @@ public class SparkBatchExecutionService {
         if (attempt == null || attempt.remoteHandle() == null) {
             throw new IllegalArgumentException("该实例没有 Spark 日志");
         }
-        return adapter.logs(attempt.remoteHandle(), offset, limit);
+        return adapter.logs(attempt.runnerBaseUrl(), attempt.remoteHandle(), offset, limit);
     }
 
     private void reconcile(TrackedAttempt attempt) {
         TrackedAttempt resolved = attempt;
         if (resolved.remoteHandle() == null) {
-            ManagedHandle handle = adapter.reconcile(requestKey(resolved.claim())).orElse(null);
+            ManagedHandle handle = adapter.reconcile(resolved.runnerBaseUrl(), requestKey(resolved.claim())).orElse(null);
             if (handle == null) return; // unknown stays unknown; never issue another POST.
             coordinator.submitted(resolved.claim(), handle);
             resolved = resolved.withHandle(handle.id());
@@ -125,9 +180,12 @@ public class SparkBatchExecutionService {
             coordinator.submitted(resolved.claim(), recovered);
             resolved = resolved.withStatus("running");
         }
-        RemoteExecution remote = adapter.status(resolved.remoteHandle());
+        RemoteExecution remote = adapter.status(resolved.runnerBaseUrl(), resolved.remoteHandle());
         if (remote.terminal()) {
             coordinator.completeRemote(resolved.claim(), remote);
+            if (!"unknown".equals(remote.status())) {
+                resourceQueue.release(resolved.claim().attemptId(), remote.status());
+            }
             if ("succeeded".equals(remote.status()) && resolved.jobDefinitionId() != null) {
                 lineage.spark(resolved.claim().instance().getTaskId(), resolved.claim(),
                         catalog.job(resolved.jobDefinitionId()));
@@ -139,7 +197,7 @@ public class SparkBatchExecutionService {
 
     private void syncLogs(TrackedAttempt attempt) {
         long cursor = Math.max(0, attempt.logCursor());
-        LogPage page = adapter.logs(attempt.remoteHandle(), cursor, LOG_PAGE_BYTES);
+        LogPage page = adapter.logs(attempt.runnerBaseUrl(), attempt.remoteHandle(), cursor, LOG_PAGE_BYTES);
         if (page.content() != null && !page.content().isBlank()) {
             String bounded = page.content().length() > LOG_PAGE_BYTES
                     ? page.content().substring(0, LOG_PAGE_BYTES) : page.content();
@@ -152,7 +210,7 @@ public class SparkBatchExecutionService {
 
     private List<TrackedAttempt> activeAttempts() {
         return jdbc.query(selectTracked() + " WHERE attempt.task_type='spark' "
-                + "AND attempt.status IN ('queued','submitting','running','cancel_requested','unknown') "
+                + "AND attempt.status IN ('submitting','running','cancel_requested','unknown') "
                 + "ORDER BY attempt.id", this::mapTracked);
     }
 
@@ -160,6 +218,13 @@ public class SparkBatchExecutionService {
         List<TrackedAttempt> rows = jdbc.query(selectTracked()
                 + " WHERE instance.id=? AND instance.active_attempt_id=attempt.id",
                 this::mapTracked, instanceId);
+        return rows.isEmpty() ? null : rows.getFirst();
+    }
+
+    private TrackedAttempt trackedByAttempt(long attemptId) {
+        List<TrackedAttempt> rows = jdbc.query(selectTracked()
+                + " WHERE attempt.id=? AND instance.active_attempt_id=attempt.id",
+                this::mapTracked, attemptId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
 
@@ -175,10 +240,11 @@ public class SparkBatchExecutionService {
                        instance.lease_expires_at instance_lease_expires_at,
                        instance.created_at instance_created_at, instance.updated_at instance_updated_at,
                        attempt.id attempt_id, attempt.remote_handle, attempt.log_cursor,
-                       attempt.job_definition_id,
+                       attempt.job_definition_id,COALESCE(runner.base_url,'config://default') runner_base_url,
                        attempt.status attempt_status
                 FROM workflow.execution_attempt attempt
                 JOIN workflow.task_instance instance ON instance.id=attempt.instance_id
+                LEFT JOIN workflow.compute_runner runner ON runner.id=attempt.runner_id
                 """;
     }
 
@@ -203,7 +269,8 @@ public class SparkBatchExecutionService {
         ExecutionClaim claim = new ExecutionClaim(instance, attemptId, instance.getAttempt(),
                 instance.getFencingToken(), instance.getLeaseExpiresAt());
         return new TrackedAttempt(claim, rs.getString("remote_handle"), rs.getLong("log_cursor"),
-                rs.getString("attempt_status"), (Long) rs.getObject("job_definition_id"));
+                rs.getString("attempt_status"), (Long) rs.getObject("job_definition_id"),
+                rs.getString("runner_base_url"));
     }
 
     private void writeLog(ExecutionClaim claim, String level, String message) {
@@ -224,8 +291,8 @@ public class SparkBatchExecutionService {
     }
 
     private record TrackedAttempt(ExecutionClaim claim, String remoteHandle, long logCursor,
-                                  String status, Long jobDefinitionId) {
-        TrackedAttempt withHandle(String value) { return new TrackedAttempt(claim, value, logCursor, status, jobDefinitionId); }
-        TrackedAttempt withStatus(String value) { return new TrackedAttempt(claim, remoteHandle, logCursor, value, jobDefinitionId); }
+                                  String status, Long jobDefinitionId, String runnerBaseUrl) {
+        TrackedAttempt withHandle(String value) { return new TrackedAttempt(claim, value, logCursor, status, jobDefinitionId, runnerBaseUrl); }
+        TrackedAttempt withStatus(String value) { return new TrackedAttempt(claim, remoteHandle, logCursor, value, jobDefinitionId, runnerBaseUrl); }
     }
 }

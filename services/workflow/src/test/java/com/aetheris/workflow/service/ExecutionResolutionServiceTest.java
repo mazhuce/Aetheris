@@ -83,10 +83,11 @@ class ExecutionResolutionServiceTest {
         assertEquals("success", result.resolvedStatus());
         assertEquals("application_123", result.evidenceRef());
         ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-        verify(jdbc, org.mockito.Mockito.times(3)).update(sql.capture(), any(Object[].class));
+        verify(jdbc, org.mockito.Mockito.times(4)).update(sql.capture(), any(Object[].class));
         assertTrue(sql.getAllValues().get(0).contains("execution_attempt"));
         assertTrue(sql.getAllValues().get(1).contains("task_instance"));
         assertTrue(sql.getAllValues().get(2).contains("manual_resolution"));
+        assertTrue(sql.getAllValues().get(3).contains("spark_resource_allocation"));
     }
 
     private static ResultSet unknownAttemptRow(String taskType, String remoteHandle) throws Exception {

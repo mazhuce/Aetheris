@@ -124,6 +124,11 @@ public class ExecutionResolutionService {
                 """, current.attemptId(), attemptStatus, reason,
                 json(Map.of("resolutionId", resolution.id(), "resolvedBy", resolvedBy,
                         "evidenceRef", evidenceRef, "instanceStatus", targetStatus)));
+        jdbc.update("""
+                UPDATE workflow.spark_resource_allocation
+                SET status='released',released_at=now(),release_reason='manual_resolution'
+                WHERE attempt_id=? AND status IN ('queued','admitted')
+                """, current.attemptId());
         return resolution;
     }
 

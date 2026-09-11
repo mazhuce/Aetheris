@@ -60,7 +60,7 @@ public class ExecutionClaimCoordinator {
     private ExecutionClaim claimInTransaction(
             Task task, String bizDate, String triggerType, String triggeredBy,
             OffsetDateTime leaseExpiresAt) {
-        String initialStatus = "spark".equals(task.getTaskType()) ? "submitting" : "running";
+        String initialStatus = "spark".equals(task.getTaskType()) ? "queued" : "running";
         String claimSql = """
                 INSERT INTO workflow.task_instance
                     (task_id, biz_date, status, trigger_type, attempt, started_at, finished_at,
@@ -74,12 +74,10 @@ public class ExecutionClaimCoordinator {
                     triggered_by = EXCLUDED.triggered_by, updated_at = now(),
                     fencing_token = task_instance.fencing_token + 1, heartbeat_at = now(),
                     lease_expires_at = EXCLUDED.lease_expires_at
-                -- Unknown may still represent a live remote Spark application. It is
-                -- never reclaimed by lease expiry; the reconciler must resolve it first.
+                -- Active or unknown work may still represent a live remote execution.
+                -- Lease recovery must classify it before another attempt can be claimed.
                 WHERE task_instance.status NOT IN (""" + BLOCKING_STATES + """
-                    ) OR (task_instance.status IN (""" + ACTIVE_STATES + """
-                       ) AND task_instance.lease_expires_at IS NOT NULL
-                          AND task_instance.lease_expires_at < now())
+                    )
                 RETURNING id, task_id, biz_date, status, trigger_type, attempt, started_at,
                           finished_at, duration_ms, affected_rows, error_message, triggered_by,
                           active_attempt_id, fencing_token, heartbeat_at, lease_expires_at,
@@ -138,7 +136,7 @@ public class ExecutionClaimCoordinator {
                 UPDATE workflow.execution_attempt
                 SET job_definition_id=?, job_version=?, artifact_digest=?, definition_digest=?,
                     input_partitions_json=?::jsonb, output_partitions_json=?::jsonb
-                WHERE id=? AND fencing_token=? AND status='submitting'
+                WHERE id=? AND fencing_token=? AND status='queued'
                 """, job.id(), job.version(), job.artifactDigest(), definition, inputs, outputs,
                 claim.attemptId(), claim.fencingToken());
         if (updated != 1) throw new StaleExecutionException("Spark attempt 在准备提交时已失效");
@@ -292,18 +290,38 @@ public class ExecutionClaimCoordinator {
         Integer updated = transactions.execute(status -> jdbc.update("""
                 WITH expired AS (
                     UPDATE workflow.execution_attempt
-                    SET status='unknown', error_code='LEASE_EXPIRED',
-                        error_message='执行租约过期，远端结果尚未确认', heartbeat_at=now()
+                    SET status=CASE WHEN status='queued' THEN 'timed_out' ELSE 'unknown' END,
+                        error_code='LEASE_EXPIRED',
+                        error_message=CASE WHEN status='queued'
+                            THEN '资源排队租约过期，未向远端提交'
+                            ELSE '执行租约过期，远端结果尚未确认' END,
+                        finished_at=CASE WHEN status='queued' THEN now() ELSE finished_at END,
+                        heartbeat_at=now()
                     WHERE status IN (""" + ACTIVE_STATES + """
                     ) AND lease_expires_at IS NOT NULL AND lease_expires_at < now()
-                    RETURNING id, instance_id, fencing_token
+                    RETURNING id, instance_id, fencing_token, status
+                ), recovered AS (
+                    UPDATE workflow.task_instance instance
+                    SET status=expired.status,
+                        error_message=CASE WHEN expired.status='timed_out'
+                            THEN '资源排队超时，未向远端提交'
+                            ELSE '执行租约过期，正在等待核对' END,
+                        finished_at=CASE WHEN expired.status='timed_out' THEN now() ELSE instance.finished_at END,
+                        lease_expires_at=CASE WHEN expired.status='timed_out' THEN NULL ELSE instance.lease_expires_at END,
+                        updated_at=now()
+                    FROM expired
+                    WHERE instance.id=expired.instance_id
+                      AND instance.active_attempt_id=expired.id
+                      AND instance.fencing_token=expired.fencing_token
+                    RETURNING expired.id,expired.status
                 )
-                UPDATE workflow.task_instance instance
-                SET status='unknown', error_message='执行租约过期，正在等待核对', updated_at=now()
-                FROM expired
-                WHERE instance.id=expired.instance_id
-                  AND instance.active_attempt_id=expired.id
-                  AND instance.fencing_token=expired.fencing_token
+                INSERT INTO workflow.execution_event
+                    (attempt_id,event_type,to_status,message,details_json)
+                SELECT id,'lease_expired',status,
+                       CASE WHEN status='timed_out' THEN '排队租约过期，已安全释放'
+                            ELSE '执行租约过期，等待远端结果核对' END,
+                       '{}'::jsonb
+                FROM recovered
                 """));
         return updated == null ? 0 : updated;
     }

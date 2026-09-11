@@ -135,7 +135,6 @@ public class ManagedSparkCatalogService {
         if (!"published".equals(job.status())) throw new IllegalStateException("Spark 作业尚未发布");
         if (!"approved".equals(job.artifactStatus())) throw new IllegalStateException("作业制品未获批准");
         if (!"active".equals(job.environmentStatus())) throw new IllegalStateException("计算环境已停用");
-        adapter.validate(job.artifactKey(), job.artifactDigest());
         return job;
     }
 

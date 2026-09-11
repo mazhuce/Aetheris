@@ -1,13 +1,13 @@
 import type { AxiosResponse } from 'axios'
 import type { Mock } from 'vitest'
 import http from './http'
-import { listExecutionAttempts, type ExecutionAttempt } from './workflow'
+import { changeSparkRunnerStatus, listExecutionAttempts, registerSparkRunner, type ExecutionAttempt, type SparkRunner } from './workflow'
 
 vi.mock('./http', () => ({
-  default: { get: vi.fn() }
+  default: { get: vi.fn(), post: vi.fn() }
 }))
 
-const mockedHttp = http as unknown as { get: Mock }
+const mockedHttp = http as unknown as { get: Mock; post: Mock }
 
 describe('workflow api', () => {
   it('loads immutable execution attempts for one logical instance', async () => {
@@ -29,5 +29,19 @@ describe('workflow api', () => {
 
     await expect(listExecutionAttempts(7)).resolves.toEqual(attempts)
     expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/tasks/instances/7/attempts')
+  })
+
+  it('uses manager-only runner registration and lifecycle endpoints', async () => {
+    const runner = { id: 3, status: 'active' } as SparkRunner
+    mockedHttp.post.mockResolvedValue({ data: runner } as AxiosResponse<SparkRunner>)
+    const input = {
+      environmentId: 1, runnerKey: 'runner-02', name: 'Runner 02',
+      baseUrl: 'http://runner-02:18081', maxCores: 4, maxMemoryMb: 4096, maxConcurrency: 2
+    }
+
+    await expect(registerSparkRunner(input)).resolves.toBe(runner)
+    await expect(changeSparkRunnerStatus(3, 'draining')).resolves.toBe(runner)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(1, '/api/workflow/spark/runners', input)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(2, '/api/workflow/spark/runners/3/status', { status: 'draining' })
   })
 })

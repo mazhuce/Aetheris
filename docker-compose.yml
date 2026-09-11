@@ -12,6 +12,11 @@ x-java-runtime: &java-runtime
   mem_limit: 768m
   cpus: 1.0
 
+x-database-pool: &database-pool
+  # 为扩容和运维连接预留 PostgreSQL 容量；环境变量仍可按部署规模覆盖。
+  SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: ${AETHERIS_DB_POOL_MIN_IDLE:-1}
+  SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: ${AETHERIS_DB_POOL_MAX_SIZE:-8}
+
 services:
   redis:
     image: docker.1panel.live/library/redis:7.4-alpine
@@ -67,6 +72,7 @@ services:
       dockerfile: services/system/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -88,6 +94,7 @@ services:
       dockerfile: services/metadata/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -110,6 +117,7 @@ services:
       dockerfile: services/serving/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -137,6 +145,7 @@ services:
       dockerfile: services/quality/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -165,6 +174,7 @@ services:
       dockerfile: services/ingestion/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -193,6 +203,7 @@ services:
       dockerfile: services/governance/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -217,6 +228,7 @@ services:
         JAVA_IMAGE: ${JAVA_IMAGE:-docker.1panel.live/library/eclipse-temurin:21-jre}
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -239,6 +251,7 @@ services:
       AETHERIS_SPARK_RUNNER_BASE_URL: ${AETHERIS_SPARK_RUNNER_BASE_URL:-http://host.docker.internal:18081}
       AETHERIS_SPARK_RUNNER_TOKEN: ${AETHERIS_SPARK_RUNNER_TOKEN:-}
       AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:-5000}
+      AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:-2000}
       AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS: ${AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS:-120}
       AETHERIS_PIPELINE_LEASE_GRACE_SECONDS: ${AETHERIS_PIPELINE_LEASE_GRACE_SECONDS:-120}
       AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS: ${AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS:-30000}
@@ -258,6 +271,7 @@ services:
       dockerfile: services/ai-agent/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}
@@ -286,6 +300,7 @@ services:
       dockerfile: services/auth/Dockerfile
     restart: unless-stopped
     environment:
+      <<: *database-pool
       DB_HOST: postgres
       DB_PORT: "5432"
       DB_NAME: ${DB_NAME:-aetheris}

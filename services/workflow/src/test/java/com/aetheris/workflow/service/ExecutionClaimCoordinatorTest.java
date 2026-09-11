@@ -52,7 +52,7 @@ class ExecutionClaimCoordinatorTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void unknownResultCannotBeReclaimedEvenAfterItsLeaseExpires() {
+    void activeOrUnknownResultCannotBeReclaimedBeforeLeaseRecovery() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.query(anyString(), any(RowMapper.class), any(Object[].class)))
                 .thenReturn(List.of());
@@ -68,7 +68,23 @@ class ExecutionClaimCoordinatorTest {
         verify(jdbc).query(sql.capture(), any(RowMapper.class), any(Object[].class));
         String normalized = sql.getValue().replaceAll("\\s+", " ").replaceAll("\\s+\\)", ")");
         assertTrue(normalized.contains("status NOT IN ('queued','submitting','running','cancel_requested','unknown')"));
-        assertTrue(normalized.contains("status IN ('queued','submitting','running','cancel_requested')"));
+        assertTrue(!normalized.contains("lease_expires_at < now()"));
+    }
+
+    @Test
+    void leaseRecoveryTimesOutNeverSubmittedQueueWorkButQuarantinesRemoteWork() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.update(anyString())).thenReturn(2);
+        ExecutionClaimCoordinator coordinator = new ExecutionClaimCoordinator(
+                jdbc, noOpTransactions(), new ObjectMapper(), "worker-test", 60);
+
+        assertEquals(2, coordinator.reconcileExpiredLeases());
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).update(sql.capture());
+        String normalized = sql.getValue().replaceAll("\\s+", " ");
+        assertTrue(normalized.contains("WHEN status='queued' THEN 'timed_out' ELSE 'unknown'"));
+        assertTrue(normalized.contains("INSERT INTO workflow.execution_event"));
     }
 
     private static PlatformTransactionManager noOpTransactions() {
