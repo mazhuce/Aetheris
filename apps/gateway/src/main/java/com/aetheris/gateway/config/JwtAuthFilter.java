@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
@@ -103,8 +104,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     /** 包级可见：验签密钥派生逻辑（供同包测试验证短密钥拒绝）。 */
     static SecretKey parseKey(String secret) {
         byte[] keyBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
+        if (keyBytes.length < 32 || "change-me-to-a-long-random-secret".equals(secret)) {
+            throw new IllegalStateException("JWT_SECRET must be a unique random value of at least 32 UTF-8 bytes");
         }
         return Keys.hmacShaKeyFor(keyBytes);
     }
@@ -165,6 +166,12 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         exchange.getAttributes().put(AUTHENTICATED_UID_ATTRIBUTE, uid);
 
         String identitySignature = identitySigner.sign(uid, username);
+        String requestId = exchange.getRequest().getHeaders().getFirst("X-Request-Id");
+        if (requestId == null || requestId.isBlank() || requestId.length() > 128) {
+            requestId = UUID.randomUUID().toString();
+        }
+        exchange.getResponse().getHeaders().set("X-Request-Id", requestId);
+        final String propagatedRequestId = requestId;
         ServerHttpRequest mutated = exchange.getRequest()
                 .mutate()
                 .headers(headers -> {
@@ -176,6 +183,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     if (identitySignature != null) {
                         headers.set(IdentitySigner.IDENTITY_HEADER, identitySignature);
                     }
+                    headers.set("X-Request-Id", propagatedRequestId);
                 })
                 .build();
         ServerWebExchange authenticated = exchange.mutate().request(mutated).build();

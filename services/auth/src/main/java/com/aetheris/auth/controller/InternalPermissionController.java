@@ -3,6 +3,8 @@ package com.aetheris.auth.controller;
 import com.aetheris.auth.audit.PermissionAuditClient;
 import com.aetheris.auth.audit.PermissionEventRequest;
 import com.aetheris.auth.dto.MutateCheckRequest;
+import com.aetheris.auth.dto.BatchPermissionCheckRequest;
+import com.aetheris.auth.dto.BatchPermissionCheckResponse;
 import com.aetheris.auth.dto.PermissionCheckRequest;
 import com.aetheris.auth.dto.PermissionCheckResponse;
 import com.aetheris.auth.dto.SubjectRequest;
@@ -93,6 +95,15 @@ public class InternalPermissionController {
         PermissionDecisionService.Visibility visibility =
                 decisionService.visibility(request.username(), request.resourceType(), request.action());
         return new VisibilityResponse(visibility.mode().name(), visibility.ids());
+    }
+
+    @PostMapping("/check-batch")
+    public BatchPermissionCheckResponse checkBatch(@Valid @RequestBody BatchPermissionCheckRequest request) {
+        return new BatchPermissionCheckResponse(new java.util.ArrayList<>(decisionService.allowedIds(
+                request.username(), request.resourceType(), request.action(), request.items().stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                com.aetheris.auth.dto.BatchPermissionCheckItem::resourceId,
+                                item -> item.ctx() == null ? Map.of() : item.ctx(), (left, right) -> left)))));
     }
 
     /** 权限版本：下游服务用版本号做本地缓存失效。 */

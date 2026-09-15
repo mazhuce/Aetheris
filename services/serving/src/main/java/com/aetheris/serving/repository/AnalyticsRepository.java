@@ -115,6 +115,11 @@ public class AnalyticsRepository {
 
     @Transactional
     public Optional<Dashboard> publishDashboard(Long id, String username) {
+        // Serialize version allocation inside the transaction; otherwise two
+        // concurrent publishers can both calculate the same next version.
+        if (jdbc.query("SELECT id FROM serving.bi_dashboard WHERE id = ? FOR UPDATE", (rs, row) -> rs.getLong("id"), id).isEmpty()) {
+            return Optional.empty();
+        }
         Optional<Dashboard> existing = findDashboard(id);
         if (existing.isEmpty()) return Optional.empty();
         Dashboard dashboard = existing.get();

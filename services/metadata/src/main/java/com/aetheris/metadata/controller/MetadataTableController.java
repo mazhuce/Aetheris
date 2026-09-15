@@ -188,9 +188,11 @@ public class MetadataTableController {
 
     private List<MetadataTable> filteredList(HttpServletRequest request, List<MetadataTable> tables) {
         String username = security.requireIdentity(request).username();
+        java.util.Set<Long> allowed = security.allowedIds(username, "table", "view",
+                tables.stream().collect(java.util.stream.Collectors.toMap(MetadataTable::getId,
+                        table -> domainCtx(table.getBusinessDomainId()), (left, right) -> left)));
         return tables.stream()
-                .filter(table -> security.isAllowed(username, "table", table.getId(), "view",
-                        domainCtx(table.getBusinessDomainId())))
+                .filter(table -> allowed.contains(table.getId()))
                 .toList();
     }
 

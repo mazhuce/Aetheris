@@ -122,6 +122,12 @@ public class QualityExecutionService {
         if (expression.contains(";") || upper.contains("--") || upper.contains("/*") || upper.contains("*/")) {
             throw new IllegalArgumentException("规则表达式只允许单条语句且不能包含注释");
         }
+        if (upper.matches(".*\\b(DROP|TRUNCATE|ALTER|INSERT|UPDATE|DELETE|GRANT|REVOKE|COPY|CALL|PG_READ_FILE|LOAD_FILE|SLEEP)\\b.*")) {
+            throw new IllegalArgumentException("规则表达式包含禁止的 SQL 关键字");
+        }
+        if (!expression.matches("[A-Za-z0-9_.$\\s(),.'\"<>!=+*/%-]+")) {
+            throw new IllegalArgumentException("规则表达式包含不支持的字符");
+        }
     }
 
     private void updateRule(QualityRule rule, String status, Long violations, String error) {

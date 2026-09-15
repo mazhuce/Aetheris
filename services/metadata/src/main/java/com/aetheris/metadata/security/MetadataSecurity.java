@@ -66,6 +66,11 @@ public class MetadataSecurity {
         return permissionClient.check(username, resourceType, resourceId, action, ctx).allowed();
     }
 
+    public java.util.Set<Long> allowedIds(String username, String resourceType, String action,
+                                          Map<Long, Map<String, String>> resourceContexts) {
+        return permissionClient.checkBatch(username, resourceType, action, resourceContexts);
+    }
+
     /** 请求某资源类型读列表时的可见范围（按业务域根资源收敛）。 */
     public Scope visibility(HttpServletRequest request, String resourceType, String action) {
         AetherisIdentity identity = requireIdentity(request);

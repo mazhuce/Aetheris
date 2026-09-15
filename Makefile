@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help init dev test smoke backend-build frontend-build build up down logs clean
+.PHONY: help init dev test smoke observability-smoke backend-build frontend-build build up down logs clean backup restore
 
 MAVEN := mvn -f pom.xml -s scripts/maven-mirror-settings.xml
 
@@ -16,6 +16,9 @@ help:
 	@echo "make down    停止服务"
 	@echo "make logs    查看日志"
 	@echo "make clean   清理构建产物"
+	@echo "make backup  导出 PostgreSQL 备份（BACKUP_DIR 可覆盖）"
+	@echo "make restore BACKUP_FILE=... 恢复 PostgreSQL 备份"
+	@echo "make observability-smoke 检查各服务 Prometheus 指标端点"
 
 init:
 	docker compose up --build -d
@@ -30,6 +33,9 @@ test:
 
 smoke:
 	bash scripts/smoke-test.sh
+
+observability-smoke:
+	pwsh -NoProfile -File scripts/observability-smoke.ps1
 
 backend-build:
 	$(MAVEN) package
@@ -51,3 +57,10 @@ logs:
 
 clean:
 	$(MAVEN) clean
+
+backup:
+	pwsh -NoProfile -File scripts/backup-postgres.ps1 -OutputDir "$${BACKUP_DIR:-./backups}"
+
+restore:
+	@test -n "$(BACKUP_FILE)" || (echo "BACKUP_FILE is required"; exit 2)
+	pwsh -NoProfile -File scripts/restore-postgres.ps1 -BackupFile "$(BACKUP_FILE)"

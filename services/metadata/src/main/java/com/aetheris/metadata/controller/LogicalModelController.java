@@ -105,9 +105,11 @@ public class LogicalModelController {
 
     private List<LogicalModel> filteredList(HttpServletRequest request, List<LogicalModel> models) {
         String username = security.requireIdentity(request).username();
+        java.util.Set<Long> allowed = security.allowedIds(username, "model", "view",
+                models.stream().collect(java.util.stream.Collectors.toMap(LogicalModel::getId,
+                        model -> domainCtx(model.getBusinessDomainId()), (left, right) -> left)));
         return models.stream()
-                .filter(model -> security.isAllowed(username, "model", model.getId(), "view",
-                        domainCtx(model.getBusinessDomainId())))
+                .filter(model -> allowed.contains(model.getId()))
                 .toList();
     }
 

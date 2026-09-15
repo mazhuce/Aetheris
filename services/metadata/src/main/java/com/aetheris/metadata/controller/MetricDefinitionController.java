@@ -112,9 +112,11 @@ public class MetricDefinitionController {
 
     private List<MetricDefinition> filteredList(HttpServletRequest request, List<MetricDefinition> metrics) {
         String username = security.requireIdentity(request).username();
+        java.util.Set<Long> allowed = security.allowedIds(username, "metric", "view",
+                metrics.stream().collect(java.util.stream.Collectors.toMap(MetricDefinition::getId,
+                        metric -> domainCtx(metric.getBusinessDomainId()), (left, right) -> left)));
         return metrics.stream()
-                .filter(metric -> security.isAllowed(username, "metric", metric.getId(), "view",
-                        domainCtx(metric.getBusinessDomainId())))
+                .filter(metric -> allowed.contains(metric.getId()))
                 .toList();
     }
 

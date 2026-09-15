@@ -98,6 +98,24 @@ public class PermissionDecisionService {
         return Decision.denied("没有 " + resourceType + "." + action + " 权限");
     }
 
+    /** 批量资源判定：一次加载主体授权，避免列表过滤为每个 id 重复访问数据库。 */
+    public Set<Long> allowedIds(String username, String resourceType, String action,
+                                Map<Long, Map<String, String>> resourceContexts) {
+        if (resourceContexts == null || resourceContexts.isEmpty()) return Set.of();
+        AuthUser user = authUserService.findByUsername(username).orElse(null);
+        if (user == null || !"active".equals(user.getStatus())) return Set.of();
+        List<ScopedGrant> grants = loadGrants(user.getId());
+        boolean narrowed = RbacConstants.isReadAction(action) && isNarrowed(resourceType, grants);
+        boolean roleDefault = !narrowed && systemRoleAllows(user.getRole(), resourceType, action);
+        Set<Long> allowed = new HashSet<>();
+        for (Map.Entry<Long, Map<String, String>> item : resourceContexts.entrySet()) {
+            if (roleDefault || grantsAllow(action, resourceType, item.getKey(), item.getValue(), grants)) {
+                allowed.add(item.getKey());
+            }
+        }
+        return allowed;
+    }
+
     /**
      * 计算某资源类型在某动作下的可见范围（用于列表过滤）。
      *

@@ -60,7 +60,8 @@ public class MetricDefinitionService {
         LambdaQueryWrapper<MetricDefinition> wrapper = new LambdaQueryWrapper<MetricDefinition>()
                 .eq(StringUtils.hasText(status), MetricDefinition::getStatus, status)
                 .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
-                .orderByDesc(MetricDefinition::getUpdatedAt);
+                .orderByDesc(MetricDefinition::getUpdatedAt)
+                .last("LIMIT 500");
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
             wrapper.and(w -> w.like(MetricDefinition::getMetricName, trimmed)
@@ -78,11 +79,15 @@ public class MetricDefinitionService {
 
     public List<MetricDefinition> published(String keyword, Collection<Long> domainIds) {
         String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
-        return mapper.selectList(new LambdaQueryWrapper<MetricDefinition>()
+        List<MetricDefinition> aggregates = mapper.selectList(new LambdaQueryWrapper<MetricDefinition>()
                         .isNotNull(MetricDefinition::getPublishedVersion)
                         .ne(MetricDefinition::getStatus, "deprecated")
-                        .orderByAsc(MetricDefinition::getMetricCode)).stream()
-                .map(this::resolvePublished)
+                        .orderByAsc(MetricDefinition::getMetricCode)
+                        .last("LIMIT 500"));
+        Map<String, SemanticVersion> snapshots = loadPublishedVersions(aggregates);
+        return aggregates.stream()
+                .map(metric -> resolvePublished(metric,
+                        snapshots.get(metric.getId() + ":" + metric.getPublishedVersion())))
                 .filter(metric -> domainIds == null || domainIds.contains(metric.getBusinessDomainId()))
                 .filter(metric -> normalizedKeyword == null || matches(metric, normalizedKeyword))
                 .toList();
@@ -292,6 +297,52 @@ public class MetricDefinitionService {
         metric.setBusinessDomainId(nullableId(node.path("businessDomainId")));
         metric.setBusinessDomain(metric.getBusinessDomainId() == null ? null
                 : domainService.require(metric.getBusinessDomainId()).getDomainName());
+        metric.setLogicalModelId(nullableId(node.path("logicalModelId")));
+        metric.setSourceTableId(nullableId(node.path("sourceTableId")));
+        metric.setLayer(node.path("layer").asText("atomic"));
+        metric.setCalibreFormula(node.path("calibreFormula").asText(""));
+        metric.setAggregation(node.path("aggregation").asText("COUNT"));
+        metric.setMeasureColumn(nullableText(node.path("measureColumn")));
+        metric.setFiltersJson(node.path("filters").toString());
+        metric.setTimeColumn(nullableText(node.path("timeColumn")));
+        metric.setDefaultTimeGrain(node.path("defaultTimeGrain").asText("none"));
+        metric.setDimensionIdsJson(node.path("dimensionIds").toString());
+        metric.setUnit(nullableText(node.path("unit")));
+        metric.setOwner(nullableText(node.path("owner")));
+        metric.setDescription(nullableText(node.path("description")));
+        metric.setStatus("published");
+        metric.setVersion(active.versionNo());
+        metric.setPublishedVersion(active.versionNo());
+        metric.setCreatedBy(aggregate.getCreatedBy());
+        metric.setPublishedBy(active.publishedBy());
+        metric.setPublishedAt(active.publishedAt());
+        metric.setCreatedAt(aggregate.getCreatedAt());
+        metric.setUpdatedAt(aggregate.getUpdatedAt());
+        return metric;
+    }
+
+    private Map<String, SemanticVersion> loadPublishedVersions(List<MetricDefinition> aggregates) {
+        if (aggregates.isEmpty()) return Map.of();
+        String placeholders = String.join(",", java.util.Collections.nCopies(aggregates.size(), "?"));
+        Object[] args = aggregates.stream().map(MetricDefinition::getId).toArray();
+        return jdbc.query("SELECT metric_definition_id, id, version_no, snapshot_json, published_by, published_at "
+                        + "FROM metadata.metric_definition_version WHERE metric_definition_id IN (" + placeholders + ")",
+                (rs, row) -> Map.entry(rs.getLong("metric_definition_id"), mapVersion(rs, row)), args)
+                .stream().collect(java.util.stream.Collectors.toMap(
+                        e -> e.getKey() + ":" + e.getValue().versionNo(), Map.Entry::getValue));
+    }
+
+    private MetricDefinition resolvePublished(MetricDefinition aggregate, SemanticVersion active) {
+        if (active == null) {
+            throw new IllegalStateException("指标在线版本快照缺失：" + aggregate.getMetricCode());
+        }
+        JsonNode node = active.snapshot();
+        MetricDefinition metric = new MetricDefinition();
+        metric.setId(aggregate.getId());
+        metric.setMetricCode(node.path("metricCode").asText(aggregate.getMetricCode()));
+        metric.setMetricName(node.path("metricName").asText(aggregate.getMetricName()));
+        metric.setBusinessDomainId(nullableId(node.path("businessDomainId")));
+        metric.setBusinessDomain(aggregate.getBusinessDomain());
         metric.setLogicalModelId(nullableId(node.path("logicalModelId")));
         metric.setSourceTableId(nullableId(node.path("sourceTableId")));
         metric.setLayer(node.path("layer").asText("atomic"));

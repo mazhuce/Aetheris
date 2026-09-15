@@ -73,9 +73,11 @@ public class BusinessDomainController {
     /** OPAQUE（子资源级授权）时逐条判定可见性。 */
     private List<BusinessDomain> filteredList(HttpServletRequest request, List<BusinessDomain> domains) {
         String username = security.requireIdentity(request).username();
+        java.util.Set<Long> allowed = security.allowedIds(username, "domain", "view",
+                domains.stream().collect(java.util.stream.Collectors.toMap(BusinessDomain::getId,
+                        domain -> Map.of("domainId", String.valueOf(domain.getId())), (left, right) -> left)));
         return domains.stream()
-                .filter(domain -> security.isAllowed(username, "domain", domain.getId(), "view",
-                        Map.of("domainId", String.valueOf(domain.getId()))))
+                .filter(domain -> allowed.contains(domain.getId()))
                 .toList();
     }
 

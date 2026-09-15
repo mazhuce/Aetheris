@@ -20,8 +20,8 @@ public class JwtService {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
         byte[] keyBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32) {
-            throw new IllegalStateException("JWT_SECRET must contain at least 32 UTF-8 bytes");
+        if (keyBytes.length < 32 || "change-me-to-a-long-random-secret".equals(secret)) {
+            throw new IllegalStateException("JWT_SECRET must be a unique random value of at least 32 UTF-8 bytes");
         }
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;

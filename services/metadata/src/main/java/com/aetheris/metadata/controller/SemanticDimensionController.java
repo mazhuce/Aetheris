@@ -120,9 +120,11 @@ public class SemanticDimensionController {
 
     private List<SemanticDimension> filteredList(HttpServletRequest request, List<SemanticDimension> dimensions) {
         String username = security.requireIdentity(request).username();
+        java.util.Set<Long> allowed = security.allowedIds(username, "dimension", "view",
+                dimensions.stream().collect(java.util.stream.Collectors.toMap(SemanticDimension::getId,
+                        dimension -> domainCtx(dimension.getBusinessDomainId()), (left, right) -> left)));
         return dimensions.stream()
-                .filter(dimension -> security.isAllowed(username, "dimension", dimension.getId(), "view",
-                        domainCtx(dimension.getBusinessDomainId())))
+                .filter(dimension -> allowed.contains(dimension.getId()))
                 .toList();
     }
 

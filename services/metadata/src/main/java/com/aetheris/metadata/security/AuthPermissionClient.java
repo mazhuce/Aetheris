@@ -102,6 +102,25 @@ public class AuthPermissionClient {
         }
     }
 
+    public java.util.Set<Long> checkBatch(String username, String resourceType, String action,
+                                          Map<Long, Map<String, String>> resourceContexts) {
+        if (resourceContexts == null || resourceContexts.isEmpty()) return java.util.Set.of();
+        try {
+            BatchResponse response = restClient.post().uri("/internal/permissions/check-batch")
+                    .body(Map.of("username", username, "resourceType", resourceType,
+                            "action", action, "items", resourceContexts.entrySet().stream()
+                                    .map(item -> Map.of("resourceId", item.getKey(), "ctx",
+                                            item.getValue() == null ? Map.of() : item.getValue()))
+                                    .toList()))
+                    .retrieve().body(BatchResponse.class);
+            return response == null || response.allowedIds() == null ? java.util.Set.of()
+                    : java.util.Set.copyOf(response.allowedIds());
+        } catch (RuntimeException error) {
+            log.warn("auth batch permission check unavailable: {}", error.getMessage());
+            return java.util.Set.of();
+        }
+    }
+
     /** 单条判定结果。 */
     public record Access(boolean allowed, String reason) {
         public static final Access ALLOWED = new Access(true, null);
@@ -118,4 +137,5 @@ public class AuthPermissionClient {
     /** 与 auth-service VisibilityResponse 对齐。 */
     public record VisibilityResponse(String mode, List<Long> ids) {
     }
+    public record BatchResponse(List<Long> allowedIds) { }
 }

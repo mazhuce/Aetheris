@@ -25,7 +25,6 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -114,7 +113,6 @@ public class TaskController {
     }
 
     @PostMapping
-    @Transactional
     public ResponseEntity<?> create(
             @Valid @RequestBody Task task,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
@@ -181,7 +179,6 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    @Transactional
     public ResponseEntity<?> update(
             @PathVariable Long id,
             @Valid @RequestBody Task task) {
@@ -206,7 +203,6 @@ public class TaskController {
     }
 
     @DeleteMapping("/{id}")
-    @Transactional
     public ResponseEntity<Void> delete(
             @PathVariable Long id) {
         if (taskService.getById(id) == null) {

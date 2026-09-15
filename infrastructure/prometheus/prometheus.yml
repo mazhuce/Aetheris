@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: aetheris
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - gateway:8080
+          - auth-service:8087
+          - system-service:8081
+          - metadata-service:8082
+          - quality-service:8083
+          - ingestion-service:8084
+          - governance-service:8085
+          - workflow-service:8088
+          - ai-agent:8086
+          - serving-service:8089

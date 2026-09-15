@@ -36,9 +36,12 @@ public class SemanticMetricController {
             case IDS -> service.published(keyword, scope.ids());
             case OPAQUE -> {
                 String username = security.requireIdentity(request).username();
-                yield service.published(keyword).stream()
-                        .filter(metric -> security.isAllowed(username, "metric", metric.getId(), "view",
-                                domainCtx(metric.getBusinessDomainId())))
+                List<MetricDefinition> published = service.published(keyword);
+                java.util.Set<Long> allowed = security.allowedIds(username, "metric", "view",
+                        published.stream().collect(java.util.stream.Collectors.toMap(MetricDefinition::getId,
+                                metric -> domainCtx(metric.getBusinessDomainId()), (left, right) -> left)));
+                yield published.stream()
+                        .filter(metric -> allowed.contains(metric.getId()))
                         .toList();
             }
         };
