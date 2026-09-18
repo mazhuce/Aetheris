@@ -17,6 +17,7 @@ import com.aetheris.workflow.service.TaskExecutionService;
 import com.aetheris.workflow.service.TaskInstanceService;
 import com.aetheris.workflow.service.TaskLogService;
 import com.aetheris.workflow.service.TaskSchedulerService;
+import com.aetheris.workflow.service.SchedulerSyncRecoveryService;
 import com.aetheris.workflow.service.TaskService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
@@ -62,6 +63,7 @@ public class TaskController {
     private final TaskDependencyService dependencyService;
     private final TaskExecutionService executionService;
     private final TaskSchedulerService schedulerService;
+    private final SchedulerSyncRecoveryService schedulerRecovery;
     private final SqlExecutionClient executionClient;
     private final ManagedSparkCatalogService sparkCatalog;
     private final SparkBatchExecutionService sparkExecutionService;
@@ -76,6 +78,7 @@ public class TaskController {
             TaskDependencyService dependencyService,
             TaskExecutionService executionService,
             TaskSchedulerService schedulerService,
+            SchedulerSyncRecoveryService schedulerRecovery,
             SqlExecutionClient executionClient,
             ManagedSparkCatalogService sparkCatalog,
             SparkBatchExecutionService sparkExecutionService,
@@ -88,6 +91,7 @@ public class TaskController {
         this.dependencyService = dependencyService;
         this.executionService = executionService;
         this.schedulerService = schedulerService;
+        this.schedulerRecovery = schedulerRecovery;
         this.executionClient = executionClient;
         this.sparkCatalog = sparkCatalog;
         this.sparkExecutionService = sparkExecutionService;
@@ -125,7 +129,12 @@ public class TaskController {
         if (!StringUtils.hasText(task.getTaskType())) task.setTaskType("sql");
         applyDefaults(task, username);
         taskService.save(task);
-        schedulerService.sync(task);
+        try {
+            schedulerService.sync(task);
+        } catch (RuntimeException error) {
+            schedulerRecovery.recordFailure(task.getId(), "sync", error);
+            throw error;
+        }
         return ResponseEntity.ok(toView(task));
     }
 
@@ -198,7 +207,12 @@ public class TaskController {
 
         Task updated = taskService.getById(id);
         // 改完 cron 或启停状态后必须重新同步，否则会出现「界面显示已停用但仍在跑」。
-        schedulerService.sync(updated);
+        try {
+            schedulerService.sync(updated);
+        } catch (RuntimeException error) {
+            schedulerRecovery.recordFailure(id, "sync", error);
+            throw error;
+        }
         return ResponseEntity.ok(toView(updated));
     }
 
@@ -209,7 +223,12 @@ public class TaskController {
             return ResponseEntity.notFound().build();
         }
         // 先摘调度再删定义：反过来的话，删除后到摘除之间的窗口里触发会拿不到任务而报错。
-        schedulerService.unschedule(id);
+        try {
+            schedulerService.unschedule(id);
+        } catch (RuntimeException error) {
+            schedulerRecovery.recordFailure(id, "unschedule", error);
+            throw error;
+        }
         taskService.removeById(id);
         return ResponseEntity.noContent().build();
     }

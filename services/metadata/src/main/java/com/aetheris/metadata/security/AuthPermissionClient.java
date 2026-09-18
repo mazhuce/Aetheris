@@ -1,5 +1,9 @@
 package com.aetheris.metadata.security;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,16 +29,32 @@ public class AuthPermissionClient {
     private static final Logger log = LoggerFactory.getLogger(AuthPermissionClient.class);
 
     private final RestClient restClient;
+    private final MeterRegistry meterRegistry;
+    private final Counter checkRequests;
+    private final Counter checkAllowed;
+    private final Counter checkDenied;
+    private final Counter checkUnavailable;
+    private final Timer checkLatency;
+    private final Counter batchRequests;
+    private final Counter batchAllowedIds;
+    private final Counter batchItems;
+    private final Counter batchUnavailable;
+    private final Timer batchLatency;
 
     @Autowired
     public AuthPermissionClient(
             RestClient.Builder builder,
             @Value("${aetheris.internal-token:}") String internalToken,
-            @Value("${aetheris.auth.base-url:http://localhost:8087}") String authBaseUrl) {
+            @Value("${aetheris.auth.base-url:http://localhost:8087}") String authBaseUrl,
+            MeterRegistry meterRegistry) {
+        this(buildRestClient(builder, internalToken, authBaseUrl), meterRegistry);
+    }
+
+    private static RestClient buildRestClient(RestClient.Builder builder, String internalToken, String authBaseUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(500);
         factory.setReadTimeout(1500);
-        this.restClient = builder
+        return builder
                 .requestFactory(factory)
                 .baseUrl(authBaseUrl)
                 .defaultHeader("X-Internal-Token", internalToken)
@@ -42,25 +62,52 @@ public class AuthPermissionClient {
     }
 
     AuthPermissionClient(RestClient restClient) {
+        this(restClient, new SimpleMeterRegistry());
+    }
+
+    AuthPermissionClient(RestClient restClient, MeterRegistry meterRegistry) {
         this.restClient = restClient;
+        this.meterRegistry = meterRegistry;
+        this.checkRequests = Counter.builder("aetheris.auth.permission.check.requests").register(meterRegistry);
+        this.checkAllowed = Counter.builder("aetheris.auth.permission.check.allowed").register(meterRegistry);
+        this.checkDenied = Counter.builder("aetheris.auth.permission.check.denied").register(meterRegistry);
+        this.checkUnavailable = Counter.builder("aetheris.auth.permission.check.unavailable").register(meterRegistry);
+        this.checkLatency = Timer.builder("aetheris.auth.permission.check.latency").register(meterRegistry);
+        this.batchRequests = Counter.builder("aetheris.auth.permission.batch.requests").register(meterRegistry);
+        this.batchAllowedIds = Counter.builder("aetheris.auth.permission.batch.allowed_ids").register(meterRegistry);
+        this.batchItems = Counter.builder("aetheris.auth.permission.batch.items").register(meterRegistry);
+        this.batchUnavailable = Counter.builder("aetheris.auth.permission.batch.unavailable").register(meterRegistry);
+        this.batchLatency = Timer.builder("aetheris.auth.permission.batch.latency").register(meterRegistry);
     }
 
     /** 单条资源级权限判定（与 auth-service PermissionCheckResponse 对齐）。 */
     public Access check(String username, String resourceType, Long resourceId,
                         String action, Map<String, String> ctx) {
+        checkRequests.increment();
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             PermissionCheckResponse response = restClient.post()
                     .uri("/internal/permissions/check")
                     .body(checkRequestBody(username, resourceType, resourceId, action, ctx))
                     .retrieve()
                     .body(PermissionCheckResponse.class);
-            return response != null && response.allowed()
-                    ? Access.ALLOWED
-                    : new Access(false, response == null ? null : response.reason());
+            if (response == null) {
+                checkUnavailable.increment();
+                return Access.unavailable("权限服务不可用");
+            }
+            if (response.allowed()) {
+                checkAllowed.increment();
+                return Access.ALLOWED;
+            }
+            checkDenied.increment();
+            return new Access(false, response.reason());
         } catch (RuntimeException error) {
+            checkUnavailable.increment();
             log.warn("auth permission check unavailable ({} {} {} {}): {}",
                     username, resourceType, resourceId, action, error.getMessage());
-            return new Access(false, "权限服务不可用");
+            return Access.unavailable("权限服务不可用");
+        } finally {
+            sample.stop(checkLatency);
         }
     }
 
@@ -105,6 +152,9 @@ public class AuthPermissionClient {
     public java.util.Set<Long> checkBatch(String username, String resourceType, String action,
                                           Map<Long, Map<String, String>> resourceContexts) {
         if (resourceContexts == null || resourceContexts.isEmpty()) return java.util.Set.of();
+        batchRequests.increment();
+        batchItems.increment(resourceContexts.size());
+        Timer.Sample sample = Timer.start(meterRegistry);
         try {
             BatchResponse response = restClient.post().uri("/internal/permissions/check-batch")
                     .body(Map.of("username", username, "resourceType", resourceType,
@@ -113,17 +163,26 @@ public class AuthPermissionClient {
                                             item.getValue() == null ? Map.of() : item.getValue()))
                                     .toList()))
                     .retrieve().body(BatchResponse.class);
-            return response == null || response.allowedIds() == null ? java.util.Set.of()
-                    : java.util.Set.copyOf(response.allowedIds());
+            if (response == null || response.allowedIds() == null) {
+                batchUnavailable.increment();
+                return java.util.Set.of();
+            }
+            batchAllowedIds.increment(response.allowedIds().size());
+            return java.util.Set.copyOf(response.allowedIds());
         } catch (RuntimeException error) {
+            batchUnavailable.increment();
             log.warn("auth batch permission check unavailable: {}", error.getMessage());
             return java.util.Set.of();
+        } finally {
+            sample.stop(batchLatency);
         }
     }
 
     /** 单条判定结果。 */
-    public record Access(boolean allowed, String reason) {
+    public record Access(boolean allowed, String reason, boolean available) {
+        public Access(boolean allowed, String reason) { this(allowed, reason, true); }
         public static final Access ALLOWED = new Access(true, null);
+        public static Access unavailable(String reason) { return new Access(false, reason, false); }
     }
 
     /** 列表可见性结果。 */

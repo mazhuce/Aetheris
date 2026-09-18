@@ -30,12 +30,14 @@ public class MetricDefinitionController {
 
     @GetMapping public List<MetricDefinition> list(HttpServletRequest request,
                                                    @RequestParam(required = false) String keyword,
-                                                   @RequestParam(required = false) String status) {
+                                                   @RequestParam(required = false) String status,
+                                                   @RequestParam(defaultValue = "1") int page,
+                                                   @RequestParam(defaultValue = "500") int size) {
         MetadataSecurity.Scope scope = security.visibility(request, "metric", "view");
         return switch (scope.mode()) {
-            case ALL -> service.list(keyword, status);
-            case IDS -> service.list(keyword, status, scope.ids());
-            case OPAQUE -> filteredList(request, service.list(keyword, status));
+            case ALL -> service.list(keyword, status, null, page, size);
+            case IDS -> service.list(keyword, status, scope.ids(), page, size);
+            case OPAQUE -> filteredList(request, service.list(keyword, status), page, size);
         };
     }
 
@@ -110,14 +112,23 @@ public class MetricDefinitionController {
                 domainCtx(metric.getBusinessDomainId())).username();
     }
 
-    private List<MetricDefinition> filteredList(HttpServletRequest request, List<MetricDefinition> metrics) {
+    private List<MetricDefinition> filteredList(HttpServletRequest request, List<MetricDefinition> metrics,
+                                                int page, int size) {
+        if (page < 1) throw new IllegalArgumentException("page 必须大于等于 1");
+        if (size < 1 || size > MetricDefinitionService.MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("size 必须在 1 到 " + MetricDefinitionService.MAX_PAGE_SIZE + " 之间");
+        }
         String username = security.requireIdentity(request).username();
         java.util.Set<Long> allowed = security.allowedIds(username, "metric", "view",
                 metrics.stream().collect(java.util.stream.Collectors.toMap(MetricDefinition::getId,
                         metric -> domainCtx(metric.getBusinessDomainId()), (left, right) -> left)));
-        return metrics.stream()
+        List<MetricDefinition> allowedMetrics = metrics.stream()
                 .filter(metric -> allowed.contains(metric.getId()))
                 .toList();
+        long fromOffset = (long) (page - 1) * size;
+        int from = (int) Math.min(fromOffset, allowedMetrics.size());
+        int to = (int) Math.min(fromOffset + size, allowedMetrics.size());
+        return allowedMetrics.subList(from, to);
     }
 
     private static Map<String, String> domainCtx(Long domainId) {

@@ -1,0 +1,32 @@
+# R1 candidate BOM. Keep every runtime pinned; promote only after the fixture passes.
+[meta]
+name = "aetheris-r1-lakehouse"
+status = "candidate"
+format_version = "2"
+
+[runtime]
+jdk = "21.0.8"
+flink = "1.20.1"
+flink_cdc = "3.4.0"
+iceberg = "1.7.1"
+spark = "3.5.6"
+trino = "476"
+
+[catalog]
+implementation = "iceberg-rest"
+version = "1.7.1"
+endpoint = "http://catalog:8181"
+
+[object_storage]
+implementation = "minio"
+image_tag = "RELEASE.2024-06-13T19-53-16Z"
+bucket = "warehouse"
+
+[source_databases]
+mysql = "8.4.5"
+postgresql = "16.9"
+
+[acceptance]
+required_table_format = "iceberg-v2"
+required_engines = ["flink", "spark", "trino"]
+rebuild_required = true

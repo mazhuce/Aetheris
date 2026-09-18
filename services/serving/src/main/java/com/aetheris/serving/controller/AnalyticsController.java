@@ -166,6 +166,11 @@ public class AnalyticsController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", error.getMessage()));
     }
 
+    @org.springframework.web.bind.annotation.ExceptionHandler(AnalyticsService.PublishConflictException.class)
+    public ResponseEntity<Map<String, String>> conflict(AnalyticsService.PublishConflictException error) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
+    }
+
     @org.springframework.web.bind.annotation.ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<Map<String, String>> forbidden() {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "仅管理员可以修改数据集和看板"));

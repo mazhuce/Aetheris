@@ -90,6 +90,7 @@ public class QualityExecutionService {
         rejectUnsafeExpression(expression);
 
         if (PREDICATE_TYPES.contains(type)) {
+            QualityExpressionAst.validatePredicate(expression);
             return "SELECT COUNT(*) AS violation_count FROM " + target + " WHERE NOT (" + expression + ")";
         }
         if ("duplicate".equals(type)) {
@@ -105,6 +106,7 @@ public class QualityExecutionService {
             if (!expression.toUpperCase(Locale.ROOT).matches("^(SELECT|WITH)\\b[\\s\\S]*")) {
                 throw new IllegalArgumentException("自定义 SQL 必须是只读查询");
             }
+            QualityExpressionAst.validateSqlFunctions(expression);
             return expression;
         }
         throw new IllegalArgumentException("不支持的质量规则类型");

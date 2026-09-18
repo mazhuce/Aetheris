@@ -10,6 +10,7 @@ import com.aetheris.workflow.service.TaskExecutionService;
 import com.aetheris.workflow.service.TaskInstanceService;
 import com.aetheris.workflow.service.TaskLogService;
 import com.aetheris.workflow.service.TaskSchedulerService;
+import com.aetheris.workflow.service.SchedulerSyncRecoveryService;
 import com.aetheris.workflow.service.TaskService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,8 @@ class TaskControllerResolutionTest {
         return new TaskController(
                 mock(TaskService.class), mock(TaskInstanceService.class), mock(TaskLogService.class),
                 mock(ExecutionAttemptService.class), resolutions, mock(TaskDependencyService.class),
-                mock(TaskExecutionService.class), mock(TaskSchedulerService.class), mock(SqlExecutionClient.class),
+                mock(TaskExecutionService.class), mock(TaskSchedulerService.class),
+                mock(SchedulerSyncRecoveryService.class), mock(SqlExecutionClient.class),
                 mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionService.class), authorization);
     }
 }

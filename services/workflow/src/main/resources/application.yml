@@ -83,6 +83,11 @@ aetheris:
     dispatch-lease-seconds: ${AETHERIS_PIPELINE_DISPATCH_LEASE_SECONDS:120}
     lease-grace-seconds: ${AETHERIS_PIPELINE_LEASE_GRACE_SECONDS:120}
     reconcile-interval-ms: ${AETHERIS_PIPELINE_RECONCILE_INTERVAL_MS:30000}
+  scheduler-recovery:
+    interval-ms: ${AETHERIS_SCHEDULER_RECOVERY_INTERVAL_MS:5000}
+    initial-delay-ms: ${AETHERIS_SCHEDULER_RECOVERY_INITIAL_DELAY_MS:10000}
+    retry-delay-seconds: ${AETHERIS_SCHEDULER_RECOVERY_RETRY_DELAY_SECONDS:30}
+    max-attempts: ${AETHERIS_SCHEDULER_RECOVERY_MAX_ATTEMPTS:8}
 
 management:
   endpoints:

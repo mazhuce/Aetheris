@@ -167,6 +167,14 @@ class AnalyticsControllerTest {
     }
 
     @Test
+    void publishConflictHandlerReturns409() {
+        ResponseEntity<Map<String, String>> response = controller.conflict(
+                new AnalyticsService.PublishConflictException("看板已发布，请先修改草稿后再发布"));
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("看板已发布，请先修改草稿后再发布", response.getBody().get("message"));
+    }
+
+    @Test
     void forbiddenExceptionHandlerReturns403() {
         ResponseEntity<Map<String, String>> response = controller.forbidden();
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());

@@ -12,6 +12,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class FieldLineageService {
+    private static final int MAX_IMPACT_NODES = 500;
+    private static final int MAX_IMPACT_DEPTH = 64;
     private static final Pattern INSERT = Pattern.compile("(?is)INSERT\\s+(?:OVERWRITE|INTO)\\s+TABLE\\s+([\\w.$]+)\\s*(?:\\(([^)]*)\\))?\\s+SELECT\\s+(.*?)\\s+FROM\\s+([\\w.$]+)");
     private static final Pattern CREATE = Pattern.compile("(?is)CREATE\\s+(?:OR\\s+REPLACE\\s+)?(?:TABLE|VIEW)\\s+([\\w.$]+).*?\\s+AS\\s+SELECT\\s+(.*?)\\s+FROM\\s+([\\w.$]+)");
     private final LineageFieldRelationMapper mapper;
@@ -34,5 +36,6 @@ public class FieldLineageService {
     private List<String> split(String value){ if(!StringUtils.hasText(value)) return List.of(); List<String> out=new ArrayList<>(); int depth=0; StringBuilder b=new StringBuilder(); for(char ch:value.toCharArray()){ if(ch=='(')depth++; if(ch==')')depth--; if(ch==','&&depth==0){out.add(b.toString());b.setLength(0);}else b.append(ch);} if(b.length()>0)out.add(b.toString()); return out; }
     private String column(String expr){ String normalized=expr.trim().replaceAll("(?i)\\s+AS\\s+\\w+\\s*$","").trim(); if(normalized.matches("[\\w]+\\.[\\w]+")) return normalized.substring(normalized.indexOf('.')+1); if(normalized.matches("[\\w]+")) return normalized; Matcher matcher=Pattern.compile("(?:^|[^\\w])(?:[A-Za-z_]\\w*\\.)?([A-Za-z_]\\w*)").matcher(normalized); return matcher.find()?matcher.group(1):null; }
     private String alias(String expr){ Matcher m=Pattern.compile("(?i)\\s+AS\\s+([\\w]+)\\s*$").matcher(expr); return m.find()?m.group(1):column(expr); }
- public List<LineageFieldRelation> impact(String table,String column){ Set<String> seen=new HashSet<>(); List<LineageFieldRelation> result=new ArrayList<>(); Deque<String> queue=new ArrayDeque<>(); queue.add(table+"|"+column); while(!queue.isEmpty()&&seen.size()<500){ String key=queue.removeFirst(); if(!seen.add(key))continue; String[] parts=key.split("\\|",2); List<LineageFieldRelation> next=mapper.selectBySource(parts[0],parts[1]); for(LineageFieldRelation r:next){result.add(r);queue.addLast(r.getTargetTable()+"|"+r.getTargetColumn());}} return result; }
+ public List<LineageFieldRelation> impact(String table,String column){ Set<String> seen=new HashSet<>(); List<LineageFieldRelation> result=new ArrayList<>(); Deque<ImpactNode> queue=new ArrayDeque<>(); queue.add(new ImpactNode(table+"|"+column,0)); while(!queue.isEmpty()&&seen.size()<MAX_IMPACT_NODES){ ImpactNode node=queue.removeFirst(); if(!seen.add(node.key()))continue; if(node.depth()>=MAX_IMPACT_DEPTH)continue; String[] parts=node.key().split("\\|",2); List<LineageFieldRelation> next=mapper.selectBySource(parts[0],parts[1]); for(LineageFieldRelation r:next){result.add(r);queue.addLast(new ImpactNode(r.getTargetTable()+"|"+r.getTargetColumn(),node.depth()+1));}} return result; }
+ private record ImpactNode(String key,int depth) {}
 }

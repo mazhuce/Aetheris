@@ -36,6 +36,7 @@ import java.util.Map;
 public class InternalPermissionController {
 
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
+    static final int MAX_BATCH_ITEMS = 1000;
 
     private final PermissionDecisionService decisionService;
     private final PermissionVersionService versionService;
@@ -99,6 +100,9 @@ public class InternalPermissionController {
 
     @PostMapping("/check-batch")
     public BatchPermissionCheckResponse checkBatch(@Valid @RequestBody BatchPermissionCheckRequest request) {
+        if (request.items().size() > MAX_BATCH_ITEMS) {
+            throw new IllegalArgumentException("批量权限判定最多支持 " + MAX_BATCH_ITEMS + " 个资源");
+        }
         return new BatchPermissionCheckResponse(new java.util.ArrayList<>(decisionService.allowedIds(
                 request.username(), request.resourceType(), request.action(), request.items().stream()
                         .collect(java.util.stream.Collectors.toMap(

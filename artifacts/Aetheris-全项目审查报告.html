@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Aetheris 全项目深度审查报告</title>
+<style>
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 400;
+  src: local("Noto Sans SC"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20(TrueType).otf") format("opentype");
+}
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 500;
+  src: local("Noto Sans SC Medium"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20Medium%20(TrueType).otf") format("opentype");
+}
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 700;
+  src: local("Noto Sans SC Bold"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20Bold%20(TrueType).otf") format("opentype");
+}
+
+@page {
+  size: A4;
+  margin: 22mm 18mm 20mm 18mm;
+  @top-center {
+    content: "Aetheris 数据平台 · 全项目深度审查报告";
+    font-family: "Noto Sans SC"; font-size: 8.5pt; color: #9aa3b2;
+    border-bottom: 0.5pt solid #e4e8ef; width: 100%; padding-bottom: 4px;
+  }
+  @bottom-center {
+    content: counter(page) " / " counter(pages);
+    font-family: "Noto Sans SC"; font-size: 8.5pt; color: #9aa3b2;
+  }
+  @bottom-right {
+    content: "2026-09-11";
+    font-family: "Noto Sans SC"; font-size: 8pt; color: #b8bfca;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  font-family: "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
+  font-size: 10.5pt; line-height: 1.75; color: #2b3340;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---------- 封面 ---------- */
+.cover {
+  page-break-after: always;
+  break-after: page;
+  min-height: 240mm;
+  padding-top: 90mm;
+  padding-left: 4mm; padding-right: 4mm;
+  position: relative;
+}
+.cover .kicker {
+  font-size: 11pt; letter-spacing: 6px; color: #6b7d99; text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.cover h1 {
+  font-size: 34pt; font-weight: 700; line-height: 1.25; margin: 0 0 14px 0;
+  color: #101828; letter-spacing: 1px;
+}
+.cover .subtitle {
+  font-size: 13pt; color: #4b5568; line-height: 1.7; margin: 0 0 26px 0;
+}
+.cover .rule {
+  width: 72px; height: 5px; background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 3px; margin-bottom: 26px;
+}
+.cover .meta {
+  display: flex; flex-wrap: wrap; gap: 14px 28px; font-size: 9.5pt; color: #6b7280;
+}
+.cover .meta b { color: #111827; font-weight: 600; }
+.cover .meta div { display: flex; align-items: center; gap: 6px; }
+.cover .dot {
+  width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  background: #3b82f6;
+}
+
+/* ---------- 目录 ---------- */
+.toc { page-break-before: always; page-break-after: always; break-before: page; break-after: page; }
+.toc h2 { font-size: 18pt; color: #101828; margin: 0 0 16px 0; border: none; padding: 0; }
+.toc ul { list-style: none; padding: 0; margin: 0; }
+.toc li { margin: 0; border-bottom: 0.5pt dotted #d9dee7; }
+.toc a {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 2px; text-decoration: none; color: #334155; font-size: 10.5pt;
+}
+.toc a .t { font-weight: 500; }
+.toc a .p { color: #9aa3b2; font-size: 9pt; }
+.toc a:hover .t { color: #2563eb; }
+
+/* ---------- 标题 ---------- */
+h1 { font-size: 20pt; color: #0f172a; margin: 0 0 14px 0;
+     padding-bottom: 8px; border-bottom: 2px solid #e5e9f0; page-break-after: avoid; }
+h2 { font-size: 15pt; color: #0f172a; margin: 26px 0 10px 0;
+     padding-left: 10px; border-left: 4px solid #3b82f6; page-break-after: avoid; }
+h3 { font-size: 12.5pt; color: #1e293b; margin: 20px 0 8px 0; page-break-after: avoid; }
+h4 { font-size: 11pt; color: #334155; margin: 16px 0 6px 0; page-break-after: avoid; }
+
+p { margin: 8px 0; text-align: justify; }
+strong { color: #0f172a; font-weight: 600; }
+a { color: #2563eb; text-decoration: none; }
+
+/* ---------- 引用块 ---------- */
+blockquote {
+  margin: 14px 0; padding: 12px 16px; border-left: 4px solid #8b5cf6;
+  background: #f6f4ff; border-radius: 0 8px 8px 0; color: #3f3a63;
+}
+blockquote p { margin: 4px 0; }
+
+/* ---------- 代码块 ---------- */
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  font-size: 8.8pt; line-height: 1.55; overflow-x: hidden; white-space: pre-wrap;
+  word-break: break-word; margin: 12px 0; page-break-inside: avoid;
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+code {
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  font-size: 0.92em; background: #eef2f7; color: #b91c1c; padding: 1px 5px;
+  border-radius: 4px;
+}
+pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+
+/* ---------- 表格 ---------- */
+table {
+  border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 9.3pt;
+  page-break-inside: auto;
+}
+th {
+  background: #1e3a8a; color: #ffffff; font-weight: 600; text-align: left;
+  padding: 7px 10px; border: 1px solid #1e3a8a;
+}
+td { padding: 6px 10px; border: 1px solid #dfe4ec; vertical-align: top; }
+tr:nth-child(even) td { background: #f7f9fc; }
+tr { page-break-inside: avoid; }
+
+/* ---------- 列表 ---------- */
+ul, ol { margin: 8px 0; padding-left: 24px; }
+li { margin: 4px 0; }
+
+/* ---------- 分隔线 ---------- */
+hr { border: none; border-top: 1px solid #e5e9f0; margin: 22px 0; }
+
+/* 让大章节独立起页 */
+h1 { page-break-before: always; }
+h1:first-of-type { page-break-before: auto; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">Technical Review Report</div>
+  <h1>让数据有序流动<br>让价值清晰发生</h1>
+  <div class="subtitle">Aetheris 数据平台 · 全项目深度审查报告<br>从代码实现到模块连接，从安全、性能到功能设计的完整剖析</div>
+  <div class="rule"></div>
+  <div class="meta">
+    <div><span class="dot"></span><span>审查范围：<b>整个 Monorepo</b></span></div>
+    <div><span class="dot" style="background:#8b5cf6"></span><span>后端：<b>10 个微服务</b></span></div>
+    <div><span class="dot" style="background:#10b981"></span><span>前端：<b>React 18 控制台</b></span></div>
+    <div><span class="dot" style="background:#f59e0b"></span><span>报告日期：<b>2026-09-11</b></span></div>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>目录</h2>
+  <ul>
+    <li><a href="#0-一句话结论"><span class="t">0 · 一句话结论</span></a></li>
+    <li><a href="#1-这个项目是什么"><span class="t">1 · 这个项目是什么（给大一新生的导读）</span></a></li>
+    <li><a href="#2-代码体量全景"><span class="t">2 · 代码体量全景</span></a></li>
+    <li><a href="#3-总体架构与模块职责地图"><span class="t">3 · 总体架构与模块职责地图</span></a></li>
+    <li><a href="#4-服务间如何连接"><span class="t">4 · 服务间如何连接：一张通信关系网</span></a></li>
+    <li><a href="#5-安全设计"><span class="t">5 · 安全设计：这不是演示项目，这是安全工程</span></a></li>
+    <li><a href="#6-性能设计"><span class="t">6 · 性能设计：从 SQL 分区到分布式调度</span></a></li>
+    <li><a href="#7-功能设计上的巧妙与创新点"><span class="t">7 · 功能设计上的巧妙与创新点</span></a></li>
+    <li><a href="#8-每个模块深入剖析"><span class="t">8 · 每个模块深入剖析</span></a></li>
+    <li><a href="#9-工程纪律与踩坑记录"><span class="t">9 · 工程纪律与踩坑记录</span></a></li>
+    <li><a href="#10-已知边界与下一步建议"><span class="t">10 · 已知边界与下一步建议</span></a></li>
+    <li><a href="#附报告如何阅读"><span class="t">附 · 报告如何阅读</span></a></li>
+  </ul>
+</div>
+
+<h1 id="aetheris-数据平台-全项目深度审查报告">Aetheris 数据平台 · 全项目深度审查报告</h1>
+<blockquote>
+<p>审查日期：2026-09-11<br />
+审查范围：整个 monorepo（10 个 Spring Boot 微服务 + 1 个 React 控制台 + 数仓脚本 + 工程配置）<br />
+报告定位：一份「写给两种读者」的技术报告 —— 面向顶级专家的工程剖析，与面向大一新生的通俗导读，两者交织在同一份文档里。</p>
+</blockquote>
+<hr />
+<h2 id="目录">目录</h2>
+<ul>
+<li><a href="#0-一句话结论">0. 一句话结论</a></li>
+<li><a href="#1-这个项目是什么">1. 这个项目是什么（给大一新生的导读）</a></li>
+<li><a href="#2-代码体量全景">2. 代码体量全景</a></li>
+<li><a href="#3-总体架构与模块职责地图">3. 总体架构与模块职责地图</a></li>
+<li><a href="#4-服务间如何连接">4. 服务间如何连接：一张通信关系网</a></li>
+<li><a href="#5-安全设计">5. 安全设计：这不是演示项目，这是安全工程</a></li>
+<li><a href="#6-性能设计">6. 性能设计：从 SQL 分区到分布式调度</a></li>
+<li><a href="#7-功能设计上的巧妙与创新点">7. 功能设计上的巧妙与创新点</a></li>
+<li><a href="#8-每个模块深入剖析">8. 每个模块深入剖析</a></li>
+<li><a href="#9-工程纪律与踩坑记录">9. 工程纪律与踩坑记录</a></li>
+<li><a href="#10-已知边界与下一步建议">10. 已知边界与下一步建议</a></li>
+</ul>
+<hr />
+<h2 id="0-一句话结论">0. 一句话结论</h2>
+<blockquote>
+<p><strong>Aetheris 不是「又一个数据中台 demo」，而是一个独立工程师用「做产品、做安全工程」的标准，在 3.2 万行 Java + 2 万行 TypeScript 里，把「数据接入 → 五层数仓 → 元数据与血缘 → 语义层 → 指标发布 → 调度执行 → 质量 → 治理 → 可视化 → NL2SQL 智能问数 → 统一权限」这条企业级数据平台闭环，真正跑通了的完整作品。</strong></p>
+</blockquote>
+<p>它最打动人的地方不在于功能多（功能多但浅的 demo 比比皆是），而在于<strong>三条贯穿始终的工程价值观</strong>：</p>
+<ol>
+<li><strong>安全不靠口号，靠「纵深防御」和「白名单」</strong> —— SQL 守卫、账号隔离、网络隔离、身份签名验签、权限 fail-closed，层层叠加。</li>
+<li><strong>执行可靠不靠运气，靠数据库事务的原子语义</strong> —— 用 fencing token、租约、心跳、SKIP LOCKED 这些分布式系统原语，硬生生把「多副本并发、进程崩溃、远端失联」这些最难的问题用 PostgreSQL 解决了。</li>
+<li><strong>AI 不是装饰，是「被安全边界管住的生产力」</strong> —— NL2SQL 的三层防护让大模型查库不出事，语义层让模型不自己发明口径。</li>
+</ol>
+<hr />
+<h2 id="1-这个项目是什么-给大一新生的导读">1. 这个项目是什么（给大一新生的导读）</h2>
+<p>如果你刚上大学、刚学完第一门编程语言，你可能对「数据中台」这个词一脸懵。别急，我用一个比喻讲清楚。</p>
+<p><strong>想象一家电商公司。</strong> 每天都有海量的订单、用户、商品数据，散落在各个系统里。老板想知道「上个月哪个品类卖得最好」，一个新手程序员可能写一句 SQL 直接查原始数据，但会遇到一堆问题：</p>
+<ul>
+<li>原始数据里<strong>有脏东西</strong>：空值、重复行、写错的枚举、负价格、已删除但没清理的订单……</li>
+<li>数据量<strong>巨大</strong>：几百万行，直接统计会卡死。</li>
+<li>每个人<strong>口径不一样</strong>：「销售额」到底是下单就算、还是付款才算？「有效订单」怎么定义？</li>
+</ul>
+<p>数据平台，就是<strong>系统地解决这些问题的一套基础设施</strong>。Aetheris 把这套东西完整做出来了：</p>
+<table>
+<thead>
+<tr>
+<th>你老板的诉求</th>
+<th>Aetheris 对应的能力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>「把各处的数据收进来」</td>
+<td><strong>数据接入（ingestion）</strong>：从不同数据库批量搬数据</td>
+</tr>
+<tr>
+<td>「数据先原样存好，别急着改」</td>
+<td><strong>贴源层 ODS</strong>：保留原始脏数据，是真相的底片</td>
+</tr>
+<tr>
+<td>「把脏数据洗干净」</td>
+<td><strong>明细层 DWD</strong>：去重、纠正、标准化，逐条清洗</td>
+</tr>
+<tr>
+<td>「洗干净后按主题汇总」</td>
+<td><strong>汇总层 DWS / 应用层 ADS</strong>：口径固化的最终结果</td>
+</tr>
+<tr>
+<td>「想知道哪张表哪来的」</td>
+<td><strong>元数据 + 血缘（lineage）</strong>：数据的「户口本」和「族谱」</td>
+</tr>
+<tr>
+<td>「统一口径，别各说各话」</td>
+<td><strong>语义层 + 指标（metric）</strong>：定义「GMV 是什么」，一次定义处处用</td>
+</tr>
+<tr>
+<td>「每天自动跑，失败了告诉我」</td>
+<td><strong>任务调度（workflow）</strong>：Quartz 定时、依赖编排、失败待办</td>
+</tr>
+<tr>
+<td>「数据质量要盯住」</td>
+<td><strong>数据质量（quality）</strong>：规则检查、结果留痕</td>
+</tr>
+<tr>
+<td>「做个好看的看板」</td>
+<td><strong>可视化看板（serving）</strong></td>
+</tr>
+<tr>
+<td>「直接用大白话问数」</td>
+<td><strong>智能问数（DataAgent）</strong>：NL2SQL，让 LLM 帮你查</td>
+</tr>
+<tr>
+<td>「谁能看什么、谁能改什么」</td>
+<td><strong>统一权限（RBAC）</strong>：从角色到字段级的精细控制</td>
+</tr>
+</tbody>
+</table>
+<p><strong>这套系统的两个关键词</strong>，也是你接下来几年会反复听到的：</p>
+<ul>
+<li><strong>分层</strong>：数据从「原始」到「干净」到「汇总」是一条流水线，每层职责清晰，就像工厂的「原料仓 → 清洗车间 → 组装线 → 成品仓」。</li>
+<li><strong>解耦</strong>：10 个微服务各管一摊，通过 HTTP 通信，任何一个挂了不影响其他，就像一家公司分了很多部门。</li>
+</ul>
+<p>下面这张图，是整个系统从「老板提问」到「系统回答」的全过程：</p>
+<pre><code class="language-mermaid">flowchart TD
+    U[老板用大白话问：&lt;br/&gt;上个月哪个品类卖得最好？] --&gt; W[React 控制台]
+    W --&gt; G[API 网关&lt;br/&gt;验签 + 权限门禁 + 限流]
+    G --&gt; AI[AI Agent 服务]
+    AI --&gt; M[元数据服务&lt;br/&gt;SQL 守卫 + 只读账号]
+    M --&gt; D[(五层数仓&lt;br/&gt;ODS/DWD/DWS/ADS/DIM)]
+    D --&gt; M --&gt; AI --&gt; G --&gt; W --&gt; U2[回答：3C 数码品类&lt;br/&gt;GMV 1.2 亿，口径来自 ADS 层]
+</code></pre>
+<p>你看，一次看似简单的问数，背后走了 5 个环节，每一环都做了安全检查。这就是企业级系统的样子——<strong>简单的问题，用一套不简单的、但每一环都可解释的机制来保证答案可信。</strong></p>
+<hr />
+<h2 id="2-代码体量全景">2. 代码体量全景</h2>
+<blockquote>
+<p>统计口径：<code>*.java</code>、<code>*.ts/tsx</code>、Flyway <code>*.sql</code>、<code>scripts/**</code>。已排除 <code>node_modules</code>、构建产物、日志、<code>target/</code>。</p>
+</blockquote>
+<h3 id="2-1-总量一览">2.1 总量一览</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th style="text-align: right;">数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Java 后端代码</strong></td>
+<td style="text-align: right;"><strong>约 32,441 行</strong></td>
+</tr>
+<tr>
+<td><strong>TypeScript/React 前端代码</strong></td>
+<td style="text-align: right;"><strong>约 19,560 行</strong></td>
+</tr>
+<tr>
+<td><strong>Flyway 数据库迁移文件</strong></td>
+<td style="text-align: right;"><strong>110 个</strong></td>
+</tr>
+<tr>
+<td><strong>数仓造数/加工 SQL</strong></td>
+<td style="text-align: right;">约 1,040 行</td>
+</tr>
+<tr>
+<td><strong>Python 辅助脚本（造数/Spark runner）</strong></td>
+<td style="text-align: right;">约 1,135 行</td>
+</tr>
+<tr>
+<td><strong>测试文件</strong></td>
+<td style="text-align: right;">约 100 个</td>
+</tr>
+</tbody>
+</table>
+<p><strong>合计手写核心代码约 5.4 万行</strong>，加上 110 个数据库迁移、数仓脚本和测试，构成了一个体量真实、绝非玩具的系统。</p>
+<h3 id="2-2-后端按服务拆分-java">2.2 后端按服务拆分（Java）</h3>
+<table>
+<thead>
+<tr>
+<th>服务</th>
+<th style="text-align: right;">文件数</th>
+<th style="text-align: right;">代码行数</th>
+<th style="text-align: right;">规模占比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metadata-service</code>（元数据/语义层/SQL 守卫）</td>
+<td style="text-align: right;">124</td>
+<td style="text-align: right;"><strong>9,433</strong></td>
+<td style="text-align: right;">29%</td>
+</tr>
+<tr>
+<td><code>workflow-service</code>（调度/执行/资源队列）</td>
+<td style="text-align: right;">75</td>
+<td style="text-align: right;"><strong>7,737</strong></td>
+<td style="text-align: right;">24%</td>
+</tr>
+<tr>
+<td><code>auth-service</code>（认证/RBAC/权限）</td>
+<td style="text-align: right;">83</td>
+<td style="text-align: right;"><strong>4,768</strong></td>
+<td style="text-align: right;">15%</td>
+</tr>
+<tr>
+<td><code>serving-service</code>（数据集/看板/指标消费）</td>
+<td style="text-align: right;">32</td>
+<td style="text-align: right;">2,007</td>
+<td style="text-align: right;">6%</td>
+</tr>
+<tr>
+<td><code>system-service</code>（配置/审计/待办）</td>
+<td style="text-align: right;">49</td>
+<td style="text-align: right;">1,834</td>
+<td style="text-align: right;">6%</td>
+</tr>
+<tr>
+<td><code>ai-agent</code>（DataAgent）</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">1,775</td>
+<td style="text-align: right;">5%</td>
+</tr>
+<tr>
+<td><code>gateway</code>（网关/限流/身份签名）</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">1,433</td>
+<td style="text-align: right;">4%</td>
+</tr>
+<tr>
+<td><code>quality-service</code>（数据质量）</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">1,426</td>
+<td style="text-align: right;">4%</td>
+</tr>
+<tr>
+<td><code>ingestion-service</code>（数据接入）</td>
+<td style="text-align: right;">22</td>
+<td style="text-align: right;">1,238</td>
+<td style="text-align: right;">4%</td>
+</tr>
+<tr>
+<td><code>governance-service</code>（数据治理）</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">790</td>
+<td style="text-align: right;">2%</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>观察</strong>：<code>metadata</code> + <code>workflow</code> 两个服务占了全后端 <strong>53%</strong> 的代码量。这非常合理——因为它们承载了整个系统最硬核的两块：<strong>元数据/语义层/SQL 安全边界</strong>（metadata），和<strong>可靠执行/分布式调度</strong>（workflow）。代码量分布本身，就是这个项目「把力气花在刀刃上」的直接证据。</p>
+</blockquote>
+<h3 id="2-3-数据库迁移分布">2.3 数据库迁移分布</h3>
+<table>
+<thead>
+<tr>
+<th>服务</th>
+<th style="text-align: right;">迁移文件数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>metadata</td>
+<td style="text-align: right;">36</td>
+<td>元数据/语义层/血缘/查询审计的表结构演进</td>
+</tr>
+<tr>
+<td>workflow</td>
+<td style="text-align: right;">28</td>
+<td>执行快照/租约/资源队列/流水线的表结构</td>
+</tr>
+<tr>
+<td>system</td>
+<td style="text-align: right;">10</td>
+<td>审计日志、待办、权限事件</td>
+</tr>
+<tr>
+<td>auth</td>
+<td style="text-align: right;">8</td>
+<td>RBAC 角色、资源授权、权限版本</td>
+</tr>
+<tr>
+<td>quality</td>
+<td style="text-align: right;">8</td>
+<td>质量规则与结果留痕</td>
+</tr>
+<tr>
+<td>ingestion</td>
+<td style="text-align: right;">6</td>
+<td>批量接入与事务写入</td>
+</tr>
+<tr>
+<td>serving</td>
+<td style="text-align: right;">6</td>
+<td>数据集、看板、订阅、授权</td>
+</tr>
+<tr>
+<td>governance</td>
+<td style="text-align: right;">4</td>
+<td>治理策略、分类分级、问题</td>
+</tr>
+<tr>
+<td>ai-agent</td>
+<td style="text-align: right;">4</td>
+<td>会话与消息持久化</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>每个服务用 <strong>独立的 schema</strong>（如 <code>metadata.*</code>、<code>workflow.*</code>、<code>auth.*</code>）管理自己的 Flyway 迁移，互不干扰。这是「数据库隔离」的落地，也是为什么 10 个服务能共用一个 PostgreSQL 而不打架。</p>
+</blockquote>
+<hr />
+<h2 id="3-总体架构与模块职责地图">3. 总体架构与模块职责地图</h2>
+<h3 id="3-1-分层架构">3.1 分层架构</h3>
+<pre><code class="language-text">┌─────────────────────────────────────────────────────────┐
+│                    浏览器 (Browser)                      │
+└───────────────────────────┬─────────────────────────────┘
+                            │ HTTP
+┌───────────────────────────▼─────────────────────────────┐
+│                 Web 控制台 (React 18 + Ant Design 5)      │
+│                 Nginx 托管，端口 5173                     │
+└───────────────────────────┬─────────────────────────────┘
+                            │ /api/**
+┌───────────────────────────▼─────────────────────────────┐
+│            API 网关 (Spring Cloud Gateway, 8080)         │
+│   JWT 验签 · 身份签名注入 · 粗粒度权限门禁 · 限流 · 审计  │
+└──────┬──────┬──────┬──────┬──────┬──────┬──────┬─────────┘
+       │      │      │      │      │      │      │
+    ┌──▼──┐ ┌▼───┐ ┌▼────┐ ┌▼───┐ ┌▼───┐ ┌▼───┐ ┌▼────┐
+    │auth│ │system│ │meta-│ │quality│ │ingest│ │govern│ │workflow│
+    │8087│ │8081│ │data │ │8083│ │8084 │ │8085 │ │8088│
+    └──┬──┘ └──┬──┘ │8082 │ └──┬──┘ └──┬──┘ └──┬──┘ └──┬──┘
+       │       │    └──┬──┘     │       │       │       │
+       │       │       │        │       │       │       │
+    ┌──▼───────▼───────▼────────▼───────▼───────▼───────▼──┐
+    │        PostgreSQL 16（每个服务独立 schema）            │
+    └───────────────────────────────────────────────────────┘
+
+     ┌──────────┐   ┌──────────┐
+     │ ai-agent │   │ serving  │
+     │ 8086     │   │ 8089     │
+     └──────────┘   └──────────┘
+         （都通过 metadata 的内部端点访问数据）
+</code></pre>
+<h3 id="3-2-每个模块-一句话职责-一段职责">3.2 每个模块「一句话职责 + 一段职责」</h3>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>一句话职责</th>
+<th>详细职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>gateway</strong></td>
+<td>唯一的对外入口</td>
+<td>JWT 验签、身份签名（X-Aetheris-Identity）、粗粒度写权限门禁、基于 Redis 的限流、审计日志、把 <code>/api/**</code> 路由到各服务。<strong>业务服务不开对外端口，全部经网关。</strong></td>
+</tr>
+<tr>
+<td><strong>auth-service</strong></td>
+<td>账号与权限的裁判</td>
+<td>登录认证、JWT 签发、RBAC 角色、资源授权（resource_grant）、数据范围（DataScope）、权限版本（permission_version）。对外提供 <code>/internal/permissions/check</code> 供其他服务实时问询。</td>
+</tr>
+<tr>
+<td><strong>system-service</strong></td>
+<td>平台的基础设施</td>
+<td>平台配置、审计日志、失败待办（「我的待办」）、服务健康信息聚合。</td>
+</tr>
+<tr>
+<td><strong>metadata-service</strong></td>
+<td>整个系统的「数据大脑」</td>
+<td>数据源管理、元数据采集、数仓地图、表级/字段级血缘、<strong>SQL 双守卫</strong>、受控执行、<strong>语义层（业务域/逻辑模型/维度/指标 + 发布生命周期）</strong>、查询审计。<strong>所有 SQL 执行能力下沉到这里。</strong></td>
+</tr>
+<tr>
+<td><strong>quality-service</strong></td>
+<td>数据质量的质检员</td>
+<td>质量规则（非空/范围/枚举/重复/自定义 SQL）、检查结果留痕、失败写待办。</td>
+</tr>
+<tr>
+<td><strong>ingestion-service</strong></td>
+<td>数据的搬运工</td>
+<td>跨数据源批量接入、事务写入、并发互斥。</td>
+</tr>
+<tr>
+<td><strong>governance-service</strong></td>
+<td>数据的治理者</td>
+<td>治理策略、分类分级、问题记录。</td>
+</tr>
+<tr>
+<td><strong>workflow-service</strong></td>
+<td>数据加工的执行引擎</td>
+<td>SQL 任务、Quartz JDBC JobStore 集群调度、依赖拓扑、幂等重跑、<strong>受管 Spark</strong>、混合流水线 DAG、资源队列、断点续跑。</td>
+</tr>
+<tr>
+<td><strong>ai-agent</strong></td>
+<td>让老板用大白话问数</td>
+<td>DataAgent 工具调用循环、会话管理、Spring AI + DeepSeek 适配、按用户限流。</td>
+</tr>
+<tr>
+<td><strong>serving-service</strong></td>
+<td>数据的出口</td>
+<td>数据集、看板、查询缓存、语义指标消费、数据服务订阅与授权。</td>
+</tr>
+</tbody>
+</table>
+<h3 id="3-3-一个贯穿全局的关键决策">3.3 一个贯穿全局的关键决策</h3>
+<blockquote>
+<p><strong>「SQL 执行能力下沉到 metadata，而不是分散在各服务」</strong></p>
+</blockquote>
+<p>这是整个架构里最值得说的一笔。<code>workflow</code>、<code>ai-agent</code>、<code>serving</code>、<code>quality</code> 这些服务<strong>都需要</strong>查数据源、执行 SQL，但设计者没有让它们各自去连数据库、各自保存数据源凭据和 JDBC 驱动。为什么？</p>
+<p>因为<strong>数据源凭据、JDBC 驱动、SQL 守卫、连接参数黑名单，是一整套「安全边界」</strong>。如果每个服务都复制一份，那就等于<strong>复制了一份安全边界</strong>——任何一个服务漏打一个补丁，就是一个可以被利用的缺口。</p>
+<p>所以：<strong>所有 SQL 执行都走 metadata 的 <code>/internal/**</code> 端点</strong>。而 <code>/internal/**</code> 路径，网关根本不会路由（网关只路由 <code>/api/**</code>），所以它<strong>只能在 Docker Compose 的内部网络里被访问，外部直接调用返回 404</strong>（这个结论是实测验证过的，不是文档说说而已）。</p>
+<p>这一笔，同时解决了<strong>代码复用</strong>和<strong>安全收敛</strong>两个问题，是架构层面的「一次正确决策，避免十处漏洞」。</p>
+<hr />
+<h2 id="4-服务间如何连接-一张通信关系网">4. 服务间如何连接：一张通信关系网</h2>
+<p>微服务最大的难点，就是「它们到底怎么互相调用」。Aetheris 的通信关系非常克制、清晰，分三种类型：</p>
+<h3 id="4-1-三类通信">4.1 三类通信</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>说明</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>对外 API</strong>（<code>/api/**</code>）</td>
+<td>仅网关可路由，浏览器经网关访问</td>
+<td>前端 → 网关 → 各服务</td>
+</tr>
+<tr>
+<td><strong>内部 API</strong>（<code>/internal/**</code>）</td>
+<td>服务间调用，网关不路由，外部 404</td>
+<td>workflow → metadata 执行 SQL</td>
+</tr>
+<tr>
+<td><strong>数据库共享</strong></td>
+<td>各服务用独立 schema 访问同一个 PostgreSQL</td>
+<td>每个服务读写自己的表</td>
+</tr>
+</tbody>
+</table>
+<h3 id="4-2-关键的服务间调用">4.2 关键的服务间调用</h3>
+<pre><code class="language-text">workflow ──/internal/sql/execute──▶ metadata  （SQL 加工任务执行）
+quality  ──/internal/sql/...─────▶ metadata  （质量规则的自定义 SQL）
+ai-agent ──/internal/agent/**────▶ metadata  （5 个工具的检索与查询）
+serving  ──/internal/semantic/**──▶ metadata  （语义指标查询）
+workflow ──/internal/quality/...─▶ quality  （流水线中的质量门禁）
+workflow ──/internal/notify──────▶ system   （失败写待办）
+gateway  ──/internal/permissions▶ auth      （粗粒度权限问询）
+各服务   ──/internal/permissions─▶ auth      （资源级权限判定）
+</code></pre>
+<h3 id="4-3-服务间信任的基石-内部令牌-身份签名">4.3 服务间信任的基石：内部令牌 + 身份签名</h3>
+<p>服务间调用不是「裸奔」的，靠两道机制保护：</p>
+<ol>
+<li><strong>X-Internal-Token</strong>：服务间调用必须携带一个共享的内部令牌，由 <code>InternalTokenInterceptor</code> 校验。没有令牌，内部端点直接拒绝。</li>
+<li><strong>X-Aetheris-Identity</strong>：网关把「经过 JWT 验签的用户身份」用 HMAC-SHA256 再签一次名，注入请求头。业务服务收到后<strong>重新验签</strong>，确认「这个身份确实经过网关认证」，而不是信任客户端可以伪造的 <code>X-User-Name</code> 头。</li>
+</ol>
+<p>这套设计回答了微服务安全里最经典的问题：<strong>「我怎么知道这个请求真的是那个用户，而不是别人伪造的？」</strong> 答案是——<strong>用签名，而不是用信任明文头。</strong></p>
+<hr />
+<h2 id="5-安全设计-这不是演示项目-这是安全工程">5. 安全设计：这不是演示项目，这是安全工程</h2>
+<p>这是整个项目里我最想重点讲的部分。很多个人项目、甚至商业项目，安全都是「事后想起来补一下」，而 Aetheris 的安全是<strong>从架构第一天就内建的、多层叠加的</strong>。我把它拆成「纵深防御的六层」。</p>
+<h3 id="5-1-第一层-sql-注入与危险语句的-白名单守卫">5.1 第一层：SQL 注入与危险语句的「白名单守卫」</h3>
+<p>数据平台的核心风险是：<strong>用户（或 AI）提交的 SQL，可能删库、改权限、读服务器文件。</strong> Aetheris 用两道守卫挡住了：</p>
+<p><strong>只读守卫 <code>validateReadOnlySql</code></strong>：只放行 <code>SELECT / SHOW / DESCRIBE / EXPLAIN</code>，其他一律拒绝。</p>
+<p><strong>写入守卫 <code>SqlWriteGuard</code></strong>（专门给数仓加工任务用）：白名单只放行<br />
+- <code>INSERT INTO / OVERWRITE ... SELECT</code>（数仓分层加工的主力写法）<br />
+- <code>CREATE TABLE/VIEW ... AS SELECT</code>（建中间表）</p>
+<p><strong>并且两条路径都拒绝</strong>：多语句（分号注入）、<code>DROP / TRUNCATE / ALTER / GRANT / REVOKE</code>、以及 <code>PG_READ_FILE</code>、<code>LOAD_FILE</code>、<code>SLEEP</code>、<code>REFLECT</code> 这类「语法合法但能读服务器文件、探测端口、阻塞连接」的危险函数。</p>
+<p>这里有两个<strong>非常专业</strong>的细节，值得单独拎出来说：</p>
+<p><strong>细节一：先剥离「噪声」，再检查。</strong> 守卫不是拿原始 SQL 直接匹配，而是<strong>先把注释和字符串字面量剥掉</strong>再检查。为什么？因为：<br />
+- 以注释开头的真实加工脚本（很常见的写法）如果用原始文本匹配白名单，会被误拒；<br />
+- 注释里的分号（如 <code>-- 见工单; 紧急</code>）会被误判成多语句；<br />
+- 注释里的「勿 DROP 此表」会被误拦，而字符串字面量里藏的关键字反而可能漏判。</p>
+<pre><code class="language-java">// 顺序很关键：先 stripNoise 剥离注释与字符串，再检查
+String scannable = stripNoise(cleaned).trim();
+</code></pre>
+<p>这个「先降噪、再判定」的顺序，是踩过真实坑之后才总结出来的（CHANGELOG 里有记录：「以注释开头的真实加工脚本被误拒 → 先剥离注释与字符串字面量再检查」）。</p>
+<p><strong>细节二：白名单而非黑名单。</strong> 黑名单是「列出禁止的」，总会有漏网之鱼；白名单是「只列出允许的」，没列出的全拒绝。后者安全得多。而且写入白名单<strong>刻意不含 <code>DROP</code></strong>——因为 <code>INSERT OVERWRITE</code> 覆盖分区已经能满足重跑需求，不需要先删表，那就干脆把删表这个能力彻底关掉。</p>
+<h3 id="5-2-第二层-账号隔离-即便守卫被绕过也无写权限">5.2 第二层：账号隔离（即便守卫被绕过也无写权限）</h3>
+<p>SQL 守卫是「软件层」的防线。但万一守卫被绕过呢？答案是<strong>账号隔离</strong>：</p>
+<ul>
+<li>数仓加工任务用 <strong>HDFS 仓库属主身份</strong>连接（有写权限）；</li>
+<li>只读查询与 AI 助手用 <strong><code>aetheris</code> 只读账号</strong>连接（仓库目录对其他用户是 <code>r-x</code>，即只能读、执行，不能写）。</li>
+</ul>
+<p>所以即使 DataAgent 的 SQL 守卫被绕过了，它拿的账号<strong>在数据库层面就没有写权限</strong>，想写也写不进去。这叫「纵深防御」——不把鸡蛋放在一个篮子里。</p>
+<h3 id="5-3-第三层-网络隔离-内部端点外部不可达">5.3 第三层：网络隔离（内部端点外部不可达）</h3>
+<p>工具端点和 SQL 执行端点都走 <code>/internal/**</code>，而网关只路由 <code>/api/**</code>。所以这些危险端点<strong>在 Compose 内部网络之外根本不可达</strong>，外部直接调用返回 404（实测验证）。</p>
+<h3 id="5-4-第四层-身份签名与常量时间比较">5.4 第四层：身份签名与常量时间比较</h3>
+<p>业务服务不信任浏览器传来的任何明文身份头。网关用共享令牌对 <code>uid|username|timestamp</code> 做 HMAC-SHA256 签名，业务服务验签。而且验签用<strong>常量时间比较</strong>（<code>constantTimeEquals</code>），防止时序侧信道攻击——即不让攻击者通过「比较时间的长短」来逐字节猜出签名。</p>
+<pre><code class="language-java">private static boolean constantTimeEquals(String expected, String actual) {
+    // 逐字节异或，不提前返回，避免时序泄露
+    int result = a.length ^ b.length;
+    for (int i = 0; i &lt; a.length &amp;&amp; i &lt; b.length; i++) {
+        result |= a[i] ^ b[i];
+    }
+    return result == 0;
+}
+</code></pre>
+<p>这个细节，很多商业系统的网关都未必做到。</p>
+<h3 id="5-5-第五层-企业级权限模型-rbac-资源授权-数据范围-权限版本">5.5 第五层：企业级权限模型（RBAC + 资源授权 + 数据范围 + 权限版本）</h3>
+<p>这不是简单的「admin / viewer」两级。而是四维叠加：</p>
+<ul>
+<li><strong>资源层级</strong>：组织 → 项目空间 → 业务域 → 表 / 字段 / 指标 / 数据集 / 看板 / 数据服务。</li>
+<li><strong>动作分离</strong>：<code>view / query / create / update / delete / submit_review / approve / publish / grant / execute / export / manage</code>。<strong>读权限和写权限分离，写动作永不默认放行。</strong></li>
+<li><strong>数据范围（DataScope）</strong>：授权可叠加取值范围（如「只能看业务域 5、6」），实现「有表权限但无字段权限时字段被拒绝」的细粒度控制。</li>
+<li><strong>权限版本（permission_version）</strong>：每次授权变更递增版本号。业务服务<strong>不做长缓存</strong>，每次判定实时问询 auth，避免「撤销了权限但旧权限还长期生效」。</li>
+</ul>
+<p><strong>失败模式是 fail-closed</strong>：权限判定服务不可用时，<strong>一律拒绝</strong>（业务服务返回 403，网关返回 503），而不是「为了不阻塞业务先放行」。这在安全上是绝对正确的——宁可不让你用，也不能让你绕过检查。</p>
+<h3 id="5-6-第六层-容器级安全基线">5.6 第六层：容器级安全基线</h3>
+<p><code>docker-compose.yml</code> 里的 <code>x-java-runtime</code> 锚点，给<strong>所有</strong> Java 服务统一施加了：</p>
+<pre><code class="language-yaml">read_only: true            # 只读根文件系统
+security_opt:
+  - no-new-privileges:true # 禁止提权
+cap_drop:
+  - ALL                    # 丢弃所有 Linux capabilities
+pids_limit: 256            # 限制进程数
+mem_limit: 768m            # 限制内存
+cpus: 1.0                  # 限制 CPU
+</code></pre>
+<p>这不是「跑起来就行」，而是<strong>最小权限原则在容器层的落地</strong>——即使某个服务被攻破，攻击者拿到的是一个只读、无提权、无能力、资源受限的容器，能做的事情极其有限。</p>
+<h3 id="5-7-数据源凭据的加密存储">5.7 数据源凭据的加密存储</h3>
+<p>数据源密码用 <code>AETHERIS_DATASOURCE_MASTER_KEY</code> 主密钥加密存储，主密钥通过 <code>openssl rand -base64 32</code> 生成，不写死在代码里。项目里还有一个 <code>DataSourceSecretMigration</code>，负责把历史明文密码迁移到加密存储。</p>
+<hr />
+<h2 id="6-性能设计-从-sql-分区到分布式调度">6. 性能设计：从 SQL 分区到分布式调度</h2>
+<h3 id="6-1-数据侧-分区与剪枝">6.1 数据侧：分区与剪枝</h3>
+<p>数仓的事实表（订单、明细）<strong>按 <code>dt</code> 字段分区</strong>，数据量在百万级。这让「分区裁剪」成为真实的查询优化问题：</p>
+<ul>
+<li>查询必须带 <code>dt</code> 条件，否则全表扫描超时。</li>
+<li>DataAgent 的系统提示里<strong>明确要求</strong>「查询必须带 dt 分区条件」，这是把性能约束固化进了 AI 的行为准则。</li>
+</ul>
+<h3 id="6-2-写入侧-distribute-by-dt-防-oom">6.2 写入侧：<code>DISTRIBUTE BY dt</code> 防 OOM</h3>
+<p>这是 CHANGELOG 里记录的<strong>真实踩坑</strong>：动态分区写入时，单个 task 会同时持有全部分区的 Parquet writer，每个 writer 各缓冲一个 row group，在单机 driver 上直接耗尽堆内存。</p>
+<p>解法是<strong>在每个写入分区语句末尾统一补 <code>DISTRIBUTE BY dt</code></strong>，让数据按分区键分发，每个 task 只处理自己分区的 writer。文档里反复强调：「改这些 SQL 时不要删掉」。</p>
+<h3 id="6-3-spark-driver-内存调优">6.3 Spark driver 内存调优</h3>
+<p><code>local[N]</code> 模式下 driver 兼作 executor，1g 堆写百万订单就 OOM。默认调到 3g。这是「本地模式」下特有的坑，文档写得很清楚。</p>
+<h3 id="6-4-查询缓存">6.4 查询缓存</h3>
+<p>serving 服务用 <strong>Caffeine Cache</strong> 做查询缓存，避免重复查询直接打到数据源。</p>
+<h3 id="6-5-限流">6.5 限流</h3>
+<p>三层限流：<br />
+- 网关层基于 Redis 的限流（<code>AETHERIS_RATE_LIMIT_CAPACITY</code>）；<br />
+- serving 服务自身的令牌桶限流；<br />
+- ai-agent 按用户限流（<code>UserRateLimiter</code>），防止单个用户刷爆 LLM 调用。</p>
+<h3 id="6-6-分布式调度-用-postgresql-解决-最难的问题">6.6 分布式调度：用 PostgreSQL 解决「最难的问题」</h3>
+<p>这部分我要重点讲，因为它体现了这个项目<strong>最硬核的工程能力</strong>。</p>
+<p><strong>问题</strong>：workflow 服务要支持多副本部署（集群模式），多个副本同时抢任务执行权，还要处理「进程崩溃了怎么办」「远端 Spark 失联了怎么办」。</p>
+<p><strong>Aetheris 没有引入 ZooKeeper、etcd 这类分布式协调中间件，而是用 PostgreSQL 的事务和行锁，自己实现了分布式调度原语。</strong> 具体有三件套：</p>
+<p><strong>① 执行权抢占（fencing token + 唯一约束）</strong></p>
+<pre><code class="language-sql">INSERT INTO workflow.task_instance (task_id, biz_date, ...)
+ON CONFLICT (task_id, biz_date) DO UPDATE ...
+WHERE task_instance.status NOT IN ('queued','submitting','running','cancel_requested','unknown')
+</code></pre>
+<p><code>(task_id, biz_date)</code> 有唯一约束，<code>ON CONFLICT</code> + <code>WHERE</code> 状态过滤，保证<strong>同一个任务的同一个业务日期，同一时刻只能有一个活动执行</strong>。<code>fencing_token</code> 每次抢占递增，用来<strong>防止旧的执行者覆盖新的状态</strong>——这就是经典的 fencing token 模式。</p>
+<p><strong>② 租约 + 心跳（lease + heartbeat）</strong></p>
+<p>每个执行 attempt 有 <code>lease_expires_at</code>（租约到期时间）和 <code>heartbeat_at</code>（心跳时间）。执行者定期心跳续租。如果进程崩溃、心跳停止，租约过期后由 <code>reconcileExpiredLeases</code> 回收——把排队中的标记为超时，把运行中的标记为 <code>unknown</code>（等待人工核对远端结果，而不是盲目重跑导致重复执行）。</p>
+<p><strong>③ 资源队列 + SKIP LOCKED（Spark 资源准入）</strong></p>
+<p>受管 Spark 任务不能无限并发，要按 CPU/内存/并发三维容量准入。<code>SparkResourceQueueService</code> 用数据库做<strong>持久化 FIFO 队列</strong>：</p>
+<pre><code class="language-sql">... FOR UPDATE OF runner SKIP LOCKED LIMIT 1
+</code></pre>
+<p><code>SKIP LOCKED</code> 是关键——多个 workflow 副本同时抢 Runner 容量时，被锁住的行直接跳过，<strong>不会互相阻塞，也不会超配</strong>。这正是 CHANGELOG 里「Compose 双副本锁竞争验收」验证过的：第二个副本在 Runner 被锁定时通过 <code>SKIP LOCKED</code> 立即跳过。</p>
+<blockquote>
+<p><strong>专家点评</strong>：这三件套（fencing token、lease/heartbeat、FOR UPDATE SKIP LOCKED）是分布式系统里最经典、最可靠的原语。很多团队会为了「看起来高大上」引入重型中间件，而这个项目证明了——<strong>在 PostgreSQL 的强一致性事务之上，用正确的 SQL 就能实现一套足够可靠的执行引擎</strong>。这是「减法自觉」的最佳体现。</p>
+</blockquote>
+<hr />
+<h2 id="7-功能设计上的巧妙与创新点">7. 功能设计上的巧妙与创新点</h2>
+<h3 id="7-1-nl2sql-的三层防护-最有价值的设计之一">7.1 NL2SQL 的三层防护（最有价值的设计之一）</h3>
+<p>市面上的 ChatBI 大多死在两个地方：<strong>模型乱猜表名</strong>、<strong>生成的 SQL 不安全</strong>。Aetheris 把这件事当安全工程来做：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>机制</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>语句守卫</td>
+<td><code>validateReadOnlySql</code> 白名单只放行 SELECT/SHOW/DESCRIBE/EXPLAIN</td>
+<td>agent 生成的 SQL 与人工输入受同一套约束</td>
+</tr>
+<tr>
+<td>账号隔离</td>
+<td>agent 用只读账号</td>
+<td>即便守卫被绕过也无法写入</td>
+</tr>
+<tr>
+<td>网络隔离</td>
+<td>工具端点走 <code>/internal/**</code></td>
+<td>外部直接调用 404</td>
+</tr>
+</tbody>
+</table>
+<p><strong>而且工具链是「语义层指标优先、元数据检索兜底」</strong>：模型先调 <code>searchMetrics</code> 查已发布指标，没匹配才回退 <code>searchTables → describeTable → query</code> 三段式。系统提示固化四条纪律，每条都对应数仓的真实特征（见 8.8 节）。</p>
+<h3 id="7-2-语义层不是-orm-是指标资产生命周期管理">7.2 语义层不是 ORM，是指标资产生命周期管理</h3>
+<p>语义层实现了 OneData 方法论的核心：业务域 → 逻辑模型 → 语义维度 → 指标，全部绑定真实表与字段。关键在于<strong>发布生命周期</strong>：</p>
+<pre><code class="language-text">首次草稿 ──校验/试算──▶ 发布 v1 ──创建新版本──▶ v1 在线 + v2 草稿
+   │                         │                         ├──发布──▶ v2 在线
+   └──可删除                 └──可下线                 └──放弃──▶ 恢复 v1
+</code></pre>
+<ul>
+<li>编码是稳定身份，创建后不可修改；</li>
+<li>每次发布生成<strong>不可变快照</strong>；线上版本和下一版草稿并行，<strong>编辑草稿不会中断现有消费者</strong>；</li>
+<li>消费者只提交「指标编码 + 维度 + 时间粒度 + 日期范围」，<strong>不提交任意 SQL</strong>。</li>
+</ul>
+<p>这套设计解决的是两个真实痛点：<br />
+1. 「开始编辑 v2 就让 v1 下线」的常见故障；<br />
+2. 「每个人都能写 SQL 导致口径爆炸」的治理问题。</p>
+<h3 id="7-3-受控的语义指标执行器-防止-sql-注入的-编译而非拼接">7.3 受控的语义指标执行器（防止 SQL 注入的「编译而非拼接」）</h3>
+<p><code>SemanticMetricQueryService</code> 是「把指标定义编译成受控 SQL」的典范：</p>
+<ul>
+<li><strong>聚合白名单</strong>：只允许 <code>SUM / COUNT / COUNT_DISTINCT / AVG / MIN / MAX</code>；</li>
+<li><strong>标识符字符校验</strong>：字段名/表名必须匹配 <code>[A-Za-z_][A-Za-z0-9_$]*</code>，否则拒绝——这从根本上堵死了标识符注入；</li>
+<li><strong>过滤操作符白名单</strong>：<code>eq/ne/gt/gte/lt/lte/in/not_in/is_null/is_not_null</code>，<code>IN</code> 值数量上限 100；</li>
+<li><strong>方言感知</strong>：<code>timeBucket</code> 根据数据源类型（Postgres/MySQL/Spark）生成不同的时间分桶表达式；</li>
+<li><strong>结果上限</strong>：最多返回 100 行。</li>
+</ul>
+<p>这是「<strong>用白名单和字符校验，把用户的任意输入关进笼子里</strong>」的教科书级实现。</p>
+<h3 id="7-4-自研-hive-血缘提取器-而不是硬套-jsqlparser">7.4 自研 Hive 血缘提取器（而不是硬套 JSqlParser）</h3>
+<p>血缘解析不用 JSqlParser，因为实测 4.9 版<strong>无法解析 Hive 的 <code>INSERT OVERWRITE TABLE ... PARTITION (dt)</code></strong>（项目的四类真实写法全部抛异常）。于是自研了一个面向 Hive 方言的词法提取器，覆盖 <code>INSERT OVERWRITE/INTO</code>、<code>LATERAL VIEW</code>、<code>DISTRIBUTE BY</code>、<code>CREATE TABLE AS SELECT</code>，并<strong>刻意排除 CTE 名称、表值函数、自引用、注释与字符串字面量</strong>，避免产生不存在的表节点。</p>
+<p>这个决策体现了「<strong>实事求是，不迷信现成库</strong>」——当现成工具不适用时，敢于自己写一个更贴合场景的，并清楚地写明边界（当前是表级血缘，字段级要等真正的 Hive 方言 AST 解析器）。</p>
+<h3 id="7-5-幂等重跑设计">7.5 幂等重跑设计</h3>
+<ul>
+<li><strong>实例幂等</strong>：<code>(task_id, biz_date)</code> 唯一，重跑复用同一行并累加 attempt，列表不膨胀，也排除了并发写入；</li>
+<li><strong>数据幂等</strong>：加工语句用 <code>INSERT OVERWRITE ... PARTITION</code> 覆盖目标分区，重跑不产生重复数据，不依赖事务回滚（Hive/Spark 本就不支持事务性 DML）。</li>
+</ul>
+<h3 id="7-6-ai-能力分层-换模型只换适配器">7.6 AI 能力分层（换模型只换适配器）</h3>
+<pre><code class="language-text">ChatController（协议转换、限流、状态码映射）
+      ↓
+ChatService（会话编排、校验、持久化）
+      ↓
+LlmClient（端口/接口）
+      ↓
+SpringAiLlmClient（Spring AI + DeepSeek 适配器）
+</code></pre>
+<p>这样 DataAgent 的核心工作（工具循环、语义层、SQL 守卫）<strong>不与具体模型厂商耦合</strong>，换模型只替换适配器。这是「面向接口编程」在 AI 时代的正确姿势。</p>
+<hr />
+<h2 id="8-每个模块深入剖析">8. 每个模块深入剖析</h2>
+<h3 id="8-1-gateway-api-网关-1-433-行">8.1 gateway（API 网关，1,433 行）</h3>
+<ul>
+<li><strong>JwtAuthFilter</strong>：JWT 验签，httponly cookie 之外仅网关可信。</li>
+<li><strong>IdentitySigner</strong>：用共享令牌对 <code>uid|username|timestamp</code> 做 HMAC-SHA256，生成 <code>X-Aetheris-Identity</code> 头。</li>
+<li><strong>AuthPermissionGate</strong>：粗粒度写权限问询，auth 不可用时 fail-closed（503），超时 500ms 连接 + 1.5s 响应，防止权限服务拖垮网关。</li>
+<li><strong>WriteRateLimitFilter + TokenRevocationStore</strong>：基于 Redis 的限流与令牌吊销。</li>
+<li><strong>AuditLogFilter</strong>：审计日志，活动流数据来源。</li>
+</ul>
+<h3 id="8-2-auth-service-认证与权限-4-768-行">8.2 auth-service（认证与权限，4,768 行）</h3>
+<ul>
+<li>RBAC 角色、权限目录、角色-权限绑定、用户组、组织、项目空间、资源授权、数据范围、权限版本。</li>
+<li><code>sys_admin</code> / <code>sys_viewer</code> 系统角色不可删改，与旧 <code>admin/viewer</code> 账号通过 <code>auth_user_role</code> 映射兼容迁移。</li>
+<li>对外提供 <code>/internal/permissions/check</code>、<code>/internal/permissions/visibility</code>、<code>/internal/permissions/mutate-check</code> 三个内部端点。</li>
+<li><strong>核心原则</strong>：业务逻辑核心链路不再把 admin 硬编码为例外，统一走 <code>PermissionDecisionService</code>。</li>
+</ul>
+<h3 id="8-3-metadata-service-元数据与语义层-9-433-行-最大服务">8.3 metadata-service（元数据与语义层，9,433 行，最大服务）</h3>
+<p>这是整个系统的「数据大脑」，职责最重：</p>
+<ul>
+<li><strong>数据源管理</strong>：JDBC 驱动（含 hive-jdbc 的 12 处 exclusion）、<code>buildUrl</code> 协议校验、危险连接参数黑名单、凭据加密存储。</li>
+<li><strong>元数据采集</strong>：层级推断（<code>WarehouseLayerResolver</code>，库名匹配不上退回表名前缀）、表注释抓取（<code>DESCRIBE FORMATTED</code> 读 Comment 行）、stale 表管理。</li>
+<li><strong>血缘</strong>：表级血缘（<code>SqlLineageExtractor</code>）+ 字段级血缘（<code>FieldLineageController</code>、<code>SqlLineageExtractor</code> 的字段投影解析）。</li>
+<li><strong>SQL 双守卫</strong>：<code>validateReadOnlySql</code> + <code>SqlWriteGuard</code>。</li>
+<li><strong>受控执行</strong>：<code>InternalSqlExecuteController</code>、<code>InternalSqlValidateController</code>。</li>
+<li><strong>语义层</strong>：业务域、逻辑模型、语义维度、指标、发布生命周期、语义资产评审。</li>
+<li><strong>查询审计</strong>：<code>QueryAuditService</code>，哈希化查询标识、失败率/P50/P95/慢查询统计。</li>
+<li><strong>安全</strong>：<code>IdentityVerifier</code>（验签）、<code>InternalTokenInterceptor</code>（内部令牌）、<code>AuthPermissionClient</code>（权限问询）、<code>MetadataSecurity</code>（资源级判定）。</li>
+</ul>
+<h3 id="8-4-workflow-service-执行引擎-7-737-行-第二大服务">8.4 workflow-service（执行引擎，7,737 行，第二大服务）</h3>
+<p>这是整个系统「可靠执行」的核心：</p>
+<ul>
+<li><strong>TaskSchedulerService</strong>：Quartz JDBC JobStore 集群调度，misfire 策略 <code>DoNothing</code>（停机期间错过的触发不补跑，避免用错误业务日期执行）。</li>
+<li><strong>TaskDependencyService</strong>：依赖拓扑，上游成功后触发下游。</li>
+<li><strong>ExecutionClaimCoordinator</strong>：原子抢占、租约、心跳、fencing token、过期回收（见 6.6 节）。</li>
+<li><strong>ExecutionAttemptService</strong>：不可变执行快照，attempt 固化任务定义（<code>definition_digest</code>），重试不读取漂移后的在线配置。</li>
+<li><strong>SparkResourceQueueService</strong>：持久化 FIFO 队列 + 三维容量准入 + SKIP LOCKED（见 6.6 节）。</li>
+<li><strong>SparkBatchExecutionService</strong>：受管 Spark，固定环境、白名单 PySpark 制品、SHA-256 校验、制作者/复核者分离、application ID、增量日志、远端确认取消。</li>
+<li><strong>PipelineExecutionService</strong>：SQL/Spark/质量混合 DAG，提交前闭包校验、质量豁免、断点续跑。</li>
+<li><strong>GitRemoteInspector / GitRepositoryService</strong>：Git 源码修订固定，JGit 只读解析远端分支头，40 位 commit SHA，私有仓库凭据只存 env 引用。</li>
+</ul>
+<h3 id="8-5-serving-service-数据服务-2-007-行">8.5 serving-service（数据服务，2,007 行）</h3>
+<ul>
+<li>数据集（AnalyticsDataset）、看板（Dashboard）、订阅（DataSubscription）、服务授权（ServiceGrant）。</li>
+<li>版本化指标/只读 SQL API、查询缓存（Caffeine）、<code>MetadataQueryClient</code> 消费语义指标。</li>
+<li>自身限流（<code>ServingRateLimiter</code>）。</li>
+</ul>
+<h3 id="8-6-quality-service-数据质量-1-426-行">8.6 quality-service（数据质量，1,426 行）</h3>
+<ul>
+<li>质量规则：非空、范围、枚举、重复、自定义 SQL。</li>
+<li>结果留痕，失败写待办（通知 system-service）。</li>
+</ul>
+<h3 id="8-7-ingestion-service-数据接入-1-238-行">8.7 ingestion-service（数据接入，1,238 行）</h3>
+<ul>
+<li>跨数据源批量接入、事务写入、并发互斥。</li>
+</ul>
+<h3 id="8-8-ai-agent-dataagent-1-775-行">8.8 ai-agent（DataAgent，1,775 行）</h3>
+<ul>
+<li><strong>五个工具</strong>（<code>DataTools</code>）：<code>searchMetrics</code>、<code>queryMetric</code>、<code>searchTables</code>、<code>describeTable</code>、<code>query</code>。</li>
+<li><strong>工具设计巧思</strong>：</li>
+<li><code>@Tool</code> 描述写得极详细（用途、参数、调用顺序），因为这是模型判断「该不该调、怎么传参」的唯一依据；</li>
+<li>返回值序列化成<strong>紧凑 JSON</strong>，省下 token 留给表注释；</li>
+<li>工具<strong>不抛异常</strong>，失败返回带 <code>error</code> 字段的结构化结果，让模型能自行改写重试——抛异常会中断整轮对话。</li>
+<li><strong>系统提示</strong>（<code>AgentPrompts</code>）固化四条纪律，每条都对应数仓真实特征：<br />
+  1. <strong>必须先检索再看结构再查询</strong>——避免凭字段名猜 SQL；<br />
+  2. <strong>统计优先用 ADS/DWS</strong>——ODS 层有脏数据，直接统计得错结论；<br />
+  3. <strong>查询必须带 dt 分区条件</strong>——事实表百万级，不带条件全表扫描超时；<br />
+  4. <strong>以字段注释为口径依据</strong>——「有效订单」「GMV」有固定定义，不让模型自己发明。</li>
+<li><strong>按用户限流</strong>（<code>UserRateLimiter</code>）+ 会话按用户隔离持久化。</li>
+<li>实测：问「2026 年 8 月销售额最高的品类」，agent 自主选 ADS 层、带 <code>month_key</code> 过滤，回答正确并说明口径来源。</li>
+</ul>
+<h3 id="8-9-system-service-系统管理-1-834-行">8.9 system-service（系统管理，1,834 行）</h3>
+<ul>
+<li>平台配置、审计日志、失败待办（「我的待办」）、服务健康信息聚合。</li>
+</ul>
+<h3 id="8-10-governance-service-数据治理-790-行">8.10 governance-service（数据治理，790 行）</h3>
+<ul>
+<li>治理策略、分类分级、问题记录。</li>
+</ul>
+<hr />
+<h2 id="9-工程纪律与踩坑记录">9. 工程纪律与踩坑记录</h2>
+<p>这个项目最难得的，是它把「个人项目」用「产品标准」来对待。CHANGELOG 记录了 10 轮迭代的踩坑，每一轮都是真金白银的教训：</p>
+<table>
+<thead>
+<tr>
+<th>踩坑</th>
+<th>教训</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spark driver OOM</td>
+<td><code>local[N]</code> 下 driver 兼 executor，1g 堆写百万订单即爆 → 默认 3g</td>
+</tr>
+<tr>
+<td>动态分区写耗尽堆</td>
+<td>单 task 持有全部分区 writer → 写分区语句末尾统一补 <code>DISTRIBUTE BY dt</code></td>
+</tr>
+<tr>
+<td>Quartz misfire</td>
+<td>停机错过的触发不补跑 → 策略选 <code>DoNothing</code>，避免用错误业务日期执行</td>
+</tr>
+<tr>
+<td>JSqlParser 解析不了 Hive</td>
+<td><code>INSERT OVERWRITE ... PARTITION</code> 报错 → 自研 Hive 方言提取器</td>
+</tr>
+<tr>
+<td>SQL 守卫顺序缺陷</td>
+<td>注释开头的真实脚本被误拒 → 先剥离注释与字符串字面量再检查</td>
+</tr>
+</tbody>
+</table>
+<p><strong>工程纪律</strong>还包括：</p>
+<ul>
+<li><strong>成熟度分级</strong>：每个模块标记为「规划 / 可用 / 完整 / 企业级」，新能力要同时满足真实数据、后端校验、角色边界、失败反馈、数据库迁移、自动化回归、Docker 升级验证，才叫「完成」。</li>
+<li><strong>刻意注入 11 类脏数据</strong>：ODS 层保留真实业务会遇到的脏数据（空值、重复、非法枚举、负价格、逻辑删除未过滤），让质量规则和 DataAgent 有真实的训练对象。</li>
+<li><strong>版本选择依据</strong>：升级前查 Maven Central 实际发布的构件，而不是二手资讯（纠正了「Spring AI 2.0 GA 已发布」的谣言）。</li>
+<li><strong>测试覆盖</strong>：ai-agent 20 个单测、auth 18 个、workflow 覆盖幂等/并发拒绝/上游跳过/重试/占位符替换。CI 含跨服务冒烟链路。</li>
+<li><strong>减法的自觉</strong>：不引入 Nacos（执行引擎未稳定时避免扩大运维复杂度）、不引入 pgvector（表少时关键词够用）、不自动生成跨表 JOIN（在已知边界里坦白写）。</li>
+</ul>
+<hr />
+<h2 id="10-已知边界与下一步建议">10. 已知边界与下一步建议</h2>
+<p>这个项目非常诚实——它把自己的边界写得清清楚楚（<code>roadmap.md</code>），不夸大、不掩饰。这也是它区别于「吹牛 demo」的地方。</p>
+<h3 id="10-1-已知边界-作者自己承认的">10.1 已知边界（作者自己承认的）</h3>
+<ul>
+<li>语义指标以<strong>单个受管物理表</strong>为执行边界，多表关系用于建模和校验，尚未自动生成跨表 JOIN。</li>
+<li>派生/复合指标目前仍用同一受控聚合执行器，尚无指标表达式 DAG。</li>
+<li>Git 集成当前验证远端分支头并固定 commit，运行器文件摘要仍由部署清单提供，尚未自动读取 Git blob、校验签名。</li>
+<li>断点续跑不允许跳过 <code>unknown</code> 节点（这是对的，宁可卡住也不盲目重跑）。</li>
+<li>Docker Compose 是当前交付环境，Kubernetes、持续负载容量、灾备尚未宣称完成。</li>
+<li>血缘当前是表级为主，字段级血缘在补强中。</li>
+</ul>
+<h3 id="10-2-我的下一步建议-按优先级">10.2 我的下一步建议（按优先级）</h3>
+<ol>
+<li><strong>字段级血缘 + 语义资产依赖图 + 变更影响分析</strong>：这是「数据资产识别最后一公里」的关键（与你近期商业化的方向直接相关），当前已有基础节点/边，缺的是「下线前跨资产自动阻断」。</li>
+<li><strong>跨表 JOIN 的受控编译</strong>：突破「单来源表」边界，是语义层从「可用」到「完整」的临门一脚。</li>
+<li><strong>数据服务开放的生产化</strong>：API key 申请/轮换、应用审批、配额持久化、分布式限流、SLA。</li>
+<li><strong>Git blob 摘要自动比对</strong>：把「commit 固定」升级为「代码供应链签名验证」。</li>
+<li><strong>Kubernetes + 高可用 PostgreSQL + 备份恢复</strong>：规模化运行的必经之路。</li>
+</ol>
+<hr />
+<h2 id="附-报告如何阅读">附：报告如何阅读</h2>
+<ul>
+<li><strong>如果你是大一新生</strong>：重点读第 1 节（导读）、第 3 节（架构地图）、第 5 节开头的「纵深防御」比喻。你会理解「企业级系统」到底比「课程作业」多做了什么。</li>
+<li><strong>如果你是有经验的工程师</strong>：重点读第 5.1（SQL 白名单守卫）、第 6.6（PostgreSQL 分布式调度三件套）、第 7.2-7.4（语义层生命周期、受控指标执行器、自研血缘提取器）。这些是真正值得拿出来说的硬核实现。</li>
+<li><strong>如果你是架构师/技术负责人</strong>：重点读第 3.3（SQL 能力下沉的决策）、第 5（纵深防御六层）、第 10（边界与建议）。</li>
+</ul>
+<hr />
+<p align="center">Aetheris · 让数据有序流动，让价值清晰发生。</p>
+
+</body>
+</html>

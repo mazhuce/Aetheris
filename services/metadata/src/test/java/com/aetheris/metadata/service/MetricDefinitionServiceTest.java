@@ -58,6 +58,12 @@ class MetricDefinitionServiceTest {
         assertEquals("指标编码是稳定标识，创建后不能修改", error.getMessage());
     }
 
+    @Test
+    void pageAndSizeHaveExplicitSafeBounds() {
+        assertThrows(IllegalArgumentException.class, () -> service.list(null, null, null, 0, 50));
+        assertThrows(IllegalArgumentException.class, () -> service.list(null, null, null, 1, 501));
+    }
+
     private MetricDefinition metric(String code, String status, int version) {
         MetricDefinition metric = new MetricDefinition();
         metric.setMetricCode(code);

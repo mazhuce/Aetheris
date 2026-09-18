@@ -80,6 +80,23 @@ class QualityExecutionServiceTest {
                 () -> service.buildSql(rule("sql", "SELECT 0; DROP TABLE users")));
     }
 
+    @Test
+    void predicateUsesAstAndFunctionWhitelist() {
+        assertEquals(
+                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (COALESCE(amount, 0) >= 0 AND status IN ('paid', 'done'))",
+                service.buildSql(rule("range", "COALESCE(amount, 0) >= 0 AND status IN ('paid', 'done')")));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.buildSql(rule("range", "amount >= 0 OR pg_sleep(1) = 0")));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.buildSql(rule("range", "amount >= (SELECT 0)")));
+    }
+
+    @Test
+    void customSqlRejectsFunctionsOutsideWhitelist() {
+        assertThrows(IllegalArgumentException.class,
+                () -> service.buildSql(rule("sql", "SELECT dangerous_fn(order_id) FROM ods.orders")));
+    }
+
     private QualityRule rule(String type, String expression) {
         QualityRule rule = new QualityRule();
         rule.setId(1L);

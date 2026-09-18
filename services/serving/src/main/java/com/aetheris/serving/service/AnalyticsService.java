@@ -107,7 +107,12 @@ public class AnalyticsService {
     }
 
     public Dashboard publish(Long id, String username) {
-        return repository.publishDashboard(id, username).orElseThrow(() -> new NotFoundException("看板不存在"));
+        try {
+            return repository.publishDashboard(id, username)
+                    .orElseThrow(() -> new NotFoundException("看板不存在"));
+        } catch (AnalyticsRepository.PublishConflictException error) {
+            throw new PublishConflictException(error.getMessage());
+        }
     }
 
     public void deleteDashboard(Long id) {
@@ -128,5 +133,9 @@ public class AnalyticsService {
 
     public static class NotFoundException extends RuntimeException {
         public NotFoundException(String message) { super(message); }
+    }
+
+    public static class PublishConflictException extends RuntimeException {
+        public PublishConflictException(String message) { super(message); }
     }
 }

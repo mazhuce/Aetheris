@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Aetheris 批判性代码审视与一周作战计划</title>
+<style>
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 400;
+  src: local("Noto Sans SC"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20(TrueType).otf") format("opentype");
+}
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 500;
+  src: local("Noto Sans SC Medium"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20Medium%20(TrueType).otf") format("opentype");
+}
+@font-face {
+  font-family: "Noto Sans SC";
+  font-weight: 700;
+  src: local("Noto Sans SC Bold"), url("file:///C:/Windows/Fonts/Noto%20Sans%20SC%20Bold%20(TrueType).otf") format("opentype");
+}
+
+:root {
+  --ink: #0f172a;
+  --muted: #5b6472;
+  --brand: #1e3a8a;
+  --brand-soft: #eef2fb;
+  --line: #e3e8f0;
+  --red: #b91c1c;
+  --red-soft: #fef2f2;
+  --amber: #b45309;
+  --amber-soft: #fffbeb;
+  --green: #047857;
+  --green-soft: #ecfdf5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: "Noto Sans SC", "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  font-size: 10.2pt;
+  line-height: 1.78;
+  margin: 0;
+  padding: 34px 40px 60px;
+  background: #ffffff;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- 封面 ---------- */
+.cover {
+  padding: 26px 0 30px;
+  border-bottom: 3px solid var(--brand);
+  margin-bottom: 26px;
+}
+.cover .kicker {
+  font-size: 8.6pt; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--brand); font-weight: 700; margin-bottom: 14px;
+}
+.cover h1 {
+  font-size: 27pt; line-height: 1.3; margin: 0 0 14px; font-weight: 700;
+  letter-spacing: -.01em; border: none; padding: 0;
+}
+.cover .subtitle { font-size: 11pt; color: var(--muted); line-height: 1.7; }
+.cover .rule { height: 4px; width: 76px; background: #f59e0b; border-radius: 2px; margin: 20px 0 18px; }
+.cover .meta { display: flex; flex-wrap: wrap; gap: 10px 26px; font-size: 9.4pt; color: var(--muted); }
+.cover .meta b { color: var(--ink); }
+.dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--brand); margin-right: 8px; vertical-align: 1px; }
+
+/* ---------- 目录 ---------- */
+.toc {
+  background: var(--brand-soft);
+  border: 1px solid #d9e1f5;
+  border-radius: 12px;
+  padding: 18px 24px 20px;
+  margin: 0 0 30px;
+}
+.toc h2 { margin: 0 0 10px; font-size: 12pt; border: none; padding: 0; color: var(--brand); }
+.toc ul { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+.toc li { margin: 3px 0; font-size: 9.6pt; }
+.toc a { color: var(--ink); text-decoration: none; }
+
+/* ---------- 标题 ---------- */
+h1 {
+  font-size: 18pt; margin: 34px 0 14px; padding-bottom: 9px;
+  border-bottom: 2px solid var(--brand); font-weight: 700;
+}
+h2 { font-size: 14pt; margin: 26px 0 10px; color: var(--brand); font-weight: 700; }
+h3 { font-size: 11.6pt; margin: 20px 0 8px; font-weight: 700; }
+h4 { font-size: 10.4pt; margin: 16px 0 6px; color: var(--muted); font-weight: 700; }
+
+p { margin: 9px 0; }
+strong { font-weight: 700; }
+
+/* ---------- 引用（用于"一句话结论"） ---------- */
+blockquote {
+  margin: 14px 0; padding: 14px 18px;
+  background: #fffbeb; border-left: 4px solid #f59e0b;
+  border-radius: 0 8px 8px 0; color: #422006; font-size: 10.4pt;
+}
+blockquote p { margin: 6px 0; }
+
+/* ---------- 代码块 ---------- */
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  font-size: 8.8pt; line-height: 1.6; white-space: pre-wrap;
+  word-break: break-word; margin: 12px 0; page-break-inside: avoid;
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+}
+code {
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  font-size: .92em; background: #eef2f7; color: var(--red);
+  padding: 1px 5px; border-radius: 4px;
+}
+pre code { background: transparent; color: inherit; padding: 0; font-size: inherit; }
+
+/* ---------- 表格 ---------- */
+table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 9.3pt; }
+th {
+  background: var(--brand); color: #fff; font-weight: 600;
+  text-align: left; padding: 7px 10px; border: 1px solid var(--brand);
+}
+td { padding: 6px 10px; border: 1px solid #dfe4ec; vertical-align: top; }
+tr:nth-child(even) td { background: #f7f9fc; }
+tr { page-break-inside: avoid; }
+
+/* ---------- 列表 ---------- */
+ul, ol { margin: 8px 0; padding-left: 24px; }
+li { margin: 4px 0; }
+
+hr { border: none; border-top: 1px solid var(--line); margin: 24px 0; }
+
+a { color: var(--brand); }
+
+/* ---------- 打印 ---------- */
+@page {
+  size: A4;
+  margin: 18mm 16mm 16mm 16mm;
+  @top-center {
+    content: "Aetheris · 批判性代码审视与一周作战计划";
+    font-family: "Noto Sans SC", sans-serif; font-size: 8pt; color: #94a3b8;
+  }
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: "Noto Sans SC", sans-serif; font-size: 8pt; color: #94a3b8;
+  }
+}
+@media print {
+  body { padding: 0; max-width: none; font-size: 9.6pt; }
+  .cover { page-break-after: always; }
+  .toc { page-break-after: always; }
+  h1 { page-break-before: always; }
+  h1:first-of-type { page-break-before: auto; }
+  pre, table, blockquote { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">Critical Code Review &amp; Weekly Battle Plan</div>
+  <h1>先让它摔不坏<br>再让它交得出去</h1>
+  <div class="subtitle">
+    Aetheris 数据平台 · 批判性代码审视与一周作战计划<br>
+    26 个问题的定位、取证与修复顺序 · 2026-09-14 — 09-20 逐日排期
+  </div>
+  <div class="rule"></div>
+  <div class="meta">
+    <div><span class="dot"></span><span>审视范围：<b>整个 Monorepo</b></span></div>
+    <div><span class="dot" style="background:#b91c1c"></span><span>阻断级：<b>3 项</b></span></div>
+    <div><span class="dot" style="background:#f59e0b"></span><span>高危：<b>7 项</b></span></div>
+    <div><span class="dot" style="background:#10b981"></span><span>审视日期：<b>2026-09-13</b></span></div>
+  </div>
+</div>
+
+<div class="toc">
+  <h2>目录</h2>
+  <ul>
+<li><a href="#0-一句话结论"><span class="t">0 · 一句话结论</span></a></li>
+<li><a href="#1-审视方法与取证基线"><span class="t">1 · 审视方法与取证基线</span></a></li>
+<li><a href="#2-两处必须更正的事实"><span class="t">2 · 两处必须更正的事实</span></a></li>
+<li><a href="#3-问题总表"><span class="t">3 · 问题总表</span></a></li>
+<li><a href="#4-阻断级问题详解"><span class="t">4 · 阻断级问题详解（B1–B3）</span></a></li>
+<li><a href="#5-高危问题详解"><span class="t">5 · 高危问题详解（H1–H7）</span></a></li>
+<li><a href="#6-中危问题"><span class="t">6 · 中危问题（M1–M11）</span></a></li>
+<li><a href="#7-低危与仓库卫生"><span class="t">7 · 低危与仓库卫生（L1–L5）</span></a></li>
+<li><a href="#8-下一步急需解决的东西"><span class="t">8 · 下一步急需解决的东西</span></a></li>
+<li><a href="#9-接下来一周的详细作战计划"><span class="t">9 · 接下来一周的详细作战计划</span></a></li>
+<li><a href="#10-一条逆耳的提醒"><span class="t">10 · 一条逆耳的提醒（战略层）</span></a></li>
+<li><a href="#附录本次审视的取证命令索引"><span class="t">附 · 取证命令索引</span></a></li>
+  </ul>
+</div>
+
+<h1 id="aetheris-批判性代码审视-问题清单与一周作战计划">Aetheris 批判性代码审视 · 问题清单与一周作战计划</h1>
+<blockquote>
+<p>审视日期：2026-09-13<br />
+审视范围：整个 monorepo —— 10 个 Spring Boot 服务 + gateway + React 控制台 + 56 个 Flyway 迁移 + Docker Compose + CI<br />
+审视方法：源码逐行核查 + 命令行取证（git 跟踪状态、测试报告、依赖扫描、配置比对），<strong>每条结论都附带文件路径与行号</strong><br />
+与既有文档的关系：<code>docs/roadmap.md</code> 记录"已完成什么"，<code>docs/enterprise-delivery-roadmap.md</code> 规划"要往哪走"，<strong>本文件只回答一件事：现在哪里在漏、哪里会炸、下周先堵哪几个洞。</strong></p>
+</blockquote>
+<hr />
+<h2 id="0-一句话结论">0. 一句话结论</h2>
+<blockquote>
+<p><strong>这套系统的工程密度已经很高，但它的"交付成熟度"严重落后于"编码密度"——442 个测试全绿、11 个容器全部健康、56 个迁移整齐排布，然而它没有一次数据库备份、没有一个指标端点、没有一条跨服务 traceId、没有一个可安装升级的发布物。</strong></p>
+<p>换句话说：<strong>它现在是一个极优秀的作品，还不是一个能交付的产品。</strong> 下周的工作重点不该是"再加一个能力"，而是<strong>把已经写好的能力变成"敢让别人碰"的系统</strong>。</p>
+</blockquote>
+<p>本次共定位 <strong>26 个问题</strong>：阻断级 3、高危 7、中危 11、低危 5。其中 3 个直接决定"能不能交给别人用"，7 个决定"出问题能不能查、能不能扛并发"。</p>
+<hr />
+<h2 id="1-审视方法与取证基线">1. 审视方法与取证基线</h2>
+<table>
+<thead>
+<tr>
+<th>取证项</th>
+<th>实测结果</th>
+<th>命令/位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Java 版本</td>
+<td>21.0.7 LTS ✅</td>
+<td><code>java -version</code></td>
+</tr>
+<tr>
+<td>Maven CLI</td>
+<td>❌ <strong>本地已损坏</strong>（<code>ClassNotFoundException: org.codehaus.plexus.classworlds.launcher.Launcher</code>）</td>
+<td><code>mvn -v</code></td>
+</tr>
+<tr>
+<td>后端测试存量</td>
+<td>71 个 surefire 报告，<strong>442 tests / 0 failures / 0 errors</strong> ✅</td>
+<td><code>surefire-reports/TEST-*.xml</code></td>
+</tr>
+<tr>
+<td>后端测试文件</td>
+<td>70 个</td>
+<td><code>find services apps/gateway -name "*Test.java"</code></td>
+</tr>
+<tr>
+<td>前端测试文件</td>
+<td>19 个</td>
+<td><code>find apps/web/src -name "*.test.ts*"</code></td>
+</tr>
+<tr>
+<td>Flyway 迁移（源码）</td>
+<td><strong>56 个</strong>（metadata 18 / workflow 15 / system 5 / quality 4 / auth 4 / serving 3 / ingestion 3 / governance 2 / ai-agent 2）</td>
+<td><code>find services -name "V*__*.sql" -not -path "*/target/*"</code></td>
+</tr>
+<tr>
+<td>回滚迁移（U 前缀）</td>
+<td><strong>0 个</strong> ❌</td>
+<td><code>find . -name "U*__*.sql"</code></td>
+</tr>
+<tr>
+<td>全局异常处理器</td>
+<td>仅 <strong>auth、metadata 两个服务有</strong>，其余 8 个服务 + gateway 为 0 ❌</td>
+<td><code>grep -rl ControllerAdvice</code></td>
+</tr>
+<tr>
+<td>指标采集 / 链路追踪 / 集中日志</td>
+<td><strong>全部为 0</strong> ❌</td>
+<td><code>grep micrometer\|prometheus\|traceId\|MDC\|otel</code></td>
+</tr>
+<tr>
+<td>Logback 配置</td>
+<td><strong>0 个</strong> ❌</td>
+<td><code>find -name "logback*.xml"</code></td>
+</tr>
+<tr>
+<td>备份 / 恢复脚本</td>
+<td><strong>0 个</strong> ❌</td>
+<td><code>find -iname "*backup*" -o -iname "*pg_dump*" -o -iname "*restore*"</code></td>
+</tr>
+<tr>
+<td>Compose 日志轮转</td>
+<td><strong>0 处</strong> ❌</td>
+<td><code>grep -c "max-size\|logging:" docker-compose.yml</code></td>
+</tr>
+<tr>
+<td>前端 TODO/FIXME</td>
+<td>0（Java 侧同样 0）—— 说明债务不是以标记形式存在的</td>
+<td><code>grep -rn TODO\|FIXME</code></td>
+</tr>
+<tr>
+<td>前端 <code>any</code> 逃逸</td>
+<td>14 处（无 <code>@ts-ignore</code> / <code>@ts-expect-error</code>）</td>
+<td><code>grep -rn ": any\|as any"</code></td>
+</tr>
+<tr>
+<td>前端 useEffect 竞态保护</td>
+<td><strong>166 处 useEffect，AbortController / cancelled 命中 0</strong> ❌</td>
+<td><code>grep -rn "AbortController\|cancelled"</code></td>
+</tr>
+<tr>
+<td>前端页面数 / 源文件数</td>
+<td>58 个页面 / 133 个源文件</td>
+<td><code>find apps/web/src/pages -name index.tsx</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-两处必须更正的事实-既有报告与代码不符">2. 两处必须更正的事实（既有报告与代码不符）</h2>
+<p>在动手之前，先把两个已经被写进文档、但与代码事实不符的结论纠正掉——否则后续排期会建立在错误的基线上。</p>
+<h3 id="2-1-110-个-flyway-迁移-实际源码是-56-个">2.1 「110 个 Flyway 迁移」→ 实际源码是 56 个</h3>
+<p><code>artifacts/Aetheris-全项目审查报告.md</code> 第 2.3 节统计为 110 个迁移。实测源码 <code>services/*/src/main/resources/db/migration/</code> 下只有 <strong>56 个</strong> V 前缀迁移；差额来自 <code>target/classes/db/migration/</code> 下的构建副本被一并计入。<strong>迁移数量被高估了近一倍</strong>，这会影响"迁移健康度"的判断。</p>
+<h3 id="2-2-前端权限是伪安全-可越权-实测不构成越权">2.2 「前端权限是伪安全、可越权」→ 实测<strong>不构成越权</strong></h3>
+<p>子调查给出了一条 P0 结论：前端把角色存在 localStorage（<code>apps/web/src/utils/access.ts:5</code> 的 <code>getCurrentRole()</code> 直接读 <code>localStorage.getItem(ROLE_KEY)</code>），用户改一行 DevTools 就能解锁 <code>/admin/*</code> 路由，因此是越权漏洞。</p>
+<p><strong>我复核后认为这个定性不准确，实测证据如下：</strong></p>
+<p><code>apps/gateway/src/main/java/com/aetheris/gateway/config/JwtAuthFilter.java:168-181</code>：</p>
+<pre><code class="language-java">ServerHttpRequest mutated = exchange.getRequest()
+    .mutate()
+    .headers(headers -&gt; {
+        headers.set(&quot;X-User-Name&quot;, username);
+        headers.set(&quot;X-User-Role&quot;, authenticatedRole);   // ← 角色来自 JWT 声明，覆盖客户端传值
+        headers.set(IdentitySigner.IDENTITY_HEADER, identitySignature);
+    })
+</code></pre>
+<p>网关<strong>用 JWT 中的角色强制覆盖</strong> <code>X-User-Name / X-User-Role / X-User-Id</code>，客户端伪造的这些头会被重写丢弃；写操作还要经 <code>AuthPermissionGate</code> → auth 的 <code>/internal/permissions/may-mutate|may-manage</code> 判定，<strong>auth 不可用时 fail-closed 返回 503</strong>；用户管理接口有服务端 <code>AdminGuard.requireManage()</code>（<code>services/auth/.../AuthUserAdminController.java:152</code>）。</p>
+<p><strong>所以：前端角色门禁确实只是"UI 收敛"，但不是安全漏洞——真正的边界在网关和 auth。</strong> 正确的表述是「<strong>纵深防御不完整</strong>」：<code>metadata</code> 有 <code>IdentityVerifier</code> 验签，而 <code>auth</code>、<code>system</code>、<code>ai-agent</code> 仍直接信任明文头（见 P2-1），一旦有内网直连路径就存在冒充空间。</p>
+<p><strong>保留一条真实结论</strong>：前端角色存 localStorage 且<strong>登出时未清理 react-query 缓存</strong>（<code>TopNav.tsx:74-82</code>），存在"切换账号后读到上一个账号缓存数据"的真实风险——这条要修。</p>
+<hr />
+<h2 id="3-问题总表">3. 问题总表</h2>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>级别</th>
+<th>问题</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>B1</strong></td>
+<td>🔴 阻断</td>
+<td>全平台<strong>零备份、零恢复方案</strong>，pgdata 单卷即全部身家</td>
+<td>全局 / <code>docker-compose.yml:60,419</code></td>
+</tr>
+<tr>
+<td><strong>B2</strong></td>
+<td>🔴 阻断</td>
+<td><strong>可观测性三缺</strong>：无指标、无 traceId、无集中日志；json-file 日志无上限</td>
+<td>全部服务 pom / <code>application.yml</code></td>
+</tr>
+<tr>
+<td><strong>B3</strong></td>
+<td>🔴 阻断</td>
+<td><code>.env.example</code> 的占位密钥<strong>能通过启动校验</strong>，照抄即上线可伪造 JWT</td>
+<td><code>.env.example:13,18,21</code></td>
+</tr>
+<tr>
+<td><strong>H1</strong></td>
+<td>🟠 高</td>
+<td>权限列表<strong>逐行远程鉴权</strong>，N 行 = N 次 HTTP，auth 抖动即级联挂死</td>
+<td><code>MetadataTableController.java:69,189-195</code></td>
+</tr>
+<tr>
+<td><strong>H2</strong></td>
+<td>🟠 高</td>
+<td>血缘影响分析<strong>每跳全表加载</strong>，最坏 500 次全表扫描</td>
+<td><code>FieldLineageService.java:37</code></td>
+</tr>
+<tr>
+<td><strong>H3</strong></td>
+<td>🟠 高</td>
+<td>语义指标列表 <strong>N+1 查询 + 无 LIMIT</strong></td>
+<td><code>MetricDefinitionService.java:79-89,280-294</code></td>
+</tr>
+<tr>
+<td><strong>H4</strong></td>
+<td>🟠 高</td>
+<td><code>@Transactional</code> 事务内发起<strong>远程 HTTP 调用</strong>，连接池可被拖垮</td>
+<td><code>TaskController.java:117,121,158</code></td>
+</tr>
+<tr>
+<td><strong>H5</strong></td>
+<td>🟠 高</td>
+<td>看板发布版本号<strong>"先读后写"非原子</strong>，并发必现 500</td>
+<td><code>AnalyticsRepository.java:116-132</code></td>
+</tr>
+<tr>
+<td><strong>H6</strong></td>
+<td>🟠 高</td>
+<td>质量规则表达式<strong>弱校验后直接拼 SQL</strong>，存在注入面</td>
+<td><code>QualityExecutionService.java:92-108,120-125</code></td>
+</tr>
+<tr>
+<td><strong>H7</strong></td>
+<td>🟠 高</td>
+<td><strong>8/10 服务无全局异常处理器</strong>，异常直接裸奔成 500</td>
+<td>auth、metadata 之外全部</td>
+</tr>
+<tr>
+<td><strong>M1</strong></td>
+<td>🟡 中</td>
+<td>身份验签<strong>不一致</strong>：metadata 验签，auth/system/ai-agent 信任明文头</td>
+<td><code>ActivityController.java:24-36</code>、<code>ChatController.java</code></td>
+</tr>
+<tr>
+<td><strong>M2</strong></td>
+<td>🟡 中</td>
+<td>任务实例接口<strong>缺资源级授权</strong>，任意登录用户可枚举全量实例</td>
+<td><code>TaskController.java:254-274</code></td>
+</tr>
+<tr>
+<td><strong>M3</strong></td>
+<td>🟡 中</td>
+<td>JDBC <strong>无连接池</strong> + <code>DriverManager.setLoginTimeout</code> 全局静态副作用</td>
+<td><code>JdbcService.java:384-392</code></td>
+</tr>
+<tr>
+<td><strong>M4</strong></td>
+<td>🟡 中</td>
+<td>搜索/列表<strong>在内存里 limit</strong>，未下推数据库</td>
+<td><code>InternalAgentToolController.java:86-88</code></td>
+</tr>
+<tr>
+<td><strong>M5</strong></td>
+<td>🟡 中</td>
+<td>Flyway <strong>零回滚能力</strong>，迁移含 2 处不可逆 <code>DELETE FROM</code></td>
+<td><code>V6__metadata_table_sync.sql:20</code>、<code>V8__lineage_source.sql:19,34</code></td>
+</tr>
+<tr>
+<td><strong>M6</strong></td>
+<td>🟡 中</td>
+<td><code>postgres</code> 容器<strong>未加固</strong>（无 <code>cap_drop: ALL</code>），全栈无日志轮转</td>
+<td><code>docker-compose.yml:43-65</code></td>
+</tr>
+<tr>
+<td><strong>M7</strong></td>
+<td>🟡 中</td>
+<td>dev 覆盖层把前端暴露到 <strong>0.0.0.0</strong></td>
+<td><code>docker-compose.dev.yml:20-21</code></td>
+</tr>
+<tr>
+<td><strong>M8</strong></td>
+<td>🟡 中</td>
+<td>CI <strong>缺密钥扫描与源码 SBOM</strong>；deploy 无健康校验/回滚；漏洞策略 <code>ignore-unfixed</code></td>
+<td><code>.github/workflows/*.yml</code></td>
+</tr>
+<tr>
+<td><strong>M9</strong></td>
+<td>🟡 中</td>
+<td>前端<strong>装而不用</strong> react-query（全站 6 处引用），200+ 请求手写样板</td>
+<td><code>main.tsx:15</code>、各页面</td>
+</tr>
+<tr>
+<td><strong>M10</strong></td>
+<td>🟡 中</td>
+<td>166 处 <code>useEffect</code> <strong>无任何竞态/卸载保护</strong></td>
+<td>前端全局</td>
+</tr>
+<tr>
+<td><strong>M11</strong></td>
+<td>🟡 中</td>
+<td>大列表<strong>无虚拟滚动</strong>（75 个 Table，0 命中虚拟化）；antd chunk <strong>1.3MB</strong></td>
+<td><code>vite.config.ts:38-45</code></td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>⚪ 低</td>
+<td><code>.git-commit-msg.tmp</code> <strong>已被 git 跟踪</strong></td>
+<td>仓库根</td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>⚪ 低</td>
+<td>仓库根遗留 <code>hs_err_pid*.log</code> / <code>replay_pid*.log</code> / <code>derby.log</code>，<strong>可能含堆内存片段</strong></td>
+<td>仓库根</td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>⚪ 低</td>
+<td>遗留未展开字面量目录 <code>${system:java.io.tmpdir}/${system:user.name}/</code></td>
+<td>仓库根</td>
+</tr>
+<tr>
+<td><strong>L4</strong></td>
+<td>⚪ 低</td>
+<td>死代码 <code>SectionHeader.tsx</code>（0 引用）+ 11 个 <code>comingSoon</code> 声明 + <strong>无 ESLint</strong></td>
+<td><code>src/components/</code>、<code>navigation.tsx</code></td>
+</tr>
+<tr>
+<td><strong>L5</strong></td>
+<td>⚪ 低</td>
+<td>本地 <strong>Maven CLI 损坏</strong>，<code>mvn</code> 完全不可用，影响开发与验收</td>
+<td>环境</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-阻断级问题详解-b1-b3">4. 阻断级问题详解（B1–B3）</h2>
+<h3 id="b1-全平台零备份-这是唯一-灭顶-级风险">B1. 全平台零备份 —— 这是唯一"灭顶"级风险</h3>
+<p><strong>证据</strong>：<code>find . -iname "*backup*" -o -iname "*pg_dump*" -o -iname "*restore*"</code> 在排除 <code>node_modules</code> 后<strong>结果为空</strong>。数据全部落在一个命名卷上：</p>
+<pre><code class="language-yaml"># docker-compose.yml
+services:
+  postgres:
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:
+</code></pre>
+<p><strong>影响</strong>：一次 <code>docker compose down -v</code>、一次卷损坏、一次勒索加密，<strong>10 个服务的全部业务数据、权限配置、审计日志、任务历史、语义资产一次性归零</strong>，且没有任何东西可以恢复。这不是"缺一个功能"，这是"整套系统押在一个卷上"。</p>
+<p>还有一层叠加风险（M5）：<strong>56 个迁移没有任何 U 前缀回滚脚本</strong>，其中 2 个迁移带 <code>DELETE FROM</code>（<code>V8__lineage_source.sql:19,34</code> 直接删血缘数据）。升级失败时既不能回滚代码，也没有数据快照可退。</p>
+<p><strong>修法</strong>（详见 D1）：<br />
+1. <code>pg_dump -Fc</code> 定时全量 + WAL 归档，落到对象存储/异机；<br />
+2. 把卷换成绑定挂载或至少加独立备份卷；<br />
+3. <strong>必须做一次"空环境恢复演练"</strong>——恢复不是"有备份文件"，而是"从零能跑起来"；<br />
+4. 破坏性迁移前强制快照，<code>DELETE FROM</code> 改为标记失效。</p>
+<h3 id="b2-可观测性三缺-出故障时只能靠猜">B2. 可观测性三缺 —— 出故障时只能靠猜</h3>
+<p><strong>证据</strong>（三条命令全部返回 0）：</p>
+<pre><code class="language-text">grep -rn &quot;micrometer|prometheus&quot; services/*/pom.xml apps/gateway/pom.xml  → 0 命中
+grep -rn &quot;traceId|MDC|OpenTelemetry&quot; services apps/gateway                → 0 命中
+find . -name &quot;logback*.xml&quot;                                               → 0 个
+grep -c &quot;max-size|logging:&quot; docker-compose.yml                           → 0
+</code></pre>
+<p>各服务 <code>application.yml</code> 的 actuator 只暴露 <code>health,info</code>，没有 <code>/actuator/prometheus</code>。日志是默认 json-file 驱动且<strong>没有 <code>max-size</code></strong>，长期运行会撑爆磁盘。</p>
+<p><strong>影响</strong>：这套系统有 11 个容器、跨服务 HTTP 调用链（网关→workflow→metadata→数据源，最长 5 跳）、有 Spark 远端执行、有 Quartz 集群调度——<strong>但一次慢查询无法从看板追到语义层再追到 SQL 和引擎</strong>，一次超时无法判断卡在哪一跳，一次 P95 劣化没有任何历史数据可比。项目本身有这个自觉（<code>docs/enterprise-delivery-roadmap.md:90</code> 把 R11 可观测列为必需项），但排在 11 次迭代之后——<strong>这个顺序是错的，可观测性应该是"现在就做"，因为后面所有修复都需要它来验证效果。</strong></p>
+<p><strong>修法</strong>（详见 D2）：加 <code>micrometer-registry-prometheus</code>，暴露 <code>/actuator/prometheus</code>；filter 里生成 <code>X-Request-Id</code> 写入 MDC 并沿调用链透传；logback 统一 JSON 格式 + traceId 字段；compose 加 <code>logging.options.max-size/max-file</code>；起一个 Prometheus + Grafana。</p>
+<h3 id="b3-弱默认密钥能通过启动校验">B3. 弱默认密钥能通过启动校验</h3>
+<p><strong>证据</strong>：<code>.env.example</code> 给出的"示例值"，长度<strong>恰好都越过启动校验门槛</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>示例值</th>
+<th>长度</th>
+<th>校验门槛</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td><code>change-me-to-a-long-random-secret</code></td>
+<td>32 字符</td>
+<td><code>JwtAuthFilter</code> 要求 <strong>≥32 字节</strong></td>
+<td>✅ 通过</td>
+</tr>
+<tr>
+<td><code>INITIAL_ADMIN_PASSWORD</code></td>
+<td><code>change-me-before-first-start</code></td>
+<td>28 字符</td>
+<td><code>DataInitializer</code> 要求 <strong>≥12 字符</strong></td>
+<td>✅ 通过</td>
+</tr>
+<tr>
+<td><code>AETHERIS_INTERNAL_TOKEN</code></td>
+<td><code>change-me-internal-token</code></td>
+<td>26 字符</td>
+<td>仅要求非空</td>
+<td>✅ 通过</td>
+</tr>
+</tbody>
+</table>
+<p><code>docker-compose.yml</code> 用的是 <code>${JWT_SECRET:?}</code> 语法——它只校验"变量已设置"，<strong>不校验"值不是示例值"</strong>。</p>
+<p><strong>影响</strong>：按 README 的"<code>cp .env.example .env</code> → <code>docker compose up</code>"照做的用户，会得到一个 <strong>JWT 密钥公开在 GitHub 上的、管理员口令可猜的</strong> 可运行系统。攻击者可以离线伪造任意用户的 JWT（包括 admin），而 <code>AETHERIS_INTERNAL_TOKEN</code> 泄露意味着<strong>服务间身份签名（<code>X-Aetheris-Identity</code>）可被伪造</strong>。</p>
+<p><strong>修法</strong>（详见 D3）：<br />
+1. <code>.env.example</code> 的敏感项<strong>留空</strong>，附带生成命令；<br />
+2. 启动时校验"值不等于示例值"，命中即拒绝启动并打印明确错误；<br />
+3. 提供一个 <code>make secret</code> / 引导脚本，一键生成全部随机密钥；<br />
+4. 顺带统一镜像标签：<code>.env.example:22</code> 是 <code>m1-exec-base-20260908</code>，<code>docker-compose.yml:69</code> 默认是 <code>security-20260908</code>——<strong>不一致会导致拉错镜像</strong>。</p>
+<hr />
+<h2 id="5-高危问题详解-h1-h7">5. 高危问题详解（H1–H7）</h2>
+<h3 id="h1-权限逐行远程鉴权-一次列表请求-n-次-http">H1. 权限逐行远程鉴权：一次列表请求 = N 次 HTTP</h3>
+<p><strong>证据</strong> <code>services/metadata/.../controller/MetadataTableController.java:69</code> 与 <code>:189-195</code>：</p>
+<pre><code class="language-java">case OPAQUE -&gt; filteredList(request, service.list());   // ← 先把全表捞出来
+...
+return tables.stream()
+    .filter(table -&gt; security.isAllowed(username, &quot;table&quot;, table.getId(), &quot;view&quot;, ...))
+    .toList();                                          // ← 每张表一次远程鉴权
+</code></pre>
+<p><code>MetadataSecurity.isAllowed</code> → <code>AuthPermissionClient</code> → <code>POST /internal/permissions/check</code>，<strong>每条记录一个往返</strong>。同样的写法在 <code>SemanticMetricController.java:37-43</code> 也存在。</p>
+<p><strong>影响</strong>：<code>OPAQUE</code> 模式下（用户没有任何 manifest 级授权时），一个 200 张表的列表页 = <strong>200 次跨服务 HTTP</strong>。而 <code>AuthPermissionGate</code> 的超时配置是 500ms 连接 + 1500ms 读（<code>apps/gateway/.../AuthPermissionGate.java:38-40</code>）——<strong>auth 一旦抖动，单次请求最坏 200 × 2s = 400s，页面直接挂死，并且形成对 auth 的自我 DDoS</strong>。这是本次审视中"改动收益最大"的一条。</p>
+<p><strong>修法</strong>：<br />
+1. 用 <code>visibility</code> 接口一次性取回<strong>可见 ID 集合</strong>，SQL 用 <code>IN (...)</code> 过滤，把 N 次网络调用压成 1 次；<br />
+2. 单请求内对 <code>(user, resource, id, action)</code> 做 request-scope 本地缓存，去重重复判定；<br />
+3. 给"逐行判定"设硬上限（超过阈值直接拒绝并要求走授权），避免无界放大。</p>
+<h3 id="h2-血缘影响分析-每跳全表加载-最坏-500-次">H2. 血缘影响分析：每跳全表加载，最坏 500 次</h3>
+<p><strong>证据</strong> <code>services/metadata/.../service/FieldLineageService.java:37</code>（单行压缩写法）：</p>
+<pre><code class="language-java">public List&lt;LineageFieldRelation&gt; impact(String table,String column){
+  ...
+  while(!queue.isEmpty()&amp;&amp;seen.size()&lt;500){
+    String key=queue.removeFirst();
+    List&lt;LineageFieldRelation&gt; next=list(null,null).stream()      // ← list(null,null) = 全表加载
+        .filter(r-&gt;r.getSourceTable().equalsIgnoreCase(parts[0])
+                 &amp;&amp; r.getSourceColumn().equalsIgnoreCase(parts[1])).toList();
+</code></pre>
+<p><code>list(null, null)</code> 每次迭代都把整张 <code>lineage_field_relation</code> 拉进内存再内存过滤。循环上限 500，<strong>最坏情况 = 500 次全表扫描 + 500 个临时 List</strong>。</p>
+<p><strong>影响</strong>：血缘图是"数据资产识别最后一公里"的核心能力（也正是你近期商业化的方向），但它<strong>在真实规模下会先超时或 OOM</strong>。表越全、血缘越密，越容易崩——<strong>这是一个会随成功而恶化的缺陷</strong>。</p>
+<p><strong>修法</strong>：按 <code>(source_table, source_column)</code> 建索引，把逐跳查询改成带 <code>WHERE</code> 的递归 CTE（PostgreSQL <code>WITH RECURSIVE</code>），一次数据库往返拿到全链路；或在应用层做逐跳 <code>WHERE source_table IN (...)</code> 的批量查询，并把 <code>seen</code> 上限做成可配置的保护阈值而非性能依赖。</p>
+<h3 id="h3-语义指标列表-n-1-无-limit">H3. 语义指标列表 N+1 + 无 LIMIT</h3>
+<p><strong>证据</strong> <code>services/metadata/.../service/MetricDefinitionService.java:79-89</code>（列表路径）与 <code>:280-294</code>（<code>resolvePublished</code>）：</p>
+<pre><code class="language-java">mapper.selectList(...).stream().map(this::resolvePublished)...
+// resolvePublished 内部再各查一次：版本快照(jdbc.query) + 业务域(domainService.require)
+</code></pre>
+<p>同一个文件 <code>:81-88</code> 还显示<strong>先全量捞出再在内存里过滤</strong> keyword/domain，没有 <code>LIMIT</code>。</p>
+<p><strong>影响</strong>：列表接口的查询次数 = 指标数 × 3，且结果集随指标增长无界。语义层是这个平台对外最有价值的能力（README 花了整整一节讲它），<strong>它的入口接口却是 N+1 + 无界</strong>。</p>
+<p><strong>修法</strong>：快照表与业务域 JOIN 一次取回；keyword/domain 过滤下推 SQL；分页参数强制上限。</p>
+<h3 id="h4-transactional-事务内发起远程-http-调用">H4. <code>@Transactional</code> 事务内发起远程 HTTP 调用</h3>
+<p><strong>证据</strong> <code>services/workflow/.../controller/TaskController.java:117,121</code> 与 <code>:158</code>：</p>
+<pre><code class="language-java">@PostMapping
+@Transactional                                    // ← 事务已开启
+public ResponseEntity&lt;?&gt; create(@Valid @RequestBody Task task, ...) {
+    String rejection = validateDefinition(task);  // ← 内部走 POST /internal/sql/validate-write
+</code></pre>
+<p><code>validateDefinition</code> → <code>executionClient.validateWrite(...)</code> 是<strong>跨服务 HTTP</strong>。</p>
+<p><strong>影响</strong>：事务横跨网络 I/O。metadata 变慢或超时时，<strong>数据库连接被长时间占用</strong>（持有连接的线程在等网络），连接池（<code>AETHERIS_DB_POOL_MAX_SIZE</code> 默认 8，见 <code>docker-compose.yml:18</code>）很容易被耗光，进而<strong>整个 workflow 服务失去数据库连接</strong>。这是典型的"小改动、大风险"。</p>
+<p><strong>修法</strong>：把远程校验移到事务边界<strong>之前</strong>（Controller 先校验，再进事务方法），事务内只做本地持久化。改动量极小。</p>
+<h3 id="h5-看板发布版本号非原子-并发必现-500">H5. 看板发布版本号非原子 → 并发必现 500</h3>
+<p><strong>证据</strong> <code>services/serving/.../repository/AnalyticsRepository.java:116-132</code>：</p>
+<pre><code class="language-java">int version = dashboard.publishedVersion() + 1;                    // ← 先读
+jdbc.update(&quot;INSERT INTO serving.bi_dashboard_version(...) ...&quot;);   // ← 后写
+</code></pre>
+<p>唯一约束见 <code>services/serving/src/main/resources/db/migration/V1__analytics.sql:51</code> 的 <code>UNIQUE(dashboard_id, version_no)</code>。</p>
+<p><strong>影响</strong>：两个管理员（或两次重试）同时发布，都算出同一个 <code>version</code>，插入撞唯一约束抛 <code>DuplicateKeyException</code>。而 serving <strong>恰好是 8 个没有全局异常处理器的服务之一</strong>（H7）——<strong>用户看到的是裸 500</strong>，没有"版本冲突，请刷新重试"的提示。</p>
+<p><strong>修法</strong>：改成单语句原子递增（<code>version_no = (SELECT COALESCE(MAX(version_no),0)+1 FROM ... WHERE dashboard_id=?)</code>，或 <code>INSERT ... ON CONFLICT</code>），并把 <code>DuplicateKeyException</code> 映射为 <strong>409 Conflict</strong>。</p>
+<h3 id="h6-质量规则表达式弱校验后直接拼-sql">H6. 质量规则表达式弱校验后直接拼 SQL</h3>
+<p><strong>证据</strong> <code>services/quality/.../service/QualityExecutionService.java:92-108</code>：</p>
+<pre><code class="language-java">return &quot;SELECT COUNT(*) AS violation_count FROM &quot; + target + &quot; WHERE NOT (&quot; + expression + &quot;)&quot;;
+</code></pre>
+<p>而"安全校验"只有 <code>:120-125</code> 这一层：</p>
+<pre><code class="language-java">private void rejectUnsafeExpression(String expression) {
+    if (expression.contains(&quot;;&quot;) || upper.contains(&quot;--&quot;)
+        || upper.contains(&quot;/*&quot;) || upper.contains(&quot;*/&quot;)) {
+        throw new IllegalArgumentException(&quot;规则表达式只允许单条语句且不能包含注释&quot;);
+    }
+}
+</code></pre>
+<p><strong>影响</strong>：只拦分号与注释，<strong>子查询、函数调用、布尔恒等式全部放行</strong>。例如 <code>NOT (1=0 OR (SELECT pg_sleep(30))::text &lt;&gt; '')</code> 之类可以构造慢查询绕过"只读"语义。<code>target</code> 有 <code>requireQualifiedIdentifier</code> 保护（<code>[A-Za-z_][A-Za-z0-9_$]*</code> 的 1–3 段），但 <code>expression</code> 没有。</p>
+<p><strong>缓解因素</strong>：规则需要 <code>quality</code> 的写权限才能配置，因此<strong>不是未授权攻击面，而是"有配置权的用户可越过预期的只读约束"</strong>。定性为高危而非阻断。</p>
+<p><strong>修法</strong>：复用 <code>SemanticMetricQueryService</code> 的思路——表达式走<strong>白名单 AST 解析</strong>（列名 + 允许的操作符 + 字面量），而不是字符黑名单；<code>sql</code> 类型分支同理，<code>^(SELECT|WITH)</code> 这个正则太弱。</p>
+<h3 id="h7-8-10-服务没有全局异常处理器">H7. 8/10 服务没有全局异常处理器</h3>
+<p><strong>证据</strong>：</p>
+<pre><code class="language-text">grep -rl ControllerAdvice services/*/src  → 仅 auth、metadata
+各服务统计：auth 1 / metadata 1 / system 0 / quality 0 / ingestion 0
+           governance 0 / workflow 0 / ai-agent 0 / serving 0 / gateway 0
+</code></pre>
+<p><strong>影响</strong>：这 8 个服务的任何未捕获异常<strong>直接把异常消息和堆栈返回给调用方</strong>，同时暴露内部类名/路径信息（信息泄露），并让前端只能靠 <code>message</code> 字符串猜错因。H5 的"裸 500"就是这个缺陷的直接表现。<strong>这是一条低成本、高一致性收益的修复。</strong></p>
+<p><strong>修法</strong>：抽一个共享的 <code>@RestControllerAdvice</code> 基类（或者各服务 15 行统一实现），把异常映射成统一错误体：<code>{code, message, requestId}</code>；<code>DuplicateKeyException → 409</code>、<code>AccessDenied → 403</code>、<code>MethodArgumentNotValid → 400</code>、其余 <code>→ 500</code> 且<strong>只回 requestId 不回堆栈</strong>。</p>
+<hr />
+<h2 id="6-中危问题-m1-m11-摘要">6. 中危问题（M1–M11）摘要</h2>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>问题</th>
+<th>关键位置</th>
+<th>为什么值得修</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>身份验签不一致：<code>metadata</code> 验签，<code>auth</code>/<code>system</code>/<code>ai-agent</code> 信明文头</td>
+<td><code>ActivityController.java:24-36</code>（<code>X-User-Role</code> 默认 <code>viewer</code>）、<code>ChatController.java</code>（<code>X-User-Name</code> 直读）</td>
+<td>内网直连即可冒充身份。当前端口未对外（<code>127.0.0.1</code> 绑定）所以不可利用，但<strong>纵深防御的假设不一致</strong>，一旦引入内网东西向流量即成缺口</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>任务实例接口无资源级授权</td>
+<td><code>TaskController.java:254-274</code>（对比 <code>logs</code>/<code>attempts</code> 有 <code>canReadInstance</code>）</td>
+<td>任意登录用户可枚举全量实例，含 <code>triggeredBy</code> 与错误信息</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>JDBC 无连接池 + 全局静态超时</td>
+<td><code>JdbcService.java:384-392</code>（<code>DriverManager.getConnection</code> + <code>DriverManager.setLoginTimeout(8)</code>）</td>
+<td>每次查询新建物理连接；<code>setLoginTimeout</code> 影响同 JVM 全部驱动，并发语义不可控</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>内存 limit 未下推</td>
+<td><code>InternalAgentToolController.java:86-88</code></td>
+<td>表量增长后每次 agent 搜索拉全表</td>
+</tr>
+<tr>
+<td>M5</td>
+<td>零回滚 + 不可逆 DELETE</td>
+<td><code>V6__metadata_table_sync.sql:20</code>、<code>V8__lineage_source.sql:19,34</code></td>
+<td>与 B1 叠加放大；升级失败无退路</td>
+</tr>
+<tr>
+<td>M6</td>
+<td>postgres 未加固 + 无日志轮转</td>
+<td><code>docker-compose.yml:43-65</code>（对比 redis 有 <code>cap_drop: ALL</code>）</td>
+<td>10 个 Java 服务与 web 都做了加固，<strong>唯独数据库容器漏了</strong>；全栈日志无上限</td>
+</tr>
+<tr>
+<td>M7</td>
+<td>dev 把前端暴露到 0.0.0.0</td>
+<td><code>docker-compose.dev.yml:20-21</code></td>
+<td>生产 compose 绑了 <code>127.0.0.1</code>（<code>:406</code>），dev 没绑</td>
+</tr>
+<tr>
+<td>M8</td>
+<td>CI 缺密钥扫描 / 源码 SBOM / 部署回滚</td>
+<td><code>.github/workflows/{ci,build,deploy}.yml</code>（trivy 均 <code>ignore-unfixed: true</code>）</td>
+<td>误提交密钥无人拦；deploy 仅 <code>git pull + compose up</code>，无健康校验与回滚</td>
+</tr>
+<tr>
+<td>M9</td>
+<td>react-query 装而不用</td>
+<td><code>main.tsx:15</code> 配置了 QueryClient，全站仅 6 处引用</td>
+<td>128K 的依赖换来零收益，同时 200+ 请求手写样板无缓存/去重/失效能力</td>
+</tr>
+<tr>
+<td>M10</td>
+<td>166 处 useEffect 无竞态保护</td>
+<td>全前端（<code>AbortController</code> 命中 0）</td>
+<td>快速切页/tab 切换时"旧响应覆盖新响应"必现</td>
+</tr>
+<tr>
+<td>M11</td>
+<td>无虚拟滚动 + antd chunk 1.3MB</td>
+<td><code>vite.config.ts:38-45</code>；75 个 Table</td>
+<td>大列表全量渲染；首屏需加载约 1.5MB</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-低危与仓库卫生-l1-l5">7. 低危与仓库卫生（L1–L5）</h2>
+<pre><code class="language-text">L1  .git-commit-msg.tmp                     tracked=YES  ignored=no   ← 明确卫生缺陷
+L2  hs_err_pid40904.log / hs_err_pid9678.log / replay_pid*.log / derby.log
+                                            tracked=no   ignored=YES  ← 仍在磁盘，可能含堆内存片段（密钥/令牌）
+L3  ${system:java.io.tmpdir}/${system:user.name}/   ← Hive 未展开变量的字面量目录
+L4  SectionHeader.tsx（0 引用）、navigation.tsx 的 11 个 comingSoon、无 ESLint 配置
+L5  mvn -v → ClassNotFoundException: org.codehaus.plexus.classworlds.launcher.Launcher
+</code></pre>
+<p><strong>处理建议</strong>：<br />
+- <code>git rm --cached .git-commit-msg.tmp</code>，并在 <code>.gitignore</code> 补 <code>*.tmp</code>、<code>hs_err_pid*</code>、<code>replay_pid*</code>；<br />
+- 删除 4 个 JVM 转储日志（<strong>先确认里面没有明文密钥</strong>再删，或直接视为敏感文件彻底清除）；<br />
+- 删除字面量目录；<br />
+- 删除死代码，补 ESLint（<code>eslint-plugin-react-hooks</code> + <code>@typescript-eslint/no-explicit-any</code>）；<br />
+- <strong>修 Maven</strong>：这是每天都要用的工具，坏着会持续拖慢一切验证工作（<code>mvn test</code> 目前根本跑不起来，只能依赖历史 surefire 报告）。</p>
+<hr />
+<h2 id="8-下一步急需解决的东西-按优先级">8. 下一步急需解决的东西（按优先级）</h2>
+<h3 id="第一优先-让系统-摔不坏-本周必须完成">第一优先：让系统"摔不坏"（本周必须完成）</h3>
+<ol>
+<li><strong>B1 备份 + PITR + 恢复演练</strong> —— 唯一"灭顶"级单点，其它问题都可以慢慢来。</li>
+<li><strong>B2 可观测性基线</strong> —— 没有它，后面每一处修复都无法验证效果。</li>
+<li><strong>B3 弱默认密钥闸门</strong> —— 一行示例值的疏忽即可让生产 JWT 可伪造。</li>
+</ol>
+<h3 id="第二优先-让系统-扛得住-本周完成-见-d4-d5">第二优先：让系统"扛得住"（本周完成，见 D4/D5）</h3>
+<ol start="4">
+<li><strong>H1 权限批量判定</strong> —— 单请求 N 次 HTTP，改动收益最大。</li>
+<li><strong>H2 + H3 血缘与语义列表下推</strong> —— 直接决定"数据资产识别"这条商业化主线能不能在真实规模下跑。</li>
+<li><strong>H4 + H5 + H7</strong> —— 事务边界外移、发布原子化、统一异常处理，三条都是低成本高确定性收益。</li>
+<li><strong>H6 质量表达式白名单</strong> —— 安全边界一致性。</li>
+</ol>
+<h3 id="第三优先-让系统-交得出去-下周-见-d7">第三优先：让系统"交得出去"（下周，见 D7）</h3>
+<ol start="8">
+<li><strong>R1 实时湖仓 ADR</strong>（不写代码，只写决策）—— 这是 <code>enterprise-delivery-roadmap.md</code> 指定的下一次迭代入口。</li>
+<li><strong>安装/升级最小闭环设计</strong> —— 环境检查 + 迁移 + 健康校验 + 回滚。</li>
+</ol>
+<h3 id="明确-本周不做">明确"本周不做"</h3>
+<table>
+<thead>
+<tr>
+<th>不做</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>❌ 继续扩展 M5b Git 供应链细节</td>
+<td><code>enterprise-delivery-roadmap.md:149</code> 自己已列为"停止加码"项，收益已递减</td>
+</tr>
+<tr>
+<td>❌ 再做整体视觉翻新</td>
+<td><code>:147</code> 已列为停止项；当前设计足够进入试点</td>
+</tr>
+<tr>
+<td>❌ 为 11 个 <code>comingSoon</code> 补占位页面</td>
+<td><code>:148</code> 已列为停止项；没有真实执行/权限/审计的页面是负资产</td>
+</tr>
+<tr>
+<td>❌ 引入 Flink / Iceberg 代码</td>
+<td>R1 只产出 ADR + BOM + allowlist，不写业务代码</td>
+</tr>
+<tr>
+<td>❌ 每次小改都全量重打 11 个镜像</td>
+<td><code>:153</code> 已列为停止项；日常只跑受影响模块测试</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-接下来一周的详细作战计划">9. 接下来一周的详细作战计划</h2>
+<blockquote>
+<p>周期：<strong>2026-09-14（周一）– 2026-09-20（周日）</strong>，7 天<br />
+单人 + AI 辅助，每天按"上午做实现、下午做验证、收尾写记录"的节奏<br />
+<strong>每天的完成定义（DoD）统一为</strong>：代码改动 + 一条可复制粘贴的验收命令（能贴出真实输出）+ 一条追加到 <code>.workbuddy/memory/YYYY-MM-DD.md</code> 的记录</p>
+</blockquote>
+<h3 id="总览">总览</h3>
+<table>
+<thead>
+<tr>
+<th>日</th>
+<th>主题</th>
+<th>交付物</th>
+<th>验收命令</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1 9/14 一</td>
+<td>🔴 数据保命：备份与恢复</td>
+<td><code>scripts/pg-backup.sh</code>、<code>scripts/pg-restore.sh</code>、恢复演练记录</td>
+<td>空环境恢复后 <code>docker compose ps</code> 全 healthy</td>
+</tr>
+<tr>
+<td>D2 9/15 二</td>
+<td>🔴 可观测基线</td>
+<td>metrics 端点 + traceId 透传 + logback JSON + 日志轮转</td>
+<td><code>curl /actuator/prometheus</code> 有指标；日志含同一 requestId</td>
+</tr>
+<tr>
+<td>D3 9/16 三</td>
+<td>🔴 上线安全闸门</td>
+<td>密钥强制校验 + 一键生成脚本 + postgres 加固 + 端口收敛</td>
+<td>用示例值启动 → <strong>拒绝启动</strong>；用随机值 → 正常</td>
+</tr>
+<tr>
+<td>D4 9/17 四</td>
+<td>🟠 性能止血 A（权限与语义层）</td>
+<td>批量权限判定 + 语义列表 JOIN/分页</td>
+<td>200 表列表页鉴权调用次数从 N → 1</td>
+</tr>
+<tr>
+<td>D5 9/18 五</td>
+<td>🟠 性能止血 B（血缘、事务、异常）</td>
+<td>递归 CTE + 事务外移 + 原子版本 + 统一异常体</td>
+<td>血缘影响分析 1 次查询；并发发布返回 409 非 500</td>
+</tr>
+<tr>
+<td>D6 9/19 六</td>
+<td>🟠 质量与前端护栏</td>
+<td>表达式白名单 + ESLint + 竞态修复 + 死代码清理</td>
+<td><code>tsc --noEmit</code> + <code>vitest run</code> + <code>eslint</code> 全绿</td>
+</tr>
+<tr>
+<td>D7 9/20 日</td>
+<td>🎯 方向决策与交付基线</td>
+<td>R1 ADR 初稿 + 安装/升级最小闭环设计 + 周复盘</td>
+<td>文档评审通过；下一迭代范围冻结</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="d1-9-14-周一-数据保命-备份与恢复">D1 · 9/14（周一）· 数据保命：备份与恢复 🔴</h3>
+<p><strong>为什么排第一</strong>：这是唯一"灭顶"级风险。所有其它工作都建立在"数据还在"这个前提上。</p>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>写备份脚本</strong> <code>scripts/pg-backup.sh</code><br />
+   - <code>pg_dump -Fc -Z6</code> 全量自定义格式，落到独立目录/卷，文件名带时间戳；<br />
+   - 保留策略：最近 7 份日备 + 4 份周备（先手工清理，不要一上来就写复杂的保留逻辑）；<br />
+   - 备份完成后<strong>校验可读性</strong>（<code>pg_restore --list</code> 能列出内容才算成功），失败时非零退出。</li>
+<li><strong>写恢复脚本</strong> <code>scripts/pg-restore.sh</code><br />
+   - <code>dropdb</code> + <code>createdb</code> + <code>pg_restore</code>；<br />
+   - <strong>明确警告这是破坏性操作</strong>，要求显式传 <code>--yes</code> 才执行。</li>
+<li><strong>加一条 Makefile 目标</strong>：<code>make backup</code> / <code>make restore FILE=...</code>。</li>
+<li><strong>做一次真实恢复演练（关键）</strong><br />
+   - 先备份 → 起一个全新的临时 compose 项目名（<code>-p aetheris-drill</code>）→ 从空库恢复 → 验证业务可用；<br />
+   - 验证点：能登录、<code>metadata.metadata_table</code> 行数一致、<code>workflow.task_instance</code> 行数一致、前端能打开工作台。<br />
+   - <strong>把演练结果（含行数比对）写进 <code>docs/</code> 作为第一份恢复报告。</strong></li>
+<li><strong>破坏性迁移前置快照</strong>：在 <code>V8</code> 这类带 <code>DELETE FROM</code> 的迁移说明中补一句"执行前必须备份"，并在 README 的升级章节写入。<br />
+6.（可选，若时间允许）<strong>WAL 归档</strong>：<code>archive_mode=on</code> + <code>archive_command</code> 到独立目录，把 RPO 从"最后一次 dump"压到分钟级。</li>
+</ol>
+<p><strong>DoD / 验收</strong></p>
+<pre><code class="language-bash">make backup                                  # 退出码 0，产出 .dump 且 pg_restore --list 可读
+make restore FILE=&lt;最新备份&gt; --yes            # 空环境恢复成功
+docker compose -p aetheris-drill ps          # 全部 healthy
+# 行数比对
+psql -c &quot;select count(*) from metadata.metadata_table&quot;   # 与备份前一致
+</code></pre>
+<p><strong>风险提示</strong>：不要再犯"备份了但从没恢复过"的经典错误——D1 的产出<strong>不是脚本，是"从零恢复成功"这个事实</strong>。</p>
+<hr />
+<h3 id="d2-9-15-周二-可观测性基线">D2 · 9/15（周二）· 可观测性基线 🔴</h3>
+<p><strong>为什么排第二</strong>：D4–D6 的每一处性能与稳定性修复，都需要指标来证明"修好了"，否则只能靠感觉。</p>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>指标</strong>：各服务 <code>pom.xml</code> 加 <code>micrometer-registry-prometheus</code>；<code>application.yml</code> 把 actuator 暴露从 <code>health,info</code> 扩到 <code>health,info,prometheus</code>；确认 <code>/actuator/prometheus</code> 返回文本格式指标。<strong>注意</strong>：该端点不能经网关对外暴露（保持在容器网络内），Prometheus 在 compose 内网抓取。</li>
+<li><strong>traceId 透传</strong>：<br />
+   - 网关 filter 生成 <code>X-Request-Id</code>（无则新建，有则沿用），写入响应头；<br />
+   - 各服务加一个 <code>OncePerRequestFilter</code>，把 <code>X-Request-Id</code> 放进 <code>MDC</code>，并在响应头回写；<br />
+   - 内部 HTTP 客户端（<code>executionClient</code>、<code>AuthPermissionClient</code>、<code>MetadataQueryClient</code>）统一带上该头 → <strong>一条链路上 5 跳共享同一个 requestId</strong>。</li>
+<li><strong>结构化日志</strong>：新增统一的 <code>logback-spring.xml</code>（放 <code>services/*/src/main/resources/</code> 或抽公共模块），JSON 单行输出，字段含 <code>timestamp / level / service / requestId / user / logger / message</code>；<strong>去掉所有 <code>printStackTrace</code></strong>（当前为 0，保持住）。</li>
+<li><strong>日志轮转</strong>：<code>docker-compose.yml</code> 给全部服务加：<br />
+<code>yaml
+   logging:
+     driver: json-file
+     options:
+       max-size: "20m"
+       max-file: "5"</code></li>
+<li><strong>起观测栈</strong>：compose 加 <code>prometheus</code> + <code>grafana</code>（放独立 profile <code>obs</code>，<strong>不污染默认环境</strong>）；建一张最小看板：各服务 QPS / P95 / 5xx 比例 / 连接池占用 / JVM 堆。</li>
+</ol>
+<p><strong>DoD / 验收</strong></p>
+<pre><code class="language-bash">curl -s localhost:8081/actuator/prometheus | head        # 有指标输出
+# 触发一次跨服务调用（如新建任务），在后端日志中查同一 requestId 是否贯穿网关→workflow→metadata
+docker compose logs workflow --tail 50 | grep requestId
+docker inspect &lt;container&gt; --format '{{.HostConfig.LogConfig}}'   # max-size 已生效
+</code></pre>
+<p><strong>提醒</strong>：这一步的价值不在"有 Grafana 看板"，而在<strong>从此每次修复都有前后对比的 P95 数据</strong>。</p>
+<hr />
+<h3 id="d3-9-16-周三-上线安全闸门">D3 · 9/16（周三）· 上线安全闸门 🔴</h3>
+<p><strong>为什么</strong>：让"照抄 .env.example"不再等于"上一个 JWT 可伪造的系统"。</p>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong><code>.env.example</code> 改造</strong>：敏感项全部<strong>留空</strong>并附生成命令注释：<br />
+<code>dotenv
+   # 生成：openssl rand -base64 48
+   JWT_SECRET=
+   # 生成：openssl rand -base64 32
+   AETHERIS_DATASOURCE_MASTER_KEY=
+   # 生成：openssl rand -hex 32
+   AETHERIS_INTERNAL_TOKEN=
+   # 生成：openssl rand -base64 24
+   INITIAL_ADMIN_PASSWORD=</code></li>
+<li><strong>启动校验</strong>：写一个 <code>SecretsValidator</code>（各服务共享或放 gateway/auth）：<br />
+   - 拒绝 <code>change-me*</code> / <code>replace-with*</code> / <code>generate-a-*</code> / 空值；<br />
+   - 拒绝 JWT_SECRET 长度 &lt; 32 字节；<br />
+   - 命中时<strong>打印明确的中文错误并拒绝启动</strong>（不要静默降级）。</li>
+<li><strong>一键生成</strong>：<code>scripts/gen-secrets.sh</code>（或 <code>make secrets</code>），把结果写到 <code>.env</code>（不覆盖已有值），并在 stdout 打印每个变量的用途。</li>
+<li><strong>镜像标签统一</strong>：<code>.env.example:22</code> 与 <code>docker-compose.yml:69</code> 对齐为同一个 tag（建议改为语义化版本如 <code>0.11.0</code>，避免日期 tag 漂移）。</li>
+<li><strong>postgres 容器加固</strong>：补 <code>cap_drop: [ALL]</code>（按需 <code>cap_add</code>），与 redis 及其它服务一致（M6）。</li>
+<li><strong>端口收敛</strong>：<code>docker-compose.dev.yml:20-21</code> 加 <code>127.0.0.1:</code> 前缀（M7）。</li>
+<li><strong>修 Maven</strong>（L5）：这是每天要用的工具，坏着会持续拖慢验证。</li>
+</ol>
+<p><strong>DoD / 验收</strong></p>
+<pre><code class="language-bash">cp .env.example .env &amp;&amp; docker compose up -d api-gateway
+# 期望：启动失败，日志明确提示 &quot;JWT_SECRET 不能使用示例值，请运行 make secrets&quot;
+bash scripts/gen-secrets.sh &amp;&amp; docker compose up -d   # 期望：全部 healthy
+git grep -n &quot;change-me&quot; -- .env.example               # 期望：仅出现在注释中
+</code></pre>
+<hr />
+<h3 id="d4-9-17-周四-性能止血-a-权限与语义层">D4 · 9/17（周四）· 性能止血 A：权限与语义层 🟠</h3>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>H1 批量权限判定</strong>（本日主攻，收益最大）<br />
+   - 在 auth 侧补一个批量端点：<code>POST /internal/permissions/visibility-batch</code>，入参 <code>(username, resourceType, action, candidateIds[])</code>，出参<strong>允许的 ID 集合</strong>；<br />
+   - <code>MetadataTableController.java:69</code> 的 <code>OPAQUE</code> 分支改为：先取可见 ID 集合 → <code>LambdaQueryWrapper.in(id, allowedIds)</code> 直接 SQL 过滤，<strong>彻底删掉 <code>filteredList</code> 逐行循环</strong>；<br />
+   - <code>SemanticMetricController.java:37-43</code> 同样改造；<br />
+   - 加请求级去重缓存（同一请求内相同 <code>(resource,id,action)</code> 只问一次）。</li>
+<li><strong>给逐行判定设熔断</strong>：若某分支仍必须逐行判定，<code>isAllowed</code> 调用次数超过阈值（如 200）直接抛异常，<strong>防止无界放大</strong>。</li>
+<li><strong>H3 语义指标列表</strong><br />
+   - <code>MetricDefinitionService.java:79-89</code>：版本快照与业务域改 JOIN 一次取回；<br />
+   - keyword/domain 过滤<strong>下推 SQL</strong>，加 <code>LIMIT</code> 与分页上限（建议默认 20、硬上限 200）。</li>
+<li><strong>顺带 M4</strong>：<code>InternalAgentToolController.java:86-88</code> 的 <code>.stream().limit()</code> 改为数据库 <code>LIMIT</code>。</li>
+</ol>
+<p><strong>DoD / 验收</strong><br />
+- 造一张 200 张表的测试数据集，在 <code>OPAQUE</code> 模式下打一次列表接口；<br />
+- 用 D2 的指标或日志验证：<strong>auth 的 <code>/internal/permissions/check</code> 调用次数从约 200 次降到 1 次</strong>；<br />
+- 语义指标列表：开启 MyBatis SQL 日志，确认<strong>指标数 N 对应固定次数查询（与 N 无关）</strong>；<br />
+- 加回归测试：一条断言"列表接口在 OPAQUE 模式下不产生逐行远程调用"。</p>
+<hr />
+<h3 id="d5-9-18-周五-性能止血-b-血缘-事务-异常">D5 · 9/18（周五）· 性能止血 B：血缘、事务、异常 🟠</h3>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>H2 血缘影响分析</strong><br />
+   - 新增索引：<code>lineage_field_relation(source_table, source_column)</code>；<br />
+   - <code>FieldLineageService.impact()</code> 改为 <strong>PostgreSQL <code>WITH RECURSIVE</code></strong>，一次往返取全链路；<br />
+   - <code>seen</code> 的 500 上限保留，但降级为"保护阈值"并在日志中告警（而不是性能依赖）。</li>
+<li><strong>H4 事务边界外移</strong><br />
+   - <code>TaskController.java:117/121/158</code>：<code>validateDefinition(task)</code>（含远程 <code>validateWrite</code>）移到 <code>@Transactional</code> 方法<strong>之前</strong>；<br />
+   - 同类问题顺手扫一遍其它 Controller（搜 <code>@Transactional</code> + 远程客户端调用的组合）。</li>
+<li><strong>H5 看板发布原子化</strong><br />
+   - <code>AnalyticsRepository.java:116-132</code> 改为单语句原子递增版本号；<br />
+   - 捕获 <code>DuplicateKeyException</code> → 返回 <strong>409 + 明确中文提示</strong>。</li>
+<li><strong>H7 统一异常处理（8 个服务）</strong><br />
+   - 抽公共 <code>ApiExceptionHandler</code>（或各服务独立实现，保持 15 行内），统一错误体 <code>{code, message, requestId}</code>；<br />
+   - 映射规则：<code>MethodArgumentNotValid → 400</code>、<code>AccessDenied → 403</code>、<code>DuplicateKey → 409</code>、其余 <code>→ 500 且只回 requestId</code>；<br />
+   - <strong>严禁把异常堆栈或内部类名返回给调用方</strong>。</li>
+<li><strong>M2 任务实例授权</strong>：<code>TaskController.java:254-274</code> 的两个实例列表接口补 <code>canReadInstance</code> / owner 过滤。</li>
+</ol>
+<p><strong>DoD / 验收</strong></p>
+<pre><code class="language-bash"># 血缘：对一个有多级下游的字段跑影响分析，日志中 SQL 执行次数应为 1（CTE）
+# 发布并发：两个并发请求发布同一看板 → 一个 200，另一个 409（而不是 500）
+# 异常：故意触发一个未预期异常 → 响应体为 {code,message,requestId}，无堆栈
+mvn -pl services/workflow,services/serving,services/metadata test   # 全绿（需先修复 mvn）
+</code></pre>
+<hr />
+<h3 id="d6-9-19-周六-质量规则与前端护栏">D6 · 9/19（周六）· 质量规则与前端护栏 🟠</h3>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>H6 质量规则表达式白名单化</strong><br />
+   - 用 AST/词法解析替代 <code>rejectUnsafeExpression</code> 的字符黑名单：只允许 <code>列名 / 字面量 / 比较操作符 / AND OR NOT / 括号 / IN / IS NULL / BETWEEN</code>；<br />
+   - 拒绝任何 <code>SELECT</code>、函数调用与子查询（<code>sql</code> 类型分支单独走"仅允许单条 SELECT 且复用 metadata 的只读守卫"）；<br />
+   - 加负向测试用例：<code>pg_sleep</code>、子查询、恒等式、注释绕过各一条。</li>
+<li><strong>前端 M9 决策（不做全套改造，只做取舍）</strong><br />
+   - 二选一：<strong>(a)</strong> 把 3–5 个最重的列表页迁到 <code>useQuery</code>（拿缓存/失效/去重）；<strong>(b)</strong> 卸载 react-query，统一到手写 <code>api/</code> 层并补齐取消能力。<strong>推荐 (b)</strong> —— 当前收益/成本比更好，且能减 128K。<br />
+   - 无论选哪个，<strong>登出必须清空缓存</strong>（<code>TopNav.tsx:74-82</code> 的 <code>handleLogout</code> 加 <code>queryClient.clear()</code>，并给 <code>catch {}</code> 补用户提示）。</li>
+<li><strong>M10 竞态修复（只修高频路径）</strong><br />
+   - 给 5–8 个最常切换的数据列表页加 <code>AbortController</code> 或 <code>cancelled</code> 标志（不动 166 处全部，聚焦高频）；<br />
+   - 封装一个 <code>useAsyncEffect</code> hook 供后续复用。</li>
+<li><strong>L4 卫生</strong><br />
+   - 删 <code>SectionHeader.tsx</code>（0 引用）；<br />
+   - 加 ESLint：<code>eslint-plugin-react-hooks</code>（<code>exhaustive-deps</code>）+ <code>@typescript-eslint/no-explicit-any</code>（先设为 <code>warn</code>，避免一次爆红）+ <code>no-unused-vars</code>；<br />
+   - <code>package.json</code> 补 <code>"lint": "eslint src --ext .ts,.tsx"</code>；<br />
+   - <code>src/utils/format.ts</code> 统一时间/金额格式，替换页面里混用的 <code>toLocaleString()</code> / <code>dayjs().format()</code> 三种写法（先修 5 个主要页面）。</li>
+<li><strong>L1/L2/L3 仓库卫生</strong><br />
+   - <code>git rm --cached .git-commit-msg.tmp</code>；<br />
+   - <code>.gitignore</code> 补 <code>*.tmp</code>、<code>hs_err_pid*</code>、<code>replay_pid*</code>；<br />
+   - 删除根目录 4 个 JVM 转储与 <code>${system:java.io.tmpdir}</code> 字面量目录（<strong>删前确认无明文密钥</strong>）。</li>
+</ol>
+<p><strong>DoD / 验收</strong></p>
+<pre><code class="language-bash">cd apps/web &amp;&amp; npm run type-check &amp;&amp; npm test &amp;&amp; npm run build &amp;&amp; npx eslint src
+# 期望：tsc 0 错误；vitest 全绿；build 成功；eslint 无 error（warn 可接受）
+git status --short          # 期望：无 .git-commit-msg.tmp；无 hs_err/replay 残留
+</code></pre>
+<hr />
+<h3 id="d7-9-20-周日-方向决策与交付基线">D7 · 9/20（周日）· 方向决策与交付基线 🎯</h3>
+<p><strong>为什么留一天给"想"</strong>：这一周前 6 天都在"堵洞"。如果不留时间回答"接下来做什么"，下周会本能地继续加功能——而 <code>enterprise-delivery-roadmap.md:143-153</code> 已经明确列出了 7 项"停止继续加码"的工作。</p>
+<p><strong>任务清单</strong></p>
+<ol>
+<li><strong>R1 的 ADR 初稿</strong>（只写决策，不写代码）<br />
+   - 写清 Flink / Flink CDC / Iceberg / REST Catalog / 对象存储 / 候选 Trino 各自的<strong>职责边界与否决理由</strong>；<br />
+   - 产出<strong>版本 BOM 表</strong>：JDK / Flink / Flink CDC / Iceberg runtime / Spark / Trino / 对象存储 SDK / 各数据库驱动，逐项标注"候选版本 + 兼容性验证状态"；<br />
+   - 产出 <strong>connector allowlist</strong>：来源 URL + SHA-256 + 许可证 + CVE 状态（哪怕先只填 1–2 行，把结构立起来）；<br />
+   - <strong>硬门槛写进文档</strong>：R1 的验收标准是"同一张 Iceberg v2 表可被 Flink 写、Spark 与 Trino 读"，<strong>不是"Flink 容器能启动"</strong>。</li>
+<li><strong>安装/升级最小闭环设计</strong>（一页纸）<br />
+   - 环境检查器（版本、端口、磁盘、内存）→ 配置向导（密钥生成）→ 迁移执行 → <strong>健康校验</strong> → 失败回滚；<br />
+   - 明确当前最大的交付阻碍：<strong>没有"全新安装/N-1 升级/失败回滚"三件事的可重复验证</strong>。</li>
+<li><strong>周复盘</strong><br />
+   - 用 D2 的指标给 D4/D5 的修复出<strong>前后对比数据</strong>（P95、远程调用次数、查询次数）；<br />
+   - 更新 <code>docs/roadmap.md</code> 与 <code>CHANGELOG.md</code>（本轮的修复按 Keep a Changelog 记入 Unreleased）；<br />
+   - 冻结下一迭代范围（R1 的 6 个可提交增量，见 <code>enterprise-delivery-roadmap.md:189-197</code>）。</li>
+<li><strong>修正两处既有文档事实错误</strong>（见本报告第 2 节）<br />
+   - <code>artifacts/Aetheris-全项目审查报告.md:94</code> 的"110 个迁移"改为 56；<br />
+   - 第 5.5 节关于前端权限的表述改为"UI 收敛 + 纵深防御不一致（非越权）"。</li>
+</ol>
+<p><strong>DoD / 验收</strong><br />
+- <code>docs/adr-0001-realtime-lakehouse.md</code> 存在且包含职责边界 + BOM + allowlist 结构 + 硬门槛；<br />
+- <code>docs/install-upgrade-design.md</code> 存在（一页纸）；<br />
+- <code>CHANGELOG.md</code> 的 Unreleased 段落记录本周 7 天改动；<br />
+- 下一迭代的 6 个增量写进 roadmap 并有明确退出门槛。</p>
+<hr />
+<h3 id="一周节奏与纪律">一周节奏与纪律</h3>
+<table>
+<thead>
+<tr>
+<th>纪律</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>上午实现 / 下午验证</td>
+<td>每个改动<strong>当天</strong>跑出验收输出，不留"待验证"</td>
+</tr>
+<tr>
+<td>每天收尾写日志</td>
+<td>追加到 <code>.workbuddy/memory/YYYY-MM-DD.md</code>，含验收命令与真实输出</td>
+</tr>
+<tr>
+<td>单主题提交</td>
+<td>每天一个可回滚的提交，提交信息用 <code>fix:</code> / <code>feat:</code> / <code>docs:</code> 前缀（项目现有风格）</td>
+</tr>
+<tr>
+<td>不碰无关文件</td>
+<td>遵守 <code>enterprise-delivery-roadmap.md:183</code> 的第 10 条：不覆盖用户未纳入本次范围的文件</td>
+</tr>
+<tr>
+<td>只跑受影响模块测试</td>
+<td>日常 <code>mvn -pl &lt;module&gt; test</code> + 前端 <code>npm test</code>；<strong>只有 D7 才做全量构建与 Compose 升级验证</strong></td>
+</tr>
+<tr>
+<td>卡住就降级</td>
+<td>某个修复超时（如 WAL 归档），当天降级为"记录方案 + 下一迭代再做"，不整周偏移</td>
+</tr>
+</tbody>
+</table>
+<h3 id="本周产出清单">本周产出清单</h3>
+<pre><code class="language-text">scripts/pg-backup.sh                 备份
+scripts/pg-restore.sh                恢复
+scripts/gen-secrets.sh               密钥一键生成
+scripts/（Makefile 目标）             make backup / restore / secrets
+services/*/src/.../SecretsValidator  启动密钥闸门
+services/*/logback-spring.xml        结构化日志
+docker-compose.yml                   observability profile + 日志轮转 + postgres 加固
+docs/backup-restore-drill-*.md       恢复演练报告
+docs/adr-0001-realtime-lakehouse.md  R1 架构决策
+docs/install-upgrade-design.md       安装/升级最小闭环设计
+CHANGELOG.md / docs/roadmap.md       本轮记录与范围冻结
+</code></pre>
+<hr />
+<h2 id="10-一条逆耳的提醒-战略层">10. 一条逆耳的提醒（战略层）</h2>
+<p>代码层面我挑出了 26 个问题，但<strong>最大的风险不在代码里</strong>。</p>
+<p>这个项目现在的状态是：<strong>5.4 万行手写代码、442 个全绿测试、11 个健康容器、56 个整齐的迁移、10 个微服务的完整闭环</strong>——工程密度在国内个人项目里属于极罕见的一档。但同时：</p>
+<ul>
+<li>没有一次备份；</li>
+<li>没有一个指标端点；</li>
+<li>没有一条跨服务 traceId；</li>
+<li>没有一个能被别人按文档安装起来的发布物；</li>
+<li>语义层最强的能力（跨表 JOIN、派生指标）<strong>仍在"已知边界"里没做</strong>；</li>
+<li>而 <code>docs/roadmap.md</code> 里 M5b 这样的供应链细节<strong>已经做到了"过度精密"的程度</strong>。</li>
+</ul>
+<p><strong>这说明过去一段时间的投入分配，偏向"证明我能做难的事"，而不是"让别人能用起来"。</strong> 对"1–2 个月内产生现金流"这个目标来说，前者的边际收益正在快速下降。</p>
+<p>结合你正在考虑的"数据资产识别最后一公里"定位（记为 H2），我的判断是：</p>
+<ol>
+<li><strong>能力上你已经够了</strong>——元数据、血缘（表级 + 字段级）、业务域、语义指标、质量、权限、审计，<strong>"数据资产识别"需要的零件基本齐全</strong>。缺的不是功能，是<strong>规模化下的性能（H2/H3 就是直接拦路的两个）和可交付性（B1/B2/B3）</strong>。</li>
+<li><strong>所以本周这 7 天不是"技术债清偿"，而是"把资产变成可变现形态"的必要前置</strong>——一个连备份都没有、慢查询查不到原因的系统，无论定位多好，都过不了任何一个客户的采购技术评审。</li>
+<li><strong>下周之后的方向取舍</strong>，建议在 D7 明确写成文档：<strong>是继续推进 R1 实时湖仓（12–20 个月的 GA 长路），还是先做"数据资产识别"的最小可交付版本（安装包 + 资产盘点报告 + 血缘影响分析），用 1–2 个月验证能否换回现金流。</strong> 这两条路的排期不冲突，但<strong>资源的先后顺序必须现在定</strong>，否则会继续"哪儿难做哪儿"。</li>
+</ol>
+<hr />
+<h2 id="附录-本次审视的取证命令索引">附录：本次审视的取证命令索引</h2>
+<pre><code class="language-bash"># 仓库与历史
+git log --oneline -40 ; git status --short ; git branch -a
+git ls-files --error-unmatch .git-commit-msg.tmp        # 确认被跟踪
+git check-ignore -v .env hs_err_pid40904.log            # 确认被忽略
+
+# 测试与构建
+find . -name &quot;TEST-*.xml&quot; -path &quot;*surefire*&quot; | wc -l    # 71
+grep -h -o 'tests=&quot;[0-9]*&quot;' ... | awk '{s+=$1} END{print s}'   # 442 / 0 / 0
+mvn -v                                                   # 复现 Maven 损坏
+
+# 代码异味
+grep -rn &quot;TODO\|FIXME\|HACK&quot; --include=*.java services apps   # 0
+grep -rn &quot;: any\|as any\|@ts-ignore&quot; apps/web/src             # 14
+grep -rn &quot;catch (Exception&quot; --include=*.java services apps    # 25
+grep -rn &quot;printStackTrace&quot; --include=*.java services apps     # 0（良好）
+
+# 可观测性与运维
+grep -rn &quot;micrometer\|prometheus&quot; services/*/pom.xml apps/gateway/pom.xml   # 0
+grep -rn &quot;traceId\|MDC\|OpenTelemetry&quot; services apps/gateway               # 0
+find . -name &quot;logback*.xml&quot;                                                # 0
+find . -iname &quot;*backup*&quot; -o -iname &quot;*pg_dump*&quot; -o -iname &quot;*restore*&quot;       # 0
+grep -c &quot;max-size\|logging:&quot; docker-compose.yml                            # 0
+grep -rl &quot;@RestControllerAdvice\|@ControllerAdvice&quot; services apps          # 2（auth, metadata）
+
+# 迁移
+find services -name &quot;V*__*.sql&quot; -not -path &quot;*/target/*&quot; | wc -l            # 56
+find . -name &quot;U*__*.sql&quot; -not -path &quot;*/target/*&quot; | wc -l                   # 0
+grep -rl &quot;DELETE FROM\|DROP TABLE\|DROP COLUMN&quot; --include=&quot;V*.sql&quot; services # 2
+
+# 权限链（用于推翻&quot;越权&quot;结论）
+sed -n '168,181p' apps/gateway/src/main/java/com/aetheris/gateway/config/JwtAuthFilter.java
+sed -n '60,75p;185,196p' services/metadata/src/main/java/com/aetheris/metadata/controller/MetadataTableController.java
+grep -n &quot;requireManage&quot; services/auth/src/main/java/com/aetheris/auth/controller/AuthUserAdminController.java
+</code></pre>
+<hr />
+<p align="center">Aetheris · 让数据有序流动，让价值清晰发生。</p>
+
+</body>
+</html>

@@ -124,6 +124,16 @@ class AnalyticsServiceTest {
     }
 
     @Test
+    void publishMapsRepositoryRaceToConflict() {
+        when(repository.publishDashboard(1L, "admin"))
+                .thenThrow(new AnalyticsRepository.PublishConflictException("看板已发布，请先修改草稿后再发布"));
+
+        AnalyticsService.PublishConflictException conflict = assertThrows(
+                AnalyticsService.PublishConflictException.class, () -> service.publish(1L, "admin"));
+        assertEquals("看板已发布，请先修改草稿后再发布", conflict.getMessage());
+    }
+
+    @Test
     void publishedThrowsWhenNotPublished() {
         when(repository.findPublishedDashboard("nope")).thenReturn(Optional.empty());
         assertThrows(AnalyticsService.NotFoundException.class, () -> service.published("nope"));

@@ -16,11 +16,13 @@ import org.junit.jupiter.api.Test;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -144,5 +146,17 @@ class InternalPermissionControllerTest {
     void versionIsExposed() {
         when(versionService.current()).thenReturn(42L);
         assertEquals(42L, controller.version().get("version"));
+    }
+
+    @Test
+    @DisplayName("批量权限判定超过 1000 条时拒绝，避免放大鉴权与审计压力")
+    void batchPermissionHasExplicitUpperBound() {
+        var items = IntStream.rangeClosed(1, InternalPermissionController.MAX_BATCH_ITEMS + 1)
+                .mapToObj(id -> new com.aetheris.auth.dto.BatchPermissionCheckItem((long) id, Map.of()))
+                .toList();
+
+        assertThrows(IllegalArgumentException.class, () -> controller.checkBatch(
+                new com.aetheris.auth.dto.BatchPermissionCheckRequest("alice", "metric", "view", items)));
+        verify(decisionService, never()).allowedIds(any(), any(), any(), any());
     }
 }

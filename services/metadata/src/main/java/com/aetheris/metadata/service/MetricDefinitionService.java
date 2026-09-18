@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 @Service
 public class MetricDefinitionService {
     private static final List<String> LAYERS = List.of("atomic", "derived", "composite");
+    public static final int MAX_PAGE_SIZE = 500;
     private final MetricDefinitionMapper mapper;
     private final BusinessDomainService domainService;
     private final LogicalModelService logicalModelService;
@@ -45,7 +46,7 @@ public class MetricDefinitionService {
     }
 
     public List<MetricDefinition> list(String keyword, String status) {
-        return list(keyword, status, null);
+        return list(keyword, status, null, 1, MAX_PAGE_SIZE);
     }
 
     /**
@@ -53,15 +54,22 @@ public class MetricDefinitionService {
      *                  空集合时返回空列表。
      */
     public List<MetricDefinition> list(String keyword, String status, Collection<Long> domainIds) {
+        return list(keyword, status, domainIds, 1, MAX_PAGE_SIZE);
+    }
+
+    public List<MetricDefinition> list(String keyword, String status, Collection<Long> domainIds,
+                                       int page, int size) {
+        validatePage(page, size);
         if (domainIds != null && domainIds.isEmpty()) {
             return List.of();
         }
-        if ("published".equals(status)) return published(keyword, domainIds);
+        if ("published".equals(status)) return published(keyword, domainIds, page, size);
+        long offset = (long) (page - 1) * size;
         LambdaQueryWrapper<MetricDefinition> wrapper = new LambdaQueryWrapper<MetricDefinition>()
                 .eq(StringUtils.hasText(status), MetricDefinition::getStatus, status)
                 .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
                 .orderByDesc(MetricDefinition::getUpdatedAt)
-                .last("LIMIT 500");
+                .last("LIMIT " + size + " OFFSET " + offset);
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
             wrapper.and(w -> w.like(MetricDefinition::getMetricName, trimmed)
@@ -78,19 +86,36 @@ public class MetricDefinitionService {
     }
 
     public List<MetricDefinition> published(String keyword, Collection<Long> domainIds) {
-        String normalizedKeyword = StringUtils.hasText(keyword) ? keyword.trim().toLowerCase(Locale.ROOT) : null;
-        List<MetricDefinition> aggregates = mapper.selectList(new LambdaQueryWrapper<MetricDefinition>()
+        return published(keyword, domainIds, 1, MAX_PAGE_SIZE);
+    }
+
+    public List<MetricDefinition> published(String keyword, Collection<Long> domainIds, int page, int size) {
+        validatePage(page, size);
+        LambdaQueryWrapper<MetricDefinition> wrapper = new LambdaQueryWrapper<MetricDefinition>()
                         .isNotNull(MetricDefinition::getPublishedVersion)
                         .ne(MetricDefinition::getStatus, "deprecated")
-                        .orderByAsc(MetricDefinition::getMetricCode)
-                        .last("LIMIT 500"));
+                        .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
+                        .orderByAsc(MetricDefinition::getMetricCode);
+        if (StringUtils.hasText(keyword)) {
+            String trimmed = keyword.trim();
+            wrapper.and(w -> w.like(MetricDefinition::getMetricName, trimmed)
+                    .or().like(MetricDefinition::getMetricCode, trimmed)
+                    .or().like(MetricDefinition::getBusinessDomain, trimmed));
+        }
+        long offset = (long) (page - 1) * size;
+        List<MetricDefinition> aggregates = mapper.selectList(wrapper.last("LIMIT " + size + " OFFSET " + offset));
         Map<String, SemanticVersion> snapshots = loadPublishedVersions(aggregates);
         return aggregates.stream()
                 .map(metric -> resolvePublished(metric,
                         snapshots.get(metric.getId() + ":" + metric.getPublishedVersion())))
-                .filter(metric -> domainIds == null || domainIds.contains(metric.getBusinessDomainId()))
-                .filter(metric -> normalizedKeyword == null || matches(metric, normalizedKeyword))
                 .toList();
+    }
+
+    private void validatePage(int page, int size) {
+        if (page < 1) throw new IllegalArgumentException("page 必须大于等于 1");
+        if (size < 1 || size > MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("size 必须在 1 到 " + MAX_PAGE_SIZE + " 之间");
+        }
     }
 
     public MetricDefinition getById(Long id) { return mapper.selectById(id); }

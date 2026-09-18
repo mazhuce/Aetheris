@@ -107,7 +107,8 @@ public class AnalyticsRepository {
     public Optional<Dashboard> updateDashboard(Long id, String name, String description, JsonNode spec, String username) {
         int changed = jdbc.update("""
                 UPDATE serving.bi_dashboard
-                   SET name = ?, description = ?, draft_spec = ?::jsonb, updated_by = ?, updated_at = now()
+                   SET name = ?, description = ?, draft_spec = ?::jsonb,
+                       status = 'draft', updated_by = ?, updated_at = now()
                  WHERE id = ?
                 """, name.trim(), clean(description), json(spec), username, id);
         return changed == 0 ? Optional.empty() : findDashboard(id);
@@ -123,6 +124,9 @@ public class AnalyticsRepository {
         Optional<Dashboard> existing = findDashboard(id);
         if (existing.isEmpty()) return Optional.empty();
         Dashboard dashboard = existing.get();
+        if ("published".equals(dashboard.status())) {
+            throw new PublishConflictException("看板已发布，请先修改草稿后再发布");
+        }
         int version = dashboard.publishedVersion() + 1;
         jdbc.update("""
                 INSERT INTO serving.bi_dashboard_version (dashboard_id, version_no, spec_json, created_by)
@@ -135,6 +139,11 @@ public class AnalyticsRepository {
                  WHERE id = ?
                 """, version, username, id);
         return findDashboard(id);
+    }
+
+    /** 发布竞争不是参数错误；调用方应以 409 告知客户端重新读取状态。 */
+    public static class PublishConflictException extends RuntimeException {
+        public PublishConflictException(String message) { super(message); }
     }
 
     public boolean deleteDashboard(Long id) {

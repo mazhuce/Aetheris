@@ -54,6 +54,9 @@ public class MetadataSecurity {
         AetherisIdentity identity = requireIdentity(request);
         AuthPermissionClient.Access access =
                 permissionClient.check(identity.username(), resourceType, resourceId, action, ctx);
+        if (!access.available()) {
+            throw new PermissionServiceUnavailableException("权限服务暂时不可用，请稍后重试");
+        }
         if (!access.allowed()) {
             throw new ForbiddenException("没有 " + resourceType + "." + action + " 权限");
         }
@@ -97,5 +100,10 @@ public class MetadataSecurity {
     /** 已认证但无权限（403）。 */
     public static class ForbiddenException extends RuntimeException {
         public ForbiddenException(String message) { super(message); }
+    }
+
+    /** 写入口不能把鉴权依赖故障伪装成普通无权限。列表路径仍采用空集 fail-closed。 */
+    public static class PermissionServiceUnavailableException extends RuntimeException {
+        public PermissionServiceUnavailableException(String message) { super(message); }
     }
 }
