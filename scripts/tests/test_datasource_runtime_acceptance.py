@@ -30,6 +30,10 @@ class DataSourceRuntimeAcceptanceTests(unittest.TestCase):
         report_path = ROOT / "artifacts" / "datasource-smoke" / "runtime-acceptance-report.json"
         report = json.loads(report_path.read_text(encoding="utf-8"))
         self.assertIn(report["status"], {"passed", "failed"})
+        self.assertIn("blockingCondition", report)
+        self.assertIn("retryable", report)
+        self.assertIn("docker", report)
+        self.assertIn(report["docker"].get("engineStatus"), {"unknown", "available"})
         if report["status"] == "passed":
             self.assertEqual(set(report["testedTypes"]), {"postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite"})
             self.assertTrue(report["cleanup"]["datasourceRowsRemoved"])

@@ -148,12 +148,20 @@ export default function AcceptanceProgressPage() {
       </Row>
 
       <Alert
-        type="warning"
+        type="success"
         showIcon
         icon={<WarningOutlined />}
         className="form-section-space"
-        message="Datasource 七类运行门禁当前待重跑"
-        description="最近一次报告因为 Docker Desktop Linux Engine API 500 失败。这里展示的是当前配置和连接健康，不把目录存在、配置保存或单次连接成功误判为完整 smoke 通过。"
+        message="Datasource 七类运行门禁最近一次已通过"
+        description="最近一次真实报告已通过七类 SELECT 1 探测并完成数据源行清理：PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite。证据：artifacts/datasource-smoke/runtime-acceptance-report.json"
+      />
+
+      <Alert
+        type="warning"
+        showIcon
+        className="form-section-space"
+        message="九类外部数据源门禁仍待真实实例"
+        description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单，但当前工作区没有伪造外部实例；需在对应环境执行 datasource-external-acceptance.ps1，生成 external-9-runtime-report.json 后才能宣告九类全量通过。"
       />
 
       <DataSurface label="R1-R5 阶段进度">

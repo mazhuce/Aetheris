@@ -1,14 +1,73 @@
 {
   "schemaVersion": 1,
   "gate": "datasource-jdbc-runtime-acceptance",
-  "status": "failed",
-  "startedAtUtc": "2026-09-29T09:31:29.0443217+00:00",
-  "testedTypes": [],
-  "results": [],
-  "cleanup": {
-    "datasourceRowsRemoved": false,
-    "smokeStackStopped": false
+  "status": "passed",
+  "startedAtUtc": "2026-09-29T16:33:03.1026519+00:00",
+  "testedTypes": [
+    "postgresql",
+    "mysql",
+    "trino",
+    "mariadb",
+    "clickhouse",
+    "cockroachdb",
+    "sqlite"
+  ],
+  "results": [
+    {
+      "type": "postgresql",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "mysql",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "trino",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "mariadb",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "clickhouse",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "cockroachdb",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    },
+    {
+      "type": "sqlite",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1"
+    }
+  ],
+  "blockingCondition": null,
+  "retryable": false,
+  "docker": {
+    "context": null,
+    "serverApiVersion": null,
+    "engineStatus": "unknown",
+    "error": null
   },
-  "error": "docker ps --filter label=com.docker.compose.project=aetheris-datasource-smoke --format {{.Names}}\\t{{.Status}} failed: request returned 500 Internal Server Error for API route and version http://%2F%2F.%2Fpipe%2FdockerDesktopLinuxEngine/v1.51/containers/json?filters=%7B%22label%22%3A%7B%22com.docker.compose.project%3Daetheris-datasource-smoke%22%3Atrue%7D%7D, check if the server supports the requested API version",
-  "finishedAtUtc": "2026-09-29T09:33:03.3002773+00:00"
+  "cleanup": {
+    "datasourceRowsRemoved": true,
+    "smokeStackStopped": true
+  },
+  "error": null,
+  "finishedAtUtc": "2026-09-29T16:33:57.1027587+00:00"
 }

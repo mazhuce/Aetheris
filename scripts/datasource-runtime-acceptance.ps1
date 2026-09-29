@@ -27,6 +27,34 @@ function Invoke-Docker {
     return @($output)
 }
 
+function Get-DockerEngineDiagnostics {
+    $diagnostics = [ordered]@{
+        context = $null
+        serverApiVersion = $null
+        engineStatus = "unknown"
+        error = $null
+    }
+    try {
+        $contextOutput = & docker context show 2>&1
+        if ($LASTEXITCODE -eq 0) { $diagnostics.context = (($contextOutput | Out-String).Trim()) }
+    } catch { }
+    try {
+        $versionOutput = & docker version --format '{{.Server.APIVersion}}' 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $diagnostics.serverApiVersion = (($versionOutput | Out-String).Trim())
+            $diagnostics.engineStatus = "available"
+        } else {
+            $diagnostics.error = (($versionOutput | Out-String).Trim())
+        }
+    } catch {
+        $diagnostics.error = $_.Exception.Message
+    }
+    if ($diagnostics.error -and $diagnostics.error.Length -gt 800) {
+        $diagnostics.error = $diagnostics.error.Substring(0, 800)
+    }
+    return $diagnostics
+}
+
 function Read-KeyValueFile([string]$Path) {
     $values = @{}
     foreach ($line in Get-Content -LiteralPath $Path) {
@@ -80,6 +108,9 @@ $report = [ordered]@{
     startedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     testedTypes = @()
     results = @()
+    blockingCondition = $null
+    retryable = $false
+    docker = [ordered]@{ context = $null; serverApiVersion = $null; engineStatus = "unknown"; error = $null }
     cleanup = [ordered]@{ datasourceRowsRemoved = $false; smokeStackStopped = $false }
     error = $null
 }
@@ -130,6 +161,11 @@ try {
     $report.status = "passed"
 } catch {
     $report.error = $_.Exception.Message
+    if ($report.error -match '(?i)(docker|engine).*(500|internal server error)|internal server error') {
+        $report.blockingCondition = "docker-engine-api-unavailable"
+        $report.retryable = $true
+        $report.docker = Get-DockerEngineDiagnostics
+    }
 } finally {
     if ($createdIds.Count -gt 0) {
         $idList = ($createdIds -join ",")
