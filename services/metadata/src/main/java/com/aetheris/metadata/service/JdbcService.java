@@ -77,9 +77,10 @@ public class JdbcService {
                 } catch (SQLFeatureNotSupportedException ignored) {
                     log.debug("JDBC driver does not support probe query timeout");
                 }
-                try (ResultSet resultSet = statement.executeQuery("SELECT 1")) {
+                String probeSql = "derby".equals(normalizedType(dataSource)) ? "VALUES 1" : "SELECT 1";
+                try (ResultSet resultSet = statement.executeQuery(probeSql)) {
                     if (!resultSet.next() || resultSet.getInt(1) != 1) {
-                        throw new SQLException("Unexpected SELECT 1 result");
+                        throw new SQLException("Unexpected probe result");
                     }
                 }
             }
@@ -427,6 +428,8 @@ public class JdbcService {
             case "oracle" ->
                     "jdbc:oracle:thin:@//" + dataSource.getHost() + ":" + port + "/" + database;
             case "sqlite" -> "jdbc:sqlite:" + database;
+            case "h2" -> "jdbc:h2:" + database;
+            case "derby" -> "jdbc:derby:" + database + ";create=true";
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + dataSource.getType());
         };
         return appendConnectionParams(baseUrl, type, dataSource.getConnectionParams());
@@ -608,6 +611,8 @@ public class JdbcService {
             case "trino" -> "jdbc:trino:";
             case "oracle" -> "jdbc:oracle:";
             case "sqlite" -> "jdbc:sqlite:";
+            case "h2" -> "jdbc:h2:";
+            case "derby" -> "jdbc:derby:";
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + type);
         };
         if (!url.toLowerCase(Locale.ROOT).startsWith(expectedPrefix)) {
@@ -680,7 +685,7 @@ public class JdbcService {
 
     private boolean usesDoubleQuote(DataSource dataSource) {
         String type = normalizedType(dataSource);
-        return isPostgresLike(type) || Set.of("sqlserver", "oracle", "trino").contains(type);
+        return isPostgresLike(type) || Set.of("sqlserver", "oracle", "trino", "h2", "derby").contains(type);
     }
 
     private int defaultPort(String type) {
@@ -698,7 +703,7 @@ public class JdbcService {
             case "clickhouse" -> 8123;
             case "trino" -> 8080;
             case "oracle" -> 1521;
-            case "sqlite" -> 0;
+            case "sqlite", "h2", "derby" -> 0;
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + type);
         };
     }
@@ -712,6 +717,8 @@ public class JdbcService {
             case "trino" -> "hive";
             case "oracle" -> "ORCL";
             case "sqlite" -> "aetheris.db";
+            case "h2" -> "mem:aetheris";
+            case "derby" -> "memory:aetheris";
             default -> "";
         };
     }

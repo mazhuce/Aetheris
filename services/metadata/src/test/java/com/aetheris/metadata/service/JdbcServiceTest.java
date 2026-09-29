@@ -83,6 +83,10 @@ class JdbcServiceTest {
                 jdbcService.buildUrl(source("oracle", "oracle", "ORCL"), "oracle", 1521));
         assertEquals("jdbc:sqlite:aetheris.db",
                 jdbcService.buildUrl(source("sqlite", "", "aetheris.db"), "sqlite", 0));
+        assertEquals("jdbc:h2:mem:aetheris",
+                jdbcService.buildUrl(source("h2", "embedded", "mem:aetheris"), "h2", 0));
+        assertEquals("jdbc:derby:memory:aetheris;create=true",
+                jdbcService.buildUrl(source("derby", "embedded", "memory:aetheris"), "derby", 0));
     }
 
     @ParameterizedTest(name = "runtime JDBC driver is packaged: {0}")
@@ -94,7 +98,9 @@ class JdbcServiceTest {
             "oracle.jdbc.OracleDriver",
             "org.sqlite.JDBC",
             "org.apache.hive.jdbc.HiveDriver",
-            "io.trino.jdbc.TrinoDriver"
+            "io.trino.jdbc.TrinoDriver",
+            "org.h2.Driver",
+            "org.apache.derby.iapi.jdbc.AutoloadedDriver"
     })
     void packagesSupportedJdbcDriversForManagedConnections(String driverClass) {
         assertDoesNotThrow(() -> Class.forName(driverClass));
@@ -109,6 +115,12 @@ class JdbcServiceTest {
         assertEquals(List.of("value"), result.get("columns"));
         assertEquals(List.of(List.of(1)), result.get("rows"));
         assertEquals(1, result.get("rowCount"));
+    }
+
+    @Test
+    void executesRealReadOnlyQueriesThroughEmbeddedJdbcDrivers() {
+        assertEquals(1, jdbcService.query(source("h2", "embedded", "mem:aetheris-h2-test;DB_CLOSE_DELAY=-1"), "SELECT 1").get("rowCount"));
+        assertEquals(1, jdbcService.query(source("derby", "embedded", "memory:aetheris-derby-test"), "SELECT 1 FROM SYSIBM.SYSDUMMY1").get("rowCount"));
     }
 
     @Test

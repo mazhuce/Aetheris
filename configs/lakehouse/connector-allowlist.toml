@@ -85,6 +85,28 @@ license = "Apache-2.0"
 status = "approved"
 
 [[connector]]
+id = "h2-jdbc"
+kind = "jdbc-driver"
+driver = "h2"
+coordinate = "com.h2database:h2:2.2.220"
+source = "https://repo1.maven.org/maven2/com/h2database/h2/2.2.220/h2-2.2.220.jar"
+license_source = "https://www.h2database.com/html/license.html"
+sha256 = "978ab863018d3f965e38880571c36293ea8b10a8086194159c4d5d20b50f0a57"
+license = "MPL-2.0 OR EPL-1.0"
+status = "approved"
+
+[[connector]]
+id = "derby-jdbc"
+kind = "jdbc-driver"
+driver = "derby"
+coordinate = "org.apache.derby:derby:10.16.1.1"
+source = "https://repo1.maven.org/maven2/org/apache/derby/derby/10.16.1.1/derby-10.16.1.1.jar"
+license_source = "https://db.apache.org/derby/license.html"
+sha256 = "ede804cb04e871d7c52d2414e952ab939f9ef243abb7bd0ce7dbeb6e1e28bd0b"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
 id = "hive-jdbc"
 kind = "jdbc-driver"
 driver = "hive"

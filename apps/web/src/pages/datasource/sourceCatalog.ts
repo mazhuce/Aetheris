@@ -26,6 +26,8 @@ export const dataSourceCatalog: DataSourceDefinition[] = [
   { value: 'sqlserver', label: 'Microsoft SQL Server', category: '关系型数据库', defaultPort: 1433, defaultDatabase: 'master', description: 'Microsoft 企业级关系型数据库' },
   { value: 'oracle', label: 'Oracle Database', category: '关系型数据库', defaultPort: 1521, defaultDatabase: 'ORCL', description: 'Oracle 企业级关系型数据库' },
   { value: 'sqlite', label: 'SQLite', category: '关系型数据库', defaultPort: 0, defaultDatabase: 'aetheris.db', description: '本地文件型数据库，适合开发与轻量任务' },
+  { value: 'h2', label: 'H2', category: '关系型数据库', defaultPort: 0, defaultDatabase: 'mem:aetheris', description: '嵌入式内存数据库，适合本地验收与开发' },
+  { value: 'derby', label: 'Apache Derby', category: '关系型数据库', defaultPort: 0, defaultDatabase: 'memory:aetheris', description: 'Apache 嵌入式数据库，适合离线验收' },
   { value: 'clickhouse', label: 'ClickHouse', category: '数仓与湖仓', defaultPort: 8123, defaultDatabase: 'default', description: '列式 OLAP 分析数据库' },
   { value: 'trino', label: 'Trino', category: '企业与联邦查询', defaultPort: 8080, defaultDatabase: 'hive', description: '跨数据源联邦 SQL 查询引擎' },
   { value: 'timescaledb', label: 'TimescaleDB', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 兼容时序数据库' }
@@ -45,6 +47,10 @@ export const dataSourceOptions = dataSourceCatalog.map((item) => ({
 
 export function getDataSourceDefinition(type?: string) {
   return dataSourceCatalog.find((item) => item.value === type) ?? dataSourceCatalog[0]
+}
+
+export function isEmbeddedDataSource(type?: string) {
+  return ['sqlite', 'h2', 'derby'].includes(type?.toLowerCase() ?? '')
 }
 
 /**

@@ -102,7 +102,7 @@ class DataSourceControllerTest {
 
         var definitions = controller.catalog(request);
 
-        assertEquals(19, definitions.size());
+        assertEquals(21, definitions.size());
         assertEquals("postgresql", definitions.get(0).type());
         assertEquals("trino", definitions.get(definitions.size() - 1).type());
     }

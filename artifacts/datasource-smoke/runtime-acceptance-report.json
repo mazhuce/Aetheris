@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "datasource-jdbc-runtime-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-09-29T16:33:03.1026519+00:00",
+  "startedAtUtc": "2026-09-29T17:06:42.1341322+00:00",
   "testedTypes": [
     "postgresql",
     "mysql",
@@ -10,50 +10,64 @@
     "mariadb",
     "clickhouse",
     "cockroachdb",
-    "sqlite"
+    "sqlite",
+    "h2",
+    "derby"
   ],
   "results": [
     {
       "type": "postgresql",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "mysql",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "trino",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "mariadb",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "clickhouse",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "cockroachdb",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
     },
     {
       "type": "sqlite",
       "status": "passed",
       "rowCount": 1,
-      "message": "SELECT 1"
+      "message": "SELECT 1 AS connected"
+    },
+    {
+      "type": "h2",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1 AS connected"
+    },
+    {
+      "type": "derby",
+      "status": "passed",
+      "rowCount": 1,
+      "message": "SELECT 1 FROM SYSIBM.SYSDUMMY1"
     }
   ],
   "blockingCondition": null,
@@ -69,5 +83,5 @@
     "smokeStackStopped": true
   },
   "error": null,
-  "finishedAtUtc": "2026-09-29T16:33:57.1027587+00:00"
+  "finishedAtUtc": "2026-09-29T17:07:42.3999689+00:00"
 }

@@ -52,7 +52,10 @@ const acceptanceSources: AcceptanceSource[] = [
   { type: 'oracle', label: 'Oracle', acceptance: '外部环境验收' },
   { type: 'clickhouse', label: 'ClickHouse', acceptance: 'JDBC smoke' },
   { type: 'trino', label: 'Trino', acceptance: 'JDBC smoke' },
-  { type: 'sqlite', label: 'SQLite', acceptance: 'JDBC smoke' }
+  { type: 'sqlite', label: 'SQLite', acceptance: 'JDBC smoke' },
+  { type: 'cockroachdb', label: 'CockroachDB', acceptance: 'JDBC smoke' },
+  { type: 'h2', label: 'H2', acceptance: 'JDBC smoke' },
+  { type: 'derby', label: 'Apache Derby', acceptance: 'JDBC smoke' }
 ]
 
 function healthLabel(status?: string) {
@@ -130,7 +133,7 @@ export default function AcceptanceProgressPage() {
   return (
     <div className="workflow-list-page">
       <PageHeader
-        description="统一跟踪 R1-R5 验收、实时服务状态、流任务运行态和 9 类数据源接入进度。页面每 10 秒刷新一次，未知状态保持为未知。"
+        description="统一跟踪 R1-R5 验收、实时服务状态、流任务运行态和本机九类与外部扩展数据源接入进度。页面每 10 秒刷新一次，未知状态保持为未知。"
         extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>}
       />
 
@@ -152,15 +155,15 @@ export default function AcceptanceProgressPage() {
         showIcon
         icon={<WarningOutlined />}
         className="form-section-space"
-        message="Datasource 七类运行门禁最近一次已通过"
-        description="最近一次真实报告已通过七类 SELECT 1 探测并完成数据源行清理：PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite。证据：artifacts/datasource-smoke/runtime-acceptance-report.json"
+        message="Datasource 本机九类运行门禁最近一次已通过"
+        description="最近一次真实报告已通过九类 SELECT 1 探测并完成数据源行清理：PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite、H2、Apache Derby。证据：artifacts/datasource-smoke/runtime-acceptance-report.json"
       />
 
       <Alert
         type="warning"
         showIcon
         className="form-section-space"
-        message="九类外部数据源门禁仍待真实实例"
+        message="三类外部数据源门禁仍待真实实例"
         description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单，但当前工作区没有伪造外部实例；需在对应环境执行 datasource-external-acceptance.ps1，生成 external-9-runtime-report.json 后才能宣告九类全量通过。"
       />
 
@@ -168,7 +171,7 @@ export default function AcceptanceProgressPage() {
         <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestones} pagination={false} scroll={{ x: 980 }} />
       </DataSurface>
 
-      <DataSurface label={`9 类数据源跟踪 · 已配置 ${sourceStats.configured} / ${acceptanceSources.length}`}>
+      <DataSurface label={`本机九类 + 外部三类 · 已配置 ${sourceStats.configured} / ${acceptanceSources.length}`}>
         <Table<AcceptanceSource> rowKey="type" size="small" columns={sourceColumns} dataSource={acceptanceSources} pagination={false} scroll={{ x: 900 }} />
       </DataSurface>
     </div>

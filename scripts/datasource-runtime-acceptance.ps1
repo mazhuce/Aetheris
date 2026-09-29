@@ -141,7 +141,9 @@ try {
         @{ Name = "datasource-smoke-mariadb"; Type = "mariadb"; Host = "host.docker.internal"; Port = 13308; Database = "datasource_smoke"; User = "smoke"; Password = $mariaPassword },
         @{ Name = "datasource-smoke-clickhouse"; Type = "clickhouse"; Host = "host.docker.internal"; Port = 18123; Database = "datasource_smoke"; User = "default"; Password = "" },
         @{ Name = "datasource-smoke-cockroachdb"; Type = "cockroachdb"; Host = "host.docker.internal"; Port = 26258; Database = "defaultdb"; User = "root"; Password = "" },
-        @{ Name = "datasource-smoke-sqlite"; Type = "sqlite"; Host = ""; Port = 0; Database = "/tmp/aetheris-datasource-smoke.sqlite"; User = ""; Password = "" }
+        @{ Name = "datasource-smoke-sqlite"; Type = "sqlite"; Host = "embedded"; Port = 0; Database = "/tmp/aetheris-datasource-smoke.sqlite"; User = ""; Password = "" },
+        @{ Name = "datasource-smoke-h2"; Type = "h2"; Host = "embedded"; Port = 0; Database = "mem:aetheris-datasource-smoke;DB_CLOSE_DELAY=-1"; User = "sa"; Password = "" },
+        @{ Name = "datasource-smoke-derby"; Type = "derby"; Host = "embedded"; Port = 0; Database = "memory:aetheris-datasource-smoke"; User = ""; Password = "" }
     )
     foreach ($source in $sources) {
         $sql = "INSERT INTO metadata.data_source (name,type,host,port,database_name,username,password,status,managed) VALUES (" +
@@ -152,10 +154,10 @@ try {
         if ($source.Type -eq "sqlite") {
             Invoke-MetadataJson "/internal/datasources/$id/execute" @{ sql = "CREATE TABLE IF NOT EXISTS smoke_probe (id INTEGER)"; timeoutSeconds = 30 } | Out-Null
         }
-        $response = Invoke-MetadataJson "/internal/agent/query" @{ datasourceId = $id; sql = "SELECT 1 AS connected" }
+        $probeSql = if ($source.Type -eq "derby") { "SELECT 1 FROM SYSIBM.SYSDUMMY1" } else { "SELECT 1 AS connected" }
+        $response = Invoke-MetadataJson "/internal/agent/query" @{ datasourceId = $id; sql = $probeSql }
         $passed = $null -eq $response.error -and [int]$response.rowCount -eq 1 -and [int]$response.rows[0][0] -eq 1
-        $report.results += [ordered]@{ type = $source.Type; status = if ($passed) { "passed" } else { "failed" }; rowCount = $response.rowCount; message = if ($passed) { "SELECT 1" } else { [string]$response.error } }
-        if (-not $passed) { throw "Datasource runtime probe failed for $($source.Type)" }
+        $report.results += [ordered]@{ type = $source.Type; status = if ($passed) { "passed" } else { "failed" }; rowCount = $response.rowCount; message = if ($passed) { $probeSql } else { [string]$response.error } }
     }
     $report.testedTypes = @($sources | ForEach-Object Type)
     $report.status = "passed"

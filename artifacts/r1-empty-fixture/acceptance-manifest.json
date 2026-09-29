@@ -94,11 +94,11 @@
   "artifacts": {
     "bom": {
       "path": "configs/lakehouse/r1-bom.toml",
-      "sha256": "1fbdc737ec7c99554e03ad3fe999b5f685ae86143d754f0fe65c52149db0c30b"
+      "sha256": "6028e8699070775608b2487c970cf718076a093b83522d189e2230aa6914f112"
     },
     "connectorAllowlist": {
       "path": "configs/lakehouse/connector-allowlist.toml",
-      "sha256": "7d035e75793fbb14f9cc4f696429ffb3587de859bb375212c20d87c0b731e83e"
+      "sha256": "2b3b96761879fe353d424da293e33bfc10c95a918eb838131124f9cfd5684687"
     },
     "connectorManifest": {
       "path": "infrastructure/lakehouse/connectors/CONNECTOR-MANIFEST.json",

@@ -11,8 +11,8 @@ class DataSourceRuntimeAcceptanceTests(unittest.TestCase):
         self.script = (ROOT / "scripts" / "datasource-runtime-acceptance.ps1").read_text(encoding="utf-8")
         self.compose = (ROOT / "infrastructure" / "datasources" / "docker-compose.smoke.yml").read_text(encoding="utf-8")
 
-    def test_runtime_gate_covers_seven_types_and_cleans_rows(self):
-        for data_source_type in ("postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite"):
+    def test_runtime_gate_covers_nine_types_and_cleans_rows(self):
+        for data_source_type in ("postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite", "h2", "derby"):
             self.assertIn(f'Type = "{data_source_type}"', self.script)
         self.assertIn("DELETE FROM metadata.data_source", self.script)
         self.assertIn("runtime-acceptance-report.json", self.script)
@@ -35,7 +35,7 @@ class DataSourceRuntimeAcceptanceTests(unittest.TestCase):
         self.assertIn("docker", report)
         self.assertIn(report["docker"].get("engineStatus"), {"unknown", "available"})
         if report["status"] == "passed":
-            self.assertEqual(set(report["testedTypes"]), {"postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite"})
+            self.assertEqual(set(report["testedTypes"]), {"postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite", "h2", "derby"})
             self.assertTrue(report["cleanup"]["datasourceRowsRemoved"])
         else:
             self.assertTrue(report.get("error"))

@@ -26,6 +26,8 @@
         <mysql-jdbc.version>9.1.0</mysql-jdbc.version>
         <!-- Keep the metadata JDBC client aligned with infrastructure/lakehouse/docker-compose.r1.yml. -->
         <trino-jdbc.version>476</trino-jdbc.version>
+        <h2-jdbc.version>2.2.220</h2-jdbc.version>
+        <derby-jdbc.version>10.16.1.1</derby-jdbc.version>
     </properties>
 
     <dependencies>
@@ -148,6 +150,18 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-jdbc</artifactId>
             <version>${trino-jdbc.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>${h2-jdbc.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.derby</groupId>
+            <artifactId>derby</artifactId>
+            <version>${derby-jdbc.version}</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>

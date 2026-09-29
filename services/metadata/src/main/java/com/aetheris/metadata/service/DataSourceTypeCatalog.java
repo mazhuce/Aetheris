@@ -29,6 +29,8 @@ public final class DataSourceTypeCatalog {
             definition("sqlserver", "Microsoft SQL Server", "关系型数据库", 1433, "master"),
             definition("oracle", "Oracle Database", "关系型数据库", 1521, "ORCL"),
             definition("sqlite", "SQLite", "关系型数据库", 0, "aetheris.db"),
+            definition("h2", "H2", "关系型数据库", 0, "mem:aetheris"),
+            definition("derby", "Apache Derby", "关系型数据库", 0, "memory:aetheris"),
             definition("clickhouse", "ClickHouse", "数仓与湖仓", 8123, "default"),
             definition("trino", "Trino", "企业与联邦查询", 8080, "hive")
     );

@@ -17,7 +17,7 @@ import {
 } from 'antd'
 import { ApiOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { testDataSourceConfig, type DataSource, type DataSourceInput, type TestResult } from '@/api/metadata'
-import { dataSourceGroups, getDataSourceCapabilities, getDataSourceDefinition, hiveConnectionPresets } from '../sourceCatalog'
+import { dataSourceGroups, getDataSourceCapabilities, getDataSourceDefinition, hiveConnectionPresets, isEmbeddedDataSource } from '../sourceCatalog'
 
 interface DataSourceFormProps {
   open: boolean
@@ -52,7 +52,7 @@ export default function DataSourceForm({
 
   const handleTypeChange = (type: string) => {
     const definition = getDataSourceDefinition(type)
-    form.setFieldsValue({ port: definition.defaultPort, databaseName: definition.defaultDatabase })
+    form.setFieldsValue({ port: definition.defaultPort, databaseName: definition.defaultDatabase, ...(isEmbeddedDataSource(type) ? { host: 'embedded' } : {}) })
     setTestResult(null)
   }
 
@@ -149,12 +149,12 @@ export default function DataSourceForm({
         <Row gutter={16}>
           <Col span={16}>
             <Form.Item name="host" label="主机地址" rules={[{ required: true, message: '请输入主机地址' }]}>
-              <Input placeholder="数据库主机名或 IP，例如 host.docker.internal" />
+              <Input placeholder="数据库主机名或 IP；嵌入式类型填写 embedded" />
             </Form.Item>
           </Col>
           <Col span={8}>
             <Form.Item name="port" label="端口" rules={[{ required: true, message: '请输入端口' }]}>
-              <InputNumber min={1} max={65535} className="full-width-control" />
+              <InputNumber min={0} max={65535} className="full-width-control" />
             </Form.Item>
           </Col>
           <Col span={12}>

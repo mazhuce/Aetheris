@@ -11,11 +11,13 @@ class DataSourceTypeCatalogTest {
     @Test
     void catalogContainsUniqueTypesAndExpandedJdbcFamilies() {
         var definitions = DataSourceTypeCatalog.all();
-        assertEquals(19, definitions.size());
+        assertEquals(21, definitions.size());
         assertEquals(definitions.size(), new HashSet<>(definitions.stream().map(DataSourceTypeCatalog.Definition::type).toList()).size());
         assertEquals(5432, DataSourceTypeCatalog.require("POSTGRESQL").defaultPort());
         assertEquals("Trino", DataSourceTypeCatalog.require("trino").label());
         assertEquals("Apache Hive", DataSourceTypeCatalog.require("hive2").label());
+        assertEquals("H2", DataSourceTypeCatalog.require("h2").label());
+        assertEquals("Apache Derby", DataSourceTypeCatalog.require("derby").label());
     }
 
     @Test

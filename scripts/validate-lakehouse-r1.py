@@ -218,7 +218,7 @@ def validate(mode: str) -> list[str]:
         value = str(bom[section][key])
         if not value or value.lower() in {"latest", "snapshot", "dev"}:
             fail(f"{section}.{key} must be pinned")
-    required_jdbc_drivers = ("postgresql", "mysql", "mssql", "clickhouse", "oracle", "sqlite", "hive", "trino")
+    required_jdbc_drivers = ("postgresql", "mysql", "mssql", "clickhouse", "oracle", "sqlite", "h2", "derby", "hive", "trino")
     for driver in required_jdbc_drivers:
         value = str(bom.get("jdbc_drivers", {}).get(driver, ""))
         if not value or value.lower() in {"latest", "snapshot", "dev"}:
@@ -239,6 +239,7 @@ def validate(mode: str) -> list[str]:
         "MIT",
         "GPL-2.0-with-Universal-FOSS-Exception",
         "Oracle-FUTC",
+        "MPL-2.0 OR EPL-1.0",
     }
     jdbc_driver_connectors = {}
     connector_by_id = {}
