@@ -45,6 +45,7 @@ const DataSyncPage = lazy(() => import('@/pages/integration/sync'))
 const SqlDevelopmentPage = lazy(() => import('@/pages/development/sql'))
 const SparkDevelopmentPage = lazy(() => import('@/pages/development/spark'))
 const FlinkDevelopmentPage = lazy(() => import('@/pages/development/flink'))
+const AcceptanceProgressPage = lazy(() => import('@/pages/development/acceptance'))
 const AssetCatalogPage = lazy(() => import('@/pages/assets/catalog'))
 const DomainPage = lazy(() => import('@/pages/modeling/domains'))
 const GovernanceIssuesPage = lazy(() => import('@/pages/governance/issues'))
@@ -156,6 +157,7 @@ export const router = createBrowserRouter([
       { path: 'development/sql', element: <SqlDevelopmentPage /> },
       { path: 'development/spark', element: <SparkDevelopmentPage /> },
       { path: 'development/flink', element: <FlinkDevelopmentPage /> },
+      { path: 'development/acceptance', element: <AcceptanceProgressPage /> },
       { path: 'assets/catalog', element: <AssetCatalogPage /> },
       { path: 'modeling/domains', element: <DomainPage /> },
       { path: 'governance/issues', element: <GovernanceIssuesPage /> },
