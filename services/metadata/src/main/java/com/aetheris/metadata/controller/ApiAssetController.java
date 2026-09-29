@@ -99,4 +99,16 @@ public class ApiAssetController {
         service.remove(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<?> publish(HttpServletRequest request, @PathVariable Long id) {
+        String username = security.require(request, "data_service", id, "publish", Map.of()).username();
+        return ResponseEntity.ok(service.publish(id, username));
+    }
+
+    @PostMapping("/{id}/deprecate")
+    public ResponseEntity<?> deprecate(HttpServletRequest request, @PathVariable Long id) {
+        security.require(request, "data_service", id, "deprecate", Map.of());
+        return ResponseEntity.ok(service.deprecate(id));
+    }
 }

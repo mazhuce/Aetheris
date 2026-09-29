@@ -10,8 +10,8 @@ Aetheris 已经具备较强的批处理开发、可靠调度、语义指标、�
 
 当前主要缺口不再是“再补几个管理页面”，而是四类生产闭环：
 
-1. **实时数据面**：Flink CDC、流任务状态恢复、Schema 演进、事件时间和实时质量尚未形成真实链路。
-2. **湖仓控制面**：目前能通过 Spark/Hive 访问 Iceberg，但还没有目录、表生命周期、快照、维护和跨引擎兼容的产品化闭环。
+1. **实时数据面**：Flink CDC、流任务状态恢复、Schema 演进、事件时间和实时质量已经形成控制面代码与阶段性运行证据，完整 CDC 增量、重启和线上 soak 仍未完成。
+2. **湖仓控制面**：目录、表生命周期、快照、维护计划和跨引擎兼容控制面已经落地；R5 已在隔离真实 Runner + REST Catalog + MinIO 上完成维护动作、对象存储结果回写和清理验收，持续并发恢复演练仍是后续工作。
 3. **可信消费面**：智能体缺少权限感知检索、引用溯源和持续评测；看板缺少联动、钻取、共享、订阅、告警和规模化查询能力。
 4. **对外交付面**：安装、升级、回滚、身份集成、租户隔离、可观测、备份灾备、容量基准和客户支持体系尚未完成。
 
@@ -59,7 +59,9 @@ Iceberg v2 湖仓表（对象存储 + REST Catalog）
 
 Flink CDC、Flink 和 Iceberg 的发布节奏并不完全同步，因此不追“每个组件都用最新”。R1 必须先生成并锁定一份 BOM：JDK、Flink、Flink CDC、Iceberg runtime、Spark、Trino、对象存储 SDK 和各数据库驱动逐项做兼容测试。
 
-当前优先候选是 **Flink 2.2 + Flink CDC 3.6 + 与 Flink 2.2 对应的 Iceberg runtime**，但只有在 MySQL/PostgreSQL CDC、Iceberg 写入、Spark/Trino 读取、savepoint 恢复全部通过后才能成为正式组合。所有 connector JAR 必须有来源、许可证、摘要和漏洞扫描记录。
+历史候选曾考虑 **Flink 2.2 + Flink CDC 3.6**，但本项目 R1 已选择并锁定可复现组合：**JDK 17.0.15 + Flink 1.20.1 + Flink CDC 3.4.0 + Iceberg 1.7.1 + Spark 3.5.6 + Trino 476**，具体以 `configs/lakehouse/r1-bom.toml` 为准。R1 的 Flink → Iceberg v2 → Spark/Trino 写读与空环境重建已通过，BOM 已晋级 approved；PostgreSQL/MySQL CDC、重启恢复和完整 R2 运行态已在隔离 Compose 通过独立验收，不回写或漂移 R1 版本组合。所有 connector JAR 必须有来源、许可证、摘要和漏洞扫描记录。
+
+数据源 JDBC 驱动也属于可复现交付范围：PostgreSQL、MySQL、SQL Server、Oracle、ClickHouse、SQLite、Hive 和 Trino 的版本、Maven Central URL、SHA-256、许可证及许可证链接已纳入同一 allowlist；release gate 会拒绝 BOM 与驱动坐标漂移，避免仅在前端目录中宣称支持。
 
 ## 3. 14 次大迭代安排
 
@@ -182,17 +184,13 @@ Flink CDC、Flink 和 Iceberg 的发布节奏并不完全同步，因此不追�
 9. 用户、管理员和运维文档同步；界面明确显示失败、部分成功、未知和可恢复状态。
 10. 不删除或覆盖用户未纳入本次范围的文件与改动；提交保持单一主题、可回滚。
 
-## 9. 建议立即开始的下一次迭代
+## 9. 当前迭代出口与下一步
 
-下一次应做 **R1：实时湖仓架构与兼容矩阵**，不要直接先画 Flink 管理页面。
+R1 的第一条硬门槛“跨引擎读写一致且可重建”已经有历史运行证据、固定 BOM、connector SHA-256 校验和一键验收脚本；当前环境恢复后必须重新执行脚本确认部署级结果不漂移。
 
-建议拆成以下可提交增量：
+下一步按 R2/R3 推进：
 
-1. 写出 ADR：Flink、CDC、Iceberg、REST Catalog、对象存储和候选 Trino 的职责边界。
-2. 增加版本 BOM 和 connector allowlist，记录下载来源、SHA-256、许可证和 CVE 状态。
-3. 在独立 Compose profile 中建立开发用对象存储、Catalog、Flink 和 Trino，不影响现有默认环境。
-4. 建立一条端到端 fixture：PostgreSQL 源表 → 初始快照/增量 → Iceberg Bronze → Spark 与 Trino 对账。
-5. 先写验收脚本和故障用例，再实现管理 API；首轮不开放导航。
-6. 全链路通过后，再进入 R2 的任务定义、运行状态和前端管理闭环。
-
-R1 的第一条硬门槛是“跨引擎读写一致且可重建”，不是“Flink 容器能启动”。
+1. 在真实隔离环境完成 PostgreSQL/MySQL CDC 的全量快照、UPDATE/DELETE/INSERT、checkpoint、TaskManager 重启和最终一致性对账。
+2. 将 JobManager 的 Job ID、checkpoint、savepoint、stop-with-savepoint 和失联对账接入实际 Flink 任务，并完成服务重启后的恢复演练。
+3. 将 Spark 制品上传、Flink 生命周期、CDC 状态和失败证据接入前端工作台，而不是只保留 API。
+4. 之后进入 R4/R5 的线上验证：Schema 演进审批、迟到/死信、Gold 阻断、快照维护、回滚和成本统计。

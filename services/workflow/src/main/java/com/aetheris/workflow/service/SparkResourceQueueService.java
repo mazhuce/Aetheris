@@ -73,6 +73,7 @@ public class SparkResourceQueueService {
                 FROM workflow.spark_resource_allocation allocation
                 JOIN workflow.execution_attempt attempt ON attempt.id=allocation.attempt_id
                 JOIN workflow.task_instance instance ON instance.id=attempt.instance_id
+                JOIN workflow.spark_job_definition job ON job.id=attempt.job_definition_id
                 WHERE allocation.attempt_id=? AND allocation.status='queued'
                   AND attempt.status='queued' AND instance.status='queued'
                   AND instance.active_attempt_id=attempt.id
@@ -91,7 +92,12 @@ public class SparkResourceQueueService {
         List<Admission> runners = jdbc.query("""
                 SELECT runner.id,runner.runner_key,runner.base_url
                 FROM workflow.compute_runner runner
+                JOIN workflow.spark_job_definition job ON job.id=(
+                    SELECT attempt.job_definition_id FROM workflow.execution_attempt attempt
+                    WHERE attempt.id=?
+                )
                 WHERE runner.environment_id=? AND runner.status='active'
+                  AND (job.runner_id IS NULL OR job.runner_id=runner.id)
                   AND runner.max_cores>=? AND runner.max_memory_mb>=?
                   AND (SELECT count(*) FROM workflow.spark_resource_allocation active
                        WHERE active.runner_id=runner.id AND active.status='admitted') < runner.max_concurrency
@@ -106,7 +112,7 @@ public class SparkResourceQueueService {
                 FOR UPDATE OF runner SKIP LOCKED LIMIT 1
                 """, (rs, row) -> new Admission(
                 head.attemptId(), rs.getLong("id"), rs.getString("runner_key"), rs.getString("base_url")),
-                head.environmentId(), head.cores(), head.memoryMb(), head.cores(), head.memoryMb());
+                head.attemptId(), head.environmentId(), head.cores(), head.memoryMb(), head.cores(), head.memoryMb());
         if (runners.isEmpty()) return null;
         Admission admission = runners.getFirst();
 

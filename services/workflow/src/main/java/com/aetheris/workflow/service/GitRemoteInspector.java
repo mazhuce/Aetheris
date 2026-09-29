@@ -54,7 +54,7 @@ public class GitRemoteInspector {
     private static final Logger log = LoggerFactory.getLogger(GitRemoteInspector.class);
     private static final Pattern HOST = Pattern.compile("^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$");
     private static final Pattern PATH_SEGMENT = Pattern.compile("^[A-Za-z0-9._-]+$");
-    private static final Pattern SOURCE_PATH = Pattern.compile("^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\\.py$");
+    private static final Pattern SOURCE_PATH = Pattern.compile("^[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*\\.(?:py|jar)$");
     private static final Pattern BRANCH = Pattern.compile("^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$");
     private static final Pattern COMMIT = Pattern.compile("^[0-9a-f]{40}$");
     private static final Pattern FINGERPRINT = Pattern.compile("^(?:[0-9a-f]{40}|[0-9a-f]{64})$");

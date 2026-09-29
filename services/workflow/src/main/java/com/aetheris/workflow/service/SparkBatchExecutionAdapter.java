@@ -77,6 +77,26 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
         return actual;
     }
 
+    /** Uploads a local PySpark or Spark JAR artifact to the runner's immutable artifact directory. */
+    public ArtifactInfo upload(String runnerBaseUrl, String artifactKey, byte[] content) {
+        requireEnabled();
+        if (content == null || content.length == 0 || content.length > 64 * 1024 * 1024) {
+            throw new IllegalArgumentException("Spark 制品大小必须在 1B 到 64MB 之间");
+        }
+        final String digest;
+        try {
+            digest = java.util.HexFormat.of().formatHex(
+                    java.security.MessageDigest.getInstance("SHA-256").digest(content));
+        } catch (java.security.NoSuchAlgorithmException error) {
+            throw new IllegalStateException("SHA-256 unavailable", error);
+        }
+        RestClient client = clientFor(runnerBaseUrl);
+        return call(() -> client.post().uri("/v1/artifacts/{key}", artifactKey)
+                .body(Map.of("artifactKey", artifactKey, "sha256", digest,
+                        "contentBase64", java.util.Base64.getEncoder().encodeToString(content)))
+                .retrieve().body(ArtifactInfo.class), false);
+    }
+
     @Override
     public ManagedHandle submit(Submission submission) {
         return submit(DEFAULT_RUNNER, submission);
@@ -85,15 +105,19 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
     public ManagedHandle submit(String runnerBaseUrl, Submission submission) {
         requireEnabled();
         RestClient client = clientFor(runnerBaseUrl);
-        Map<String, Object> body = Map.of(
-                "requestKey", submission.requestKey(),
-                "artifactKey", submission.artifactKey(),
-                "artifactDigest", submission.artifactDigest(),
-                "parameters", submission.parameters(),
-                "resources", Map.of(
-                        "cores", submission.cores(),
-                        "driverMemoryMb", submission.driverMemoryMb(),
-                        "timeoutSeconds", submission.timeoutSeconds()));
+        Map<String, Object> body = new java.util.HashMap<>();
+        body.put("requestKey", submission.requestKey());
+        body.put("artifactKey", submission.artifactKey());
+        body.put("artifactType", submission.artifactType());
+        body.put("artifactDigest", submission.artifactDigest());
+        if (submission.mainClass() != null && !submission.mainClass().isBlank()) {
+            body.put("mainClass", submission.mainClass());
+        }
+        body.put("parameters", submission.parameters());
+        body.put("resources", Map.of(
+                "cores", submission.cores(),
+                "driverMemoryMb", submission.driverMemoryMb(),
+                "timeoutSeconds", submission.timeoutSeconds()));
         try {
             ManagedHandle handle = client.post().uri("/v1/jobs").body(body)
                     .retrieve().body(ManagedHandle.class);

@@ -21,11 +21,17 @@ public class ExecutionAttempt {
     private String triggeredBy;
     private String taskName;
     private String taskType;
+    private Integer taskDefinitionVersion;
     private String taskSql;
     private Long datasourceId;
     private Long jobDefinitionId;
     private Integer jobVersion;
     private Long qualityRuleId;
+    private String eventTimeColumn;
+    private String watermarkExpression;
+    private Integer allowedLatenessSeconds;
+    private String lateDataPolicy;
+    private String deadLetterTable;
     private OffsetDateTime taskUpdatedAt;
     private String definitionDigest;
     private String parametersJson;
@@ -41,6 +47,15 @@ public class ExecutionAttempt {
     private OffsetDateTime sourceVerifiedAt;
     private String remoteHandle;
     private String applicationId;
+    private String flinkJobId;
+    private String flinkLifecycleState;
+    private String flinkLifecycleIntent;
+    private String flinkUpgradeTaskSql;
+    private String flinkUpgradeDefinitionDigest;
+    private Long flinkLatestCheckpointId;
+    private String flinkSavepointPath;
+    private String flinkSavepointRequestId;
+    private OffsetDateTime flinkLifecycleUpdatedAt;
     private String inputPartitionsJson;
     private String outputPartitionsJson;
     private String resultMetadataJson;
@@ -77,6 +92,8 @@ public class ExecutionAttempt {
     public void setTaskName(String taskName) { this.taskName = taskName; }
     public String getTaskType() { return taskType; }
     public void setTaskType(String taskType) { this.taskType = taskType; }
+    public Integer getTaskDefinitionVersion() { return taskDefinitionVersion; }
+    public void setTaskDefinitionVersion(Integer value) { taskDefinitionVersion = value; }
     public String getTaskSql() { return taskSql; }
     public void setTaskSql(String taskSql) { this.taskSql = taskSql; }
     public Long getDatasourceId() { return datasourceId; }
@@ -87,6 +104,16 @@ public class ExecutionAttempt {
     public void setJobVersion(Integer jobVersion) { this.jobVersion = jobVersion; }
     public Long getQualityRuleId() { return qualityRuleId; }
     public void setQualityRuleId(Long qualityRuleId) { this.qualityRuleId = qualityRuleId; }
+    public String getEventTimeColumn() { return eventTimeColumn; }
+    public void setEventTimeColumn(String value) { eventTimeColumn = value; }
+    public String getWatermarkExpression() { return watermarkExpression; }
+    public void setWatermarkExpression(String value) { watermarkExpression = value; }
+    public Integer getAllowedLatenessSeconds() { return allowedLatenessSeconds; }
+    public void setAllowedLatenessSeconds(Integer value) { allowedLatenessSeconds = value; }
+    public String getLateDataPolicy() { return lateDataPolicy; }
+    public void setLateDataPolicy(String value) { lateDataPolicy = value; }
+    public String getDeadLetterTable() { return deadLetterTable; }
+    public void setDeadLetterTable(String value) { deadLetterTable = value; }
     public OffsetDateTime getTaskUpdatedAt() { return taskUpdatedAt; }
     public void setTaskUpdatedAt(OffsetDateTime taskUpdatedAt) { this.taskUpdatedAt = taskUpdatedAt; }
     public String getDefinitionDigest() { return definitionDigest; }
@@ -117,6 +144,24 @@ public class ExecutionAttempt {
     public void setRemoteHandle(String remoteHandle) { this.remoteHandle = remoteHandle; }
     public String getApplicationId() { return applicationId; }
     public void setApplicationId(String applicationId) { this.applicationId = applicationId; }
+    public String getFlinkJobId() { return flinkJobId; }
+    public void setFlinkJobId(String value) { flinkJobId = value; }
+    public String getFlinkLifecycleState() { return flinkLifecycleState; }
+    public void setFlinkLifecycleState(String value) { flinkLifecycleState = value; }
+    public String getFlinkLifecycleIntent() { return flinkLifecycleIntent; }
+    public void setFlinkLifecycleIntent(String value) { flinkLifecycleIntent = value; }
+    public String getFlinkUpgradeTaskSql() { return flinkUpgradeTaskSql; }
+    public void setFlinkUpgradeTaskSql(String value) { flinkUpgradeTaskSql = value; }
+    public String getFlinkUpgradeDefinitionDigest() { return flinkUpgradeDefinitionDigest; }
+    public void setFlinkUpgradeDefinitionDigest(String value) { flinkUpgradeDefinitionDigest = value; }
+    public Long getFlinkLatestCheckpointId() { return flinkLatestCheckpointId; }
+    public void setFlinkLatestCheckpointId(Long value) { flinkLatestCheckpointId = value; }
+    public String getFlinkSavepointPath() { return flinkSavepointPath; }
+    public void setFlinkSavepointPath(String value) { flinkSavepointPath = value; }
+    public String getFlinkSavepointRequestId() { return flinkSavepointRequestId; }
+    public void setFlinkSavepointRequestId(String value) { flinkSavepointRequestId = value; }
+    public OffsetDateTime getFlinkLifecycleUpdatedAt() { return flinkLifecycleUpdatedAt; }
+    public void setFlinkLifecycleUpdatedAt(OffsetDateTime value) { flinkLifecycleUpdatedAt = value; }
     public String getInputPartitionsJson() { return inputPartitionsJson; }
     public void setInputPartitionsJson(String inputPartitionsJson) { this.inputPartitionsJson = inputPartitionsJson; }
     public String getOutputPartitionsJson() { return outputPartitionsJson; }

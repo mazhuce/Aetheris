@@ -3,32 +3,281 @@
 
 [[connector]]
 id = "flink-connector-jdbc"
-coordinate = "org.apache.flink:flink-connector-jdbc:3.2.0-1.20"
-source = "https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/3.2.0-1.20/"
-sha256 = "PENDING_CAPTURE"
+coordinate = "org.apache.flink:flink-connector-jdbc:3.4.0-1.20"
+source = "https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/3.4.0-1.20/flink-connector-jdbc-3.4.0-1.20.jar"
+sha256 = "de6e78774a55cd97aefd771db5ce4c30404b064897860960a5ad6e172b516699"
 license = "Apache-2.0"
-status = "candidate"
+status = "approved"
+
+[[connector]]
+id = "flink-s3-fs-hadoop"
+coordinate = "org.apache.flink:flink-s3-fs-hadoop:1.20.1"
+source = "https://repo1.maven.org/maven2/org/apache/flink/flink-s3-fs-hadoop/1.20.1/flink-s3-fs-hadoop-1.20.1.jar"
+sha256 = "4dabe5d51519984f88d677c477b99c5e18cec924af2e41816da67df527a5c679"
+runtime_sha256 = "535793ae49c5e11f8c4be070b7f4e57fde2957c1b0c3844f4b22bf9367759a41"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "postgresql-jdbc"
+kind = "jdbc-driver"
+driver = "postgresql"
+coordinate = "org.postgresql:postgresql:42.7.13"
+source = "https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.13/postgresql-42.7.13.jar"
+license_source = "https://www.postgresql.org/about/licence/"
+sha256 = "6e0e4cc2d8cae902084f8a2b18728b073a6fd9d1f87c9d8bff8f298c18185b93"
+license = "BSD-2-Clause"
+status = "approved"
+
+[[connector]]
+id = "mysql-jdbc"
+kind = "jdbc-driver"
+driver = "mysql"
+coordinate = "com.mysql:mysql-connector-j:9.1.0"
+source = "https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/9.1.0/mysql-connector-j-9.1.0.jar"
+license_source = "https://www.mysql.com/about/legal/licensing/oem/"
+sha256 = "8776e2ebc46072c9a47ea59d98298c4273bd9f16a7b26b5dfa4744535aa26c62"
+license = "GPL-2.0-with-Universal-FOSS-Exception"
+status = "approved"
+
+[[connector]]
+id = "mssql-jdbc"
+kind = "jdbc-driver"
+driver = "mssql"
+coordinate = "com.microsoft.sqlserver:mssql-jdbc:12.8.1.jre11"
+source = "https://repo1.maven.org/maven2/com/microsoft/sqlserver/mssql-jdbc/12.8.1.jre11/mssql-jdbc-12.8.1.jre11.jar"
+license_source = "https://github.com/microsoft/mssql-jdbc/blob/main/license.txt"
+sha256 = "e6933c0711e598a224060e52ed31392f720a4a7664e85d8ae37c52a85b67ebb0"
+license = "MIT"
+status = "approved"
+
+[[connector]]
+id = "clickhouse-jdbc"
+kind = "jdbc-driver"
+driver = "clickhouse"
+coordinate = "com.clickhouse:clickhouse-jdbc:0.6.3"
+source = "https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.6.3/clickhouse-jdbc-0.6.3.jar"
+license_source = "https://www.apache.org/licenses/LICENSE-2.0"
+sha256 = "13dff94963fbf131116abb8d2c4b8201dddb88b70eecbe5480b86cc9a60ce726"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "oracle-jdbc"
+kind = "jdbc-driver"
+driver = "oracle"
+coordinate = "com.oracle.database.jdbc:ojdbc11:23.6.0.24.10"
+source = "https://repo1.maven.org/maven2/com/oracle/database/jdbc/ojdbc11/23.6.0.24.10/ojdbc11-23.6.0.24.10.jar"
+license_source = "https://www.oracle.com/downloads/licenses/oracle-free-license.html"
+sha256 = "8e6af2c3401c64270922e0dca66879fd07281de3347ad1d1a0e1153ed41423a6"
+license = "Oracle-FUTC"
+status = "approved"
+
+[[connector]]
+id = "sqlite-jdbc"
+kind = "jdbc-driver"
+driver = "sqlite"
+coordinate = "org.xerial:sqlite-jdbc:3.46.1.0"
+source = "https://repo1.maven.org/maven2/org/xerial/sqlite-jdbc/3.46.1.0/sqlite-jdbc-3.46.1.0.jar"
+license_source = "https://www.apache.org/licenses/LICENSE-2.0"
+sha256 = "6dc7464e3803648d3ff18a7359bab6adf079fcd8495b18991f6f5edcb8ac6e3b"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "hive-jdbc"
+kind = "jdbc-driver"
+driver = "hive"
+coordinate = "org.apache.hive:hive-jdbc:3.1.3"
+source = "https://repo1.maven.org/maven2/org/apache/hive/hive-jdbc/3.1.3/hive-jdbc-3.1.3.jar"
+license_source = "https://www.apache.org/licenses/LICENSE-2.0"
+sha256 = "f9fa451cf20598013df335e4328b9580fdec0c3fd72d7149dd2ceadb043be7c6"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "trino-jdbc"
+kind = "jdbc-driver"
+driver = "trino"
+coordinate = "io.trino:trino-jdbc:476"
+source = "https://repo1.maven.org/maven2/io/trino/trino-jdbc/476/trino-jdbc-476.jar"
+license_source = "https://www.apache.org/licenses/LICENSE-2.0"
+sha256 = "a3736d21609a5a317d2ce88b3835e312e9b6f41393c1d4b09f2ad6e7aeb3bb90"
+license = "Apache-2.0"
+status = "approved"
 
 [[connector]]
 id = "flink-sql-connector-kafka"
-coordinate = "org.apache.flink:flink-sql-connector-kafka:3.3.0-1.20"
-source = "https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.3.0-1.20/"
-sha256 = "PENDING_CAPTURE"
+coordinate = "org.apache.flink:flink-sql-connector-kafka:3.4.0-1.20"
+source = "https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-kafka/3.4.0-1.20/flink-sql-connector-kafka-3.4.0-1.20.jar"
+sha256 = "b860724fd97d7da0901bfc3859680442f4c1aa2b35ab944407558b393a1cf93e"
 license = "Apache-2.0"
-status = "candidate"
+status = "approved"
+
+[[connector]]
+id = "flink-sql-connector-postgres-cdc"
+coordinate = "org.apache.flink:flink-sql-connector-postgres-cdc:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-postgres-cdc/3.4.0/flink-sql-connector-postgres-cdc-3.4.0.jar"
+sha256 = "8013e0ddc3c5bd28a28faf8146d738dfbba07a527bbb7f0e3a615a8e5425d9ab"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "flink-sql-connector-mysql-cdc"
+coordinate = "org.apache.flink:flink-sql-connector-mysql-cdc:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-mysql-cdc/3.4.0/flink-sql-connector-mysql-cdc-3.4.0.jar"
+sha256 = "85e5dd7ac121853220da93be7dfb6500da600c5fdcfbfca214913e1fbb775254"
+license = "Apache-2.0"
+status = "approved"
 
 [[connector]]
 id = "iceberg-flink-runtime"
 coordinate = "org.apache.iceberg:iceberg-flink-runtime-1.20:1.7.1"
-source = "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.20/1.7.1/"
-sha256 = "PENDING_CAPTURE"
+source = "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-flink-runtime-1.20/1.7.1/iceberg-flink-runtime-1.20-1.7.1.jar"
+sha256 = "4886de53d83bd2c00d4edf1f709e114b895370c18281b30d654b4913d6a7bf2b"
 license = "Apache-2.0"
-status = "candidate"
+status = "approved"
+
+[[connector]]
+id = "hadoop-common"
+coordinate = "org.apache.hadoop:hadoop-common:3.3.6"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.3.6/hadoop-common-3.3.6.jar"
+sha256 = "10b8edb304bccc10a939d29edde128d0f6d95129427ec69f5cc7003ba8c6b737"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "hadoop-hdfs-client"
+coordinate = "org.apache.hadoop:hadoop-hdfs-client:3.3.6"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-hdfs-client/3.3.6/hadoop-hdfs-client-3.3.6.jar"
+sha256 = "fee1e4addd705a281aafdf02f41426a07ec00382327c44b43e4542818e62c483"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "woodstox-core"
+coordinate = "com.fasterxml.woodstox:woodstox-core:6.4.0"
+source = "https://repo1.maven.org/maven2/com/fasterxml/woodstox/woodstox-core/6.4.0/woodstox-core-6.4.0.jar"
+sha256 = "d6eb9f2f40049a7a808baf11ffba0737648e62ff52fde9271d808e5d57a27279"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "stax2-api"
+coordinate = "org.codehaus.woodstox:stax2-api:4.2.1"
+source = "https://repo1.maven.org/maven2/org/codehaus/woodstox/stax2-api/4.2.1/stax2-api-4.2.1.jar"
+sha256 = "678567e48b51a42c65c699f266539ad3d676d4b1a5b0ad7d89ece8b9d5772579"
+license = "BSD-2-Clause"
+status = "approved"
+
+[[connector]]
+id = "hadoop-shaded-guava"
+coordinate = "org.apache.hadoop.thirdparty:hadoop-shaded-guava:1.1.1"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/thirdparty/hadoop-shaded-guava/1.1.1/hadoop-shaded-guava-1.1.1.jar"
+sha256 = "66711253edbb9a172efbf12e8b4511cd413627d069e0f5a62ea475b4e14093f8"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "hadoop-client-api"
+coordinate = "org.apache.hadoop:hadoop-client-api:3.3.6"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/3.3.6/hadoop-client-api-3.3.6.jar"
+sha256 = "f3d2347a6e1c6885d5bcfd4f60c3ac3810ec11068fc161e04329baabf412d963"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "hadoop-client-runtime"
+coordinate = "org.apache.hadoop:hadoop-client-runtime:3.3.6"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/3.3.6/hadoop-client-runtime-3.3.6.jar"
+sha256 = "15f01bc804294df06d2effc87de363a83cf589f50558bdbf48f72541ad8de854"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-hadoop-common"
+coordinate = "org.apache.hadoop:hadoop-common:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-common/3.4.0/hadoop-common-3.4.0.jar"
+sha256 = "90e89190cb3c2449c3e0d17c91a73fa6d59164f8b0f9bdf799c78d4a911fc009"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-hadoop-client-api"
+coordinate = "org.apache.hadoop:hadoop-client-api:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-api/3.4.0/hadoop-client-api-3.4.0.jar"
+sha256 = "fb77a824b1065245a0c874209d262319d4c117461db4900d5e235cf67585a789"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-hadoop-client-runtime"
+coordinate = "org.apache.hadoop:hadoop-client-runtime:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-client-runtime/3.4.0/hadoop-client-runtime-3.4.0.jar"
+sha256 = "d021f88a724a11dd9f2771e4804f685b8159b70697cfe1b53cefa0497323a431"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-hadoop-aws"
+coordinate = "org.apache.hadoop:hadoop-aws:3.4.0"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.4.0/hadoop-aws-3.4.0.jar"
+sha256 = "052ba6e1dcdc7ba708d0e2d43eac02bcbc4aea6f628bf11432c22ab296ec7430"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-re2j"
+coordinate = "com.google.re2j:re2j:1.7"
+source = "https://repo1.maven.org/maven2/com/google/re2j/re2j/1.7/re2j-1.7.jar"
+sha256 = "4f657af51ab8bb0909bcc3eb40862d26125af8cbcf92aaaba595fed77f947bc0"
+license = "BSD-3-Clause"
+status = "approved"
+
+[[connector]]
+id = "spark-runner-s3-transfer-manager"
+coordinate = "software.amazon.awssdk:s3-transfer-manager:2.23.19"
+source = "https://repo1.maven.org/maven2/software/amazon/awssdk/s3-transfer-manager/2.23.19/s3-transfer-manager-2.23.19.jar"
+sha256 = "bf55a1426d273db50eb991c4424889e1a43ee0fe9fab8a22f4b889262d867bfe"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "hadoop-aws"
+coordinate = "org.apache.hadoop:hadoop-aws:3.3.6"
+source = "https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.6/hadoop-aws-3.3.6.jar"
+sha256 = "fba9eb73e6f0f5458355627fe095f5124705d4048551f4d6aa4084777b824c13"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "aws-java-sdk-bundle"
+coordinate = "com.amazonaws:aws-java-sdk-bundle:1.12.262"
+source = "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar"
+sha256 = "873fe7cf495126619997bec21c44de5d992544aea7e632fdc77adb1a0915bae5"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "commons-configuration2"
+coordinate = "org.apache.commons:commons-configuration2:2.8.0"
+source = "https://repo1.maven.org/maven2/org/apache/commons/commons-configuration2/2.8.0/commons-configuration2-2.8.0.jar"
+sha256 = "e5c46e4b0b1acddbc96651838c19d3df70da92dfb5107a6e4c42cb92d3a300bd"
+license = "Apache-2.0"
+status = "approved"
+
+[[connector]]
+id = "iceberg-aws-bundle"
+coordinate = "org.apache.iceberg:iceberg-aws-bundle:1.7.1"
+source = "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.7.1/iceberg-aws-bundle-1.7.1.jar"
+sha256 = "5d7c0baf877ee4296c4f98425165484404af4227fb487f1847a3cb1a577dfc3b"
+license = "Apache-2.0"
+status = "approved"
 
 [[connector]]
 id = "iceberg-spark-runtime"
 coordinate = "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.7.1"
-source = "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.7.1/"
-sha256 = "PENDING_CAPTURE"
+source = "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.7.1/iceberg-spark-runtime-3.5_2.12-1.7.1.jar"
+sha256 = "cdf7357865d8d91764e0f147a2d76bc3e1e2b8792ddc0d3be329b3d34aaf218c"
 license = "Apache-2.0"
-status = "candidate"
+status = "approved"

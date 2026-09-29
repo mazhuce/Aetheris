@@ -72,6 +72,7 @@ export const navModules: NavModule[] = [
     children: [
       { key: 'sql', label: 'SQL开发', path: '/development/sql', status: 'available' },
       { key: 'spark', label: 'Spark开发', path: '/development/spark', status: 'available', description: '受管制品、执行恢复与混合流水线。' },
+      { key: 'flink', label: 'Flink开发', path: '/development/flink', status: 'available', description: '流任务、checkpoint/savepoint 与失联对账。' },
       { key: 'workflows', label: '工作流', path: '/development/workflows', status: 'available' },
       { key: 'scheduling', label: '任务调度', path: '/development/scheduling', status: 'available' },
       { key: 'releases', label: '发布管理', path: '/development/releases', status: 'available' }

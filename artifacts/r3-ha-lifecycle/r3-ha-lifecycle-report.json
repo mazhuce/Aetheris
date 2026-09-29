@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "gate": "R3-flink-lifecycle-runtime-gate",
+  "status": "failed",
+  "startedAtUtc": "2026-09-29T03:35:38.4524144+00:00",
+  "fixture": "aetheris-r3-flink-lifecycle-v1",
+  "phases": {},
+  "reconciliation": {
+    "attempted": false,
+    "outageInjected": false,
+    "remoteUnavailableObserved": false,
+    "unknownWasNotSuccess": false,
+    "networkOutageInjected": false,
+    "networkRecoveryObserved": false,
+    "mode": null
+  },
+  "cleanup": {
+    "completed": true
+  },
+  "error": "R3 source fixture reset failed",
+  "finishedAtUtc": "2026-09-29T03:35:38.6749607+00:00"
+}

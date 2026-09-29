@@ -1,0 +1,155 @@
+# R3-only HA overlay. It uses a separate Compose project and alternate host
+# ports so the ordinary R1 profile and its volumes remain untouched.
+services:
+  zookeeper:
+    image: zookeeper:3.9
+    restart: unless-stopped
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: ruok,stat,conf
+    ports: !override
+      - "127.0.0.1:12181:2181"
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 127.0.0.1 2181 | grep imok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  object-store:
+    ports: !override
+      - "127.0.0.1:19100:9000"
+      - "127.0.0.1:19101:9001"
+
+  source-postgres:
+    ports: !override
+      - "127.0.0.1:15433:5432"
+
+  source-mysql:
+    ports: !override
+      - "127.0.0.1:13307:3306"
+
+  catalog:
+    ports: !override
+      - "127.0.0.1:18182:8181"
+
+  trino:
+    ports: !override
+      - "127.0.0.1:18082:8080"
+
+  flink-jobmanager:
+    ports: !override
+      - "127.0.0.1:18184:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        rest.address: flink-jobmanager
+        rest.bind-address: 0.0.0.0
+        high-availability.type: zookeeper
+        high-availability.storageDir: s3://warehouse/flink-ha
+        high-availability.zookeeper.quorum: zookeeper:2181
+        high-availability.cluster-id: /aetheris-r3-ha
+        state.backend: hashmap
+        rest.flamegraph.enabled: false
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+    depends_on:
+      object-store-init:
+        condition: service_completed_successfully
+      zookeeper:
+        condition: service_healthy
+
+  # A second JobManager is required for a real HA handover.  It intentionally
+  # has no host port: the primary service keeps the REST endpoint used by the
+  # acceptance script while ZooKeeper elects whichever JobManager is alive.
+  flink-jobmanager-standby:
+    image: flink:1.20.1-java17
+    command:
+      - bash
+      - -lc
+      - >-
+        mkdir -p /opt/flink/plugins/s3-fs-hadoop &&
+        ln -sf /opt/flink/opt/flink-s3-fs-hadoop-1.20.1.jar /opt/flink/plugins/s3-fs-hadoop/flink-s3-fs-hadoop-1.20.1.jar &&
+        exec /docker-entrypoint.sh jobmanager
+    volumes:
+      - ./connectors/flink-connector-jdbc-3.4.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.4.0-1.20.jar:ro
+      - ./connectors/postgresql-42.7.13.jar:/opt/flink/lib/postgresql-42.7.13.jar:ro
+      - ./connectors/mysql-connector-j-9.1.0.jar:/opt/flink/lib/mysql-connector-j-9.1.0.jar:ro
+      - ./connectors/flink-sql-connector-kafka-3.4.0-1.20.jar:/opt/flink/lib/flink-sql-connector-kafka-3.4.0-1.20.jar:ro
+      - ./connectors/flink-sql-connector-postgres-cdc-3.4.0.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.4.0.jar:ro
+      - ./connectors/flink-sql-connector-mysql-cdc-3.4.0.jar:/opt/flink/lib/flink-sql-connector-mysql-cdc-3.4.0.jar:ro
+      - ./connectors/iceberg-flink-runtime-1.20-1.7.1.jar:/opt/flink/lib/iceberg-flink-runtime-1.20-1.7.1.jar:ro
+      - ./connectors/iceberg-aws-bundle-1.7.1.jar:/opt/flink/lib/iceberg-aws-bundle-1.7.1.jar:ro
+      - ./connectors/hadoop-client-api-3.3.6.jar:/opt/flink/lib/hadoop-client-api-3.3.6.jar:ro
+      - ./connectors/hadoop-client-runtime-3.3.6.jar:/opt/flink/lib/hadoop-client-runtime-3.3.6.jar:ro
+      - ./connectors/commons-configuration2-2.8.0.jar:/opt/flink/lib/commons-configuration2-2.8.0.jar:ro
+      - ./connectors/woodstox-core-6.4.0.jar:/opt/flink/lib/woodstox-core-6.4.0.jar:ro
+      - ./connectors/stax2-api-4.2.1.jar:/opt/flink/lib/stax2-api-4.2.1.jar:ro
+    ports:
+      - "127.0.0.1:18185:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager-standby
+        rest.address: flink-jobmanager-standby
+        rest.bind-address: 0.0.0.0
+        high-availability.type: zookeeper
+        high-availability.storageDir: s3://warehouse/flink-ha
+        high-availability.zookeeper.quorum: zookeeper:2181
+        high-availability.cluster-id: /aetheris-r3-ha
+        state.backend: hashmap
+        rest.flamegraph.enabled: false
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+      AWS_ACCESS_KEY_ID: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
+      AWS_SECRET_ACCESS_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    depends_on:
+      object-store-init:
+        condition: service_completed_successfully
+      zookeeper:
+        condition: service_healthy
+
+  flink-taskmanager:
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        taskmanager.numberOfTaskSlots: 2
+        high-availability.type: zookeeper
+        high-availability.storageDir: s3://warehouse/flink-ha
+        high-availability.zookeeper.quorum: zookeeper:2181
+        high-availability.cluster-id: /aetheris-r3-ha
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+      object-store-init:
+        condition: service_completed_successfully
+      zookeeper:
+        condition: service_healthy
+
+  flink-sql-gateway:
+    ports: !override
+      - "127.0.0.1:18186:8083"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        rest.address: flink-jobmanager
+        rest.bind-address: 0.0.0.0
+        sql-gateway.endpoint.rest.address: flink-sql-gateway
+        sql-gateway.endpoint.rest.bind-address: 0.0.0.0
+        sql-gateway.endpoint.rest.port: 8083
+        high-availability.type: zookeeper
+        high-availability.storageDir: s3://warehouse/flink-ha
+        high-availability.zookeeper.quorum: zookeeper:2181
+        high-availability.cluster-id: /aetheris-r3-ha
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+      flink-taskmanager:
+        condition: service_started
+      object-store-init:
+        condition: service_completed_successfully
+      zookeeper:
+        condition: service_healthy

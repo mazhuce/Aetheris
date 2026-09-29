@@ -1,0 +1,87 @@
+{
+  "fixture": "aetheris-r1-postgres-iceberg-v1",
+  "bronzeTable": "bronze.r1_orders",
+  "status": "passed",
+  "expected": {
+    "columns": [
+      "category",
+      "order_count",
+      "total_amount"
+    ],
+    "rows": [
+      [
+        "A",
+        2,
+        "30.50"
+      ],
+      [
+        "B",
+        2,
+        "20.00"
+      ],
+      [
+        "C",
+        1,
+        "4.00"
+      ]
+    ],
+    "rowCount": 3,
+    "checksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b"
+  },
+  "engines": {
+    "spark": {
+      "columns": [
+        "category",
+        "order_count",
+        "total_amount"
+      ],
+      "rows": [
+        [
+          "A",
+          2,
+          "30.50"
+        ],
+        [
+          "B",
+          2,
+          "20.00"
+        ],
+        [
+          "C",
+          1,
+          "4.00"
+        ]
+      ],
+      "rowCount": 3,
+      "checksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b",
+      "matchesExpected": true
+    },
+    "trino": {
+      "columns": [
+        "category",
+        "order_count",
+        "total_amount"
+      ],
+      "rows": [
+        [
+          "A",
+          2,
+          "30.50"
+        ],
+        [
+          "B",
+          2,
+          "20.00"
+        ],
+        [
+          "C",
+          1,
+          "4.00"
+        ]
+      ],
+      "rowCount": 3,
+      "checksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b",
+      "matchesExpected": true
+    }
+  }
+}

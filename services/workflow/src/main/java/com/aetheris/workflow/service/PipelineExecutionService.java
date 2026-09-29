@@ -454,7 +454,7 @@ public class PipelineExecutionService {
     }
 
     private TaskInstance awaitTerminal(Task task, TaskInstance initial) {
-        if (!"spark".equals(task.getTaskType())) return initial;
+        if (!Set.of("spark", "flink").contains(task.getTaskType())) return initial;
         long timeout = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds()) * 1000L + 60_000;
         long deadline = System.currentTimeMillis() + timeout;
         TaskInstance current = initial;
@@ -467,7 +467,7 @@ public class PipelineExecutionService {
             current = instanceService.getById(initial.getId());
         }
         if (awaitingRemoteResult(current)) {
-            throw new IllegalStateException("Spark 节点状态在等待窗口内未能确认");
+            throw new IllegalStateException(task.getTaskType() + " 节点状态在等待窗口内未能确认");
         }
         return current;
     }
@@ -523,7 +523,7 @@ public class PipelineExecutionService {
             throw new IllegalStateException("流水线节点「" + task.getName() + "」已停用");
         }
         String taskType = task.getTaskType() == null ? "sql" : task.getTaskType();
-        if (!Set.of("sql", "spark", "quality").contains(taskType)) {
+        if (!Set.of("sql", "spark", "flink", "quality").contains(taskType)) {
             throw new IllegalStateException("流水线节点「" + task.getName() + "」类型不受支持");
         }
     }

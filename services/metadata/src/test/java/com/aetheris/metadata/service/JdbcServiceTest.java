@@ -2,6 +2,8 @@ package com.aetheris.metadata.service;
 
 import com.aetheris.metadata.entity.DataSource;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -9,8 +11,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -65,6 +69,57 @@ class JdbcServiceTest {
         assertEquals(
                 "jdbc:mysql://192.168.30.202:4000/analytics?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai",
                 jdbcService.buildUrl(source("tidb", "192.168.30.202", "analytics"), "tidb", 4000));
+    }
+
+    @Test
+    void buildsExpandedEnterpriseAndAnalyticsUrls() {
+        assertEquals("jdbc:sqlserver://sqlserver:1433;databaseName=master;encrypt=false",
+                jdbcService.buildUrl(source("sqlserver", "sqlserver", "master"), "sqlserver", 1433));
+        assertEquals("jdbc:ch://clickhouse:8123/analytics?compress=0",
+                jdbcService.buildUrl(source("clickhouse", "clickhouse", "analytics"), "clickhouse", 8123));
+        assertEquals("jdbc:trino://trino:8080/hive",
+                jdbcService.buildUrl(source("trino", "trino", "hive"), "trino", 8080));
+        assertEquals("jdbc:oracle:thin:@//oracle:1521/ORCL",
+                jdbcService.buildUrl(source("oracle", "oracle", "ORCL"), "oracle", 1521));
+        assertEquals("jdbc:sqlite:aetheris.db",
+                jdbcService.buildUrl(source("sqlite", "", "aetheris.db"), "sqlite", 0));
+    }
+
+    @ParameterizedTest(name = "runtime JDBC driver is packaged: {0}")
+    @ValueSource(strings = {
+            "org.postgresql.Driver",
+            "com.mysql.cj.jdbc.Driver",
+            "com.microsoft.sqlserver.jdbc.SQLServerDriver",
+            "com.clickhouse.jdbc.ClickHouseDriver",
+            "oracle.jdbc.OracleDriver",
+            "org.sqlite.JDBC",
+            "org.apache.hive.jdbc.HiveDriver",
+            "io.trino.jdbc.TrinoDriver"
+    })
+    void packagesSupportedJdbcDriversForManagedConnections(String driverClass) {
+        assertDoesNotThrow(() -> Class.forName(driverClass));
+    }
+
+    @Test
+    void executesARealReadOnlyQueryThroughTheSqliteDriver() {
+        DataSource dataSource = source("sqlite", "", ":memory:");
+
+        var result = jdbcService.query(dataSource, "SELECT 1 AS value");
+
+        assertEquals(List.of("value"), result.get("columns"));
+        assertEquals(List.of(List.of(1)), result.get("rows"));
+        assertEquals(1, result.get("rowCount"));
+    }
+
+    @Test
+    void validatesExpandedCustomJdbcProtocols() {
+        DataSource dataSource = source("clickhouse", "localhost", "default");
+        dataSource.setJdbcUrl("jdbc:postgresql://localhost:5432/postgres");
+        assertThrows(IllegalArgumentException.class,
+                () -> jdbcService.buildUrl(dataSource, "clickhouse", 8123));
+
+        dataSource.setJdbcUrl("jdbc:ch://localhost:8123/default");
+        assertEquals("jdbc:ch://localhost:8123/default", jdbcService.buildUrl(dataSource, "clickhouse", 8123));
     }
 
     @Test

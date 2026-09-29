@@ -2,10 +2,11 @@ import type { AxiosResponse } from 'axios'
 import type { Mock } from 'vitest'
 import http from './http'
 import {
-  changeGitRepositoryStatus, changeGitRepositoryTrust, changeSparkRunnerStatus, listExecutionAttempts, listGitRevisions,
-  listSparkArtifactVerifications, registerGitRepository, registerSparkArtifact, registerSparkRunner,
+  changeGitRepositoryStatus, changeGitRepositoryTrust, changeSparkRunnerStatus, getFlinkHealth, listExecutionAttempts, listGitRevisions, probeFlinkHealth,
+  createSparkJob, disableSparkJob, listSparkArtifactVerifications, publishSparkJob, registerGitRepository, registerSparkArtifact, registerSparkRunner,
   synchronizeGitRepository, verifySparkArtifact,
-  type ExecutionAttempt, type GitRepository, type ManagedArtifact, type SparkRunner
+  pauseFlink, resumeFlink, upgradeFlink,
+  type ExecutionAttempt, type FlinkGatewayHealth, type GitRepository, type ManagedArtifact, type SparkRunner
 } from './workflow'
 
 vi.mock('./http', () => ({
@@ -36,6 +37,20 @@ describe('workflow api', () => {
 
     await expect(listExecutionAttempts(7)).resolves.toEqual(attempts)
     expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/tasks/instances/7/attempts')
+  })
+
+  it('loads Flink SQL Gateway capability health separately from Spark Runner health', async () => {
+    const health = { status: 'UP', version: '1.20.1', endpoint: 'http://flink:8083' } satisfies FlinkGatewayHealth
+    mockedHttp.get.mockResolvedValueOnce({ data: health } as AxiosResponse<FlinkGatewayHealth>)
+    await expect(getFlinkHealth()).resolves.toBe(health)
+    expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/flink/health')
+  })
+
+  it('probes the Gateway endpoint supplied by a Flink task form', async () => {
+    const health = { status: 'UP', version: '1.20.1', endpoint: 'http://flink-task:8083' } satisfies FlinkGatewayHealth
+    mockedHttp.get.mockResolvedValueOnce({ data: health } as AxiosResponse<FlinkGatewayHealth>)
+    await expect(probeFlinkHealth('http://flink-task:8083')).resolves.toBe(health)
+    expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/flink/health', { params: { endpoint: 'http://flink-task:8083' } })
   })
 
   it('uses manager-only runner registration and lifecycle endpoints', async () => {
@@ -91,5 +106,55 @@ describe('workflow api', () => {
     expect(mockedHttp.post).toHaveBeenNthCalledWith(5, '/api/workflow/spark/artifacts', artifactInput)
     expect(mockedHttp.post).toHaveBeenNthCalledWith(6, '/api/workflow/spark/artifacts/7/verify')
     expect(mockedHttp.get).toHaveBeenCalledWith('/api/workflow/spark/artifacts/7/verifications')
+  })
+
+  it('submits Spark JAR job definitions with their main class and lifecycle actions', async () => {
+    const job = { id: 9, status: 'draft' } as any
+    mockedHttp.post.mockResolvedValue({ data: job } as AxiosResponse<typeof job>)
+    const input = {
+      name: 'Orders', environmentId: 1, artifactId: 7, inputTables: ['hive_prod.dwd.orders'],
+      outputUri: 'hdfs://localhost:9000/user/aetheris/managed/orders', mainClass: 'com.acme.OrdersJob', runnerId: 3,
+      parameterSchema: { properties: { bizDate: { type: 'date', required: true } } }, defaultParameters: {},
+      driverCores: 1, driverMemoryMb: 768, timeoutSeconds: 1800, maxRetries: 0
+    }
+    await expect(createSparkJob(input)).resolves.toBe(job)
+    await expect(publishSparkJob(9)).resolves.toBe(job)
+    await expect(disableSparkJob(9)).resolves.toBe(job)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(1, '/api/workflow/spark/jobs', input)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(2, '/api/workflow/spark/jobs/9/publish')
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(3, '/api/workflow/spark/jobs/9/disable')
+  })
+
+  it('uses explicit Flink pause and savepoint-resume lifecycle endpoints', async () => {
+    const paused = { jobId: 'job-1', requestId: 'req-1', intent: 'pause' } as any
+    const resumed = {
+      attemptId: 11, sessionHandle: 'session-2', operationHandle: 'op-2',
+      savepoint: 's3://warehouse/savepoints/sp-1', state: 'running' as const
+    }
+    mockedHttp.post
+      .mockResolvedValueOnce({ data: paused } as AxiosResponse<typeof paused>)
+      .mockResolvedValueOnce({ data: resumed } as AxiosResponse<typeof resumed>)
+    await expect(pauseFlink(7, 11, 's3://warehouse/savepoints')).resolves.toBe(paused)
+    await expect(resumeFlink(7, 11)).resolves.toBe(resumed)
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(
+      1, '/api/workflow/tasks/instances/7/attempts/11/flink-pause',
+      { targetDirectory: 's3://warehouse/savepoints' },
+    )
+    expect(mockedHttp.post).toHaveBeenNthCalledWith(
+      2, '/api/workflow/tasks/instances/7/attempts/11/flink-resume',
+    )
+  })
+
+  it('submits a versioned Flink upgrade contract', async () => {
+    const result = { jobId: 'job-1', requestId: 'req-2', intent: 'upgrade', definitionDigest: 'a'.repeat(64) } as any
+    const payload = {
+      targetDirectory: 's3://warehouse/savepoints',
+      replacementSql: 'INSERT INTO bronze.orders SELECT * FROM source_orders'
+    }
+    mockedHttp.post.mockResolvedValueOnce({ data: result } as AxiosResponse<typeof result>)
+    await expect(upgradeFlink(7, 11, payload)).resolves.toBe(result)
+    expect(mockedHttp.post).toHaveBeenCalledWith(
+      '/api/workflow/tasks/instances/7/attempts/11/flink-upgrade', payload,
+    )
   })
 })

@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Small authenticated runner for approved local Spark 3.5.6 applications.
 
-This is a development backend. It accepts only repository-owned PySpark files,
-verifies their SHA-256 digest, builds spark-submit as an argv list, strips the
-control-plane environment and persists enough state to reconcile after restart.
+This is a development backend. It accepts PySpark files or Spark JARs staged from a repository
+or the control plane, verifies their SHA-256 digest, builds spark-submit as an
+argv list, strips the control-plane environment and persists enough state to
+reconcile after restart.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import hmac
 import json
@@ -29,13 +31,77 @@ from urllib.parse import parse_qs, unquote, urlparse
 RUNNER_VERSION = "1"
 ACTIVE = {"queued", "submitting", "running", "cancel_requested"}
 TERMINAL = {"succeeded", "failed", "cancelled", "timed_out", "unknown"}
-ARTIFACT_KEY = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}\.py$")
+ARTIFACT_KEY = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}\.(?:py|jar)$")
+PYSPARK_KEY = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}\.py$")
+JAR_KEY = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}\.jar$")
+MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 REQUEST_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+MAINTENANCE_OPERATIONS = {
+    "expire_snapshots", "rewrite_data_files", "remove_orphan_files",
+    "storage_estimate", "time_travel", "rollback",
+}
+MAINTENANCE_STATEMENT_BYTES = 16 * 1024
+SCHEMA_CHANGE_OPERATIONS = {"add_column", "widen_type", "rename_column", "drop_column", "comment"}
+SCHEMA_CHANGE_STATEMENT_BYTES = 16 * 1024
+SCHEMA_IDENTIFIER = r"`[A-Za-z_][A-Za-z0-9_]{0,127}`"
+SCHEMA_TABLE = rf"(?:{SCHEMA_IDENTIFIER}\.){{1,7}}{SCHEMA_IDENTIFIER}"
+SCHEMA_TYPE = r"(?:BOOLEAN|TINYINT|SMALLINT|INT|INTEGER|BIGINT|FLOAT|DOUBLE|STRING|DATE|TIMESTAMP|BINARY|UUID|DECIMAL\s*\(\s*\d{1,2}\s*,\s*\d{1,2}\s*\))"
 REDACTIONS = [
     re.compile(r"(?i)(password|secret|token|access[_-]?key)(\s*[=:]\s*)[^\s,;]+"),
     re.compile(r"(?i)(authorization\s*:\s*bearer\s+)[^\s]+"),
 ]
+
+
+def spark_catalog_arguments() -> list[str]:
+    """Build the fixed Spark catalog contract from runner-owned environment.
+
+    The default remains the historic local Hive catalog.  REST mode is used by
+    the R1/R5 acceptance profile and deliberately reads object-store
+    credentials from the child environment instead of putting them in the
+    spark-submit argv (which is visible to process listings).
+    """
+    mode = os.environ.get("AETHERIS_RUNNER_SPARK_CATALOG_MODE", "hive").strip().lower()
+    if mode == "hive":
+        return [
+            "--conf", "spark.sql.catalogImplementation=hive",
+            "--conf", "spark.sql.catalog.hive_prod=org.apache.iceberg.spark.SparkCatalog",
+            "--conf", "spark.sql.catalog.hive_prod.type=hive",
+            "--conf", "spark.sql.catalog.hive_prod.uri=thrift://127.0.0.1:9083",
+            "--conf", "spark.sql.catalog.hive_prod.warehouse=hdfs://localhost:9000/user/hive/warehouse",
+            "--conf", "spark.sql.defaultCatalog=hive_prod",
+        ]
+    if mode != "rest":
+        raise RunnerError(HTTPStatus.INTERNAL_SERVER_ERROR, "unsupported runner catalog mode")
+    name = os.environ.get("AETHERIS_RUNNER_CATALOG_NAME", "iceberg").strip()
+    uri = os.environ.get("AETHERIS_RUNNER_CATALOG_URI", "").strip()
+    warehouse = os.environ.get("AETHERIS_RUNNER_CATALOG_WAREHOUSE", "").strip()
+    endpoint = os.environ.get("AETHERIS_RUNNER_S3_ENDPOINT", "").strip()
+    region = os.environ.get("AETHERIS_RUNNER_S3_REGION", "us-east-1").strip()
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,63}", name):
+        raise RunnerError(HTTPStatus.INTERNAL_SERVER_ERROR, "runner catalog name is invalid")
+    if not uri or not warehouse or not endpoint or not region:
+        raise RunnerError(HTTPStatus.INTERNAL_SERVER_ERROR, "runner REST catalog is incompletely configured")
+    prefix = f"spark.sql.catalog.{name}"
+    return [
+        "--conf", "spark.sql.catalogImplementation=in-memory",
+        "--conf", f"{prefix}=org.apache.iceberg.spark.SparkCatalog",
+        "--conf", f"{prefix}.catalog-impl=org.apache.iceberg.rest.RESTCatalog",
+        "--conf", f"{prefix}.uri={uri}",
+        "--conf", f"{prefix}.warehouse={warehouse}",
+        "--conf", f"{prefix}.io-impl=org.apache.iceberg.aws.s3.S3FileIO",
+        "--conf", f"{prefix}.s3.endpoint={endpoint}",
+        "--conf", f"{prefix}.s3.path-style-access=true",
+        "--conf", f"{prefix}.s3.region={region}",
+        "--conf", "spark.hadoop.fs.s3.impl=org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "--conf", "spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem",
+        "--conf", f"spark.hadoop.fs.s3a.endpoint={endpoint}",
+        "--conf", "spark.hadoop.fs.s3a.path.style.access=true",
+        "--conf", "spark.hadoop.fs.s3a.connection.ssl.enabled=false",
+        "--conf", "spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.EnvironmentVariableCredentialsProvider",
+        "--conf", "spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        "--conf", f"spark.sql.defaultCatalog={name}",
+    ]
 
 
 def utc_now() -> str:
@@ -113,7 +179,7 @@ class JobRunner:
 
     def _public(self, state: dict[str, object]) -> dict[str, object]:
         allowed = (
-            "id", "requestKey", "status", "artifactKey", "artifactDigest",
+            "id", "requestKey", "status", "artifactKey", "artifactType", "artifactDigest",
             "applicationId", "submittedAt", "startedAt", "heartbeatAt",
             "finishedAt", "timeoutSeconds", "affectedRows", "errorCode",
             "errorMessage", "result", "cancellationConfirmedAt",
@@ -126,9 +192,40 @@ class JobRunner:
         path = (self.artifact_root / key).resolve(strict=False)
         if path.parent != self.artifact_root or not path.is_file():
             raise RunnerError(HTTPStatus.NOT_FOUND, "artifact not found")
-        if path.suffix != ".py":
-            raise RunnerError(HTTPStatus.BAD_REQUEST, "only approved PySpark artifacts are supported")
-        return {"key": key, "sha256": sha256(path), "size": path.stat().st_size}
+        if not (PYSPARK_KEY.fullmatch(key) or JAR_KEY.fullmatch(key)):
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "only approved PySpark or Spark JAR artifacts are supported")
+        if path.stat().st_size > MAX_ARTIFACT_BYTES:
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "artifact exceeds the 64MB runner limit")
+        return {"key": key, "sha256": sha256(path), "size": path.stat().st_size,
+                "artifactType": "spark-jar" if JAR_KEY.fullmatch(key) else "pyspark"}
+
+    def upload_artifact(self, key: str, body: dict[str, object]) -> dict[str, object]:
+        if not ARTIFACT_KEY.fullmatch(key):
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "only lowercase .py or .jar artifacts are supported")
+        encoded = body.get("contentBase64")
+        expected = str(body.get("sha256", "")).lower()
+        if not isinstance(encoded, str) or len(encoded) > 90 * 1024 * 1024:
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid artifact content")
+        try:
+            content = base64.b64decode(encoded, validate=True)
+        except (ValueError, TypeError):
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid artifact encoding")
+        if not content or len(content) > MAX_ARTIFACT_BYTES:
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "artifact size must be between 1B and 64MB")
+        digest = hashlib.sha256(content).hexdigest()
+        if not hmac.compare_digest(digest, expected):
+            raise RunnerError(HTTPStatus.CONFLICT, "artifact digest does not match content")
+        path = (self.artifact_root / key).resolve(strict=False)
+        if path.parent != self.artifact_root:
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid artifact path")
+        if path.exists() and sha256(path) != digest:
+            raise RunnerError(HTTPStatus.CONFLICT, "artifact key already contains another file")
+        if not path.exists():
+            temporary = path.with_suffix(path.suffix + ".upload")
+            temporary.write_bytes(content)
+            os.chmod(temporary, 0o640)
+            temporary.replace(path)
+        return {"key": key, "sha256": digest, "size": len(content)}
 
     def submit(self, body: dict[str, object]) -> dict[str, object]:
         request_key = str(body.get("requestKey", ""))
@@ -138,12 +235,75 @@ class JobRunner:
         resources = body.get("resources")
         if not REQUEST_KEY.fullmatch(request_key):
             raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid request key")
-        if not isinstance(parameters, dict) or set(parameters) != {"bizDate", "attemptId"}:
+        if not isinstance(parameters, dict) or not {"bizDate", "attemptId"}.issubset(parameters):
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "managed job parameters are required")
+        if set(parameters) - {"bizDate", "attemptId", "maintenance", "schemaChange"}:
             raise RunnerError(HTTPStatus.BAD_REQUEST, "unsupported parameters")
         biz_date = str(parameters.get("bizDate", ""))
         attempt_id = str(parameters.get("attemptId", ""))
         if not DATE.fullmatch(biz_date) or not attempt_id.isdecimal():
             raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid managed job parameters")
+        maintenance = parameters.get("maintenance")
+        maintenance_operation = None
+        maintenance_statement = None
+        schema_change_operation = None
+        schema_change_statement = None
+        if maintenance is not None:
+            if not isinstance(maintenance, dict):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid maintenance parameters")
+            maintenance_operation = str(maintenance.get("operation", ""))
+            maintenance_statement = str(maintenance.get("statement", ""))
+            if maintenance_operation not in MAINTENANCE_OPERATIONS:
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "unsupported maintenance operation")
+            if (not maintenance_statement or len(maintenance_statement.encode("utf-8")) > MAINTENANCE_STATEMENT_BYTES
+                    or "\x00" in maintenance_statement or ";" in maintenance_statement
+                    or "--" in maintenance_statement or "/*" in maintenance_statement
+                    or "*/" in maintenance_statement):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid maintenance statement")
+            if maintenance_operation in {"storage_estimate", "time_travel"}:
+                if not maintenance_statement.lstrip().upper().startswith("SELECT "):
+                    raise RunnerError(HTTPStatus.BAD_REQUEST, "read-only maintenance must use SELECT")
+            elif not maintenance_statement.lstrip().upper().startswith("CALL "):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "mutating maintenance must use CALL")
+            else:
+                procedure = {
+                    "expire_snapshots": "EXPIRE_SNAPSHOTS",
+                    "rewrite_data_files": "REWRITE_DATA_FILES",
+                    "remove_orphan_files": "REMOVE_ORPHAN_FILES",
+                    "rollback": "ROLLBACK_TO_SNAPSHOT",
+                }[maintenance_operation]
+                if not re.fullmatch(
+                        r"CALL\s+[A-Za-z0-9_:.\-]+\.SYSTEM\." + procedure + r"\s*\(.*",
+                        maintenance_statement, re.IGNORECASE | re.DOTALL):
+                    raise RunnerError(HTTPStatus.BAD_REQUEST, "maintenance procedure does not match operation")
+        schema_change = parameters.get("schemaChange")
+        if schema_change is not None:
+            if maintenance is not None or not isinstance(schema_change, dict):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid schema change parameters")
+            schema_change_operation = str(schema_change.get("operation", ""))
+            schema_change_statement = str(schema_change.get("statement", ""))
+            if schema_change_operation not in SCHEMA_CHANGE_OPERATIONS:
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "unsupported schema change operation")
+            if (not schema_change_statement
+                    or len(schema_change_statement.encode("utf-8")) > SCHEMA_CHANGE_STATEMENT_BYTES
+                    or "\x00" in schema_change_statement
+                    or ";" in schema_change_statement
+                    or "--" in schema_change_statement
+                    or "/*" in schema_change_statement
+                    or "*/" in schema_change_statement):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid schema change statement")
+            identifier = SCHEMA_IDENTIFIER
+            table = SCHEMA_TABLE
+            patterns = {
+                "add_column": rf"ALTER\s+TABLE\s+{table}\s+ADD\s+COLUMN\s+{identifier}\s+{SCHEMA_TYPE}",
+                "widen_type": rf"ALTER\s+TABLE\s+{table}\s+ALTER\s+COLUMN\s+{identifier}\s+TYPE\s+{SCHEMA_TYPE}",
+                "rename_column": rf"ALTER\s+TABLE\s+{table}\s+RENAME\s+COLUMN\s+{identifier}\s+TO\s+{identifier}",
+                "drop_column": rf"ALTER\s+TABLE\s+{table}\s+DROP\s+COLUMN\s+{identifier}",
+                "comment": rf"ALTER\s+TABLE\s+{table}\s+ALTER\s+COLUMN\s+{identifier}\s+COMMENT\s+'(?:''|[^'\r\n]){{1,512}}'",
+            }
+            if not re.fullmatch(patterns[schema_change_operation], schema_change_statement,
+                               re.IGNORECASE | re.DOTALL):
+                raise RunnerError(HTTPStatus.BAD_REQUEST, "schema change operation does not match statement")
         if not isinstance(resources, dict):
             raise RunnerError(HTTPStatus.BAD_REQUEST, "resources are required")
         cores = int(resources.get("cores", 1))
@@ -152,6 +312,13 @@ class JobRunner:
         if cores not in (1, 2) or not 512 <= memory_mb <= 2048 or not 30 <= timeout_seconds <= 86400:
             raise RunnerError(HTTPStatus.BAD_REQUEST, "resources exceed the local runner policy")
         artifact = self.artifact(artifact_key)
+        artifact_type = str(body.get("artifactType") or
+                            ("spark-jar" if JAR_KEY.fullmatch(artifact_key) else "pyspark"))
+        if artifact_type not in {"pyspark", "spark-jar"} or artifact["artifactType"] != artifact_type:
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "artifact type does not match artifact key")
+        main_class = str(body.get("mainClass", ""))
+        if artifact_type == "spark-jar" and not re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$.]{0,255}", main_class):
+            raise RunnerError(HTTPStatus.BAD_REQUEST, "Spark JAR requires a valid mainClass")
         if not re.fullmatch(r"[0-9a-f]{64}", artifact_digest) or artifact["sha256"] != artifact_digest:
             raise RunnerError(HTTPStatus.CONFLICT, "artifact digest does not match the approved file")
 
@@ -173,17 +340,26 @@ class JobRunner:
                 str(self.spark_submit),
                 "--master", f"local[{cores}]",
                 "--driver-memory", f"{memory_mb}m",
-                "--conf", "spark.sql.catalogImplementation=hive",
-                "--conf", "spark.sql.catalog.hive_prod=org.apache.iceberg.spark.SparkCatalog",
-                "--conf", "spark.sql.catalog.hive_prod.type=hive",
-                "--conf", "spark.sql.catalog.hive_prod.uri=thrift://127.0.0.1:9083",
-                "--conf", "spark.sql.catalog.hive_prod.warehouse=hdfs://localhost:9000/user/hive/warehouse",
-                "--conf", "spark.sql.defaultCatalog=hive_prod",
                 "--conf", "spark.sql.shuffle.partitions=4",
-                str(self.artifact_root / artifact_key),
-                "--biz-date", biz_date,
-                "--attempt-id", attempt_id,
             ]
+            command.extend(spark_catalog_arguments())
+            if os.environ.get("AETHERIS_RUNNER_SPARK_USER_CLASS_PATH_FIRST", "").strip().lower() == "true":
+                command.extend(["--conf", "spark.driver.userClassPathFirst=true",
+                                "--conf", "spark.executor.userClassPathFirst=true"])
+            jars = os.environ.get("AETHERIS_RUNNER_SPARK_JARS", "").strip()
+            if jars:
+                command.extend(["--jars", jars])
+            if artifact_type == "spark-jar":
+                command.extend(["--class", main_class, str(self.artifact_root / artifact_key)])
+            else:
+                command.append(str(self.artifact_root / artifact_key))
+            command.extend(["--biz-date", biz_date, "--attempt-id", attempt_id])
+            if maintenance_operation is not None:
+                command.extend(["--maintenance-operation", maintenance_operation,
+                                "--maintenance-statement", maintenance_statement])
+            if schema_change_operation is not None:
+                command.extend(["--schema-change-operation", schema_change_operation,
+                                "--schema-change-statement", schema_change_statement])
             environment = {
                 "HOME": os.environ.get("HOME", str(Path.home())),
                 "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
@@ -196,14 +372,29 @@ class JobRunner:
                 "PYSPARK_PYTHON": "/usr/bin/python3",
                 "AETHERIS_JOB_RESULT_PATH": str(result_path),
             }
+            # AWS SDK resolves S3FileIO credentials from the child environment;
+            # never add access keys to spark-submit arguments or persisted state.
+            for key in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN",
+                        "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_PROFILE", "AWS_SHARED_CREDENTIALS_FILE"):
+                value = os.environ.get(key)
+                if value:
+                    environment[key] = value
             environment = {key: value for key, value in environment.items() if value}
             state: dict[str, object] = {
                 "id": job_id,
                 "requestKey": request_key,
                 "status": "submitting",
                 "artifactKey": artifact_key,
+                "artifactType": artifact_type,
                 "artifactDigest": artifact_digest,
-                "parameters": {"bizDate": biz_date, "attemptId": attempt_id},
+                "mainClass": main_class or None,
+                "parameters": {"bizDate": biz_date, "attemptId": attempt_id,
+                                **({"schemaChange": {"operation": schema_change_operation,
+                                                      "statement": schema_change_statement}}
+                                   if schema_change_operation is not None else {}),
+                                **({"maintenance": {"operation": maintenance_operation,
+                                                     "statement": maintenance_statement}}
+                                   if maintenance_operation is not None else {})},
                 "resources": {"cores": cores, "driverMemoryMb": memory_mb},
                 "timeoutSeconds": timeout_seconds,
                 "submittedAt": utc_now(),
@@ -245,6 +436,15 @@ class JobRunner:
                     state["heartbeatAt"] = utc_now()
                     self._read_result(state, allow_terminal=False)
                     self._save(state)
+                elif process is not None:
+                    # The child has exited, but its monitor thread may still be
+                    # persisting the result.  Keep the attempt observable for
+                    # one more poll; marking it unknown here would turn a
+                    # successful local Spark exit into a false restart result.
+                    self._read_result(state, allow_terminal=True)
+                    if state.get("status") in ACTIVE:
+                        state["heartbeatAt"] = utc_now()
+                        self._save(state)
                 else:
                     self._read_result(state, allow_terminal=True)
                     if state.get("status") in ACTIVE:
@@ -472,6 +672,9 @@ class Handler(BaseHTTPRequestHandler):
             if method == "POST" and path == "/v1/jobs":
                 return self._json(HTTPStatus.ACCEPTED, self.runner.submit(self._body()))
             match = re.fullmatch(r"/v1/artifacts/([^/]+)", path)
+            if method == "POST" and match:
+                return self._json(HTTPStatus.CREATED,
+                                  self.runner.upload_artifact(unquote(match.group(1)), self._body()))
             if method == "GET" and match:
                 return self._json(HTTPStatus.OK, self.runner.artifact(unquote(match.group(1))))
             match = re.fullmatch(r"/v1/jobs/by-request/([^/]+)", path)
@@ -500,7 +703,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _body(self) -> dict[str, object]:
         length = int(self.headers.get("Content-Length", "0"))
-        if length <= 0 or length > 65536:
+        if length <= 0 or length > 96 * 1024 * 1024:
             raise RunnerError(HTTPStatus.BAD_REQUEST, "invalid request size")
         payload = json.loads(self.rfile.read(length))
         if not isinstance(payload, dict):

@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography, Upload } from 'antd'
 import { BranchesOutlined, CaretRightOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import {
   approveSparkArtifact, cancelPipeline, cancelTaskInstance, changeGitRepositoryStatus, changeGitRepositoryTrust, changeSparkRunnerStatus,
-  getPipelineRun, getSparkHealth, listAllInstances, listGitRepositories, listGitRevisions, listPipelineRuns,
+  createSparkJob, disableSparkJob, publishSparkJob,
+  getFlinkHealth, getPipelineRun, getSparkHealth, listAllInstances, listGitRepositories, listGitRevisions, listPipelineRuns,
   listSparkArtifactVerifications, listSparkArtifacts,
-  listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, registerGitRepository, registerSparkArtifact,
+  listSparkEnvironments, listSparkJobs, listSparkRunners, listTasks, registerGitRepository, registerSparkArtifact, uploadSparkArtifact,
   resolveTaskInstance, revokeSparkArtifact, runTask, startPipeline, synchronizeGitRepository, registerSparkRunner,
   retryPipeline, verifySparkArtifact,
   type ExecutionResolutionInput,
   type GitRepository, type GitRepositoryInput, type GitRepositoryTrustInput, type GitRevision, type ManagedArtifact, type ManagedArtifactInput,
   type PipelineDetail, type PipelineNodeRun, type PipelineRun, type SourceVerification,
-  type SparkEnvironment, type SparkJobDefinition,
+  type FlinkGatewayHealth, type SparkEnvironment, type SparkJobDefinition, type SparkJobInput,
   type SparkRunner, type SparkRunnerHealth, type SparkRunnerInput, type TaskInstance, type TaskView
 } from '@/api/workflow'
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
@@ -24,6 +25,7 @@ import { getCurrentRole } from '@/utils/access'
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
   const [health, setHealth] = useState<SparkRunnerHealth | null>(null)
+  const [flinkHealth, setFlinkHealth] = useState<FlinkGatewayHealth | null>(null)
   const [environments, setEnvironments] = useState<SparkEnvironment[]>([])
   const [runners, setRunners] = useState<SparkRunner[]>([])
   const [repositories, setRepositories] = useState<GitRepository[]>([])
@@ -47,30 +49,101 @@ export default function SparkDevelopmentPage() {
   const [repositoryEditorOpen, setRepositoryEditorOpen] = useState(false)
   const [trustRepository, setTrustRepository] = useState<GitRepository>()
   const [artifactEditorOpen, setArtifactEditorOpen] = useState(false)
+  const [uploadEditorOpen, setUploadEditorOpen] = useState(false)
+  const [jobEditorOpen, setJobEditorOpen] = useState(false)
+  const [uploadFile, setUploadFile] = useState<File>()
   const [resolutionTarget, setResolutionTarget] = useState<{ instanceId: number; label: string; pipeline: boolean }>()
   const [resolutionForm] = Form.useForm<ExecutionResolutionInput>()
   const [runnerForm] = Form.useForm<SparkRunnerInput>()
   const [repositoryForm] = Form.useForm<GitRepositoryInput & { trustedSignerText?: string }>()
   const [trustForm] = Form.useForm<GitRepositoryTrustInput & { trustedSignerText?: string }>()
   const [artifactForm] = Form.useForm<ManagedArtifactInput>()
+  const [uploadForm] = Form.useForm<{ name: string; version: string; artifactKey: string }>()
+  const [jobForm] = Form.useForm<SparkJobInput & { inputTablesText: string; parameterSchemaText: string; defaultParametersText: string }>()
   const isAdmin = getCurrentRole() === 'admin'
+
+  const uploadArtifact = async () => {
+    if (!uploadFile) { message.error('请选择 .py 或 .jar 文件'); return }
+    if (!/\.(py|jar)$/i.test(uploadFile.name) || uploadFile.size > 64 * 1024 * 1024) {
+      message.error('仅支持 .py/.jar 文件，大小不能超过 64MB'); return
+    }
+    try {
+      setPipelineAction('artifact-upload')
+      const values = await uploadForm.validateFields()
+      await uploadSparkArtifact({ ...values, file: uploadFile })
+      message.success('Spark 制品已上传并登记')
+      setUploadEditorOpen(false); setUploadFile(undefined); uploadForm.resetFields(); await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Spark 制品上传失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const createJob = async () => {
+    let values: SparkJobInput & { inputTablesText: string; parameterSchemaText: string; defaultParametersText: string }
+    try { values = await jobForm.validateFields() }
+    catch { return }
+    const artifact = artifacts.find((item) => item.id === values.artifactId)
+    if (!artifact) { message.error('请选择已登记制品'); return }
+    const inputTables = values.inputTablesText.split(/[\n,，]+/).map((item) => item.trim()).filter(Boolean)
+    if (!inputTables.length) { message.error('至少填写一张输入表'); return }
+    if (artifact.artifactType === 'spark-jar' && !values.mainClass?.trim()) {
+      message.error('Spark JAR 作业必须填写主类名'); return
+    }
+    if (artifact.artifactType === 'pyspark' && values.mainClass?.trim()) {
+      message.error('PySpark 作业不需要主类名'); return
+    }
+    let parameterSchema: Record<string, unknown>
+    let defaultParameters: Record<string, unknown>
+    try {
+      parameterSchema = JSON.parse(values.parameterSchemaText || '{}') as Record<string, unknown>
+      defaultParameters = JSON.parse(values.defaultParametersText || '{}') as Record<string, unknown>
+      if (!parameterSchema || Array.isArray(parameterSchema) || typeof parameterSchema !== 'object'
+        || !defaultParameters || Array.isArray(defaultParameters) || typeof defaultParameters !== 'object') throw new Error()
+    } catch {
+      message.error('参数架构和默认参数必须是合法 JSON 对象'); return
+    }
+    setPipelineAction('job-create')
+    try {
+      const { inputTablesText: _inputTablesText, parameterSchemaText: _parameterSchemaText, defaultParametersText: _defaultParametersText, ...payload } = values
+      await createSparkJob({ ...payload, inputTables, parameterSchema, defaultParameters,
+        mainClass: artifact.artifactType === 'spark-jar' ? values.mainClass?.trim() : undefined })
+      message.success('Spark 作业定义已创建，等待发布')
+      setJobEditorOpen(false); jobForm.resetFields(); await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Spark 作业创建失败')
+    } finally { setPipelineAction(undefined) }
+  }
+
+  const updateJob = async (job: SparkJobDefinition, action: 'publish' | 'disable') => {
+    const key = `job-${job.id}-${action}`
+    setPipelineAction(key)
+    try {
+      if (action === 'publish') await publishSparkJob(job.id)
+      else await disableSparkJob(job.id)
+      message.success(action === 'publish' ? 'Spark 作业已发布' : 'Spark 作业已停用')
+      await refresh()
+    } catch (error) {
+      message.error((error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Spark 作业状态更新失败')
+    } finally { setPipelineAction(undefined) }
+  }
 
   const refresh = async () => {
     const settled = await Promise.allSettled([
-      getSparkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]),
+      getSparkHealth(), getFlinkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]),
       isAdmin ? listGitRepositories() : Promise.resolve([]), listSparkArtifacts(), listSparkJobs(),
       listTasks(), listAllInstances(undefined, 100), listPipelineRuns()
     ])
     if (settled[0].status === 'fulfilled') setHealth(settled[0].value)
     else setHealth({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0 })
-    if (settled[1].status === 'fulfilled') setEnvironments(settled[1].value)
-    if (settled[2].status === 'fulfilled') setRunners(settled[2].value)
-    if (settled[3].status === 'fulfilled') setRepositories(settled[3].value)
-    if (settled[4].status === 'fulfilled') setArtifacts(settled[4].value)
-    if (settled[5].status === 'fulfilled') setJobs(settled[5].value)
-    if (settled[6].status === 'fulfilled') setTasks(settled[6].value)
-    if (settled[7].status === 'fulfilled') setInstances(settled[7].value)
-    if (settled[8].status === 'fulfilled') setPipelines(settled[8].value)
+    if (settled[1].status === 'fulfilled') setFlinkHealth(settled[1].value)
+    if (settled[2].status === 'fulfilled') setEnvironments(settled[2].value)
+    if (settled[3].status === 'fulfilled') setRunners(settled[3].value)
+    if (settled[4].status === 'fulfilled') setRepositories(settled[4].value)
+    if (settled[5].status === 'fulfilled') setArtifacts(settled[5].value)
+    if (settled[6].status === 'fulfilled') setJobs(settled[6].value)
+    if (settled[7].status === 'fulfilled') setTasks(settled[7].value)
+    if (settled[8].status === 'fulfilled') setInstances(settled[8].value)
+    if (settled[9].status === 'fulfilled') setPipelines(settled[9].value)
   }
 
   useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 5000); return () => window.clearInterval(timer) }, [])
@@ -322,13 +395,19 @@ export default function SparkDevelopmentPage() {
   }
 
   return <div className="page-stack">
-    <PageHeader title="Spark 开发" description="受管 PySpark 制品、固定资源边界、可恢复执行与混合 DAG。当前后端是 WSL 本机开发环境。" />
+    <PageHeader title="Spark 开发" description="受管 PySpark / Spark JAR 制品、固定资源边界、可恢复执行与混合 DAG。当前后端是 WSL 本机开发环境。" />
     <Row gutter={12}>
-      <Col span={8}><Card size="small"><Descriptions column={1} size="small" title="运行器">
+      <Col span={8}><Card size="small"><Descriptions column={1} size="small" title="Spark 运行器">
         <Descriptions.Item label="状态"><Tag color={health?.status === 'UP' ? 'success' : 'error'}>{health?.status || 'LOADING'}</Tag></Descriptions.Item>
         <Descriptions.Item label="活动 / 上限">{health?.activeJobs ?? '-'} / {health?.maxConcurrency ?? '-'}</Descriptions.Item>
       </Descriptions></Card></Col>
-      <Col span={16}><Card size="small" title="提交">
+      <Col span={8}><Card size="small"><Descriptions column={1} size="small" title="Flink SQL Gateway">
+        <Descriptions.Item label="状态"><Tag color={flinkHealth?.status === 'UP' ? 'success' : 'error'}>{flinkHealth?.status || 'LOADING'}</Tag></Descriptions.Item>
+        <Descriptions.Item label="版本">{flinkHealth?.version || '-'}</Descriptions.Item>
+        <Descriptions.Item label="地址">{flinkHealth?.endpoint || '-'}</Descriptions.Item>
+        {flinkHealth?.message && <Descriptions.Item label="诊断">{flinkHealth.message}</Descriptions.Item>}
+      </Descriptions></Card></Col>
+      <Col span={8}><Card size="small" title="提交">
         <Space wrap><Select value={sparkTaskId} onChange={setSparkTaskId} placeholder="选择单个 Spark 任务" style={{ width: 260 }}
           options={individualTaskOptions} />
           <DatePicker value={bizDate} onChange={(value) => value && setBizDate(value)} allowClear={false} />
@@ -351,11 +430,33 @@ export default function SparkDevelopmentPage() {
           {canResolveUnknownInstance(row.status, row.id) && <Button size="small" onClick={() => openResolution(row.id, `Spark 实例 #${row.id}`)}>确认结果</Button>}
         </Space> }
       ]} /></DataSurface> },
-      { key: 'jobs', label: '作业定义', children: <Table rowKey="id" size="small" dataSource={jobs} pagination={{ pageSize: 10 }} columns={[
-        { title: '名称', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '制品', dataIndex: 'artifactKey' },
+      { key: 'jobs', label: '作业定义', children: <Space direction="vertical" className="full-width-control">
+        <Space className="full-width-control" style={{ justifyContent: 'space-between' }}>
+          <Typography.Text type="secondary">作业绑定已批准制品、计算环境、输入表和输出位置；JAR 作业同时保存 JVM 主类名。</Typography.Text>
+          {isAdmin && <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+            jobForm.setFieldsValue({ driverCores: 1, driverMemoryMb: 768, timeoutSeconds: 1800, maxRetries: 0,
+              outputUri: 'hdfs://localhost:9000/user/aetheris/managed/', inputTablesText: '',
+              parameterSchemaText: '{\n  "properties": {\n    "bizDate": { "type": "date", "required": true }\n  }\n}', defaultParametersText: '{}' })
+            setJobEditorOpen(true)
+          }}>新建 Spark 作业</Button>}
+        </Space>
+        <Table rowKey="id" size="small" dataSource={jobs} pagination={{ pageSize: 10 }} columns={[
+        { title: '名称', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' },
+        { title: '类型', render: (_: unknown, value: SparkJobDefinition) => value.artifactType === 'spark-jar' ? 'Spark JAR' : 'PySpark' },
+        { title: '制品', dataIndex: 'artifactKey' },
+        { title: '主类', dataIndex: 'mainClass', render: (value?: string) => value || '-' },
         { title: '输入', dataIndex: 'inputTables', render: (v: string[]) => v?.join(', ') }, { title: '输出', dataIndex: 'outputUri' },
-        { title: '资源', render: (_, v: SparkJobDefinition) => `${v.driverCores}C / ${v.driverMemoryMb}MB` }, { title: '状态', dataIndex: 'status' }
-      ]} /> },
+        { title: 'Runner', width: 110, render: (_: unknown, value: SparkJobDefinition) => value.runnerId ? `#${value.runnerId}` : '自动调度' },
+        { title: '资源', render: (_, v: SparkJobDefinition) => `${v.driverCores}C / ${v.driverMemoryMb}MB` }, { title: '状态', dataIndex: 'status' },
+        { title: '操作', width: 180, render: (_: unknown, value: SparkJobDefinition) => <Space size={6}>
+          {value.status === 'draft' && <Button size="small" loading={pipelineAction === `job-${value.id}-publish`}
+            onClick={() => void updateJob(value, 'publish')}>发布</Button>}
+          {['draft', 'published'].includes(value.status) && <Popconfirm title="停用此 Spark 作业？" description="停用后不能再用于新任务执行。"
+            onConfirm={() => void updateJob(value, 'disable')} okText="确认停用" cancelText="返回">
+            <Button danger size="small" loading={pipelineAction === `job-${value.id}-disable`}>停用</Button>
+          </Popconfirm>}
+        </Space> }
+      ]} /></Space> },
       { key: 'artifacts', label: '制品与环境', children: <Space direction="vertical" className="full-width-control">
         <Space className="full-width-control" style={{ justifyContent: 'space-between' }}>
           <Typography.Text type="secondary">源码从固定 commit 自动计算摘要；审批、发布和执行均保留不可变验证证据。</Typography.Text>
@@ -369,6 +470,7 @@ export default function SparkDevelopmentPage() {
               artifactForm.setFieldsValue({ repositoryId: repository?.id, commitSha: repository?.currentCommitSha })
               setArtifactEditorOpen(true)
             }}>登记制品</Button>
+            <Button onClick={() => { uploadForm.setFieldsValue({ version: '1' }); setUploadEditorOpen(true) }}>上传 Spark 制品</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               runnerForm.setFieldsValue({ maxCores: 2, maxMemoryMb: 2048, maxConcurrency: 1 })
               setRunnerEditorOpen(true)
@@ -417,7 +519,9 @@ export default function SparkDevelopmentPage() {
           </Space> }] : [])
         ]} />
         <Table<ManagedArtifact> rowKey="id" size="small" dataSource={artifacts} pagination={false} scroll={{ x: 1280 }} columns={[
-          { title: '制品', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' }, { title: '文件', dataIndex: 'artifactKey' },
+          { title: '制品', dataIndex: 'name' }, { title: '版本', dataIndex: 'version' },
+          { title: '类型', dataIndex: 'artifactType', render: (value: ManagedArtifact['artifactType']) => value === 'spark-jar' ? 'Spark JAR' : 'PySpark' },
+          { title: '文件', dataIndex: 'artifactKey' },
           { title: 'Git 来源', width: 230, render: (_, value) => value.sourceRepositoryKey
             ? `${value.sourceRepositoryKey}@${value.commitSha?.slice(0, 10)}` : '历史制品' },
           { title: '源码路径', dataIndex: 'sourcePath', ellipsis: true },
@@ -643,6 +747,91 @@ export default function SparkDevelopmentPage() {
           extra="留空时完全使用 Git blob 自动计算结果；填写后用于额外防误选。">
           <Input maxLength={64} placeholder="由服务端自动计算" />
         </Form.Item>
+      </Form>
+    </Modal>
+    <Modal title="上传 PySpark 制品" open={uploadEditorOpen} onCancel={() => setUploadEditorOpen(false)}
+      onOk={() => void uploadArtifact()} okText="上传并登记" cancelText="返回"
+      confirmLoading={pipelineAction === 'artifact-upload'} destroyOnClose>
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+        message="支持单个 .py 或 Spark .jar 文件（1B–64MB）。JAR 作业创建时还需填写主类名。上传后直接进入已登记状态，可用于创建 Spark 作业。" />
+      <Form form={uploadForm} layout="vertical" preserve={false}>
+        <Row gutter={12}>
+          <Col span={14}><Form.Item name="name" label="制品名称" rules={[{ required: true, whitespace: true, max: 128 }]}><Input maxLength={128} /></Form.Item></Col>
+          <Col span={10}><Form.Item name="version" label="版本" rules={[{ required: true, whitespace: true, max: 32 }]}><Input maxLength={32} /></Form.Item></Col>
+        </Row>
+        <Form.Item name="artifactKey" label="运行器制品键" rules={[{ required: true, pattern: /^[a-z0-9][a-z0-9_-]{0,63}\.(py|jar)$/, message: '例如 order_daily.py 或 order_daily.jar' }]}>
+          <Input maxLength={68} placeholder="order_daily.py / order_daily.jar" />
+        </Form.Item>
+        <Upload accept=".py,.jar" maxCount={1} beforeUpload={(file) => { setUploadFile(file); return false }} onRemove={() => { setUploadFile(undefined) }}>
+          <Button>选择 .py / .jar 文件</Button>
+        </Upload>
+        {uploadFile && <Typography.Text type="secondary">已选择：{uploadFile.name}（{Math.ceil(uploadFile.size / 1024)} KB）</Typography.Text>}
+      </Form>
+    </Modal>
+    <Modal title="新建 Spark 作业" open={jobEditorOpen} onCancel={() => setJobEditorOpen(false)}
+      onOk={() => void createJob()} okText="创建草稿" cancelText="返回"
+      confirmLoading={pipelineAction === 'job-create'} destroyOnClose width={760}>
+      <Alert type="info" showIcon style={{ marginBottom: 16 }}
+        message="请选择已批准制品和活动计算环境。输入表使用 catalog.schema.table 或 schema.table，每行一张；JAR 制品还必须填写主类名。" />
+      <Form form={jobForm} layout="vertical" preserve={false}>
+        <Row gutter={12}>
+          <Col span={14}><Form.Item name="name" label="作业名称" rules={[{ required: true, whitespace: true, max: 128 }]}>
+            <Input maxLength={128} placeholder="订单日汇总" />
+          </Form.Item></Col>
+          <Col span={10}><Form.Item name="environmentId" label="计算环境" rules={[{ required: true, message: '请选择活动计算环境' }]}>
+            <Select options={environments.filter((item) => item.status === 'active').map((item) => ({ value: item.id, label: item.name }))} />
+          </Form.Item></Col>
+        </Row>
+        <Form.Item name="artifactId" label="已批准制品" rules={[{ required: true, message: '请选择已批准制品' }]}>
+          <Select showSearch optionFilterProp="label" onChange={() => jobForm.setFieldValue('mainClass', undefined)} options={artifacts.filter((item) => item.status === 'approved').map((item) => ({
+            value: item.id, label: `${item.name} · ${item.version} · ${item.artifactType === 'spark-jar' ? 'Spark JAR' : 'PySpark'}`
+          }))} />
+        </Form.Item>
+        <Form.Item noStyle shouldUpdate={(previous, current) => previous.environmentId !== current.environmentId}>
+          {({ getFieldValue }) => {
+            const environmentId = getFieldValue('environmentId') as number | undefined
+            return <Form.Item name="runnerId" label="指定 Runner（可选）" extra="留空时由资源队列在所选计算环境内自动选择可用 Runner。">
+              <Select allowClear options={runners.filter((item) => item.status === 'active' && (!environmentId || item.environmentId === environmentId)).map((item) => ({
+                value: item.id, label: `${item.name} · ${item.environmentName}`
+              }))} />
+            </Form.Item>
+          }}
+        </Form.Item>
+        <Form.Item noStyle shouldUpdate={(previous, current) => previous.artifactId !== current.artifactId}>
+          {({ getFieldValue }) => {
+            const artifact = artifacts.find((item) => item.id === getFieldValue('artifactId'))
+            return artifact?.artifactType === 'spark-jar' ? <Form.Item name="mainClass" label="JVM 主类名"
+              rules={[{ required: true, pattern: /^[A-Za-z_$][A-Za-z0-9_$.]{0,255}$/, message: '请输入合法 Java/Scala 主类名' }]}>
+              <Input maxLength={256} placeholder="com.acme.jobs.OrderDailyJob" />
+            </Form.Item> : null
+          }}
+        </Form.Item>
+        <Form.Item name="inputTablesText" label="输入表" rules={[{ required: true, whitespace: true, message: '至少填写一张输入表' }]}>
+          <Input.TextArea rows={3} placeholder={'hive_prod.dwd.orders\nhive_prod.dim.users'} />
+        </Form.Item>
+        <Row gutter={12}>
+          <Col span={12}><Form.Item name="parameterSchemaText" label="参数架构 JSON" rules={[{ required: true, whitespace: true, message: '请输入参数架构 JSON' }]}
+            extra="可用 properties 声明 bizDate 等运行参数；发布后随作业定义固化。">
+            <Input.TextArea rows={6} className="code-input" spellCheck={false} />
+          </Form.Item></Col>
+          <Col span={12}><Form.Item name="defaultParametersText" label="默认参数 JSON" rules={[{ required: true, whitespace: true, message: '请输入默认参数 JSON' }]}
+            extra="只能填写参数架构已声明的字段；业务日期由执行实例自动注入。">
+            <Input.TextArea rows={6} className="code-input" spellCheck={false} />
+          </Form.Item></Col>
+        </Row>
+        <Row gutter={12}>
+          <Col span={10}><Form.Item name="outputTable" label="输出表（可选）"><Input placeholder="hive_prod.ads.order_daily" /></Form.Item></Col>
+          <Col span={14}><Form.Item name="outputUri" label="输出路径" rules={[{ required: true, whitespace: true, max: 512 }]}>
+            <Input maxLength={512} placeholder="hdfs://localhost:9000/user/aetheris/managed/order_daily" />
+          </Form.Item></Col>
+        </Row>
+        <Row gutter={12}>
+          <Col span={6}><Form.Item name="driverCores" label="核心" rules={[{ required: true }]}><InputNumber min={1} max={64} precision={0} className="full-width-control" /></Form.Item></Col>
+          <Col span={6}><Form.Item name="driverMemoryMb" label="内存 MB" rules={[{ required: true }]}><InputNumber min={512} max={262144} precision={0} className="full-width-control" /></Form.Item></Col>
+          <Col span={6}><Form.Item name="timeoutSeconds" label="超时秒" rules={[{ required: true }]}><InputNumber min={30} max={86400} precision={0} className="full-width-control" /></Form.Item></Col>
+          <Col span={6}><Form.Item name="maxRetries" label="最大重试" rules={[{ required: true }]}><InputNumber min={0} max={3} precision={0} className="full-width-control" /></Form.Item></Col>
+        </Row>
+        <Form.Item name="description" label="说明"><Input.TextArea rows={2} maxLength={512} showCount /></Form.Item>
       </Form>
     </Modal>
     <Modal title="注册 Spark Runner" open={runnerEditorOpen} onCancel={() => setRunnerEditorOpen(false)}

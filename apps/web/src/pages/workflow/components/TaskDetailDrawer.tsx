@@ -5,6 +5,8 @@ import {
   Descriptions,
   Drawer,
   Empty,
+  Input,
+  Modal,
   Popconfirm,
   Select,
   Space,
@@ -26,6 +28,9 @@ import {
   listInstances,
   listTasks,
   removeDependency,
+  pauseFlink,
+  resumeFlink,
+  upgradeFlink,
   INSTANCE_STATUS_META,
   ATTEMPT_STATUS_META,
   type ExecutionAttempt,
@@ -61,6 +66,9 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   const [selectedInstance, setSelectedInstance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [upstreamToAdd, setUpstreamToAdd] = useState<number | undefined>()
+  const [upgradeAttempt, setUpgradeAttempt] = useState<ExecutionAttempt | null>(null)
+  const [upgradeSql, setUpgradeSql] = useState('')
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     if (taskId == null) return
@@ -142,6 +150,48 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       onChanged()
     } catch {
       message.error('移除依赖失败')
+    }
+  }
+
+  const handlePauseFlink = async (attempt: ExecutionAttempt) => {
+    if (selectedInstance == null || !attempt.flinkJobId) return
+    try {
+      const target = `s3://warehouse/savepoints/aetheris/attempt-${attempt.id}`
+      await pauseFlink(selectedInstance, attempt.id, target)
+      message.success('已提交 Flink 暂停请求，等待 savepoint 完成')
+      await openLogs(selectedInstance)
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || 'Flink 暂停请求失败')
+    }
+  }
+
+  const handleResumeFlink = async (attempt: ExecutionAttempt) => {
+    if (selectedInstance == null) return
+    try {
+      await resumeFlink(selectedInstance, attempt.id)
+      message.success('已从 savepoint 提交 Flink 恢复请求')
+      await openLogs(selectedInstance)
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || 'Flink 恢复请求失败')
+    }
+  }
+
+  const handleUpgradeFlink = async () => {
+    if (selectedInstance == null || upgradeAttempt == null || !upgradeSql.trim()) return
+    try {
+      const target = `s3://warehouse/savepoints/aetheris/attempt-${upgradeAttempt.id}`
+      await upgradeFlink(selectedInstance, upgradeAttempt.id, {
+        targetDirectory: target,
+        replacementSql: upgradeSql.trim()
+      })
+      setUpgradeOpen(false)
+      message.success('已提交 Flink 升级请求，等待 savepoint 完成后恢复')
+      await openLogs(selectedInstance)
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || 'Flink 升级请求失败')
     }
   }
 
@@ -251,7 +301,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                   <>
                     <Descriptions className="detail-descriptions" size="small" column={2}>
                       <Descriptions.Item label="任务名称" span={2}>
-                        {view.task.name}
+                        {view.task.name} <Tag>v{view.task.definitionVersion ?? 1}</Tag>
                       </Descriptions.Item>
                       <Descriptions.Item label="目标表">
                         {view.task.targetTable || '—'}
@@ -289,6 +339,26 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                           {view.task.taskSql}
                         </pre>
                       </Descriptions.Item>
+                      {view.task.taskType === 'flink' && <>
+                        <Descriptions.Item label="Flink 模式">
+                          {view.task.flinkMode === 'streaming' ? '持续流任务' : '有界任务'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="事件时间列">
+                          {view.task.eventTimeColumn || '由 SQL 自行管理'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="水位线" span={2}>
+                          {view.task.watermarkExpression || '—'}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="允许迟到">
+                          {view.task.allowedLatenessSeconds ?? 0} 秒
+                        </Descriptions.Item>
+                        <Descriptions.Item label="迟到策略">
+                          {view.task.lateDataPolicy || 'drop'}
+                        </Descriptions.Item>
+                        {view.task.deadLetterTable && <Descriptions.Item label="死信表" span={2}>
+                          {view.task.deadLetterTable}
+                        </Descriptions.Item>}
+                      </>}
                     </Descriptions>
                   </>
                 )
@@ -330,6 +400,64 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                               )
                             },
                             { title: '执行者', dataIndex: 'workerId', ellipsis: true },
+                            {
+                              title: '远端句柄',
+                              width: 150,
+                              render: (_: unknown, attempt: ExecutionAttempt) => {
+                                const value = attempt.remoteHandle || attempt.applicationId || attempt.resultMetadataJson
+                                return value ? <Tooltip title={attempt.resultMetadataJson || value}>{value.slice(0, 18)}</Tooltip> : '—'
+                              }
+                            },
+                            {
+                              title: 'Flink 生命周期',
+                              width: 190,
+                              render: (_: unknown, attempt: ExecutionAttempt) => {
+                                const state = attempt.flinkLifecycleState
+                                if (!state) return '—'
+                                  const label: Record<string, string> = {
+                                  running: '运行中', paused: '已暂停', stopping: '保存中',
+                                  stopped: '已停止', resuming: '恢复中', upgrading: '升级保存中', failed: '失败',
+                                  cancelled: '已取消', unknown: '待核对'
+                                }
+                                return (
+                                  <Space size={4}>
+                                    <Tag color={state === 'running' ? 'processing' : state === 'paused' ? 'warning' : 'default'}>
+                                      {label[state] ?? state}
+                                    </Tag>
+                                    {state === 'running' && attempt.flinkJobId && (
+                                      <Popconfirm
+                                        title="暂停 Flink 流任务？"
+                                        description="将通过 stop-with-savepoint 暂停，只有保存点完成后才会变为已暂停。"
+                                        onConfirm={() => void handlePauseFlink(attempt)}
+                                      >
+                                        <Button type="link" size="small">暂停</Button>
+                                      </Popconfirm>
+                                    )}
+                                    {(state === 'paused' || state === 'stopped') && attempt.flinkSavepointPath && (
+                                      <Popconfirm
+                                        title="从最近 savepoint 恢复？"
+                                        onConfirm={() => void handleResumeFlink(attempt)}
+                                      >
+                                        <Button type="link" size="small">恢复</Button>
+                                      </Popconfirm>
+                                    )}
+                                    {state === 'running' && attempt.flinkJobId && view.task.taskType === 'flink' && (
+                                      <Button
+                                        type="link"
+                                        size="small"
+                                        onClick={() => {
+                                          setUpgradeAttempt(attempt)
+                                          setUpgradeSql(view.task.taskSql || '')
+                                          setUpgradeOpen(true)
+                                        }}
+                                      >
+                                        升级
+                                      </Button>
+                                    )}
+                                  </Space>
+                                )
+                              }
+                            },
                             {
                               title: '定义摘要',
                               dataIndex: 'definitionDigest',
@@ -462,6 +590,23 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
           />
         )}
       </Spin>
+      <Modal
+        title="升级 Flink 流任务"
+        open={upgradeOpen}
+        onCancel={() => setUpgradeOpen(false)}
+        onOk={() => void handleUpgradeFlink()}
+        okText="提交升级"
+        cancelText="取消"
+        destroyOnClose
+      >
+        <p>任务会先 stop-with-savepoint，再使用下面的 SQL 从该 savepoint 恢复。原 attempt 定义不会被覆盖。</p>
+        <Input.TextArea
+          value={upgradeSql}
+          onChange={(event) => setUpgradeSql(event.target.value)}
+          rows={12}
+          placeholder="输入新的 Flink SQL"
+        />
+      </Modal>
     </Drawer>
   )
 }

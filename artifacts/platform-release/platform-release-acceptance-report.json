@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "gate": "platform-release-acceptance",
+  "status": "failed",
+  "startedAtUtc": "2026-09-29T09:52:31.7260772+00:00",
+  "offlineChecks": [
+    {
+      "name": "r1-release-validator",
+      "status": "passed",
+      "exitCode": 0,
+      "output": "R1 release validation passed"
+    },
+    {
+      "name": "r3-ha-compose-contract",
+      "status": "passed",
+      "exitCode": 0,
+      "output": "R3 HA offline validation passed"
+    },
+    {
+      "name": "script-regression-suite",
+      "status": "passed",
+      "exitCode": 0,
+      "output": "........................................................................................ ---------------------------------------------------------------------- Ran 88 tests in 3.181s  OK"
+    }
+  ],
+  "runtimeReports": [
+    {
+      "name": "r1-empty-rebuild",
+      "path": "artifacts/r1-fixture/acceptance-manifest.json",
+      "status": "passed"
+    },
+    {
+      "name": "r2-cdc",
+      "path": "artifacts/r1-fixture/r2-cdc-acceptance-report.json",
+      "status": "passed"
+    },
+    {
+      "name": "r3-managed-lifecycle",
+      "path": "artifacts/r3-lifecycle/r3-managed-stream-report.json",
+      "status": "passed"
+    },
+    {
+      "name": "r4-event-time-quality",
+      "path": "artifacts/r4-event-time/r4-event-time-quality-report.json",
+      "status": "passed"
+    },
+    {
+      "name": "r4-r5-control-plane",
+      "path": "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
+      "status": "passed"
+    },
+    {
+      "name": "r5-maintenance-runner",
+      "path": "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json",
+      "status": "passed"
+    },
+    {
+      "name": "datasource-seven-runtime",
+      "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
+      "status": "failed"
+    }
+  ],
+  "additionalGates": {
+    "r3Ha": {
+      "name": "r3-ha-runtime",
+      "path": "artifacts/r3-ha/r3-ha-lifecycle-report.json",
+      "status": "passed"
+    },
+    "datasourceNine": {
+      "name": "datasource-nine-external-runtime",
+      "path": "artifacts/datasource-smoke/external-9-runtime-report.json",
+      "status": "missing"
+    }
+  },
+  "docker": {
+    "available": false,
+    "status": "skipped"
+  },
+  "manualReviewRequired": [
+    "datasource-nine-external-runtime"
+  ],
+  "failedAdditionalGates": [],
+  "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
+  "finishedAtUtc": "2026-09-29T09:52:31.7401182+00:00"
+}

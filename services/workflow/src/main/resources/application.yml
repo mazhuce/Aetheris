@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: workflow-service
+  servlet:
+    multipart:
+      max-file-size: ${AETHERIS_SPARK_ARTIFACT_MAX_FILE_SIZE:64MB}
+      max-request-size: ${AETHERIS_SPARK_ARTIFACT_MAX_REQUEST_SIZE:96MB}
   datasource:
     url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:aetheris}
     username: ${DB_USER:aetheris}
@@ -70,6 +74,25 @@ aetheris:
     connect-timeout: ${AETHERIS_SPARK_RUNNER_CONNECT_TIMEOUT:PT3S}
     poll-interval-ms: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:5000}
     queue-dispatch-interval-ms: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:2000}
+    maintenance:
+      # Disabled until the immutable maintenance artifact and its digest are
+      # staged on every approved Runner. Enabling without the digest fails
+      # closed rather than executing an unverified file.
+      enabled: ${AETHERIS_SPARK_MAINTENANCE_ENABLED:false}
+      artifact-key: ${AETHERIS_SPARK_MAINTENANCE_ARTIFACT_KEY:aetheris_lakehouse_maintenance.py}
+      artifact-sha256: ${AETHERIS_SPARK_MAINTENANCE_ARTIFACT_SHA256:}
+  flink-sql-gateway:
+    # 每个 Flink 任务可覆盖 endpoint；这里提供连接与轮询默认值。
+    base-url: ${AETHERIS_FLINK_SQL_GATEWAY_BASE_URL:http://127.0.0.1:18083}
+    connect-timeout: ${AETHERIS_FLINK_SQL_GATEWAY_CONNECT_TIMEOUT:PT5S}
+    poll-interval-ms: ${AETHERIS_FLINK_SQL_GATEWAY_POLL_INTERVAL_MS:1000}
+    reconcile-interval-ms: ${AETHERIS_FLINK_SQL_GATEWAY_RECONCILE_INTERVAL_MS:5000}
+    max-active-streams: ${AETHERIS_FLINK_MAX_ACTIVE_STREAMS:8}
+  flink-jobmanager:
+    base-url: ${AETHERIS_FLINK_JOBMANAGER_BASE_URL:http://127.0.0.1:18081}
+    connect-timeout: ${AETHERIS_FLINK_JOBMANAGER_CONNECT_TIMEOUT:PT3S}
+    read-timeout: ${AETHERIS_FLINK_JOBMANAGER_READ_TIMEOUT:PT10S}
+    reconcile-interval-ms: ${AETHERIS_FLINK_JOBMANAGER_RECONCILE_INTERVAL_MS:5000}
   git:
     allowed-hosts: ${AETHERIS_GIT_ALLOWED_HOSTS:github.com,gitee.com}
     connect-timeout-seconds: ${AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS:8}

@@ -1,0 +1,1 @@
+{"requestKey": "r5-cleanup-20260920", "artifactKey": "aetheris_r5_acceptance_cleanup.py", "artifactDigest": "ad563bcf39c5737d60fc5ac1f63712b0684a8c44f9f45f67d810da5d032cb903", "artifactType": "pyspark", "parameters": {"bizDate": "2026-09-20", "attemptId": "10"}, "resources": {"cores": 1, "driverMemoryMb": 1024, "timeoutSeconds": 300}}

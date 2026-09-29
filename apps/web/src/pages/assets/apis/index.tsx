@@ -10,8 +10,10 @@ import StatusBadge from '@/components/StatusBadge'
 import RowActions from '@/components/RowActions'
 import {
   createApiAsset,
+  deprecateApiAsset,
   deleteApiAsset,
   listApiAssets,
+  publishApiAsset,
   updateApiAsset,
   type ApiAsset,
   type ApiAssetInput
@@ -121,6 +123,28 @@ export default function ApiAssetPage() {
     }
   }
 
+  const handlePublish = async (record: ApiAsset) => {
+    try {
+      await publishApiAsset(record.id)
+      message.success('API 资产已发布')
+      await refresh()
+    } catch (err) {
+      const detail = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || '发布失败，请确认已绑定已发布指标或有效数据表')
+    }
+  }
+
+  const handleDeprecate = async (record: ApiAsset) => {
+    try {
+      await deprecateApiAsset(record.id)
+      message.success('API 资产已废弃')
+      await refresh()
+    } catch (err) {
+      const detail = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || '废弃失败')
+    }
+  }
+
   const columns: TableColumnsType<ApiAsset> = [
     {
       title: '资产编码',
@@ -148,6 +172,12 @@ export default function ApiAssetPage() {
     { title: '分类', dataIndex: 'category', key: 'category', width: 110, render: (v?: string) => v || '—' },
     { title: '负责人', dataIndex: 'owner', key: 'owner', width: 90, render: (v?: string) => v || '—' },
     {
+      title: '执行目标',
+      key: 'target',
+      width: 150,
+      render: (_, record) => record.targetType && record.targetRef ? `${record.targetType}: ${record.targetRef}` : '未绑定'
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -170,10 +200,39 @@ export default function ApiAssetPage() {
       render: (_, record) => (
         <RowActions
           items={[
-            { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
+            ...(record.status === 'registered'
+              ? [{ key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } }]
+              : []),
+            ...(record.status === 'registered'
+              ? [{
+                  key: 'publish',
+                  label: '发布',
+                  onClick: () => modal.confirm({
+                    title: `发布 API 资产“${record.assetName}”？`,
+                    content: '发布前会校验执行目标必须是已发布指标或有效数据表。',
+                    okText: '确认发布',
+                    onOk: () => handlePublish(record)
+                  })
+                }]
+              : []),
+            ...(record.status === 'published'
+              ? [{
+                  key: 'deprecate',
+                  label: '废弃',
+                  danger: true,
+                  onClick: () => modal.confirm({
+                    title: `废弃 API 资产“${record.assetName}”？`,
+                    content: '废弃后不可直接恢复或编辑，仍保留历史记录。',
+                    okText: '确认废弃',
+                    okButtonProps: { danger: true },
+                    onOk: () => handleDeprecate(record)
+                  })
+                }]
+              : []),
             {
               key: 'delete',
               label: '删除',
+              disabled: record.status !== 'registered',
               danger: true,
               onClick: () =>
                 modal.confirm({
@@ -255,7 +314,7 @@ export default function ApiAssetPage() {
         confirmLoading={submitting}
         width={620}
       >
-        <Form form={form} layout="vertical" initialValues={{ httpMethod: 'GET', status: 'registered', version: 'v1' }} onFinish={(v) => void handleSubmit(v)}>
+        <Form form={form} layout="vertical" initialValues={{ httpMethod: 'POST', status: 'registered', version: 'v1' }} onFinish={(v) => void handleSubmit(v)}>
           <Row gutter={12}>
             <Col span={12}>
               <Form.Item name="assetCode" label="资产编码" rules={[{ required: true, message: '请输入资产编码' }]}>
@@ -276,7 +335,7 @@ export default function ApiAssetPage() {
             </Col>
             <Col span={18}>
               <Form.Item name="apiPath" label="接口路径" rules={[{ required: true, message: '请输入接口路径' }]}>
-                <Input placeholder="如 /api/serving/orders/detail" />
+                <Input placeholder="如 /api/serving/v1/apis/PUBLIC_METRIC/query" />
               </Form.Item>
             </Col>
           </Row>
@@ -294,8 +353,13 @@ export default function ApiAssetPage() {
           </Row>
           <Row gutter={12}>
             <Col span={8}>
-              <Form.Item name="status" label="状态">
-                <Select options={Object.entries(statusMeta).map(([value, meta]) => ({ value, label: meta.label }))} />
+              <Form.Item name="targetType" label="执行目标类型">
+                <Select allowClear options={[{ value: 'metric', label: '已发布指标' }, { value: 'table', label: '有效数据表' }]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="targetRef" label="执行目标">
+                <Input placeholder="指标编码或数据表 ID" />
               </Form.Item>
             </Col>
             <Col span={8}>

@@ -49,7 +49,7 @@ public class SchedulerSyncRecoveryService {
         String message = error == null ? "未知调度同步错误" : truncate(error.getMessage());
         try {
             jdbc.update("""
-                    INSERT INTO scheduler_sync_outbox
+                    INSERT INTO workflow.scheduler_sync_outbox
                         (task_id, operation, status, attempts, next_attempt_at, last_error, updated_at)
                     VALUES (?, ?, 'pending', 0, now(), ?, now())
                     ON CONFLICT (task_id, operation) WHERE status IN ('pending', 'processing')
@@ -70,7 +70,7 @@ public class SchedulerSyncRecoveryService {
     public void retryPending() {
         // 进程在调度调用中止后可能留下 processing，超过 10 分钟才释放，避免重复同步。
         jdbc.update("""
-                UPDATE scheduler_sync_outbox
+                UPDATE workflow.scheduler_sync_outbox
                    SET status = 'pending', updated_at = now()
                  WHERE status = 'processing'
                    AND updated_at < now() - interval '10 minutes'
@@ -78,7 +78,7 @@ public class SchedulerSyncRecoveryService {
 
         List<RecoveryEntry> entries = jdbc.query("""
                 SELECT id, task_id, operation
-                  FROM scheduler_sync_outbox
+                  FROM workflow.scheduler_sync_outbox
                  WHERE status = 'pending'
                    AND next_attempt_at <= now()
                  ORDER BY id
@@ -88,7 +88,7 @@ public class SchedulerSyncRecoveryService {
 
         for (RecoveryEntry entry : entries) {
             int claimed = jdbc.update("""
-                    UPDATE scheduler_sync_outbox
+                    UPDATE workflow.scheduler_sync_outbox
                        SET status = 'processing', attempts = attempts + 1, updated_at = now()
                      WHERE id = ? AND status = 'pending'
                     """, entry.id());
@@ -98,13 +98,13 @@ public class SchedulerSyncRecoveryService {
             try {
                 reconcile(entry);
                 jdbc.update("""
-                        UPDATE scheduler_sync_outbox
+                        UPDATE workflow.scheduler_sync_outbox
                            SET status = 'succeeded', last_error = NULL, updated_at = now()
                          WHERE id = ?
                         """, entry.id());
             } catch (RuntimeException error) {
                 jdbc.update("""
-                        UPDATE scheduler_sync_outbox
+                        UPDATE workflow.scheduler_sync_outbox
                            SET status = CASE WHEN attempts >= ? THEN 'failed' ELSE 'pending' END,
                                next_attempt_at = CASE WHEN attempts >= ? THEN next_attempt_at
                                                        ELSE now() + (? * interval '1 second') END,

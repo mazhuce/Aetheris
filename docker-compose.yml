@@ -111,6 +111,11 @@ services:
 
   metadata-service:
     <<: *java-runtime
+    # xerial SQLite extracts its native library into the temp directory; keep
+    # the hardened default for other services but allow executable mappings
+    # only in this JDBC adapter's isolated tmpfs.
+    tmpfs:
+      - /tmp:size=64m,mode=1777,exec
     image: aetheris-local/metadata:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
@@ -280,6 +285,9 @@ services:
       AETHERIS_SPARK_RUNNER_TOKEN: ${AETHERIS_SPARK_RUNNER_TOKEN:-}
       AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:-5000}
       AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:-2000}
+      # Flink SQL Gateway 的连接/轮询参数；任务定义仍可覆盖 endpoint，便于多集群部署。
+      AETHERIS_FLINK_SQL_GATEWAY_CONNECT_TIMEOUT: ${AETHERIS_FLINK_SQL_GATEWAY_CONNECT_TIMEOUT:-PT5S}
+      AETHERIS_FLINK_SQL_GATEWAY_POLL_INTERVAL_MS: ${AETHERIS_FLINK_SQL_GATEWAY_POLL_INTERVAL_MS:-1000}
       AETHERIS_GIT_ALLOWED_HOSTS: ${AETHERIS_GIT_ALLOWED_HOSTS:-github.com,gitee.com}
       AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS: ${AETHERIS_GIT_CONNECT_TIMEOUT_SECONDS:-8}
       AETHERIS_GIT_FETCH_DEPTH: ${AETHERIS_GIT_FETCH_DEPTH:-64}

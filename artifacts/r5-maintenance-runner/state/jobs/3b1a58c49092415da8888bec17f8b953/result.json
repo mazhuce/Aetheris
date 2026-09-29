@@ -1,0 +1,1 @@
+{"operation": "rollback", "bizDate": "2026-09-20", "attemptId": "7", "rowCount": 1, "rows": [{"previous_snapshot_id": 8237865856058155380, "current_snapshot_id": 2748639995003246425}]}

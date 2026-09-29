@@ -1,0 +1,4 @@
+*.jar
+!.gitignore
+!README.md
+!CONNECTOR-MANIFEST.json

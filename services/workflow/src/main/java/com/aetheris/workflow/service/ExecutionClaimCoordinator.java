@@ -7,6 +7,8 @@ import com.aetheris.workflow.service.ExecutionAdapter.RemoteExecution;
 import com.aetheris.workflow.service.ManagedSparkCatalogService.SparkJobView;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -34,19 +36,29 @@ public class ExecutionClaimCoordinator {
     private final ObjectMapper objectMapper;
     private final String workerId;
     private final long leaseGraceSeconds;
+    private final int maxActiveFlinkStreams;
 
+    @Autowired
     public ExecutionClaimCoordinator(
             JdbcTemplate jdbc,
             PlatformTransactionManager transactionManager,
             ObjectMapper objectMapper,
             @Value("${aetheris.execution.worker-id:local}") String workerId,
-            @Value("${aetheris.execution.lease-grace-seconds:60}") long leaseGraceSeconds) {
+            @Value("${aetheris.execution.lease-grace-seconds:60}") long leaseGraceSeconds,
+            @Value("${aetheris.flink-sql-gateway.max-active-streams:8}") int maxActiveFlinkStreams) {
         if (leaseGraceSeconds < 1) throw new IllegalStateException("Execution lease grace must be positive");
+        if (maxActiveFlinkStreams < 1) throw new IllegalStateException("Flink stream capacity must be positive");
         this.jdbc = jdbc;
         this.transactions = new TransactionTemplate(transactionManager);
         this.objectMapper = objectMapper;
         this.workerId = workerId;
         this.leaseGraceSeconds = leaseGraceSeconds;
+        this.maxActiveFlinkStreams = maxActiveFlinkStreams;
+    }
+
+    ExecutionClaimCoordinator(JdbcTemplate jdbc, PlatformTransactionManager transactionManager,
+                              ObjectMapper objectMapper, String workerId, long leaseGraceSeconds) {
+        this(jdbc, transactionManager, objectMapper, workerId, leaseGraceSeconds, 8);
     }
 
     public ExecutionClaim claim(
@@ -60,6 +72,21 @@ public class ExecutionClaimCoordinator {
     private ExecutionClaim claimInTransaction(
             Task task, String bizDate, String triggerType, String triggeredBy,
             OffsetDateTime leaseExpiresAt) {
+        if ("flink".equals(task.getTaskType()) && "streaming".equalsIgnoreCase(task.getFlinkMode())) {
+            String endpoint = task.getFlinkEndpoint();
+            if (endpoint == null || endpoint.isBlank()) throw new IllegalArgumentException("Flink Gateway 地址不能为空");
+            // Serialize admission across workflow replicas. Unknown attempts
+            // retain their reservation until a remote terminal state is proven.
+            jdbc.queryForList("SELECT pg_advisory_xact_lock(87312, hashtext(?))", endpoint);
+            Long active = jdbc.queryForObject("""
+                    SELECT count(*) FROM workflow.execution_attempt
+                    WHERE task_type='flink' AND flink_mode='streaming' AND flink_endpoint=?
+                      AND status IN ('running','submitting','cancel_requested','unknown')
+                    """, Long.class, endpoint);
+            if (active != null && active >= maxActiveFlinkStreams) {
+                throw new IllegalStateException("Flink Gateway 流任务容量已满，待远端终态核对后再提交");
+            }
+        }
         String initialStatus = "spark".equals(task.getTaskType()) ? "queued" : "running";
         String claimSql = """
                 INSERT INTO workflow.task_instance
@@ -96,22 +123,34 @@ public class ExecutionClaimCoordinator {
                 String.valueOf(task.getId()), safe(task.getName()), safe(task.getTaskType()),
                 safe(task.getTaskSql()), String.valueOf(task.getDatasourceId()),
                 String.valueOf(task.getJobDefinitionId()), String.valueOf(task.getQualityRuleId()),
+                String.valueOf(task.getDefinitionVersion()),
+                safe(task.getFlinkEndpoint()),
+                safe(task.getFlinkMode()),
+                safe(task.getEventTimeColumn()),
+                safe(task.getWatermarkExpression()),
+                String.valueOf(task.getAllowedLatenessSeconds()),
+                safe(task.getLateDataPolicy()),
+                safe(task.getDeadLetterTable()),
                 String.valueOf(task.getUpdatedAt())));
         Long attemptId = jdbc.queryForObject("""
                 INSERT INTO workflow.execution_attempt
                     (instance_id, attempt_no, status, fencing_token, worker_id, trigger_type,
                      triggered_by, task_name, task_type, task_sql, datasource_id,
-                     job_definition_id, quality_rule_id, task_updated_at, definition_digest,
+                    job_definition_id, quality_rule_id, flink_endpoint, flink_mode, task_definition_version,
+                    event_time_column, watermark_expression, allowed_lateness_seconds, late_data_policy, dead_letter_table,
+                    task_updated_at, definition_digest,
                      parameters_json, parameter_digest, queued_at, submitted_at, started_at,
                      heartbeat_at, lease_expires_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, now(),
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?, now(),
                         CASE WHEN ?='running' THEN now() ELSE NULL END,
                         CASE WHEN ?='running' THEN now() ELSE NULL END, now(), ?)
                 RETURNING id
                 """, Long.class,
                 instance.getId(), instance.getAttempt(), initialStatus, instance.getFencingToken(),
                 workerId, triggerType, triggeredBy, task.getName(), task.getTaskType(), task.getTaskSql(),
-                task.getDatasourceId(), task.getJobDefinitionId(), task.getQualityRuleId(), task.getUpdatedAt(),
+                task.getDatasourceId(), task.getJobDefinitionId(), task.getQualityRuleId(), task.getFlinkEndpoint(), task.getFlinkMode(),
+                task.getDefinitionVersion() == null ? 1 : task.getDefinitionVersion(),
+                task.getEventTimeColumn(), task.getWatermarkExpression(), task.getAllowedLatenessSeconds(), task.getLateDataPolicy(), task.getDeadLetterTable(), task.getUpdatedAt(),
                 definitionDigest, parametersJson, digest(parametersJson), initialStatus, initialStatus,
                 leaseExpiresAt);
 
@@ -132,20 +171,26 @@ public class ExecutionClaimCoordinator {
         String inputs = json(Map.of("tables", job.inputTables(), "bizDate", claim.instance().getBizDate()));
         String outputs = json(Map.of("uri", job.outputUri() + "/biz_date=" + claim.instance().getBizDate(),
                 "writeMode", job.writeMode()));
+        ObjectNode parameters = job.defaultParameters() != null && job.defaultParameters().isObject()
+                ? job.defaultParameters().deepCopy() : objectMapper.createObjectNode();
+        parameters.put("bizDate", claim.instance().getBizDate());
+        parameters.put("attemptId", claim.attemptId());
+        String parametersJson = json(parameters);
         int updated = jdbc.update("""
                 UPDATE workflow.execution_attempt
                 SET job_definition_id=?, job_version=?, artifact_digest=?, definition_digest=?,
                     source_repository_id=?,source_commit_sha=?,source_path=?,
                     source_blob_id=?,source_blob_sha256=?,source_signature_status=?,
                     source_signer_fingerprint=?,source_verified_at=?,
-                    input_partitions_json=?::jsonb, output_partitions_json=?::jsonb
+                    input_partitions_json=?::jsonb, output_partitions_json=?::jsonb,
+                    parameters_json=?::jsonb, parameter_digest=?
                 WHERE id=? AND fencing_token=? AND status='queued'
                 """, job.id(), job.version(), job.artifactDigest(), definition,
                 job.sourceRepositoryId(), job.sourceCommitSha(), job.sourcePath(),
                 job.sourceBlobId(), job.sourceBlobSha256(), job.sourceSignatureStatus(),
                 job.sourceSignerFingerprint(), job.sourceVerifiedAt(),
                 inputs, outputs,
-                claim.attemptId(), claim.fencingToken());
+                parametersJson, digest(parametersJson), claim.attemptId(), claim.fencingToken());
         if (updated != 1) throw new StaleExecutionException("Spark attempt 在准备提交时已失效");
     }
 
@@ -168,6 +213,147 @@ public class ExecutionClaimCoordinator {
                     "Spark 运行器返回受管句柄", Map.of("remoteHandle", handle.id()));
             return claim.instance();
         });
+    }
+
+    /** Persist a Flink SQL Gateway handle without waiting for an unbounded INSERT to finish. */
+    public TaskInstance submittedFlink(ExecutionClaim claim,
+                                       FlinkSqlExecutionClient.ExecutionResult result,
+                                       String resultJson) {
+        return transactions.execute(status -> {
+            String remoteHandle = result.sessionHandle() + "/" + result.operationHandle();
+            int attempt = jdbc.update("""
+                    UPDATE workflow.execution_attempt
+                    SET status='running', remote_handle=?, submitted_at=now(),
+                        started_at=COALESCE(started_at, now()), heartbeat_at=now(),
+                        result_metadata_json=?::jsonb
+                    WHERE id=? AND fencing_token=? AND status IN ('running','submitting','unknown')
+                    """, remoteHandle, resultJson == null ? "{}" : resultJson,
+                    claim.attemptId(), claim.fencingToken());
+            if (attempt != 1) throw new StaleExecutionException("Flink 提交结果属于已失效 attempt");
+            int instanceUpdated = jdbc.update("""
+                    UPDATE workflow.task_instance SET status='running', heartbeat_at=now(), updated_at=now()
+                    WHERE id=? AND active_attempt_id=? AND fencing_token=?
+                    """, claim.instance().getId(), claim.attemptId(), claim.fencingToken());
+            if (instanceUpdated != 1) throw new StaleExecutionException("Flink 提交结果不能覆盖新实例");
+            claim.instance().setStatus("running");
+            event(claim.attemptId(), "submitted", "running", "running",
+                    "Flink SQL Gateway 已返回持续任务句柄", Map.of("remoteHandle", remoteHandle));
+            return claim.instance();
+        });
+    }
+
+    /**
+     * Persist a savepoint resume and, for a replacement SQL upgrade, advance
+     * the task definition in the same transaction. The attempt's claimed
+     * definition version stays immutable; the new version is recorded as an
+     * append-only event for the running replacement.
+     */
+    public int persistFlinkResume(long instanceId, long attemptId, Task task,
+                                  String remoteHandle, String replacementSql,
+                                  String replacementDigest) {
+        if (task == null || task.getId() == null || remoteHandle == null || !remoteHandle.contains("/")) {
+            throw new IllegalArgumentException("Flink resume requires task and remote handle");
+        }
+        if (replacementSql != null && !digest(replacementSql).equals(replacementDigest)) {
+            throw new IllegalStateException("Flink replacement SQL digest mismatch");
+        }
+        return transactions.execute(status -> {
+            int version = task.getDefinitionVersion() == null ? 1 : task.getDefinitionVersion();
+            OffsetDateTime lease = OffsetDateTime.now().plusSeconds(Math.max(leaseGraceSeconds, 30));
+            int persisted = jdbc.update("""
+                    UPDATE workflow.execution_attempt ea
+                       SET remote_handle=?, status='running', flink_lifecycle_state='running',
+                           flink_job_id=NULL, flink_latest_checkpoint_id=NULL, flink_savepoint_request_id=NULL,
+                           flink_lifecycle_intent=NULL, flink_lifecycle_updated_at=now(),
+                           flink_upgrade_task_sql=NULL,
+                           submitted_at=COALESCE(submitted_at, now()), started_at=COALESCE(started_at, now()),
+                           finished_at=NULL, error_message=NULL, heartbeat_at=now(), lease_expires_at=?
+                     WHERE ea.id=? AND ea.instance_id=? AND ea.flink_lifecycle_state='resuming'
+                       AND ea.status IN ('running','unknown')
+                       AND EXISTS (SELECT 1 FROM workflow.task_instance ti
+                                   WHERE ti.id=ea.instance_id AND ti.active_attempt_id=ea.id)
+                    """, remoteHandle, lease, attemptId, instanceId);
+            if (persisted != 1) throw new IllegalStateException("Flink 恢复提交结果未能持久化");
+            if (replacementSql != null) {
+                int updated = jdbc.update("""
+                        UPDATE workflow.task
+                           SET task_sql=?, definition_version=definition_version+1, updated_at=now()
+                         WHERE id=? AND task_type='flink' AND flink_mode='streaming'
+                           AND definition_version=?
+                        """, replacementSql, task.getId(), version);
+                if (updated != 1) {
+                    throw new IllegalStateException("Flink 任务定义版本已变化，升级未覆盖新的定义");
+                }
+                version++;
+                event(attemptId, "flink_upgrade_submitted", null, "running",
+                        "替换 SQL 已提交并成为任务定义的新版本",
+                        Map.of("definitionVersion", version, "definitionDigest", replacementDigest,
+                                "remoteHandle", remoteHandle));
+            }
+            int instance = jdbc.update("""
+                    UPDATE workflow.task_instance
+                       SET status='running', error_message=NULL, heartbeat_at=now(),
+                           lease_expires_at=?, updated_at=now()
+                     WHERE id=? AND task_id=? AND active_attempt_id=?
+                       AND status IN ('running','unknown')
+                    """, lease, instanceId, task.getId(), attemptId);
+            if (instance != 1) throw new IllegalStateException("Flink 恢复实例状态已变化");
+            return version;
+        });
+    }
+
+    /** Renew only a currently active stream whose persisted Gateway handle was observed alive. */
+    public void renewFlinkLease(long instanceId, long attemptId, String remoteHandle) {
+        OffsetDateTime lease = OffsetDateTime.now().plusSeconds(Math.max(leaseGraceSeconds, 30));
+        transactions.executeWithoutResult(status -> {
+            int updated = jdbc.update("""
+                    UPDATE workflow.execution_attempt ea
+                       SET status=CASE WHEN ea.status='unknown' THEN 'running' ELSE ea.status END,
+                           error_code=CASE WHEN ea.status='unknown' THEN NULL ELSE ea.error_code END,
+                           error_message=CASE WHEN ea.status='unknown' THEN NULL ELSE ea.error_message END,
+                           heartbeat_at=now(), lease_expires_at=?
+                     WHERE ea.id=? AND ea.instance_id=? AND ea.remote_handle=?
+                       AND (ea.status IN ('running','cancel_requested')
+                            OR (ea.status='unknown' AND ea.flink_job_id IS NULL))
+                       AND EXISTS (SELECT 1 FROM workflow.task_instance ti
+                                   WHERE ti.id=ea.instance_id AND ti.active_attempt_id=ea.id
+                                     AND ti.fencing_token=ea.fencing_token)
+                    """, lease, attemptId, instanceId, remoteHandle);
+            if (updated != 1) return;
+            int instance = jdbc.update("""
+                    UPDATE workflow.task_instance
+                       SET status=CASE WHEN status='unknown' THEN 'running' ELSE status END,
+                           error_message=CASE WHEN status='unknown' THEN NULL ELSE error_message END,
+                           heartbeat_at=now(), lease_expires_at=?, updated_at=now()
+                     WHERE id=? AND active_attempt_id=? AND status IN ('running','cancel_requested','unknown')
+                    """, lease, instanceId, attemptId);
+            if (instance != 1) throw new StaleExecutionException("Flink 续租时实例已失效");
+        });
+    }
+
+    /** Bind the Job ID returned by the same persisted Gateway operation. */
+    public boolean bindDiscoveredFlinkJob(long instanceId, long attemptId,
+                                          String remoteHandle, String jobId) {
+        if (jobId == null || !jobId.matches("[0-9a-fA-F]{32}")) {
+            throw new IllegalArgumentException("Flink Job ID 格式非法");
+        }
+        return Boolean.TRUE.equals(transactions.execute(status -> {
+            int updated = jdbc.update("""
+                    UPDATE workflow.execution_attempt ea
+                       SET flink_job_id=?, flink_lifecycle_state='running',
+                           flink_lifecycle_updated_at=now(), heartbeat_at=now()
+                     WHERE ea.id=? AND ea.instance_id=? AND ea.remote_handle=?
+                       AND ea.flink_job_id IS NULL
+                       AND ea.status IN ('running','cancel_requested','unknown')
+                       AND EXISTS (SELECT 1 FROM workflow.task_instance ti
+                                   WHERE ti.id=ea.instance_id AND ti.active_attempt_id=ea.id
+                                     AND ti.fencing_token=ea.fencing_token)
+                    """, jobId.toLowerCase(java.util.Locale.ROOT), attemptId, instanceId, remoteHandle);
+            if (updated != 1) return false;
+            event(attemptId, "flink_job_bound", null, null,
+                    "SQL Gateway 返回的 Job ID 已绑定", Map.of("jobId", jobId.toLowerCase(java.util.Locale.ROOT)));
+            return true;
+        }));
     }
 
     public TaskInstance submissionUnknown(ExecutionClaim claim, String message) {
@@ -195,6 +381,77 @@ public class ExecutionClaimCoordinator {
                 "正在请求远端取消", "cancel_requested");
     }
 
+    /** Cancel path for a persisted Flink handle after the original request thread is gone. */
+    public TaskInstance requestCancelFlink(long instanceId, long attemptId) {
+        return transactions.execute(status -> {
+            int attempt = jdbc.update("""
+                    UPDATE workflow.execution_attempt
+                    SET status='cancel_requested', error_message='正在请求远端取消', heartbeat_at=now()
+                    WHERE id=? AND instance_id=? AND status IN ('running','submitting')
+                    """, attemptId, instanceId);
+            if (attempt != 1) throw new IllegalStateException("Flink 执行当前不处于可取消状态");
+            int instanceUpdated = jdbc.update("""
+                    UPDATE workflow.task_instance SET status='cancel_requested',
+                        error_message='正在请求远端取消', heartbeat_at=now(), updated_at=now()
+                    WHERE id=? AND active_attempt_id=? AND status IN ('running','submitting')
+                    """, instanceId, attemptId);
+            if (instanceUpdated != 1) throw new IllegalStateException("Flink 实例状态已发生变化");
+            event(attemptId, "cancel_requested", "running", "cancel_requested", "正在请求远端取消", Map.of());
+            return loadInstance(instanceId, new TaskInstance());
+        });
+    }
+
+    /** Reconcile a persisted Flink Gateway operation after a poll or service restart. */
+    public TaskInstance reconcileFlink(long instanceId, long attemptId, String remoteStatus) {
+        String normalized = remoteStatus == null ? "" : remoteStatus.toUpperCase();
+        String instanceStatus;
+        String attemptStatus;
+        String errorCode = null;
+        String errorMessage = null;
+        String eventMessage;
+        switch (normalized) {
+            case "FINISHED" -> {
+                instanceStatus = "success"; attemptStatus = "succeeded"; eventMessage = "Flink 远端任务已完成";
+            }
+            case "CANCELED" -> {
+                instanceStatus = "cancelled"; attemptStatus = "cancelled"; eventMessage = "Flink 远端任务已确认取消";
+            }
+            case "ERROR", "FAILED" -> {
+                instanceStatus = "failed"; attemptStatus = "failed";
+                errorCode = "FLINK_REMOTE_FAILED"; errorMessage = "Flink 远端任务失败";
+                eventMessage = errorMessage;
+            }
+            default -> {
+                return loadInstance(instanceId, new TaskInstance());
+            }
+        }
+        final String finalErrorCode = errorCode;
+        final String finalErrorMessage = errorMessage;
+        final String finalEventMessage = eventMessage;
+        return transactions.execute(status -> {
+            int attempt = jdbc.update("""
+                    UPDATE workflow.execution_attempt
+                    SET status=?, finished_at=now(),
+                        duration_ms=COALESCE(duration_ms,
+                            EXTRACT(EPOCH FROM (now()-COALESCE(started_at, now()))) * 1000)::bigint,
+                        error_code=?, error_message=?, heartbeat_at=now(), lease_expires_at=NULL,
+                        cancellation_confirmed_at=CASE WHEN ?='cancelled' THEN now() ELSE cancellation_confirmed_at END
+                    WHERE id=? AND instance_id=? AND status IN ('running','cancel_requested','unknown')
+                    """, attemptStatus, finalErrorCode, finalErrorMessage, attemptStatus,
+                    attemptId, instanceId);
+            if (attempt != 1) return loadInstance(instanceId, new TaskInstance());
+            jdbc.update("""
+                    UPDATE workflow.task_instance
+                    SET status=?, finished_at=now(), duration_ms=COALESCE(duration_ms,
+                        EXTRACT(EPOCH FROM (now()-COALESCE(started_at, now()))) * 1000)::bigint,
+                        error_message=?, heartbeat_at=now(), lease_expires_at=NULL, updated_at=now()
+                    WHERE id=? AND active_attempt_id=? AND status IN ('running','cancel_requested','unknown')
+                    """, instanceStatus, finalErrorMessage, instanceId, attemptId);
+            event(attemptId, "completed", null, attemptStatus, finalEventMessage, Map.of());
+            return loadInstance(instanceId, new TaskInstance());
+        });
+    }
+
     public TaskInstance completeRemote(ExecutionClaim claim, RemoteExecution remote) {
         OffsetDateTime started = claim.instance().getStartedAt() == null
                 ? OffsetDateTime.now() : claim.instance().getStartedAt();
@@ -216,8 +473,15 @@ public class ExecutionClaimCoordinator {
 
     public TaskInstance succeed(
             ExecutionClaim claim, long affectedRows, long attemptDurationMs, long totalDurationMs) {
+        return succeed(claim, affectedRows, attemptDurationMs, totalDurationMs, "{}");
+    }
+
+    public TaskInstance succeed(
+            ExecutionClaim claim, long affectedRows, long attemptDurationMs, long totalDurationMs,
+            String resultJson) {
         return complete(claim, "succeeded", "success", affectedRows, null,
-                null, attemptDurationMs, totalDurationMs, "{}", null);
+                null, attemptDurationMs, totalDurationMs,
+                resultJson == null || resultJson.isBlank() ? "{}" : resultJson, null);
     }
 
     public TaskInstance fail(
@@ -263,7 +527,7 @@ public class ExecutionClaimCoordinator {
                     UPDATE workflow.execution_attempt
                     SET status=?, finished_at=now(), duration_ms=?, affected_rows=?, error_code=?,
                         error_message=?, heartbeat_at=now(), result_metadata_json=?::jsonb,
-                        cancellation_confirmed_at=CASE WHEN ? IS NULL THEN cancellation_confirmed_at
+                        cancellation_confirmed_at=CASE WHEN ?::timestamptz IS NULL THEN cancellation_confirmed_at
                             ELSE ?::timestamptz END
                     WHERE id=? AND fencing_token=? AND status IN (""" + ACTIVE_STATES + ",'unknown')",
                     attemptStatus, attemptDurationMs, affectedRows, errorCode, truncate(errorMessage),

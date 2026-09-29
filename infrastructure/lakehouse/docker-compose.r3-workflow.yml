@@ -1,0 +1,26 @@
+# Local managed R3 acceptance bridge. Keep the platform Compose network while
+# joining the already-running isolated R1 lakehouse network by service DNS.
+# No Flink REST port has to bind beyond the host loopback interface.
+services:
+  workflow-service:
+    # The local Maven build supplies the exact JAR under test; the fixed image
+    # contributes only the already-cached Java 21 runtime and healthcheck.
+    image: aetheris-local/workflow:m5b-20260912
+    volumes:
+      - type: bind
+        source: ./services/workflow/target/workflow-service-0.1.0-SNAPSHOT.jar
+        target: /app/app.jar
+        read_only: true
+    environment:
+      AETHERIS_FLINK_SQL_GATEWAY_BASE_URL: http://flink-sql-gateway:8083
+      AETHERIS_FLINK_JOBMANAGER_BASE_URL: http://flink-jobmanager:8081
+      # Acceptance uses one slot so a second distinct task proves admission.
+      AETHERIS_FLINK_MAX_ACTIVE_STREAMS: ${AETHERIS_FLINK_MAX_ACTIVE_STREAMS:-1}
+    networks:
+      - default
+      - r1-lakehouse
+
+networks:
+  r1-lakehouse:
+    external: true
+    name: aetheris-r1-lakehouse_default

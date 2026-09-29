@@ -29,7 +29,9 @@ public interface ExecutionAdapter {
     record Submission(
             String requestKey,
             String artifactKey,
+            String artifactType,
             String artifactDigest,
+            String mainClass,
             Map<String, Object> parameters,
             int cores,
             int driverMemoryMb,

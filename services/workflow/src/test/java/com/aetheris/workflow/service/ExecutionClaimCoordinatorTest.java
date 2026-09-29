@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -85,6 +86,81 @@ class ExecutionClaimCoordinatorTest {
         String normalized = sql.getValue().replaceAll("\\s+", " ");
         assertTrue(normalized.contains("WHEN status='queued' THEN 'timed_out' ELSE 'unknown'"));
         assertTrue(normalized.contains("INSERT INTO workflow.execution_event"));
+    }
+
+    @Test
+    void streamingCapacityCountsUnknownAttemptsUnderEndpointLock() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("http://flink:8083"))).thenReturn(8L);
+        ExecutionClaimCoordinator coordinator = new ExecutionClaimCoordinator(
+                jdbc, noOpTransactions(), new ObjectMapper(), "worker-test", 60, 8);
+        Task task = new Task();
+        task.setId(3L);
+        task.setTaskType("flink");
+        task.setFlinkMode("streaming");
+        task.setFlinkEndpoint("http://flink:8083");
+
+        assertThrows(IllegalStateException.class,
+                () -> coordinator.claim(task, "2026-09-23", "manual", "alice", 120));
+
+        verify(jdbc).queryForList(anyString(), eq("http://flink:8083"));
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).queryForObject(sql.capture(), eq(Long.class), eq("http://flink:8083"));
+        assertTrue(sql.getValue().contains("'unknown'"));
+    }
+
+    @Test
+    void liveStreamRenewalUpdatesAttemptAndInstanceLeaseTogether() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+        ExecutionClaimCoordinator coordinator = new ExecutionClaimCoordinator(
+                jdbc, noOpTransactions(), new ObjectMapper(), "worker-test", 60);
+
+        coordinator.renewFlinkLease(7L, 9L, "session/operation");
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc, org.mockito.Mockito.times(2)).update(sql.capture(), any(Object[].class));
+        assertTrue(sql.getAllValues().getFirst().contains("ea.remote_handle=?"));
+        assertTrue(sql.getAllValues().getFirst().contains("ea.flink_job_id IS NULL"));
+        assertTrue(sql.getAllValues().get(1).contains("active_attempt_id=?"));
+    }
+
+    @Test
+    void replacementResumeAdvancesDefinitionVersionAndWritesAuditEvent() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+        ExecutionClaimCoordinator coordinator = new ExecutionClaimCoordinator(
+                jdbc, noOpTransactions(), new ObjectMapper(), "worker-test", 60);
+        Task task = new Task(); task.setId(3L); task.setDefinitionVersion(4);
+        String replacement = "INSERT INTO sink SELECT id + 0 FROM source";
+
+        assertEquals(5, coordinator.persistFlinkResume(7L, 9L, task, "session/operation",
+                replacement, ExecutionClaimCoordinator.digest(replacement)));
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc, org.mockito.Mockito.times(4)).update(sql.capture(), any(Object[].class));
+        assertTrue(sql.getAllValues().get(0).contains("flink_lifecycle_state='resuming'"));
+        assertTrue(sql.getAllValues().get(1).contains("definition_version=definition_version+1"));
+        assertTrue(sql.getAllValues().get(2).contains("INSERT INTO workflow.execution_event"));
+        assertTrue(sql.getAllValues().get(3).contains("active_attempt_id=?"));
+    }
+
+    @Test
+    void replacementResumeRejectsConcurrentDefinitionChange() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.update(anyString(), any(Object[].class))).thenAnswer(invocation -> {
+            String sql = invocation.getArgument(0);
+            return sql.contains("UPDATE workflow.task\n") ? 0 : 1;
+        });
+        ExecutionClaimCoordinator coordinator = new ExecutionClaimCoordinator(
+                jdbc, noOpTransactions(), new ObjectMapper(), "worker-test", 60);
+        Task task = new Task(); task.setId(3L); task.setDefinitionVersion(4);
+        String replacement = "INSERT INTO sink SELECT id + 0 FROM source";
+
+        assertThrows(IllegalStateException.class, () -> coordinator.persistFlinkResume(
+                7L, 9L, task, "session/operation", replacement,
+                ExecutionClaimCoordinator.digest(replacement)));
+        verify(jdbc, org.mockito.Mockito.times(2)).update(anyString(), any(Object[].class));
     }
 
     private static PlatformTransactionManager noOpTransactions() {

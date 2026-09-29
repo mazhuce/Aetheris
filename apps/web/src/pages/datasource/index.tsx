@@ -50,7 +50,7 @@ import ConnectionHealthStatus from './components/ConnectionHealthStatus'
 import { connectionFailureDescription, effectiveConnectionStatus } from './connectionHealth'
 import { useConnectionHealthClock } from './useConnectionHealthClock'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
-import { dataSourceOptions, getDataSourceDefinition } from './sourceCatalog'
+import { dataSourceCatalog, dataSourceOptions, getDataSourceDefinition } from './sourceCatalog'
 
 const statusMeta: Record<string, { color: string; text: string }> = {
   active: { color: 'success', text: '启用' },
@@ -322,7 +322,7 @@ export default function DataSourcePage() {
         <Col xs={12} lg={6}><Card><Statistic title="已接入数据源" value={overview.total} prefix={<DatabaseOutlined />} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="配置已启用" value={overview.active} prefix={<ApiOutlined />} /></Card></Col>
         <Col xs={12} lg={6}><Card><Statistic title="Hive / 湖仓" value={overview.lakehouse} prefix={<ClusterOutlined />} /></Card></Col>
-        <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix="/ 13" prefix={<ApiOutlined />} /></Card></Col>
+        <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix={`/ ${dataSourceCatalog.length}`} prefix={<ApiOutlined />} /></Card></Col>
       </Row>
 
       <Alert

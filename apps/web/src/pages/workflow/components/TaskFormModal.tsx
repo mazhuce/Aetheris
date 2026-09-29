@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { App, AutoComplete, Form, Input, InputNumber, Modal, Select } from 'antd'
-import { createTask, listSparkJobs, updateTask, type SparkJobDefinition, type TaskInput, type TaskView } from '@/api/workflow'
+import { App, AutoComplete, Button, Form, Input, InputNumber, Modal, Select, Space } from 'antd'
+import { createTask, listSparkJobs, probeFlinkHealth, updateTask, type SparkJobDefinition, type TaskInput, type TaskView } from '@/api/workflow'
 import { listDataSources, type DataSource } from '@/api/metadata'
 import { listRules, type QualityRule } from '@/api/quality'
 
@@ -27,7 +27,9 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
   const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [sparkJobs, setSparkJobs] = useState<SparkJobDefinition[]>([])
   const [qualityRules, setQualityRules] = useState<QualityRule[]>([])
+  const [flinkProbeLoading, setFlinkProbeLoading] = useState(false)
   const taskType = Form.useWatch('taskType', form) || 'sql'
+  const lateDataPolicy = Form.useWatch('lateDataPolicy', form) || 'drop'
 
   useEffect(() => {
     if (!open) return
@@ -36,7 +38,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
     } else {
       form.resetFields()
       // 给出可用的默认值，减少新建时的必填项。
-      form.setFieldsValue({ taskType: 'sql', timeoutSeconds: 1800, maxRetries: 0, status: 'enabled' })
+      form.setFieldsValue({ taskType: 'sql', flinkMode: 'streaming', timeoutSeconds: 1800, maxRetries: 0, status: 'enabled' })
     }
     void (async () => {
       try {
@@ -57,11 +59,16 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
       const selected = dataSources.find((d) => d.id === values.datasourceId)
       const payload: TaskInput = { ...values, datasourceName: selected?.name }
       if (values.taskType === 'spark') {
-        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.qualityRuleId
+        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.qualityRuleId; delete payload.flinkEndpoint; delete payload.flinkMode
+        delete payload.eventTimeColumn; delete payload.watermarkExpression; delete payload.allowedLatenessSeconds; delete payload.lateDataPolicy; delete payload.deadLetterTable
+      } else if (values.taskType === 'flink') {
+        delete payload.datasourceId; delete payload.datasourceName; delete payload.jobDefinitionId; delete payload.qualityRuleId
       } else if (values.taskType === 'quality') {
-        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.jobDefinitionId
+        delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.jobDefinitionId; delete payload.flinkEndpoint; delete payload.flinkMode
+        delete payload.eventTimeColumn; delete payload.watermarkExpression; delete payload.allowedLatenessSeconds; delete payload.lateDataPolicy; delete payload.deadLetterTable
       } else {
-        delete payload.jobDefinitionId; delete payload.qualityRuleId
+        delete payload.jobDefinitionId; delete payload.qualityRuleId; delete payload.flinkEndpoint; delete payload.flinkMode
+        delete payload.eventTimeColumn; delete payload.watermarkExpression; delete payload.allowedLatenessSeconds; delete payload.lateDataPolicy; delete payload.deadLetterTable
       }
 
       if (editing) {
@@ -81,6 +88,19 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const probeFlink = async () => {
+    const endpoint = String(form.getFieldValue('flinkEndpoint') || '').trim()
+    if (!endpoint) { message.warning('请先填写 Flink SQL Gateway 地址'); return }
+    setFlinkProbeLoading(true)
+    try {
+      const health = await probeFlinkHealth(endpoint)
+      message.success(`Gateway 可用${health.version ? `，版本 ${health.version}` : ''}`)
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || 'Gateway 不可用，请检查地址和网络')
+    } finally { setFlinkProbeLoading(false) }
   }
 
   return (
@@ -111,6 +131,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           <Select disabled={!!editing} options={[
             { value: 'sql', label: 'SQL 加工' },
             { value: 'spark', label: '受管 Spark' },
+            { value: 'flink', label: 'Flink SQL' },
             { value: 'quality', label: '质量门禁' }
           ]} />
         </Form.Item>
@@ -152,6 +173,50 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           extra="只允许执行审批制品与固定参数架构；不能上传或输入任意代码。">
           <Select options={sparkJobs.map((job) => ({ value: job.id, label: `${job.name} v${job.version}` }))} />
         </Form.Item>}
+
+        {taskType === 'flink' && <>
+          <Form.Item name="flinkEndpoint" label="Flink SQL Gateway 地址"
+            rules={[{ required: true, message: '请输入 Flink SQL Gateway 地址' }, { type: 'url', message: '请输入有效的 http(s) 地址' }]}
+            extra="例如 http://flink-sql-gateway:8083；任务会通过 SQL Gateway 会话执行，持续任务会持久化远端句柄。">
+            <Space.Compact block>
+              <Input placeholder="http://flink-sql-gateway:8083" />
+              <Button loading={flinkProbeLoading} onClick={() => void probeFlink()}>测试连接</Button>
+            </Space.Compact>
+          </Form.Item>
+          <Form.Item name="flinkMode" label="运行模式" rules={[{ required: true }]}
+            extra="持续模式提交后立即返回并保留 session/operation 句柄；有界模式等待 Gateway 终态。">
+            <Select options={[{ value: 'streaming', label: '持续流任务' }, { value: 'bounded', label: '有界任务' }]} />
+          </Form.Item>
+          <Form.Item name="eventTimeColumn" label="事件时间列"
+            extra="填写后必须同时填写水位线表达式；留空表示由 SQL 自行管理时间属性。">
+            <Input placeholder="例如 event_time" />
+          </Form.Item>
+          <Form.Item name="watermarkExpression" label="水位线表达式"
+            extra="例如 event_time - INTERVAL '5' SECOND；最大 512 个字符。">
+            <Input placeholder="event_time - INTERVAL '5' SECOND" />
+          </Form.Item>
+          <Form.Item name="allowedLatenessSeconds" label="允许迟到（秒）" initialValue={0}
+            rules={[{ type: 'number', min: 0, max: 86400 }]}>
+            <InputNumber min={0} max={86400} className="full-width-control" />
+          </Form.Item>
+          <Form.Item name="lateDataPolicy" label="迟到数据策略" initialValue="drop">
+            <Select options={[
+              { value: 'drop', label: '丢弃并记录' },
+              { value: 'dead_letter', label: '写入死信表' },
+              { value: 'side_output', label: '侧输出（由 SQL 处理）' }
+            ]} />
+          </Form.Item>
+          {lateDataPolicy === 'dead_letter' && <Form.Item name="deadLetterTable" label="死信表"
+            rules={[{ required: true, message: 'dead_letter 策略必须填写死信表' }]}
+            extra="仅允许表标识符，不接受任意 SQL。">
+            <Input placeholder="bronze.orders_late" />
+          </Form.Item>}
+          <Form.Item name="taskSql" label="Flink SQL"
+            rules={[{ required: true, message: '请输入 Flink SQL' }]}
+            extra="支持单条 Flink SQL（DDL、INSERT、STATEMENT SET 等由 Gateway 版本决定）；可用 ${'{bizDate}'} 占位符。">
+            <Input.TextArea rows={8} placeholder={"INSERT INTO catalog.db.dwd_order SELECT ... WHERE dt = '${bizDate}'"} className="code-input" />
+          </Form.Item>
+        </>}
 
         {taskType === 'quality' && <Form.Item name="qualityRuleId" label="质量规则"
           rules={[{ required: true, message: '请选择启用中的质量规则' }]}>

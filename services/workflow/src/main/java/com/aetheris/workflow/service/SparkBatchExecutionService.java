@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -69,9 +70,14 @@ public class SparkBatchExecutionService {
         String requestKey = requestKey(claim);
         try {
             adapter.validate(admission.baseUrl(), job.artifactKey(), job.artifactDigest());
+            Map<String, Object> parameters = new HashMap<>();
+            if (job.defaultParameters() != null && job.defaultParameters().isObject()) {
+                job.defaultParameters().fields().forEachRemaining(entry -> parameters.put(entry.getKey(), entry.getValue()));
+            }
+            parameters.put("bizDate", claim.instance().getBizDate());
+            parameters.put("attemptId", claim.attemptId());
             ManagedHandle handle = adapter.submit(admission.baseUrl(), new Submission(requestKey, job.artifactKey(),
-                    job.artifactDigest(), Map.of("bizDate", claim.instance().getBizDate(),
-                            "attemptId", claim.attemptId()), job.driverCores(),
+                    job.artifactType(), job.artifactDigest(), job.mainClass(), parameters, job.driverCores(),
                     job.driverMemoryMb(), job.timeoutSeconds()));
             TaskInstance instance;
             try {

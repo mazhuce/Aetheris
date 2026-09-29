@@ -372,9 +372,13 @@ public class JdbcService {
         String safeSchema = requireIdentifier(schema, "库/Schema");
         String safeTable = requireIdentifier(table, "表名");
         try (Connection connection = connect(dataSource)) {
-            String quote = isPostgresLike(dataSource) ? "\"" : "`";
-            String sql = "SELECT * FROM " + quote + safeSchema + quote + "." + quote + safeTable + quote
-                    + " LIMIT " + MAX_PREVIEW_ROWS;
+            String quote = usesDoubleQuote(dataSource) ? "\"" : "`";
+            String qualified = quote + safeSchema + quote + "." + quote + safeTable + quote;
+            String sql = switch (normalizedType(dataSource)) {
+                case "sqlserver" -> "SELECT TOP " + MAX_PREVIEW_ROWS + " * FROM " + qualified;
+                case "oracle" -> "SELECT * FROM " + qualified + " FETCH FIRST " + MAX_PREVIEW_ROWS + " ROWS ONLY";
+                default -> "SELECT * FROM " + qualified + " LIMIT " + MAX_PREVIEW_ROWS;
+            };
             return executeQuery(connection, sql, MAX_PREVIEW_ROWS);
         } catch (SQLException error) {
             throw new IllegalStateException(friendlyMessage(error));
@@ -403,13 +407,26 @@ public class JdbcService {
                 ? dataSource.getDatabaseName().trim()
                 : defaultDatabase(type);
         String baseUrl = switch (type) {
-            case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb" ->
+            case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb", "timescaledb" ->
                     "jdbc:postgresql://" + dataSource.getHost() + ":" + port + "/" + database;
             case "mysql", "mariadb", "tidb", "oceanbase", "doris", "starrocks" ->
                     "jdbc:mysql://" + dataSource.getHost() + ":" + port + "/" + database
                             + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai";
             case "hive2", "spark" ->
                     "jdbc:hive2://" + dataSource.getHost() + ":" + port + "/" + database;
+            case "sqlserver" ->
+                    "jdbc:sqlserver://" + dataSource.getHost() + ":" + port
+                            + ";databaseName=" + database + ";encrypt=false";
+            case "clickhouse" ->
+                    // The lean runtime image intentionally does not bundle optional LZ4/Apache HTTP
+                    // client modules. Disable wire compression so the official JDBC driver remains
+                    // usable without pulling a second dependency graph into the service image.
+                    "jdbc:ch://" + dataSource.getHost() + ":" + port + "/" + database + "?compress=0";
+            case "trino" ->
+                    "jdbc:trino://" + dataSource.getHost() + ":" + port + "/" + database;
+            case "oracle" ->
+                    "jdbc:oracle:thin:@//" + dataSource.getHost() + ":" + port + "/" + database;
+            case "sqlite" -> "jdbc:sqlite:" + database;
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + dataSource.getType());
         };
         return appendConnectionParams(baseUrl, type, dataSource.getConnectionParams());
@@ -562,7 +579,7 @@ public class JdbcService {
             throw new IllegalArgumentException("连接参数格式不正确");
         }
         rejectDangerousParams(cleaned);
-        if (isHiveLike(type)) {
+        if (isHiveLike(type) || "sqlserver".equals(type) || "oracle".equals(type)) {
             return url + ";" + cleaned;
         }
         return url + (url.contains("?") ? "&" : "?") + cleaned.replace(';', '&');
@@ -582,9 +599,17 @@ public class JdbcService {
     }
 
     private void validateJdbcUrl(String type, String url) {
-        String expectedPrefix = isHiveLike(type)
-                ? "jdbc:hive2:"
-                : isPostgresLike(type) ? "jdbc:postgresql:" : "jdbc:mysql:";
+        String expectedPrefix = switch (type) {
+            case "hive2", "spark" -> "jdbc:hive2:";
+            case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb", "timescaledb" -> "jdbc:postgresql:";
+            case "mysql", "mariadb", "tidb", "oceanbase", "doris", "starrocks" -> "jdbc:mysql:";
+            case "sqlserver" -> "jdbc:sqlserver:";
+            case "clickhouse" -> "jdbc:ch:";
+            case "trino" -> "jdbc:trino:";
+            case "oracle" -> "jdbc:oracle:";
+            case "sqlite" -> "jdbc:sqlite:";
+            default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + type);
+        };
         if (!url.toLowerCase(Locale.ROOT).startsWith(expectedPrefix)) {
             throw new IllegalArgumentException("自定义 JDBC URL 与所选数据源类型不匹配");
         }
@@ -646,16 +671,21 @@ public class JdbcService {
     private boolean isHiveLike(String type) { return "hive2".equals(type) || "spark".equals(type); }
     private boolean isPostgresLike(DataSource dataSource) { return isPostgresLike(normalizedType(dataSource)); }
     private boolean isPostgresLike(String type) {
-        return Set.of("postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb").contains(type);
+        return Set.of("postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb", "timescaledb").contains(type);
     }
     private boolean isMysqlLike(DataSource dataSource) {
         String type = normalizedType(dataSource);
         return Set.of("mysql", "mariadb", "tidb", "oceanbase", "doris", "starrocks").contains(type);
     }
 
+    private boolean usesDoubleQuote(DataSource dataSource) {
+        String type = normalizedType(dataSource);
+        return isPostgresLike(type) || Set.of("sqlserver", "oracle", "trino").contains(type);
+    }
+
     private int defaultPort(String type) {
         return switch (type) {
-            case "postgresql", "greenplum", "opengauss" -> 5432;
+            case "postgresql", "greenplum", "opengauss", "timescaledb" -> 5432;
             case "cockroachdb" -> 26257;
             case "yugabytedb" -> 5433;
             case "mysql", "mariadb" -> 3306;
@@ -664,14 +694,24 @@ public class JdbcService {
             case "doris" -> 9030;
             case "starrocks" -> 9030;
             case "hive2", "spark" -> 10000;
+            case "sqlserver" -> 1433;
+            case "clickhouse" -> 8123;
+            case "trino" -> 8080;
+            case "oracle" -> 1521;
+            case "sqlite" -> 0;
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + type);
         };
     }
 
     private String defaultDatabase(String type) {
         return switch (type) {
-            case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb" -> "postgres";
+            case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb", "timescaledb" -> "postgres";
             case "hive2", "spark" -> "default";
+            case "sqlserver" -> "master";
+            case "clickhouse" -> "default";
+            case "trino" -> "hive";
+            case "oracle" -> "ORCL";
+            case "sqlite" -> "aetheris.db";
             default -> "";
         };
     }

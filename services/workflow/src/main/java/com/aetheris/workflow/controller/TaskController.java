@@ -14,6 +14,7 @@ import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.SparkBatchExecutionService;
 import com.aetheris.workflow.service.TaskDependencyService;
 import com.aetheris.workflow.service.TaskExecutionService;
+import com.aetheris.workflow.service.FlinkSqlScript;
 import com.aetheris.workflow.service.TaskInstanceService;
 import com.aetheris.workflow.service.TaskLogService;
 import com.aetheris.workflow.service.TaskSchedulerService;
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /** 任务编排接口：任务定义、手动触发、运行实例、日志与依赖。 */
 @RestController
@@ -54,6 +56,7 @@ public class TaskController {
 
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
     private static final DateTimeFormatter BIZ_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final Pattern STREAM_IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_.:-]{0,511}");
 
     private final TaskService taskService;
     private final TaskInstanceService instanceService;
@@ -127,6 +130,7 @@ public class TaskController {
 
         task.setId(null);
         if (!StringUtils.hasText(task.getTaskType())) task.setTaskType("sql");
+        task.setDefinitionVersion(1);
         applyDefaults(task, username);
         taskService.save(task);
         try {
@@ -154,19 +158,26 @@ public class TaskController {
             return error.getMessage();
         }
         String type = StringUtils.hasText(task.getTaskType()) ? task.getTaskType() : "sql";
+        if ("flink".equals(type) && !StringUtils.hasText(task.getFlinkMode())) {
+            task.setFlinkMode("streaming");
+        }
+        String streamRejection = validateStreamContract(task, type);
+        if (streamRejection != null) return streamRejection;
         return switch (type) {
             case "sql" -> {
                 if (task.getDatasourceId() == null || !StringUtils.hasText(task.getTaskSql())) {
                     yield "SQL 任务必须选择数据源并填写加工 SQL";
                 }
-                if (task.getJobDefinitionId() != null || task.getQualityRuleId() != null) {
+                if (task.getJobDefinitionId() != null || task.getQualityRuleId() != null
+                        || StringUtils.hasText(task.getFlinkEndpoint())) {
                     yield "SQL 任务不能引用 Spark 作业或质量规则";
                 }
                 yield executionClient.validateWrite(task.getTaskSql());
             }
             case "spark" -> {
                 if (task.getJobDefinitionId() == null || task.getDatasourceId() != null
-                        || StringUtils.hasText(task.getTaskSql()) || task.getQualityRuleId() != null) {
+                        || StringUtils.hasText(task.getTaskSql()) || task.getQualityRuleId() != null
+                        || StringUtils.hasText(task.getFlinkEndpoint())) {
                     yield "Spark 任务必须且只能引用一个已发布受管作业";
                 }
                 try {
@@ -176,15 +187,75 @@ public class TaskController {
                     yield error.getMessage();
                 }
             }
+            case "flink" -> {
+                if (!"streaming".equals(task.getFlinkMode()) && !"bounded".equals(task.getFlinkMode())) {
+                    yield "Flink 运行模式必须是 streaming 或 bounded";
+                }
+                if (!StringUtils.hasText(task.getTaskSql()) || !StringUtils.hasText(task.getFlinkEndpoint())
+                        || task.getDatasourceId() != null || task.getJobDefinitionId() != null
+                        || task.getQualityRuleId() != null) {
+                    yield "Flink 任务必须填写 SQL 和 SQL Gateway 地址，且不能引用其他执行定义";
+                }
+                String endpoint = task.getFlinkEndpoint().trim();
+                if (!(endpoint.startsWith("http://") || endpoint.startsWith("https://"))
+                        || endpoint.length() > 512 || endpoint.contains(" ")) {
+                    yield "Flink SQL Gateway 地址必须是有效的 http(s) 地址";
+                }
+                try { FlinkSqlScript.statements(task.getTaskSql(), "streaming".equals(task.getFlinkMode())); }
+                catch (IllegalArgumentException error) { yield error.getMessage(); }
+                yield null;
+            }
             case "quality" -> {
                 if (task.getQualityRuleId() == null || task.getDatasourceId() != null
-                        || StringUtils.hasText(task.getTaskSql()) || task.getJobDefinitionId() != null) {
+                        || StringUtils.hasText(task.getTaskSql()) || task.getJobDefinitionId() != null
+                        || StringUtils.hasText(task.getFlinkEndpoint())) {
                     yield "质量节点必须且只能引用一个质量规则";
                 }
                 yield null;
             }
             default -> "不支持的任务类型";
         };
+    }
+
+    private String validateStreamContract(Task task, String type) {
+        if (!"flink".equals(type)) {
+            if (StringUtils.hasText(task.getEventTimeColumn())
+                    || StringUtils.hasText(task.getWatermarkExpression())
+                    || (task.getAllowedLatenessSeconds() != null && task.getAllowedLatenessSeconds() != 0)
+                    || (StringUtils.hasText(task.getLateDataPolicy()) && !"drop".equals(task.getLateDataPolicy()))
+                    || StringUtils.hasText(task.getDeadLetterTable())) {
+                return "事件时间和迟到数据策略只能配置在 Flink 任务上";
+            }
+            return null;
+        }
+        if (task.getAllowedLatenessSeconds() == null) task.setAllowedLatenessSeconds(0);
+        if (!StringUtils.hasText(task.getLateDataPolicy())) task.setLateDataPolicy("drop");
+        if (task.getAllowedLatenessSeconds() < 0 || task.getAllowedLatenessSeconds() > 86400) {
+            return "允许迟到时长必须在 0 到 86400 秒之间";
+        }
+        if (!java.util.Set.of("drop", "dead_letter", "side_output").contains(task.getLateDataPolicy())) {
+            return "迟到数据策略必须是 drop、dead_letter 或 side_output";
+        }
+        boolean hasEventTime = StringUtils.hasText(task.getEventTimeColumn());
+        boolean hasWatermark = StringUtils.hasText(task.getWatermarkExpression());
+        if (hasEventTime != hasWatermark) {
+            return "事件时间列和水位线表达式必须同时填写";
+        }
+        if (hasEventTime && !STREAM_IDENTIFIER.matcher(task.getEventTimeColumn().trim()).matches()) {
+            return "事件时间列名格式非法";
+        }
+        if (hasWatermark && task.getWatermarkExpression().length() > 512) {
+            return "水位线表达式不能超过 512 个字符";
+        }
+        if ("dead_letter".equals(task.getLateDataPolicy())) {
+            if (!StringUtils.hasText(task.getDeadLetterTable())
+                    || !STREAM_IDENTIFIER.matcher(task.getDeadLetterTable().trim()).matches()) {
+                return "dead_letter 策略必须填写合法死信表名";
+            }
+        } else if (StringUtils.hasText(task.getDeadLetterTable())) {
+            return "只有 dead_letter 策略可以填写死信表";
+        }
+        return null;
     }
 
     @PutMapping("/{id}")
@@ -196,12 +267,16 @@ public class TaskController {
             return ResponseEntity.notFound().build();
         }
         if (!StringUtils.hasText(task.getTaskType())) task.setTaskType(existing.getTaskType());
+        if ("flink".equals(task.getTaskType()) && !StringUtils.hasText(task.getFlinkMode())) {
+            task.setFlinkMode(existing.getFlinkMode() == null ? "streaming" : existing.getFlinkMode());
+        }
         String rejection = validateDefinition(task);
         if (rejection != null) {
             return ResponseEntity.badRequest().body(Map.of("message", rejection));
         }
 
         task.setId(id);
+        task.setDefinitionVersion((existing.getDefinitionVersion() == null ? 1 : existing.getDefinitionVersion()) + 1);
         task.setUpdatedAt(OffsetDateTime.now());
         taskService.updateById(task);
 
@@ -301,6 +376,181 @@ public class TaskController {
                         .orderByAsc(TaskLog::getId)));
     }
 
+    @GetMapping("/instances/{instanceId}/flink-status")
+    public ResponseEntity<?> flinkStatus(
+            @PathVariable long instanceId,
+            @RequestParam long attemptId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该实例状态"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.flinkStatus(instanceId, attemptId));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Bind a JobManager job to an existing Flink attempt after submission. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-job")
+    public ResponseEntity<?> bindFlinkJob(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestBody FlinkJobBindingRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以绑定 Flink Job"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.bindFlinkJob(instanceId, attemptId,
+                    request == null ? null : request.jobId()));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Read current JobManager state and checkpoint evidence for a Flink attempt. */
+    @GetMapping("/instances/{instanceId}/attempts/{attemptId}/flink-job-status")
+    public ResponseEntity<?> flinkJobStatus(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该 Flink Job 状态"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.flinkJobStatus(instanceId, attemptId));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Request an asynchronous savepoint and persist its request handle. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-savepoint")
+    public ResponseEntity<?> triggerFlinkSavepoint(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestBody FlinkSavepointRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以触发 Flink savepoint"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.triggerFlinkSavepoint(instanceId, attemptId,
+                    request == null ? null : request.targetDirectory(),
+                    request != null && Boolean.TRUE.equals(request.cancelJob())));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Poll a JobManager savepoint request. */
+    @GetMapping("/instances/{instanceId}/attempts/{attemptId}/flink-savepoint/{requestId}")
+    public ResponseEntity<?> flinkSavepointStatus(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @PathVariable String requestId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.canReadInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权查看该 Flink savepoint 状态"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.flinkSavepointStatus(instanceId, attemptId, requestId));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Stop a Flink job with a final savepoint; no direct cancel shortcut is exposed. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-stop-with-savepoint")
+    public ResponseEntity<?> stopFlinkWithSavepoint(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestBody FlinkStopSavepointRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以停止 Flink Job"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.stopFlinkWithSavepoint(instanceId, attemptId,
+                    request == null ? null : request.targetDirectory(),
+                    request == null || request.drain() == null || request.drain()));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Pause is a stop-with-savepoint request whose intent is reconciled to paused. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-pause")
+    public ResponseEntity<?> pauseFlink(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestBody FlinkPauseRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以暂停 Flink Job"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.pauseFlink(instanceId, attemptId,
+                    request == null ? null : request.targetDirectory()));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Drain a streaming job, persist replacement SQL, and resume from its savepoint. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-upgrade")
+    public ResponseEntity<?> upgradeFlink(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestBody FlinkUpgradeRequest request,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以升级 Flink Job"));
+        }
+        try {
+            return ResponseEntity.accepted().body(executionService.upgradeFlink(instanceId, attemptId,
+                    request == null ? null : request.targetDirectory(),
+                    request == null ? null : request.replacementSql()));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** Resume a paused/stopped streaming attempt from its persisted savepoint. */
+    @PostMapping("/instances/{instanceId}/attempts/{attemptId}/flink-resume")
+    public ResponseEntity<?> resumeFlink(
+            @PathVariable long instanceId,
+            @PathVariable long attemptId,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorizationService.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以恢复 Flink Job"));
+        }
+        try {
+            return ResponseEntity.ok(executionService.resumeFlink(instanceId, attemptId));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        }
+    }
+
     /** Physical attempts are append-only audit records for retries and recovery. */
     @GetMapping("/instances/{instanceId}/attempts")
     public ResponseEntity<?> attempts(@PathVariable Long instanceId,
@@ -353,6 +603,16 @@ public class TaskController {
 
     public record ResolutionRequest(String status, String reason, String evidenceRef) { }
 
+    public record FlinkJobBindingRequest(String jobId) { }
+
+    public record FlinkSavepointRequest(String targetDirectory, Boolean cancelJob) { }
+
+    public record FlinkStopSavepointRequest(String targetDirectory, Boolean drain) { }
+
+    public record FlinkPauseRequest(String targetDirectory) { }
+
+    public record FlinkUpgradeRequest(String targetDirectory, String replacementSql) { }
+
     @GetMapping("/instances/{instanceId}/spark-logs")
     public ResponseEntity<?> sparkLogs(@PathVariable long instanceId,
                                        @RequestParam(defaultValue = "0") long offset,
@@ -375,6 +635,17 @@ public class TaskController {
             return ResponseEntity.status(403).body(Map.of("message", "无权操作该实例"));
         }
         try {
+            TaskInstance instance = instanceService.getById(instanceId);
+            Task task = instance == null ? null : taskService.getById(instance.getTaskId());
+            if (task != null && "flink".equals(task.getTaskType())) {
+                ExecutionAttempt attempt = attemptService.getOne(new LambdaQueryWrapper<ExecutionAttempt>()
+                        .eq(ExecutionAttempt::getInstanceId, instanceId)
+                        .orderByDesc(ExecutionAttempt::getAttemptNo).last("LIMIT 1"));
+                if (attempt == null || attempt.getId() == null) {
+                    return ResponseEntity.status(409).body(Map.of("message", "Flink 执行尚未创建 attempt"));
+                }
+                return ResponseEntity.ok(executionService.cancelFlink(instanceId, attempt.getId()));
+            }
             return ResponseEntity.ok(sparkExecutionService.cancel(instanceId));
         } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));

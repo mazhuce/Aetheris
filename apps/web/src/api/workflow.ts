@@ -4,10 +4,18 @@ import http from './http'
 export interface Task {
   id: number
   name: string
-  taskType?: 'sql' | 'spark' | 'quality'
+  taskType?: 'sql' | 'spark' | 'flink' | 'quality'
+  definitionVersion?: number
   datasourceId?: number
   datasourceName?: string
   taskSql?: string
+  flinkEndpoint?: string
+  flinkMode?: 'bounded' | 'streaming'
+  eventTimeColumn?: string
+  watermarkExpression?: string
+  allowedLatenessSeconds?: number
+  lateDataPolicy?: 'drop' | 'dead_letter' | 'side_output'
+  deadLetterTable?: string
   jobDefinitionId?: number
   qualityRuleId?: number
   /** Quartz cron（6 或 7 段）；为空表示仅手动触发。 */
@@ -24,10 +32,18 @@ export interface Task {
 
 export interface TaskInput {
   name: string
-  taskType?: 'sql' | 'spark' | 'quality'
+  taskType?: 'sql' | 'spark' | 'flink' | 'quality'
+  definitionVersion?: number
   datasourceId?: number
   datasourceName?: string
   taskSql?: string
+  flinkEndpoint?: string
+  flinkMode?: 'bounded' | 'streaming'
+  eventTimeColumn?: string
+  watermarkExpression?: string
+  allowedLatenessSeconds?: number
+  lateDataPolicy?: 'drop' | 'dead_letter' | 'side_output'
+  deadLetterTable?: string
   jobDefinitionId?: number
   qualityRuleId?: number
   cronExpression?: string
@@ -113,7 +129,8 @@ export interface ExecutionAttempt {
   triggerType: 'manual' | 'schedule' | 'retry' | 'pipeline'
   triggeredBy?: string
   taskName: string
-  taskType?: 'sql' | 'spark' | 'quality'
+  taskType?: 'sql' | 'spark' | 'flink' | 'quality'
+  taskDefinitionVersion?: number
   datasourceId?: number
   jobDefinitionId?: number
   jobVersion?: number
@@ -132,7 +149,15 @@ export interface ExecutionAttempt {
   sourceSignerFingerprint?: string
   sourceVerifiedAt?: string
   remoteHandle?: string
+  flinkJobId?: string
+  flinkLifecycleState?: 'unknown' | 'running' | 'paused' | 'stopping' | 'stopped' | 'failed' | 'cancelled' | 'upgrading'
+  flinkUpgradeDefinitionDigest?: string
+  flinkLatestCheckpointId?: number
+  flinkSavepointPath?: string
+  flinkSavepointRequestId?: string
+  flinkLifecycleUpdatedAt?: string
   applicationId?: string
+  resultMetadataJson?: string
   startedAt?: string
   heartbeatAt?: string
   leaseExpiresAt?: string
@@ -255,6 +280,143 @@ export function listInstanceLogs(instanceId: number): Promise<TaskLog[]> {
     .then((res) => res.data)
 }
 
+export interface FlinkInstanceStatus {
+  instanceStatus: string
+  attemptStatus: string
+  remoteStatus: string
+  terminal: boolean
+  sessionHandle: string
+  operationHandle: string
+}
+
+export function getFlinkInstanceStatus(instanceId: number, attemptId: number): Promise<FlinkInstanceStatus> {
+  return http.get<FlinkInstanceStatus>(`/api/workflow/tasks/instances/${instanceId}/flink-status`, { params: { attemptId } }).then((res) => res.data)
+}
+
+export interface FlinkJobStatus {
+  jobId: string
+  state: string
+  name?: string
+  latestCompletedCheckpointId?: number
+  checkpointStatus?: string
+  attemptId: number
+}
+
+export interface FlinkSavepointRequest {
+  jobId: string
+  requestId: string
+  cancelJob?: boolean
+  drain?: boolean
+}
+
+export interface FlinkSavepointStatus {
+  jobId: string
+  requestId: string
+  status: string
+  location?: string
+  failureCause?: string
+}
+
+export function bindFlinkJob(instanceId: number, attemptId: number, jobId: string): Promise<FlinkJobStatus> {
+  return http
+    .post<FlinkJobStatus>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-job`, { jobId })
+    .then((res) => res.data)
+}
+
+export function getFlinkJobStatus(instanceId: number, attemptId: number): Promise<FlinkJobStatus> {
+  return http
+    .get<FlinkJobStatus>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-job-status`)
+    .then((res) => res.data)
+}
+
+export function triggerFlinkSavepoint(
+  instanceId: number,
+  attemptId: number,
+  targetDirectory: string,
+  cancelJob = false,
+): Promise<FlinkSavepointRequest> {
+  return http
+    .post<FlinkSavepointRequest>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-savepoint`, {
+      targetDirectory,
+      cancelJob,
+    })
+    .then((res) => res.data)
+}
+
+export function getFlinkSavepointStatus(
+  instanceId: number,
+  attemptId: number,
+  requestId: string,
+): Promise<FlinkSavepointStatus> {
+  return http
+    .get<FlinkSavepointStatus>(
+      `/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-savepoint/${encodeURIComponent(requestId)}`,
+    )
+    .then((res) => res.data)
+}
+
+export function stopFlinkWithSavepoint(
+  instanceId: number,
+  attemptId: number,
+  targetDirectory: string,
+  drain = true,
+): Promise<FlinkSavepointRequest> {
+  return http
+    .post<FlinkSavepointRequest>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-stop-with-savepoint`, {
+      targetDirectory,
+      drain,
+    })
+    .then((res) => res.data)
+}
+
+export function pauseFlink(
+  instanceId: number,
+  attemptId: number,
+  targetDirectory: string,
+): Promise<FlinkSavepointRequest> {
+  return http
+    .post<FlinkSavepointRequest>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-pause`, {
+      targetDirectory,
+    })
+    .then((res) => res.data)
+}
+
+export interface FlinkUpgradeRequest {
+  targetDirectory: string
+  replacementSql: string
+}
+
+export interface FlinkUpgradeResult extends FlinkSavepointRequest {
+  intent: 'upgrade'
+  definitionDigest: string
+}
+
+export function upgradeFlink(
+  instanceId: number,
+  attemptId: number,
+  payload: FlinkUpgradeRequest,
+): Promise<FlinkUpgradeResult> {
+  return http
+    .post<FlinkUpgradeResult>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-upgrade`, payload)
+    .then((res) => res.data)
+}
+
+export interface FlinkResumeResult {
+  attemptId: number
+  sessionHandle: string
+  operationHandle: string
+  savepoint: string
+  state: 'running'
+  upgraded?: boolean
+  definitionDigest?: string
+}
+
+export function resumeFlink(instanceId: number, attemptId: number): Promise<FlinkResumeResult> {
+  return http
+    .post<FlinkResumeResult>(`/api/workflow/tasks/instances/${instanceId}/attempts/${attemptId}/flink-resume`)
+    .then((res) => res.data)
+}
+
 export function listExecutionAttempts(instanceId: number): Promise<ExecutionAttempt[]> {
   return http
     .get<ExecutionAttempt[]>(`/api/workflow/tasks/instances/${instanceId}/attempts`)
@@ -286,7 +448,7 @@ export interface SparkEnvironment {
   maxMemoryMb: number; maxTimeoutSeconds: number; maxConcurrency: number; status: string
 }
 export interface ManagedArtifact {
-  id: number; name: string; version: string; artifactKey: string; sha256: string; status: string
+  id: number; name: string; version: string; artifactType: 'pyspark' | 'spark-jar'; artifactKey: string; sha256: string; status: string
   sourceRepositoryId?: number; sourceRepositoryKey?: string; sourceRepositoryStatus?: string
   commitSha?: string; sourcePath?: string
   sourceBlobId?: string; sourceBlobSha256?: string; sourceBlobSize?: number
@@ -300,14 +462,25 @@ export interface ManagedArtifactInput {
 }
 export interface SparkJobDefinition {
   id: number; name: string; version: number; environmentId: number; environmentName: string
-  artifactId: number; artifactName: string; artifactKey: string; artifactDigest: string
+  artifactId: number; artifactName: string; artifactType: 'pyspark' | 'spark-jar'; artifactKey: string; artifactDigest: string
+  mainClass?: string
+  runnerId?: number
   artifactStatus: string; sourceRepositoryId?: number; sourceRepositoryKey?: string
   sourceRepositoryStatus?: string; sourceCommitSha?: string; sourcePath?: string
   inputTables: string[]; outputTable?: string; outputUri: string
+  parameterSchema?: Record<string, unknown>; defaultParameters?: Record<string, unknown>
   driverCores: number; driverMemoryMb: number; timeoutSeconds: number; maxRetries: number
   status: string; definitionDigest?: string; owner: string; description?: string
 }
+export interface SparkJobInput {
+  name: string; environmentId: number; artifactId: number; inputTables: string[]
+  outputTable?: string; outputUri: string; mainClass?: string; runnerId?: number
+  parameterSchema?: Record<string, unknown>; defaultParameters?: Record<string, unknown>
+  driverCores: number; driverMemoryMb: number; timeoutSeconds: number; maxRetries: number
+  description?: string
+}
 export interface SparkRunnerHealth { status: string; version?: string; activeJobs: number; maxConcurrency: number; message?: string }
+export interface FlinkGatewayHealth { status: string; version?: string; endpoint?: string; message?: string }
 
 export interface SparkRunner {
   id: number; environmentId: number; environmentName: string; runnerKey: string; name: string
@@ -348,6 +521,9 @@ export interface SourceVerification {
 }
 
 export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
+export const getFlinkHealth = () => http.get<FlinkGatewayHealth>('/api/workflow/spark/flink/health').then((r) => r.data)
+export const probeFlinkHealth = (endpoint: string) =>
+  http.get<FlinkGatewayHealth>('/api/workflow/spark/flink/health', { params: { endpoint } }).then((r) => r.data)
 export const listSparkEnvironments = () => http.get<SparkEnvironment[]>('/api/workflow/spark/environments').then((r) => r.data)
 export const listSparkRunners = () => http.get<SparkRunner[]>('/api/workflow/spark/runners').then((r) => r.data)
 export const registerSparkRunner = (input: SparkRunnerInput) => http.post<SparkRunner>('/api/workflow/spark/runners', input).then((r) => r.data)
@@ -367,6 +543,12 @@ export const listGitRevisions = (id: number) =>
 export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
 export const registerSparkArtifact = (input: ManagedArtifactInput) =>
   http.post<ManagedArtifact>('/api/workflow/spark/artifacts', input).then((r) => r.data)
+export const uploadSparkArtifact = (input: { name: string; version: string; artifactKey: string; file: File }) => {
+  const form = new FormData()
+  form.append('name', input.name); form.append('version', input.version)
+  form.append('artifactKey', input.artifactKey); form.append('file', input.file)
+  return http.post<ManagedArtifact>('/api/workflow/spark/artifacts/upload', form).then((r) => r.data)
+}
 export const approveSparkArtifact = (id: number) =>
   http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/approve`).then((r) => r.data)
 export const verifySparkArtifact = (id: number) =>
@@ -376,6 +558,12 @@ export const listSparkArtifactVerifications = (id: number) =>
 export const revokeSparkArtifact = (id: number) =>
   http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/revoke`).then((r) => r.data)
 export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)
+export const createSparkJob = (input: SparkJobInput) =>
+  http.post<SparkJobDefinition>('/api/workflow/spark/jobs', input).then((r) => r.data)
+export const publishSparkJob = (id: number) =>
+  http.post<SparkJobDefinition>(`/api/workflow/spark/jobs/${id}/publish`).then((r) => r.data)
+export const disableSparkJob = (id: number) =>
+  http.post<SparkJobDefinition>(`/api/workflow/spark/jobs/${id}/disable`).then((r) => r.data)
 
 export interface PipelineRun {
   id: number
@@ -397,7 +585,7 @@ export interface PipelineNodeRun {
   pipeline_run_id: number
   task_id: number
   task_name: string
-  task_type: 'sql' | 'spark' | 'quality'
+  task_type: 'sql' | 'spark' | 'flink' | 'quality'
   sequence_no: number
   status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'waived' | 'unknown' | 'cancelled'
   instance_id?: number

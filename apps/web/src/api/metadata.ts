@@ -362,6 +362,257 @@ export interface MetadataTableInput {
   businessDomainId?: number
 }
 
+export type LakehouseLayer = 'bronze' | 'silver' | 'gold' | 'other'
+export type LakehouseTableStatus = 'active' | 'paused' | 'deprecated'
+
+export interface LakehouseTable {
+  id: number
+  identifier?: string
+  catalogName: string
+  namespaceName: string
+  tableName: string
+  location?: string
+  formatVersion: 1 | 2
+  layer: LakehouseLayer
+  owner?: string
+  status: LakehouseTableStatus
+  currentSnapshotId?: string
+  currentSchemaVersion: number
+  retentionDays: number
+  propertiesJson?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface LakehouseTableSnapshot {
+  id: number
+  lakehouseTableId: number
+  snapshotId: string
+  parentSnapshotId?: string
+  operation: 'append' | 'overwrite' | 'replace' | 'compact' | 'rewrite' | 'rollback'
+  committedAt: string
+  rowCount?: number
+  fileCount?: number
+  totalBytes?: number
+  schemaVersion: number
+  manifestLocation?: string
+  metadataJson?: string
+  createdBy: string
+  createdAt?: string
+}
+
+export function listLakehouseTables(): Promise<LakehouseTable[]> {
+  return http.get<LakehouseTable[]>('/api/metadata/lakehouse/tables').then((res) => res.data)
+}
+
+export function registerLakehouseTable(payload: Partial<LakehouseTable>): Promise<LakehouseTable> {
+  return http.post<LakehouseTable>('/api/metadata/lakehouse/tables', payload).then((res) => res.data)
+}
+
+export function listLakehouseSnapshots(tableId: number): Promise<LakehouseTableSnapshot[]> {
+  return http.get<LakehouseTableSnapshot[]>(`/api/metadata/lakehouse/tables/${tableId}/snapshots`).then((res) => res.data)
+}
+
+export function recordLakehouseSnapshot(tableId: number, payload: Partial<LakehouseTableSnapshot>): Promise<LakehouseTableSnapshot> {
+  return http.post<LakehouseTableSnapshot>(`/api/metadata/lakehouse/tables/${tableId}/snapshots`, payload).then((res) => res.data)
+}
+
+export function setLakehouseCurrentSnapshot(tableId: number, snapshotId: string): Promise<LakehouseTable> {
+  return http.post<LakehouseTable>(`/api/metadata/lakehouse/tables/${tableId}/current-snapshot`, { snapshotId }).then((res) => res.data)
+}
+
+export type LakehouseSchemaChangeOperation = 'add_column' | 'rename_column' | 'drop_column' | 'widen_type' | 'narrow_type' | 'comment'
+export type LakehouseSchemaChangeDecision = 'auto_apply' | 'approval_required' | 'isolate'
+export type LakehouseSchemaChangeStatus = 'proposed' | 'approved' | 'rejected' | 'isolated' | 'executing' | 'applied' | 'failed' | 'cancelled'
+
+export interface LakehouseSchemaChange {
+  id: number
+  lakehouseTableId: number
+  operation: LakehouseSchemaChangeOperation
+  columnName: string
+  newColumnName?: string
+  fromType?: string
+  toType?: string
+  decision: LakehouseSchemaChangeDecision
+  status: LakehouseSchemaChangeStatus
+  reason?: string
+  requestedBy: string
+  reviewedBy?: string
+  reviewedAt?: string
+  appliedAt?: string
+  createdAt?: string
+  updatedAt?: string
+  executionRequestKey?: string | null
+  remoteHandle?: string | null
+  executionResultJson?: string | null
+  executionError?: string | null
+}
+
+export function listLakehouseSchemaChanges(tableId: number): Promise<LakehouseSchemaChange[]> {
+  return http.get<LakehouseSchemaChange[]>(`/api/metadata/lakehouse/tables/${tableId}/schema-changes`).then((res) => res.data)
+}
+
+export function proposeLakehouseSchemaChange(tableId: number, payload: Partial<LakehouseSchemaChange>): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/tables/${tableId}/schema-changes`, payload).then((res) => res.data)
+}
+
+export function reviewLakehouseSchemaChange(tableId: number, changeId: number, approved: boolean): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/schema-changes/${changeId}/review`, { approved }, { params: { tableId } }).then((res) => res.data)
+}
+
+export function isolateLakehouseSchemaChange(tableId: number, changeId: number): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/schema-changes/${changeId}/isolate`, null, { params: { tableId } }).then((res) => res.data)
+}
+
+export interface LakehouseSchemaChangePlan {
+  operation: LakehouseSchemaChangeOperation
+  statement: string
+  destructive: boolean
+  readyForExecution: boolean
+}
+
+export function planLakehouseSchemaChange(tableId: number, changeId: number): Promise<LakehouseSchemaChangePlan> {
+  return http.get<LakehouseSchemaChangePlan>(`/api/metadata/lakehouse/schema-changes/${changeId}/plan`, { params: { tableId } }).then((res) => res.data)
+}
+
+export function executeLakehouseSchemaChange(tableId: number, changeId: number): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/schema-changes/${changeId}/execute`, null, { params: { tableId } }).then((res) => res.data)
+}
+
+export function reconcileLakehouseSchemaChange(tableId: number, changeId: number): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/schema-changes/${changeId}/reconcile`, null, { params: { tableId } }).then((res) => res.data)
+}
+
+export function cancelLakehouseSchemaChange(tableId: number, changeId: number): Promise<LakehouseSchemaChange> {
+  return http.post<LakehouseSchemaChange>(`/api/metadata/lakehouse/schema-changes/${changeId}/cancel`, null, { params: { tableId } }).then((res) => res.data)
+}
+
+export type LakehouseMaintenanceOperation = 'expire_snapshots' | 'rewrite_data_files' | 'remove_orphan_files' | 'storage_estimate' | 'time_travel' | 'rollback'
+export type LakehouseMaintenanceStatus = 'requested' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+
+export interface LakehouseMaintenanceJob {
+  id: number
+  lakehouseTableId: number
+  operation: LakehouseMaintenanceOperation
+  idempotencyKey: string
+  requestedSnapshotId?: string
+  status: LakehouseMaintenanceStatus
+  executorRequestKey?: string | null
+  remoteHandle?: string | null
+  requestJson?: string
+  resultJson?: string
+  requestedBy: string
+  lastError?: string
+  startedAt?: string
+  finishedAt?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface LakehouseMaintenancePlan {
+  operation: LakehouseMaintenanceOperation
+  tableIdentifier: string
+  mutating: boolean
+  snapshotId?: string | null
+  statement: string
+}
+
+export function listLakehouseMaintenanceJobs(tableId: number): Promise<LakehouseMaintenanceJob[]> {
+  return http.get<LakehouseMaintenanceJob[]>(`/api/metadata/lakehouse/tables/${tableId}/maintenance-jobs`).then((res) => res.data)
+}
+
+export function requestLakehouseMaintenanceJob(tableId: number, payload: Partial<LakehouseMaintenanceJob>): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/tables/${tableId}/maintenance-jobs`, payload).then((res) => res.data)
+}
+
+export function claimLakehouseMaintenanceJob(jobId: number): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/claim`).then((res) => res.data)
+}
+
+export function executeLakehouseMaintenanceJob(jobId: number): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/execute`).then((res) => res.data)
+}
+
+export function reconcileLakehouseMaintenanceJob(jobId: number): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/reconcile`).then((res) => res.data)
+}
+
+export function completeLakehouseMaintenanceJob(jobId: number, status: 'succeeded' | 'failed' | 'cancelled', resultJson?: string, error?: string): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/complete`, { status, resultJson, error }).then((res) => res.data)
+}
+
+export function cancelLakehouseMaintenanceJob(jobId: number): Promise<LakehouseMaintenanceJob> {
+  return http.post<LakehouseMaintenanceJob>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/cancel`).then((res) => res.data)
+}
+
+export function previewLakehouseMaintenanceJob(jobId: number): Promise<LakehouseMaintenancePlan> {
+  return http.get<LakehouseMaintenancePlan>(`/api/metadata/lakehouse/maintenance-jobs/${jobId}/plan`).then((res) => res.data)
+}
+
+export interface LakehouseSnapshotRef {
+  id: number
+  lakehouseTableId: number
+  refName: string
+  refType: 'branch' | 'tag'
+  snapshotId: string
+  protected?: boolean
+  createdBy: string
+  updatedBy: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export function listLakehouseSnapshotRefs(tableId: number): Promise<LakehouseSnapshotRef[]> {
+  return http.get<LakehouseSnapshotRef[]>(`/api/metadata/lakehouse/tables/${tableId}/refs`).then((res) => res.data)
+}
+
+export function createLakehouseSnapshotRef(tableId: number, payload: Partial<LakehouseSnapshotRef>): Promise<LakehouseSnapshotRef> {
+  return http.post<LakehouseSnapshotRef>(`/api/metadata/lakehouse/tables/${tableId}/refs`, payload).then((res) => res.data)
+}
+
+export function moveLakehouseSnapshotRef(refId: number, snapshotId: string): Promise<LakehouseSnapshotRef> {
+  return http.post<LakehouseSnapshotRef>(`/api/metadata/lakehouse/refs/${refId}/move`, { snapshotId }).then((res) => res.data)
+}
+
+export function deleteLakehouseSnapshotRef(refId: number): Promise<void> {
+  return http.delete(`/api/metadata/lakehouse/refs/${refId}`).then(() => undefined)
+}
+
+export interface LakehouseQualityObservation {
+  id: number
+  lakehouseTableId: number
+  layer: LakehouseLayer
+  ruleKey: string
+  status: 'passed' | 'failed' | 'unknown'
+  violationCount: number
+  lateDataCount: number
+  deadLetterCount: number
+  watermarkAt?: string
+  blocksGold: boolean
+  runId?: string
+  detailsJson?: string
+  observedAt: string
+  observedBy: string
+  createdAt?: string
+}
+
+export interface LakehouseGoldQualityGate {
+  allowed: boolean
+  blockingRuleKeys: string[]
+}
+
+export function listLakehouseQualityObservations(tableId: number): Promise<LakehouseQualityObservation[]> {
+  return http.get<LakehouseQualityObservation[]>(`/api/metadata/lakehouse/tables/${tableId}/quality-observations`).then((res) => res.data)
+}
+
+export function recordLakehouseQualityObservation(tableId: number, payload: Partial<LakehouseQualityObservation>): Promise<LakehouseQualityObservation> {
+  return http.post<LakehouseQualityObservation>(`/api/metadata/lakehouse/tables/${tableId}/quality-observations`, payload).then((res) => res.data)
+}
+
+export function getLakehouseGoldQualityGate(tableId: number): Promise<LakehouseGoldQualityGate> {
+  return http.get<LakehouseGoldQualityGate>(`/api/metadata/lakehouse/tables/${tableId}/gold-quality-gate`).then((res) => res.data)
+}
+
 export interface LineageRelation {
   id: number
   sourceTable: string
@@ -740,6 +991,10 @@ export interface ApiAsset {
   status?: 'registered' | 'published' | 'deprecated'
   version?: string
   description?: string
+  targetType?: 'metric' | 'table'
+  targetRef?: string
+  publishedBy?: string
+  publishedAt?: string
   createdBy?: string
   createdAt?: string
   updatedAt?: string
@@ -755,6 +1010,8 @@ export interface ApiAssetInput {
   status?: string
   version?: string
   description?: string
+  targetType?: 'metric' | 'table'
+  targetRef?: string
 }
 
 export function listApiAssets(keyword?: string): Promise<ApiAsset[]> {
@@ -773,6 +1030,14 @@ export function updateApiAsset(id: number, payload: ApiAssetInput): Promise<ApiA
 
 export function deleteApiAsset(id: number): Promise<void> {
   return http.delete(`/api/metadata/api-assets/${id}`).then(() => undefined)
+}
+
+export function publishApiAsset(id: number): Promise<ApiAsset> {
+  return http.post<ApiAsset>(`/api/metadata/api-assets/${id}/publish`).then((res) => res.data)
+}
+
+export function deprecateApiAsset(id: number): Promise<ApiAsset> {
+  return http.post<ApiAsset>(`/api/metadata/api-assets/${id}/deprecate`).then((res) => res.data)
 }
 
 // —— 数据产品：面向业务交付的数据产品及其生命周期 ——

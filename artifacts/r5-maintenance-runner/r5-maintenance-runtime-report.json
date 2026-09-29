@@ -1,0 +1,412 @@
+{
+  "schemaVersion": 1,
+  "gate": "R5-maintenance-runner-runtime-gate",
+  "status": "passed",
+  "sparkVersion": "3.5.6",
+  "icebergRuntime": "1.7.1",
+  "catalogMode": "rest",
+  "phases": {
+    "setup": {
+      "artifactDigest": "fd489ccb2afb4164ae2e0cc71d78033f9373aed50e08f294a324a8502350a899",
+      "artifactKey": "aetheris_r5_acceptance_setup.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:20:22.461136+00:00",
+      "heartbeatAt": "2026-09-29T03:20:22.461146+00:00",
+      "id": "613073f8d0d44268b8af515abd4edd5f",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "1",
+        "bizDate": "2026-09-20"
+      },
+      "pid": 16886,
+      "processStart": "677421",
+      "requestKey": "r5-setup-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "rowCount": 3,
+        "snapshotCount": 2,
+        "snapshotIds": [
+          "2748639995003246425",
+          "8237865856058155380"
+        ],
+        "table": "iceberg.acceptance.r5_runner_acceptance"
+      },
+      "startedAt": "2026-09-29T03:19:58.805741+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:19:58.798485+00:00",
+      "timeoutSeconds": 300
+    },
+    "storageEstimate": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:20:42.523865+00:00",
+      "heartbeatAt": "2026-09-29T03:20:42.523878+00:00",
+      "id": "78f10508e552429e86a82fc9d07e716a",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "2",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "storage_estimate",
+          "statement": "SELECT COUNT(*) AS file_count, COALESCE(SUM(file_size_in_bytes), 0) AS total_bytes FROM iceberg.acceptance.r5_runner_acceptance.files"
+        }
+      },
+      "pid": 17201,
+      "processStart": "679943",
+      "requestKey": "r5-storage-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "2",
+        "bizDate": "2026-09-20",
+        "operation": "storage_estimate",
+        "rowCount": 1,
+        "rows": [
+          {
+            "file_count": 2,
+            "total_bytes": 1820
+          }
+        ]
+      },
+      "startedAt": "2026-09-29T03:20:24.028359+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:20:24.023144+00:00",
+      "timeoutSeconds": 300
+    },
+    "timeTravel": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:21:01.939988+00:00",
+      "heartbeatAt": "2026-09-29T03:21:01.939996+00:00",
+      "id": "1eb87057814f4b909ca58d78f5d59d7b",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "3",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "time_travel",
+          "statement": "SELECT COUNT(*) AS row_count FROM iceberg.acceptance.r5_runner_acceptance VERSION AS OF 2748639995003246425"
+        }
+      },
+      "pid": 17467,
+      "processStart": "681828",
+      "requestKey": "r5-travel-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "3",
+        "bizDate": "2026-09-20",
+        "operation": "time_travel",
+        "rowCount": 1,
+        "rows": [
+          {
+            "row_count": 2
+          }
+        ]
+      },
+      "startedAt": "2026-09-29T03:20:42.879827+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:20:42.871679+00:00",
+      "timeoutSeconds": 300
+    },
+    "rewriteDataFiles": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:21:23.986185+00:00",
+      "heartbeatAt": "2026-09-29T03:21:23.986195+00:00",
+      "id": "1646c9160aac4061b4773a2d7db6267d",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "4",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "rewrite_data_files",
+          "statement": "CALL iceberg.system.rewrite_data_files(table => 'acceptance.r5_runner_acceptance')"
+        }
+      },
+      "pid": 17730,
+      "processStart": "683763",
+      "requestKey": "r5-rewrite-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "4",
+        "bizDate": "2026-09-20",
+        "operation": "rewrite_data_files",
+        "rowCount": 1,
+        "rows": [
+          {
+            "added_data_files_count": 0,
+            "failed_data_files_count": 0,
+            "rewritten_bytes_count": 0,
+            "rewritten_data_files_count": 0
+          }
+        ]
+      },
+      "startedAt": "2026-09-29T03:21:02.223207+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:21:02.191110+00:00",
+      "timeoutSeconds": 300
+    },
+    "expireSnapshots": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:21:50.843318+00:00",
+      "heartbeatAt": "2026-09-29T03:21:50.843328+00:00",
+      "id": "2ac86a27f3f14442b7ebc6f34a230a8c",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "5",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "expire_snapshots",
+          "statement": "CALL iceberg.system.expire_snapshots(table => 'acceptance.r5_runner_acceptance', older_than => TIMESTAMP '2026-08-21 00:00:00')"
+        }
+      },
+      "pid": 17999,
+      "processStart": "686061",
+      "requestKey": "r5-expire-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "5",
+        "bizDate": "2026-09-20",
+        "operation": "expire_snapshots",
+        "rowCount": 1,
+        "rows": [
+          {
+            "deleted_data_files_count": 0,
+            "deleted_equality_delete_files_count": 0,
+            "deleted_manifest_files_count": 0,
+            "deleted_manifest_lists_count": 0,
+            "deleted_position_delete_files_count": 0,
+            "deleted_statistics_files_count": 0
+          }
+        ]
+      },
+      "startedAt": "2026-09-29T03:21:25.198991+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:21:25.191964+00:00",
+      "timeoutSeconds": 300
+    },
+    "removeOrphanFiles": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:22:18.759879+00:00",
+      "heartbeatAt": "2026-09-29T03:22:18.759906+00:00",
+      "id": "94ae23d022774c6a876e3dcd93f2ad7a",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "6",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "remove_orphan_files",
+          "statement": "CALL iceberg.system.remove_orphan_files(table => 'acceptance.r5_runner_acceptance', older_than => TIMESTAMP '2026-08-21 00:00:00')"
+        }
+      },
+      "pid": 18319,
+      "processStart": "688757",
+      "requestKey": "r5-orphan-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "6",
+        "bizDate": "2026-09-20",
+        "operation": "remove_orphan_files",
+        "rowCount": 0,
+        "rows": []
+      },
+      "startedAt": "2026-09-29T03:21:52.165732+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:21:52.143407+00:00",
+      "timeoutSeconds": 300
+    },
+    "rollback": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:22:37.833717+00:00",
+      "heartbeatAt": "2026-09-29T03:22:37.833727+00:00",
+      "id": "3b1a58c49092415da8888bec17f8b953",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "7",
+        "bizDate": "2026-09-20",
+        "maintenance": {
+          "operation": "rollback",
+          "statement": "CALL iceberg.system.rollback_to_snapshot('acceptance.r5_runner_acceptance', 2748639995003246425)"
+        }
+      },
+      "pid": 18723,
+      "processStart": "691459",
+      "requestKey": "r5-rollback-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "7",
+        "bizDate": "2026-09-20",
+        "operation": "rollback",
+        "rowCount": 1,
+        "rows": [
+          {
+            "current_snapshot_id": 2748639995003246425,
+            "previous_snapshot_id": 8237865856058155380
+          }
+        ]
+      },
+      "startedAt": "2026-09-29T03:22:19.178448+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:22:19.172019+00:00",
+      "timeoutSeconds": 300
+    },
+    "schemaChange": {
+      "artifactDigest": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+      "artifactKey": "aetheris_lakehouse_maintenance.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:22:55.822964+00:00",
+      "heartbeatAt": "2026-09-29T03:22:55.822974+00:00",
+      "id": "f6e8902b0072414a97171f60a2b42e45",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "8",
+        "bizDate": "2026-09-20",
+        "schemaChange": {
+          "operation": "add_column",
+          "statement": "ALTER TABLE `iceberg`.`acceptance`.`r5_runner_acceptance` ADD COLUMN `ingested_at` TIMESTAMP"
+        }
+      },
+      "pid": 18987,
+      "processStart": "693408",
+      "requestKey": "r5-schema-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "attemptId": "8",
+        "bizDate": "2026-09-20",
+        "operation": "add_column",
+        "rowCount": 0,
+        "rows": []
+      },
+      "startedAt": "2026-09-29T03:22:38.666705+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:22:38.661022+00:00",
+      "timeoutSeconds": 300
+    },
+    "verify": {
+      "artifactDigest": "da9c24c641ee1048f8dc09a18ec8752ef2ac2a41dc0eb7b5e2a0f013927d7ebd",
+      "artifactKey": "aetheris_r5_acceptance_verify.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:23:14.889468+00:00",
+      "heartbeatAt": "2026-09-29T03:23:14.889481+00:00",
+      "id": "5b6806a88b914082bcf5d2c0b049439d",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "9",
+        "bizDate": "2026-09-20"
+      },
+      "pid": 19234,
+      "processStart": "695270",
+      "requestKey": "r5-verify-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "columns": [
+          "id",
+          "category",
+          "amount",
+          "ingested_at"
+        ],
+        "hasIngestedAt": true,
+        "rowCount": 2,
+        "table": "iceberg.acceptance.r5_runner_acceptance"
+      },
+      "startedAt": "2026-09-29T03:22:57.290937+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:22:57.271275+00:00",
+      "timeoutSeconds": 300
+    },
+    "cleanup": {
+      "artifactDigest": "ad563bcf39c5737d60fc5ac1f63712b0684a8c44f9f45f67d810da5d032cb903",
+      "artifactKey": "aetheris_r5_acceptance_cleanup.py",
+      "artifactType": "pyspark",
+      "errorCode": null,
+      "errorMessage": null,
+      "exitCode": 0,
+      "finishedAt": "2026-09-29T03:23:32.986003+00:00",
+      "heartbeatAt": "2026-09-29T03:23:32.986011+00:00",
+      "id": "b92a40041f384d78a961f5e26b0ed7e2",
+      "mainClass": null,
+      "parameters": {
+        "attemptId": "10",
+        "bizDate": "2026-09-20"
+      },
+      "pid": 19505,
+      "processStart": "697202",
+      "requestKey": "r5-cleanup-20260920",
+      "resources": {
+        "cores": 1,
+        "driverMemoryMb": 1024
+      },
+      "result": {
+        "dropped": true
+      },
+      "startedAt": "2026-09-29T03:23:16.612591+00:00",
+      "status": "succeeded",
+      "submittedAt": "2026-09-29T03:23:16.596432+00:00",
+      "timeoutSeconds": 300
+    }
+  },
+  "artifactSha256": "16a6d79fe4574622e446e0499cc0a45ef0d6d839f2c6fc04e6b60b84d22f4b89",
+  "secretsIncluded": false
+}

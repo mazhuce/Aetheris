@@ -1,0 +1,53 @@
+name: R1 Lakehouse Contract Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  r1-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run deterministic script regression tests
+        run: python -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
+      - name: Validate approved R1 release contract
+        run: python scripts/validate-lakehouse-r1.py --mode release
+
+      - name: Validate Compose profile topology without starting services
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          compose = yaml.safe_load(Path('infrastructure/lakehouse/docker-compose.r1.yml').read_text())
+          services = compose['services']
+          expected = {
+              'object-store': {'r1', 'storage'},
+              'object-store-init': {'r1', 'storage'},
+              'catalog': {'r1', 'catalog'},
+              'trino': {'r1', 'trino'},
+              'flink-jobmanager': {'r1', 'flink'},
+              'flink-taskmanager': {'r1', 'flink'},
+              'flink-sql-gateway': {'r1', 'flink'},
+          }
+          for service, profiles in expected.items():
+              actual = set(services[service].get('profiles', []))
+              missing = profiles - actual
+              if missing:
+                  raise SystemExit(f'{service} missing profiles: {sorted(missing)}')
+          print('R1 Compose profile topology passed')
+          PY

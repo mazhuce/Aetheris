@@ -3,6 +3,7 @@ package com.aetheris.workflow.controller;
 import com.aetheris.workflow.service.ManagedSparkCatalogService;
 import com.aetheris.workflow.service.GitRepositoryService;
 import com.aetheris.workflow.service.SparkBatchExecutionAdapter;
+import com.aetheris.workflow.service.FlinkSqlExecutionClient;
 import com.aetheris.workflow.service.SparkResourceQueueService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.junit.jupiter.api.Test;
@@ -88,5 +89,35 @@ class ManagedSparkControllerTest {
         verify(repositories, never()).changeTrust(1L, trust, "alice");
         verify(catalog, never()).verifyArtifact(2L, "alice");
         verify(catalog, never()).verifications(2L);
+    }
+
+    @Test
+    void probesRequestedFlinkGatewayEndpoint() {
+        FlinkSqlExecutionClient flink = mock(FlinkSqlExecutionClient.class);
+        when(flink.health("http://flink-task:8083"))
+                .thenReturn(new FlinkSqlExecutionClient.GatewayHealth("UP", "1.20.1", "http://flink-task:8083"));
+        ManagedSparkController controller = new ManagedSparkController(
+                mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionAdapter.class),
+                mock(SparkResourceQueueService.class), mock(GitRepositoryService.class),
+                mock(WorkflowAuthorizationService.class), flink);
+
+        ResponseEntity<?> response = controller.flinkHealth("http://flink-task:8083/");
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        verify(flink).health("http://flink-task:8083");
+    }
+
+    @Test
+    void rejectsCredentialedOrNonHttpFlinkEndpointBeforeProbing() {
+        FlinkSqlExecutionClient flink = mock(FlinkSqlExecutionClient.class);
+        ManagedSparkController controller = new ManagedSparkController(
+                mock(ManagedSparkCatalogService.class), mock(SparkBatchExecutionAdapter.class),
+                mock(SparkResourceQueueService.class), mock(GitRepositoryService.class),
+                mock(WorkflowAuthorizationService.class), flink);
+
+        ResponseEntity<?> response = controller.flinkHealth("file:///tmp/flink");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        verify(flink, never()).health(org.mockito.ArgumentMatchers.anyString());
     }
 }

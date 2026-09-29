@@ -1,0 +1,1 @@
+{"requestKey": "r5-setup-20260920", "artifactKey": "aetheris_r5_acceptance_setup.py", "artifactDigest": "fd489ccb2afb4164ae2e0cc71d78033f9373aed50e08f294a324a8502350a899", "artifactType": "pyspark", "parameters": {"bizDate": "2026-09-20", "attemptId": "1"}, "resources": {"cores": 1, "driverMemoryMb": 1024, "timeoutSeconds": 300}}

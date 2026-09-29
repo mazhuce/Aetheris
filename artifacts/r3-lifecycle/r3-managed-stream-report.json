@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "gate": "R3-managed-flink-stream-runtime-gate",
+  "generatedAt": "2026-09-29T02:00:17.3508289+00:00",
+  "status": "passed",
+  "configuration": {
+    "flinkEndpoint": "http://aetheris-r1-lakehouse-flink-sql-gateway-1:8083",
+    "maxActiveStreams": 1,
+    "networkFaultInjection": true
+  },
+  "phases": {
+    "submit": {
+      "instanceId": 97,
+      "remoteHandle": "992b0184-8263-48fd-a6a8-ef504767a558/cf0caee1-4bcb-4a4e-b58c-0fbb77717267",
+      "jobId": "e9abb28a449b80b070cf7c19ed0447e0",
+      "taskId": 48,
+      "instanceStatus": "running",
+      "attemptId": 72
+    },
+    "checkpoint": {
+      "jobId": "e9abb28a449b80b070cf7c19ed0447e0",
+      "id": 7
+    },
+    "leaseRenewal": {
+      "first": "2026-09-29T10:01:34.0000000+08:00",
+      "second": "2026-09-29T10:01:39.0000000+08:00"
+    },
+    "admission": {
+      "duplicateHttp": 409,
+      "capacityHttp": 409
+    },
+    "pause": {
+      "oldJobId": "e9abb28a449b80b070cf7c19ed0447e0",
+      "state": "paused",
+      "requestId": "53163d46d784631b850b4fed2bf11398",
+      "savepoint": "s3://warehouse/savepoints/r3-managed-1790647217725/savepoint-e9abb2-83259c5d6052"
+    },
+    "resume": {
+      "checkpoint": 24,
+      "jobId": "5146222091786c1d6820322f1985e3c1",
+      "fromSavepoint": "s3://warehouse/savepoints/r3-managed-1790647217725/savepoint-e9abb2-83259c5d6052"
+    },
+    "upgrade": {
+      "definitionVersion": 2,
+      "replacementPublished": true,
+      "definitionDigest": "20dfa92bdb31e820c2f377caa0156d41b1f00f62b462d692f3f8be98c5748326",
+      "jobId": "a32ea80ef2d7a417a510a74ae3a3342d",
+      "requestId": "c2126d3e3351cce1f608f6efe6782b93",
+      "checkpoint": 33,
+      "oldJobId": "5146222091786c1d6820322f1985e3c1",
+      "savepoint": "s3://warehouse/savepoints/r3-managed-upgrade-1790647217725/savepoint-514622-e91a15c7050c"
+    },
+    "networkUnknown": {
+      "attemptStatus": "unknown",
+      "wasNotSuccess": true,
+      "jobId": "a32ea80ef2d7a417a510a74ae3a3342d",
+      "instanceStatus": "unknown"
+    },
+    "networkRecovery": {
+      "status": "running",
+      "jobId": "a32ea80ef2d7a417a510a74ae3a3342d"
+    },
+    "cancel": {
+      "attemptStatus": "cancelled",
+      "jobId": "a32ea80ef2d7a417a510a74ae3a3342d",
+      "instanceStatus": "cancelled"
+    }
+  },
+  "cleanup": {
+    "tasksDeleted": 2,
+    "completed": true
+  }
+}

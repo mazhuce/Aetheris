@@ -1,5 +1,6 @@
 package com.aetheris.metadata.security;
 
+import com.aetheris.metadata.service.ApiAssetService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +34,12 @@ public class MetadataAccessExceptionHandler {
             MetadataSecurity.PermissionServiceUnavailableException error, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(body("AUTH_UNAVAILABLE", error.getMessage(), request));
+    }
+
+    @ExceptionHandler(ApiAssetService.NotFoundException.class)
+    public ResponseEntity<Map<String, Object>> apiAssetNotFound(ApiAssetService.NotFoundException error,
+                                                                  HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body("NOT_FOUND", error.getMessage(), request));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

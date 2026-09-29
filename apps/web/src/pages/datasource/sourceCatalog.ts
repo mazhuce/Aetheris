@@ -1,4 +1,4 @@
-export type DataSourceCategory = '关系型数据库' | '分布式数据库' | '数仓与湖仓'
+export type DataSourceCategory = '关系型数据库' | '分布式数据库' | '数仓与湖仓' | '企业与联邦查询'
 
 export interface DataSourceDefinition {
   value: string
@@ -22,10 +22,16 @@ export const dataSourceCatalog: DataSourceDefinition[] = [
   { value: 'doris', label: 'Apache Doris', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数仓' },
   { value: 'starrocks', label: 'StarRocks', category: '数仓与湖仓', defaultPort: 9030, defaultDatabase: 'information_schema', description: 'MySQL 协议实时分析数据库' },
   { value: 'hive2', label: 'Apache Hive', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '通过 HiveServer2 JDBC 接入' },
-  { value: 'spark', label: 'Spark Thrift Server', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '兼容 Hive2 JDBC 协议' }
+  { value: 'spark', label: 'Spark Thrift Server', category: '数仓与湖仓', defaultPort: 10000, defaultDatabase: 'default', description: '兼容 Hive2 JDBC 协议' },
+  { value: 'sqlserver', label: 'Microsoft SQL Server', category: '关系型数据库', defaultPort: 1433, defaultDatabase: 'master', description: 'Microsoft 企业级关系型数据库' },
+  { value: 'oracle', label: 'Oracle Database', category: '关系型数据库', defaultPort: 1521, defaultDatabase: 'ORCL', description: 'Oracle 企业级关系型数据库' },
+  { value: 'sqlite', label: 'SQLite', category: '关系型数据库', defaultPort: 0, defaultDatabase: 'aetheris.db', description: '本地文件型数据库，适合开发与轻量任务' },
+  { value: 'clickhouse', label: 'ClickHouse', category: '数仓与湖仓', defaultPort: 8123, defaultDatabase: 'default', description: '列式 OLAP 分析数据库' },
+  { value: 'trino', label: 'Trino', category: '企业与联邦查询', defaultPort: 8080, defaultDatabase: 'hive', description: '跨数据源联邦 SQL 查询引擎' },
+  { value: 'timescaledb', label: 'TimescaleDB', category: '分布式数据库', defaultPort: 5432, defaultDatabase: 'postgres', description: 'PostgreSQL 兼容时序数据库' }
 ]
 
-export const dataSourceGroups = (['关系型数据库', '分布式数据库', '数仓与湖仓'] as const).map((category) => ({
+export const dataSourceGroups = (['关系型数据库', '分布式数据库', '数仓与湖仓', '企业与联邦查询'] as const).map((category) => ({
   label: category,
   options: dataSourceCatalog
     .filter((item) => item.category === category)
@@ -39,6 +45,27 @@ export const dataSourceOptions = dataSourceCatalog.map((item) => ({
 
 export function getDataSourceDefinition(type?: string) {
   return dataSourceCatalog.find((item) => item.value === type) ?? dataSourceCatalog[0]
+}
+
+/**
+ * 能力口径与后端 JDBC/transfer/CDC 边界保持一致，避免把“可连接”误写成“可写入/可 CDC”。
+ */
+export function getDataSourceCapabilities(type?: string) {
+  const normalized = type?.toLowerCase()
+  const query = ['连接探测', '查询', '元数据', '预览']
+  if (normalized === 'postgresql' || normalized === 'mysql') {
+    return [...query, '批量写入', '首批 CDC']
+  }
+  if (normalized === 'timescaledb' || normalized === 'mariadb') {
+    return [...query, '批量写入']
+  }
+  if (['greenplum', 'opengauss', 'cockroachdb', 'yugabytedb', 'tidb', 'oceanbase', 'doris', 'starrocks'].includes(normalized || '')) {
+    return [...query, '批量写入']
+  }
+  if (normalized === 'hive2' || normalized === 'spark') {
+    return [...query, 'Hive/Spark SQL 写入']
+  }
+  return query
 }
 
 export interface ConnectionPreset {

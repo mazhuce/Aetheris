@@ -1,0 +1,46 @@
+name: aetheris-datasource-smoke
+
+# Optional local compatibility fixtures for the JDBC datasource catalog.
+# This project is deliberately separate from both the platform and R1 lakehouse
+# projects. It exposes only loopback ports and never shares their volumes.
+services:
+  mariadb:
+    image: mariadb:11.4.3
+    environment:
+      MARIADB_DATABASE: datasource_smoke
+      MARIADB_USER: smoke
+      MARIADB_PASSWORD: ${DATASOURCE_SMOKE_PASSWORD:?DATASOURCE_SMOKE_PASSWORD is required}
+      MARIADB_ROOT_PASSWORD: ${DATASOURCE_SMOKE_ROOT_PASSWORD:?DATASOURCE_SMOKE_ROOT_PASSWORD is required}
+    ports:
+      - "127.0.0.1:13308:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$$MARIADB_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8.14.39-alpine
+    environment:
+      CLICKHOUSE_DB: datasource_smoke
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    ports:
+      - "127.0.0.1:18123:8123"
+      - "127.0.0.1:19002:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping | grep -q '^Ok'"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
+  cockroachdb:
+    image: cockroachdb/cockroach:v24.3.6
+    command: ["start-single-node", "--insecure", "--http-addr=0.0.0.0:8080"]
+    ports:
+      - "127.0.0.1:26258:26257"
+      - "127.0.0.1:18089:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "cockroach sql --insecure --host=127.0.0.1:26257 -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24

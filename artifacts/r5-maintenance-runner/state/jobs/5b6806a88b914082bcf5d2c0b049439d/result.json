@@ -1,0 +1,1 @@
+{"table": "iceberg.acceptance.r5_runner_acceptance", "hasIngestedAt": true, "rowCount": 2, "columns": ["id", "category", "amount", "ingested_at"]}

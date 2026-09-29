@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "gate": "R4-flink-event-time-quality-runtime-gate",
+  "status": "passed",
+  "startedAtUtc": "2026-09-29T02:05:01.8377013+00:00",
+  "source": {
+    "kind": "postgres-cdc",
+    "table": "event_time_quality_1790647501827",
+    "slot": "aetheris_r4_quality_1790647501827"
+  },
+  "watermark": {
+    "expression": "event_time - INTERVAL '5' SECOND",
+    "allowedLatenessSeconds": 5,
+    "observedAt": "2026-09-23T00:00:55.000000Z"
+  },
+  "job": {
+    "id": "037451225c2fdea9e8f7e782299cb555",
+    "state": "CANCELED",
+    "checkpointId": 20,
+    "canceled": true
+  },
+  "counts": {
+    "accepted": 2,
+    "deadLetter": 1,
+    "total": 3
+  },
+  "metadataCallback": {
+    "status": "passed",
+    "tableId": 8,
+    "failedClosed": true
+  },
+  "cleanup": {
+    "sourceRowsRemoved": true,
+    "replicationSlotRemoved": true,
+    "icebergTableRemoved": true,
+    "metadataRowsRemoved": true,
+    "jobStopped": true,
+    "error": null
+  },
+  "evidence": {
+    "watermarkedRows": 2,
+    "rows": [
+      "route\t_col1",
+      "accepted\t2",
+      "dead_letter\t1"
+    ]
+  },
+  "error": null,
+  "finishedAtUtc": "2026-09-29T02:05:36.7811263+00:00"
+}

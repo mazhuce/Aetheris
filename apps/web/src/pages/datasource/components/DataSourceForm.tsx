@@ -17,7 +17,7 @@ import {
 } from 'antd'
 import { ApiOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { testDataSourceConfig, type DataSource, type DataSourceInput, type TestResult } from '@/api/metadata'
-import { dataSourceGroups, getDataSourceDefinition, hiveConnectionPresets } from '../sourceCatalog'
+import { dataSourceGroups, getDataSourceCapabilities, getDataSourceDefinition, hiveConnectionPresets } from '../sourceCatalog'
 
 interface DataSourceFormProps {
   open: boolean
@@ -139,7 +139,8 @@ export default function DataSourceForm({
                 className="datasource-type-hint"
                 type="info"
                 showIcon
-                message={<Space><Tag>{definition.label}</Tag><span>{definition.description}</span></Space>}
+                message={<Space wrap><Tag>{definition.label}</Tag><span>{definition.description}</span></Space>}
+                description={<Space size={[4, 4]} wrap>{getDataSourceCapabilities(getFieldValue('type')).map((capability) => <Tag key={capability}>{capability}</Tag>)}</Space>}
               />
             )
           }}

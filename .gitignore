@@ -45,6 +45,7 @@ venv/
 
 # 环境变量与密钥（本地真实配置不提交）
 .env
+configs/datasource-smoke.env
 .env.*
 !.env.example
 *.local
@@ -85,3 +86,5 @@ ${system:java.io.tmpdir}/
 # 其他
 *.bak
 *.orig
+# Generated R1 fixture SQL/results (recreate with scripts/r1-fixture.py)
+/artifacts/r1-fixture/

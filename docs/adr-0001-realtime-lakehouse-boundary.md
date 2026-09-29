@@ -1,6 +1,6 @@
 # ADR-0001：实时湖仓边界与 R1 验收
 
-- 状态：提案，进入 R1 兼容验证后再批准
+- 状态：已批准（R1 历史运行验收通过；环境恢复后需按脚本复验当前部署）
 - 日期：2026-09-18
 - 范围：Flink、Flink CDC、Iceberg v2、Spark、Trino、REST Catalog 与对象存储
 
@@ -24,13 +24,13 @@ R1 必须记录 JDK、Flink、Flink CDC、Iceberg runtime、Spark、Trino、对�
 
 Bronze 保留源字段与变更元数据，Silver 承担清洗和类型稳定，Gold 承担对外语义消费。新增列默认进入审批后的演进流程；重命名、删除和缩窄类型属于破坏性变更，必须隔离、审批或回滚。快照、checkpoint、savepoint 和 Catalog 元数据都属于恢复材料，不能只备份业务数据库。
 
-## 未决项
+## 后续验证项
 
-- REST Catalog 的具体实现及其对象存储认证方式。
-- Flink 2.2、Flink CDC 3.6 与 Iceberg runtime 的最终组合。
+- R1 已锁定 JDK 17.0.15、Flink 1.20.1、Flink CDC 3.4.0、Iceberg 1.7.1、Spark 3.5.6、Trino 476；后续升级仍需另建兼容验证记录，不得直接替换当前 BOM。
+- 当前运行环境恢复后，先执行 `scripts/r1-rebuild.ps1 -ForceFixture -RunAcceptance` 做跨引擎回归；发布硬门槛再执行 `-ResetVolumes -RequireFreshRebuild -ForceFixture -RunAcceptance`，确认本次部署能从空环境得到同一 checksum。
 - Trino 是否在实际 P95、并发和成本基准中优于现有查询路径。
 - PostgreSQL 与 MySQL 首批 CDC 的日志保留、DDL 策略和重放边界。
 
 ## 退出条件
 
-本 ADR 只有在兼容矩阵、端到端 fixture、故障重启和重建结果均有可复核记录后，才能从“提案”改为“批准”。
+本 ADR 的 R1 兼容矩阵、端到端 fixture 和空环境重建已有历史可复核记录；R2 故障重启与后续版本升级仍按独立验收记录管理，不自动改变本 ADR 的已批准 BOM。

@@ -2,6 +2,7 @@ package com.aetheris.workflow.controller;
 
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
 import com.aetheris.workflow.service.ExecutionAdapter;
+import com.aetheris.workflow.service.FlinkSqlExecutionClient;
 import com.aetheris.workflow.service.GitRepositoryService;
 import com.aetheris.workflow.service.GitRepositoryService.RepositoryInput;
 import com.aetheris.workflow.service.GitRepositoryService.RepositoryStatusInput;
@@ -14,6 +15,11 @@ import com.aetheris.workflow.service.SparkResourceQueueService.RunnerInput;
 import com.aetheris.workflow.service.SparkResourceQueueService.RunnerStatusInput;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,8 +27,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
+import java.net.URI;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -36,6 +45,9 @@ public class ManagedSparkController {
     private final SparkResourceQueueService resourceQueue;
     private final GitRepositoryService gitRepositories;
     private final WorkflowAuthorizationService authorization;
+    private final FlinkSqlExecutionClient flinkGateway;
+    @Value("${aetheris.flink-sql-gateway.base-url:http://127.0.0.1:18083}")
+    private String flinkGatewayEndpoint;
 
     public ManagedSparkController(ManagedSparkCatalogService catalog,
                                   com.aetheris.workflow.service.SparkBatchExecutionAdapter adapter,
@@ -47,6 +59,22 @@ public class ManagedSparkController {
         this.resourceQueue = resourceQueue;
         this.gitRepositories = gitRepositories;
         this.authorization = authorization;
+        this.flinkGateway = null;
+    }
+
+    @Autowired
+    public ManagedSparkController(ManagedSparkCatalogService catalog,
+                                  com.aetheris.workflow.service.SparkBatchExecutionAdapter adapter,
+                                  SparkResourceQueueService resourceQueue,
+                                  GitRepositoryService gitRepositories,
+                                  WorkflowAuthorizationService authorization,
+                                  FlinkSqlExecutionClient flinkGateway) {
+        this.catalog = catalog;
+        this.adapter = adapter;
+        this.resourceQueue = resourceQueue;
+        this.gitRepositories = gitRepositories;
+        this.authorization = authorization;
+        this.flinkGateway = flinkGateway;
     }
 
     @GetMapping("/health")
@@ -56,6 +84,43 @@ public class ManagedSparkController {
         } catch (RuntimeException error) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                     .body(Map.of("status", "DOWN", "message", error.getMessage()));
+        }
+    }
+
+    @GetMapping("/flink/health")
+    public ResponseEntity<?> flinkHealth(@RequestParam(required = false) String endpoint) {
+        if (flinkGateway == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("status", "DOWN", "message", "Flink SQL Gateway 客户端未配置"));
+        }
+        final String target;
+        try {
+            target = normalizeFlinkEndpoint(endpoint);
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("status", "INVALID", "message", error.getMessage()));
+        }
+        try {
+            return ResponseEntity.ok(flinkGateway.health(target));
+        } catch (RuntimeException error) {
+            String message = error.getMessage();
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("status", "DOWN", "endpoint", target,
+                            "message", message == null || message.isBlank() ? "Flink SQL Gateway 不可达" : message));
+        }
+    }
+
+    private String normalizeFlinkEndpoint(String requested) {
+        String value = StringUtils.hasText(requested) ? requested.trim() : flinkGatewayEndpoint;
+        try {
+            URI uri = URI.create(value == null ? "" : value);
+            if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    || uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null
+                    || uri.getFragment() != null) {
+                throw new IllegalArgumentException("Flink SQL Gateway 地址必须是无凭据、无查询参数的 HTTP(S) 地址");
+            }
+            return value.replaceAll("/+$", "");
+        } catch (IllegalArgumentException error) {
+            throw new IllegalArgumentException("Flink SQL Gateway 地址必须是有效的 HTTP(S) 地址");
         }
     }
 
@@ -158,6 +223,22 @@ public class ManagedSparkController {
             @RequestBody ArtifactInput input,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
         return action(() -> catalog.registerArtifact(input, username));
+    }
+
+    @PostMapping(value = "/artifacts/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> upload(
+            @RequestParam String name,
+            @RequestParam String version,
+            @RequestParam String artifactKey,
+            @RequestParam MultipartFile file,
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        return action(() -> {
+            try {
+                return catalog.registerUploadedArtifact(name, version, artifactKey, file.getBytes(), username);
+            } catch (java.io.IOException error) {
+                throw new IllegalArgumentException("无法读取上传的 Spark 制品");
+            }
+        });
     }
 
     @PostMapping("/artifacts/{id}/approve")

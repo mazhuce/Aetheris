@@ -19,14 +19,28 @@ public class Task {
     @NotBlank(message = "任务名称不能为空")
     private String name;
 
-    /** sql / spark / quality; concrete fields are validated by task type. */
+    /** sql / spark / flink / quality; concrete fields are validated by task type. */
     private String taskType;
+    private Integer definitionVersion;
 
     private Long datasourceId;
 
     private String datasourceName;
 
     private String taskSql;
+
+    /** Flink SQL Gateway base URL for flink tasks, e.g. http://flink-sql-gateway:8083. */
+    private String flinkEndpoint;
+
+    /** bounded waits for an operation terminal state; streaming returns a durable remote handle. */
+    private String flinkMode;
+
+    /** R4 stream-time contract; populated for Flink tasks and snapshotted per attempt. */
+    private String eventTimeColumn;
+    private String watermarkExpression;
+    private Integer allowedLatenessSeconds;
+    private String lateDataPolicy;
+    private String deadLetterTable;
 
     /** Published managed Spark job definition for spark tasks. */
     private Long jobDefinitionId;
@@ -59,12 +73,28 @@ public class Task {
     public void setName(String name) { this.name = name; }
     public String getTaskType() { return taskType; }
     public void setTaskType(String taskType) { this.taskType = taskType; }
+    public Integer getDefinitionVersion() { return definitionVersion; }
+    public void setDefinitionVersion(Integer value) { definitionVersion = value; }
     public Long getDatasourceId() { return datasourceId; }
     public void setDatasourceId(Long datasourceId) { this.datasourceId = datasourceId; }
     public String getDatasourceName() { return datasourceName; }
     public void setDatasourceName(String datasourceName) { this.datasourceName = datasourceName; }
     public String getTaskSql() { return taskSql; }
     public void setTaskSql(String taskSql) { this.taskSql = taskSql; }
+    public String getFlinkEndpoint() { return flinkEndpoint; }
+    public void setFlinkEndpoint(String flinkEndpoint) { this.flinkEndpoint = flinkEndpoint; }
+    public String getFlinkMode() { return flinkMode; }
+    public void setFlinkMode(String flinkMode) { this.flinkMode = flinkMode; }
+    public String getEventTimeColumn() { return eventTimeColumn; }
+    public void setEventTimeColumn(String value) { eventTimeColumn = value; }
+    public String getWatermarkExpression() { return watermarkExpression; }
+    public void setWatermarkExpression(String value) { watermarkExpression = value; }
+    public Integer getAllowedLatenessSeconds() { return allowedLatenessSeconds; }
+    public void setAllowedLatenessSeconds(Integer value) { allowedLatenessSeconds = value; }
+    public String getLateDataPolicy() { return lateDataPolicy; }
+    public void setLateDataPolicy(String value) { lateDataPolicy = value; }
+    public String getDeadLetterTable() { return deadLetterTable; }
+    public void setDeadLetterTable(String value) { deadLetterTable = value; }
     public Long getJobDefinitionId() { return jobDefinitionId; }
     public void setJobDefinitionId(Long jobDefinitionId) { this.jobDefinitionId = jobDefinitionId; }
     public Long getQualityRuleId() { return qualityRuleId; }

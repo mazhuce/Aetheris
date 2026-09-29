@@ -1,19 +1,61 @@
 package com.aetheris.metadata.service;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.OffsetDateTime;
+import java.util.concurrent.TimeUnit;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class QueryAuditService {
+    static final long DEFAULT_SLOW_QUERY_MS = 3000L;
     private final JdbcTemplate jdbc;
-    public QueryAuditService(JdbcTemplate jdbc){this.jdbc=jdbc;}
+    private final Counter queryCount;
+    private final Counter failedQueryCount;
+    private final Counter slowQueryCount;
+    private final Timer queryDuration;
+
+    public QueryAuditService(JdbcTemplate jdbc){
+        this(jdbc, new SimpleMeterRegistry());
+    }
+
+    @Autowired
+    public QueryAuditService(JdbcTemplate jdbc, MeterRegistry meterRegistry){
+        this.jdbc=jdbc;
+        this.queryCount=Counter.builder("aetheris.query.audit.count")
+                .description("Completed semantic and ad-hoc queries recorded by the audit service")
+                .register(meterRegistry);
+        this.failedQueryCount=Counter.builder("aetheris.query.audit.failed")
+                .description("Queries recorded with a non-success status")
+                .register(meterRegistry);
+        this.slowQueryCount=Counter.builder("aetheris.query.audit.slow")
+                .description("Queries whose recorded duration reaches the default slow-query threshold")
+                .register(meterRegistry);
+        this.queryDuration=Timer.builder("aetheris.query.audit.duration")
+                .description("Recorded query duration")
+                .publishPercentiles(0.5, 0.95)
+                .register(meterRegistry);
+    }
+
     public void record(String kind,String assetCode,Long assetId,Long datasourceId,String user,String status,Long rows,Long duration,Boolean truncated,String errorCode,String error,String query){
         jdbc.update("INSERT INTO metadata.semantic_query_audit (query_kind,asset_code,asset_id,datasource_id,username,status,row_count,duration_ms,truncated,error_code,error_message,query_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",kind,assetCode,assetId,datasourceId,user,status,rows,duration,truncated==null?false:truncated,errorCode,truncate(error),hash(query));
+        queryCount.increment();
+        if (!"success".equalsIgnoreCase(status)) {
+            failedQueryCount.increment();
+        }
+        if (duration != null && duration >= DEFAULT_SLOW_QUERY_MS) {
+            slowQueryCount.increment();
+        }
+        if (duration != null && duration >= 0) {
+            queryDuration.record(duration, TimeUnit.MILLISECONDS);
+        }
     }
     public Map<String,Object> summary(String user, boolean global, int days, Long slowMs){
         int window=Math.clamp(days,1,90); long threshold=slowMs==null?3000:Math.clamp(slowMs,100,600000);

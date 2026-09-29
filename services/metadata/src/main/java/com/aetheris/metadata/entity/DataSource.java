@@ -23,7 +23,7 @@ public class DataSource {
     private String name;
 
     @NotBlank
-    @Pattern(regexp = "postgresql|greenplum|opengauss|cockroachdb|yugabytedb|mysql|mariadb|tidb|oceanbase|doris|starrocks|hive2|spark")
+    @Pattern(regexp = "postgresql|greenplum|opengauss|cockroachdb|yugabytedb|timescaledb|mysql|mariadb|tidb|oceanbase|doris|starrocks|hive2|spark|sqlserver|oracle|clickhouse|trino|sqlite")
     private String type;
 
     @NotBlank

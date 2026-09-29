@@ -1,0 +1,28 @@
+name: R3 HA Contract Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  r3-ha-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate R3 HA overlay
+        run: python scripts/validate-r3-ha.py
+
+      - name: Run R3 HA contract tests
+        run: python scripts/tests/test_validate_r3_ha.py -v

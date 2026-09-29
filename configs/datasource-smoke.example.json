@@ -1,0 +1,80 @@
+[
+  {
+    "name": "postgresql-smoke",
+    "type": "postgresql",
+    "host": "127.0.0.1",
+    "port": 5432,
+    "databaseName": "postgres",
+    "username": "aetheris",
+    "passwordEnv": "AETHERIS_SMOKE_POSTGRES_PASSWORD",
+    "required": false
+  },
+  {
+    "name": "mysql-smoke",
+    "type": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "databaseName": "mysql",
+    "username": "aetheris",
+    "passwordEnv": "AETHERIS_SMOKE_MYSQL_PASSWORD",
+    "required": false
+  },
+  {
+    "name": "hive2-smoke",
+    "type": "hive2",
+    "host": "127.0.0.1",
+    "port": 10000,
+    "databaseName": "default",
+    "username": "aetheris",
+    "connectionParams": "auth=noSasl",
+    "required": false
+  },
+  {
+    "name": "sqlserver-smoke",
+    "type": "sqlserver",
+    "host": "127.0.0.1",
+    "port": 1433,
+    "databaseName": "master",
+    "username": "sa",
+    "passwordEnv": "AETHERIS_SMOKE_SQLSERVER_PASSWORD",
+    "required": false
+  },
+  {
+    "name": "oracle-smoke",
+    "type": "oracle",
+    "host": "127.0.0.1",
+    "port": 1521,
+    "databaseName": "ORCL",
+    "username": "aetheris",
+    "passwordEnv": "AETHERIS_SMOKE_ORACLE_PASSWORD",
+    "required": false
+  },
+  {
+    "name": "clickhouse-smoke",
+    "type": "clickhouse",
+    "host": "127.0.0.1",
+    "port": 8123,
+    "databaseName": "default",
+    "username": "default",
+    "passwordEnv": "AETHERIS_SMOKE_CLICKHOUSE_PASSWORD",
+    "required": false
+  },
+  {
+    "name": "trino-smoke",
+    "type": "trino",
+    "host": "127.0.0.1",
+    "port": 8080,
+    "databaseName": "hive",
+    "username": "aetheris",
+    "required": false
+  },
+  {
+    "name": "sqlite-smoke",
+    "type": "sqlite",
+    "host": "",
+    "port": 0,
+    "databaseName": "artifacts/datasource-smoke.sqlite",
+    "username": "",
+    "required": false
+  }
+]

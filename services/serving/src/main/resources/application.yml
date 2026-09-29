@@ -26,6 +26,9 @@ aetheris:
   rate-limit:
     capacity: ${AETHERIS_SERVING_RATE_LIMIT_CAPACITY:60}
     window-ms: ${AETHERIS_SERVING_RATE_LIMIT_WINDOW_MS:60000}
+    cleanup-ms: ${AETHERIS_SERVING_RATE_LIMIT_CLEANUP_MS:300000}
+  api-usage:
+    cleanup-ms: ${AETHERIS_API_USAGE_CLEANUP_MS:3600000}
   metadata:
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
 

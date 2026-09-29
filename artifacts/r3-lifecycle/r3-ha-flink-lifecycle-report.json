@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "gate": "R3-flink-lifecycle-runtime-gate",
+  "status": "passed",
+  "startedAtUtc": "2026-09-21T14:34:26.7270497+00:00",
+  "fixture": "aetheris-r3-flink-lifecycle-v1",
+  "phases": {
+    "submit": {
+      "status": "passed",
+      "session": "0e76d6f9-867f-4741-b084-473fa83887bc",
+      "operation": "1ee604a5-5567-4e89-b8d6-41797988bdd7",
+      "jobId": "77efd2858381560b49c7c0bfc49e4e81",
+      "jobState": "RUNNING"
+    },
+    "checkpoint": {
+      "id": 5,
+      "status": "completed",
+      "triggerTimestamp": 1790001282246,
+      "latestAckTimestamp": 1790001282330
+    },
+    "taskManagerRestart": {
+      "status": "passed",
+      "jobId": "77efd2858381560b49c7c0bfc49e4e81",
+      "stable": {
+        "jobId": "77efd2858381560b49c7c0bfc49e4e81",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 10,
+        "status": "completed",
+        "triggerTimestamp": 1790001305863,
+        "latestAckTimestamp": 1790001305920
+      }
+    },
+    "pause": {
+      "status": "passed",
+      "jobId": "77efd2858381560b49c7c0bfc49e4e81",
+      "savepoint": {
+        "requestId": "ad21fbc9f6cf6e1c89c4df5a6676b091",
+        "status": "COMPLETED",
+        "location": "s3://warehouse/savepoints/r3-pause/savepoint-77efd2-8b36854f50e8",
+        "target": "s3://warehouse/savepoints/r3-pause"
+      },
+      "terminalState": "FINISHED"
+    },
+    "resume": {
+      "status": "passed",
+      "session": "f7f3d1c2-a1ea-45f3-b264-a062181574ed",
+      "operation": "5e5147aa-2dd2-41ec-b852-ebdd79b18dba",
+      "savepoint": "s3://warehouse/savepoints/r3-pause/savepoint-77efd2-8b36854f50e8",
+      "jobId": "a33afe876acc4a5103998a7f98acbe8e",
+      "stable": {
+        "jobId": "a33afe876acc4a5103998a7f98acbe8e",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 23,
+        "status": "completed",
+        "triggerTimestamp": 1790001330047,
+        "latestAckTimestamp": 1790001330089
+      }
+    },
+    "upgrade": {
+      "status": "passed",
+      "oldJobId": "a33afe876acc4a5103998a7f98acbe8e",
+      "oldTerminalState": "FINISHED",
+      "session": "8a974559-da5e-4078-90b3-5733b02c8bcb",
+      "operation": "be74d4d5-940a-4de9-a3d2-36f5bc13c23b",
+      "savepoint": "s3://warehouse/savepoints/r3-upgrade/savepoint-a33afe-da10b8478108",
+      "replacementSqlSha256": "731cc9ebc350cf31ace2d8d8f37b7a4f86d952ad517a4ea1bc6fee8f230f92cf",
+      "jobId": "289585756e8e5d7f59de5f0395276612",
+      "stable": {
+        "jobId": "289585756e8e5d7f59de5f0395276612",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 31,
+        "status": "completed",
+        "triggerTimestamp": 1790001348140,
+        "latestAckTimestamp": 1790001348182
+      }
+    }
+  },
+  "reconciliation": {
+    "attempted": true,
+    "outageInjected": true,
+    "remoteUnavailableObserved": true,
+    "unknownWasNotSuccess": true,
+    "networkOutageInjected": false,
+    "networkRecoveryObserved": false,
+    "mode": "auto_reconciled"
+  },
+  "cleanup": {
+    "completed": true
+  },
+  "error": null,
+  "finishedAtUtc": "2026-09-21T14:35:54.1473732+00:00"
+}

@@ -1,15 +1,31 @@
 name: aetheris-r1-lakehouse
 
+x-flink-connector-volumes: &flink-connector-volumes
+  - ./connectors/flink-connector-jdbc-3.4.0-1.20.jar:/opt/flink/lib/flink-connector-jdbc-3.4.0-1.20.jar:ro
+  - ./connectors/postgresql-42.7.13.jar:/opt/flink/lib/postgresql-42.7.13.jar:ro
+  - ./connectors/mysql-connector-j-9.1.0.jar:/opt/flink/lib/mysql-connector-j-9.1.0.jar:ro
+  - ./connectors/flink-sql-connector-kafka-3.4.0-1.20.jar:/opt/flink/lib/flink-sql-connector-kafka-3.4.0-1.20.jar:ro
+  - ./connectors/flink-sql-connector-postgres-cdc-3.4.0.jar:/opt/flink/lib/flink-sql-connector-postgres-cdc-3.4.0.jar:ro
+  - ./connectors/flink-sql-connector-mysql-cdc-3.4.0.jar:/opt/flink/lib/flink-sql-connector-mysql-cdc-3.4.0.jar:ro
+  - ./connectors/iceberg-flink-runtime-1.20-1.7.1.jar:/opt/flink/lib/iceberg-flink-runtime-1.20-1.7.1.jar:ro
+  - ./connectors/iceberg-aws-bundle-1.7.1.jar:/opt/flink/lib/iceberg-aws-bundle-1.7.1.jar:ro
+  - ./connectors/hadoop-client-api-3.3.6.jar:/opt/flink/lib/hadoop-client-api-3.3.6.jar:ro
+  - ./connectors/hadoop-client-runtime-3.3.6.jar:/opt/flink/lib/hadoop-client-runtime-3.3.6.jar:ro
+  - ./connectors/commons-configuration2-2.8.0.jar:/opt/flink/lib/commons-configuration2-2.8.0.jar:ro
+  - ./connectors/woodstox-core-6.4.0.jar:/opt/flink/lib/woodstox-core-6.4.0.jar:ro
+  - ./connectors/stax2-api-4.2.1.jar:/opt/flink/lib/stax2-api-4.2.1.jar:ro
+
 services:
   object-store:
-    image: minio/minio:RELEASE.2024-06-13T19-53-16Z
+    profiles: ["r1", "storage"]
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
       MINIO_ROOT_PASSWORD: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
     ports:
-      - "127.0.0.1:${R1_MINIO_PORT:-19000}:9000"
-      - "127.0.0.1:${R1_MINIO_CONSOLE_PORT:-19001}:9001"
+      - "${R1_BIND_HOST:-127.0.0.1}:${R1_MINIO_PORT:-19000}:9000"
+      - "${R1_BIND_HOST:-127.0.0.1}:${R1_MINIO_CONSOLE_PORT:-19001}:9001"
     volumes:
       - r1-minio-data:/data
     healthcheck:
@@ -19,7 +35,8 @@ services:
       retries: 12
 
   object-store-init:
-    image: minio/mc:RELEASE.2024-06-13T19-53-16Z
+    profiles: ["r1", "storage"]
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
@@ -28,27 +45,94 @@ services:
     environment:
       R1_MINIO_ACCESS_KEY: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
       R1_MINIO_SECRET_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_REGION: us-east-1
     depends_on:
       object-store:
         condition: service_healthy
     restart: "no"
 
+  # Isolated PostgreSQL source for the deterministic CDC fixture.  It is kept
+  # inside the R1 project so a rebuild never touches the platform database.
+  source-postgres:
+    profiles: ["r1", "sources"]
+    image: postgres:16.9
+    # Logical WAL is required by the postgres-cdc source in the fixture.
+    command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
+    environment:
+      POSTGRES_DB: ${R1_SOURCE_POSTGRES_DB:?R1_SOURCE_POSTGRES_DB is required}
+      POSTGRES_USER: ${R1_SOURCE_POSTGRES_USER:?R1_SOURCE_POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${R1_SOURCE_POSTGRES_PASSWORD:?R1_SOURCE_POSTGRES_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${R1_SOURCE_POSTGRES_PORT:-15432}:5432"
+    volumes:
+      - r1-source-postgres-data:/var/lib/postgresql/data
+      - ../../fixtures/r1/postgres:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # Isolated MySQL source for the R2 binlog fixture. Dedicated credentials can
+  # password can be supplied through R1_SOURCE_MYSQL_PASSWORD; the local profile falls back to the
+  # existing isolated source password so older .env.r1 files remain usable.
+  source-mysql:
+    profiles: ["r1", "sources"]
+    image: mysql:8.0.40
+    command:
+      - mysqld
+      - --server-id=184054
+      - --log-bin=mysql-bin
+      - --binlog-format=ROW
+      - --binlog-row-image=FULL
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+    environment:
+      MYSQL_DATABASE: ${R1_SOURCE_MYSQL_DB:-r1_mysql_source}
+      MYSQL_USER: r1_mysql_fixture
+      MYSQL_PASSWORD: ${R1_SOURCE_MYSQL_PASSWORD:-${R1_SOURCE_POSTGRES_PASSWORD:?R1_SOURCE_POSTGRES_PASSWORD is required}}
+      MYSQL_ROOT_PASSWORD: ${R1_SOURCE_MYSQL_ROOT_PASSWORD:-${R1_SOURCE_POSTGRES_PASSWORD:?R1_SOURCE_POSTGRES_PASSWORD is required}}
+    ports:
+      - "127.0.0.1:${R1_SOURCE_MYSQL_PORT:-13306}:3306"
+    volumes:
+      - r1-source-mysql-data:/var/lib/mysql
+      - ../../fixtures/r1/mysql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+
   catalog:
-    image: tabulario/iceberg-rest:1.7.1
+    profiles: ["r1", "catalog"]
+    image: tabulario/iceberg-rest:1.6.0
     environment:
       CATALOG_WAREHOUSE: s3://warehouse/
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://object-store:9000
       AWS_ACCESS_KEY_ID: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
       AWS_SECRET_ACCESS_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_S3_REGION: us-east-1
     ports:
-      - "127.0.0.1:${R1_CATALOG_PORT:-18181}:8181"
+      - "${R1_BIND_HOST:-127.0.0.1}:${R1_CATALOG_PORT:-18181}:8181"
     depends_on:
       object-store-init:
         condition: service_completed_successfully
 
   trino:
+    profiles: ["r1", "trino"]
     image: trinodb/trino:476
+    environment:
+      R1_MINIO_ACCESS_KEY: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
+      R1_MINIO_SECRET_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     ports:
       - "127.0.0.1:${R1_TRINO_PORT:-18080}:8080"
     volumes:
@@ -58,26 +142,110 @@ services:
         condition: service_started
 
   flink-jobmanager:
-    image: flink:1.20.1-java21
-    command: jobmanager
+    profiles: ["r1", "flink"]
+    image: flink:1.20.1-java17
+    command:
+      - bash
+      - -lc
+      - >-
+        mkdir -p /opt/flink/plugins/s3-fs-hadoop &&
+        ln -sf /opt/flink/opt/flink-s3-fs-hadoop-1.20.1.jar /opt/flink/plugins/s3-fs-hadoop/flink-s3-fs-hadoop-1.20.1.jar &&
+        exec /docker-entrypoint.sh jobmanager
+    volumes: *flink-connector-volumes
     ports:
       - "127.0.0.1:${R1_FLINK_UI_PORT:-18081}:8081"
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
+        rest.address: flink-jobmanager
+        rest.bind-address: 0.0.0.0
         state.backend: hashmap
+        # A TaskManager process restart can take longer than one fixed-delay
+        # interval on a cold Docker Desktop host. Keep the streaming job alive
+        # long enough to reconnect and restore from its last completed checkpoint.
+        restart-strategy: fixed-delay
+        restart-strategy.fixed-delay.attempts: 10
+        restart-strategy.fixed-delay.delay: 10 s
         rest.flamegraph.enabled: false
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+      AWS_ACCESS_KEY_ID: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
+      AWS_SECRET_ACCESS_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    depends_on:
+      object-store-init:
+        condition: service_completed_successfully
 
   flink-taskmanager:
-    image: flink:1.20.1-java21
-    command: taskmanager
+    profiles: ["r1", "flink"]
+    image: flink:1.20.1-java17
+    command:
+      - bash
+      - -lc
+      - >-
+        mkdir -p /opt/flink/plugins/s3-fs-hadoop &&
+        ln -sf /opt/flink/opt/flink-s3-fs-hadoop-1.20.1.jar /opt/flink/plugins/s3-fs-hadoop/flink-s3-fs-hadoop-1.20.1.jar &&
+        exec /docker-entrypoint.sh taskmanager
+    volumes: *flink-connector-volumes
     environment:
       FLINK_PROPERTIES: |
         jobmanager.rpc.address: flink-jobmanager
         taskmanager.numberOfTaskSlots: 2
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+      AWS_ACCESS_KEY_ID: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
+      AWS_SECRET_ACCESS_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
     depends_on:
       flink-jobmanager:
         condition: service_started
+      object-store-init:
+        condition: service_completed_successfully
+
+  # Flink SQL Gateway 为 workflow 的 flink 任务提供统一 REST 执行入口。
+  # 网关与 JobManager/TaskManager 共用同一 session cluster，宿主机只暴露回环地址。
+  flink-sql-gateway:
+    profiles: ["r1", "flink"]
+    image: flink:1.20.1-java17
+    command:
+      - bash
+      - -lc
+      - >-
+        mkdir -p /opt/flink/plugins/s3-fs-hadoop &&
+        ln -sf /opt/flink/opt/flink-s3-fs-hadoop-1.20.1.jar /opt/flink/plugins/s3-fs-hadoop/flink-s3-fs-hadoop-1.20.1.jar &&
+        ./bin/sql-gateway.sh start
+        -Dsql-gateway.endpoint.rest.address=0.0.0.0
+        -Dsql-gateway.endpoint.rest.bind-address=0.0.0.0
+        -Dsql-gateway.endpoint.rest.port=8083
+        && tail -f /dev/null
+    volumes: *flink-connector-volumes
+    ports:
+      - "127.0.0.1:${R1_FLINK_SQL_GATEWAY_PORT:-18083}:8083"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        rest.address: flink-jobmanager
+        rest.bind-address: 0.0.0.0
+        sql-gateway.endpoint.rest.address: flink-sql-gateway
+        sql-gateway.endpoint.rest.bind-address: 0.0.0.0
+        sql-gateway.endpoint.rest.port: 8083
+        s3.endpoint: http://object-store:9000
+        s3.path.style.access: true
+      AWS_ACCESS_KEY_ID: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
+      AWS_SECRET_ACCESS_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    depends_on:
+      flink-jobmanager:
+        condition: service_started
+      flink-taskmanager:
+        condition: service_started
+      object-store-init:
+        condition: service_completed_successfully
 
 volumes:
   r1-minio-data:
+  r1-source-postgres-data:
+  r1-source-mysql-data:

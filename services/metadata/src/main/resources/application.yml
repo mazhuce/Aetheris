@@ -35,7 +35,6 @@ management:
   endpoint:
     prometheus:
       access: unrestricted
-  endpoint:
     health:
       show-details: never
 
@@ -65,3 +64,7 @@ aetheris:
     base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
   identity:
     max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
+  workflow:
+    base-url: http://${WORKFLOW_SERVICE_HOST:localhost}:${WORKFLOW_SERVICE_PORT:8088}
+  lakehouse:
+    maintenance-reconcile-interval-ms: ${AETHERIS_LAKEHOUSE_MAINTENANCE_RECONCILE_INTERVAL_MS:5000}

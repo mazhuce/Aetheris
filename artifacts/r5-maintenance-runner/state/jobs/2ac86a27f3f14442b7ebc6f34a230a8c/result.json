@@ -1,0 +1,1 @@
+{"operation": "expire_snapshots", "bizDate": "2026-09-20", "attemptId": "5", "rowCount": 1, "rows": [{"deleted_data_files_count": 0, "deleted_position_delete_files_count": 0, "deleted_equality_delete_files_count": 0, "deleted_manifest_files_count": 0, "deleted_manifest_lists_count": 0, "deleted_statistics_files_count": 0}]}

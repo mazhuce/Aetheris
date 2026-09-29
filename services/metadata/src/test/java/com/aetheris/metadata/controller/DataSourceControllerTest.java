@@ -89,10 +89,22 @@ class DataSourceControllerTest {
         assertEquals(HttpStatus.BAD_GATEWAY, response.getStatusCode());
         assertEquals("目标端口拒绝连接，请确认数据库服务已启动并监听外部地址",
                 response.getBody().get("message"));
-        verify(queryHistoryService).record(argThat(history ->
+                verify(queryHistoryService).record(argThat(history ->
                 "failed".equals(history.getStatus())
                         && history.getDurationMs() != null
                         && history.getErrorMessage() != null));
+    }
+
+    @Test
+    void exposesBackendDataSourceCatalog() {
+        when(security.require(request, "datasource", null, "view", Map.of()))
+                .thenReturn(new AetherisIdentity(1L, "admin"));
+
+        var definitions = controller.catalog(request);
+
+        assertEquals(19, definitions.size());
+        assertEquals("postgresql", definitions.get(0).type());
+        assertEquals("trino", definitions.get(definitions.size() - 1).type());
     }
 
     private void allowQuery(Long datasourceId, String username) {

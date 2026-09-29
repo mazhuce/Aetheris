@@ -22,7 +22,12 @@ public class ApiAsset {
     private String status;
     private String version;
     private String description;
+    /** 可执行目标类型：目前仅支持已发布 metric 或非 stale table。 */
+    private String targetType;
+    private String targetRef;
     private String createdBy;
+    private String publishedBy;
+    private OffsetDateTime publishedAt;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -46,8 +51,16 @@ public class ApiAsset {
     public void setVersion(String version) { this.version = version; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+    public String getTargetType() { return targetType; }
+    public void setTargetType(String targetType) { this.targetType = targetType; }
+    public String getTargetRef() { return targetRef; }
+    public void setTargetRef(String targetRef) { this.targetRef = targetRef; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public String getPublishedBy() { return publishedBy; }
+    public void setPublishedBy(String publishedBy) { this.publishedBy = publishedBy; }
+    public OffsetDateTime getPublishedAt() { return publishedAt; }
+    public void setPublishedAt(OffsetDateTime publishedAt) { this.publishedAt = publishedAt; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

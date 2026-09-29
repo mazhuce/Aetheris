@@ -7,6 +7,7 @@ import com.aetheris.metadata.security.MetadataSecurity;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.DataSourceHealthService;
+import com.aetheris.metadata.service.DataSourceTypeCatalog;
 import com.aetheris.metadata.service.QueryHistoryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -54,6 +55,12 @@ public class DataSourceController {
         return healthService.attach(dataSourceService.list());
     }
 
+    @GetMapping("/catalog")
+    public List<DataSourceTypeCatalog.Definition> catalog(HttpServletRequest request) {
+        security.require(request, "datasource", null, "view", Map.of());
+        return DataSourceTypeCatalog.all();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<DataSource> getById(HttpServletRequest request, @PathVariable Long id) {
         security.require(request, "datasource", id, "view", Map.of());
@@ -66,6 +73,7 @@ public class DataSourceController {
     @PostMapping
     public DataSource create(HttpServletRequest request, @Valid @RequestBody DataSource dataSource) {
         security.require(request, "datasource", null, "create", Map.of());
+        DataSourceTypeCatalog.require(dataSource.getType());
         dataSource.setManaged(false);
         dataSourceService.save(dataSource);
         return dataSource;
@@ -74,6 +82,7 @@ public class DataSourceController {
     @PostMapping("/test")
     public Map<String, Object> testBeforeSave(HttpServletRequest request, @Valid @RequestBody DataSource dataSource) {
         security.require(request, "datasource", null, "create", Map.of());
+        DataSourceTypeCatalog.require(dataSource.getType());
         dataSource.setManaged(false);
         return healthService.testBeforeSave(dataSource);
     }
@@ -91,6 +100,7 @@ public class DataSourceController {
         if (Boolean.TRUE.equals(existing.getManaged())) {
             return ResponseEntity.status(403).build();
         }
+        DataSourceTypeCatalog.require(dataSource.getType());
         if (dataSource.getPassword() == null || dataSource.getPassword().isBlank()) {
             dataSource.setPassword(existing.getPassword());
         }
