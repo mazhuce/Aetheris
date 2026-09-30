@@ -11,6 +11,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/r4-r5-control-plane-accept
 - 创建 Iceberg v2 Gold 表，登记连续快照 `1001 -> 1002`，确认当前快照指针推进；
 - 创建 `main` branch 与受保护 `release_1` tag；
 - 提交 `add_column` schema change，确认计划为 `auto_apply` 且生成单条 `ALTER TABLE`；
+- 提交 `rename_column`，确认 `approval_required -> approved` 后才生成可执行计划；
+- 提交 `drop_column` 并拒绝审批，确认拒绝后计划接口 fail-closed；
+- 提交 `narrow_type` 并隔离，确认进入 `isolated` 且不会生成执行计划；
 - 对同一质量规则写入 passed/failed 同时间戳观测，确认 Gold 门禁 fail-closed，再写入新 passed 观测确认恢复；
 - 删除 schema-change、maintenance request 后清理临时表，清理失败会让整项验收失败，不会输出假阳性；
 - 写出机器可读报告 `artifacts/r4-r5-control-plane/runtime-acceptance-report.json`。

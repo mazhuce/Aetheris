@@ -23,6 +23,12 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
             "DELETE FROM metadata.lakehouse_maintenance_job",
             "current snapshot pointer did not advance",
             "Gold quality gate did not fail closed",
+            "rename_column",
+            "drop_column",
+            "narrow_type",
+            "approval_required",
+            "planRejected",
+            "isolated",
         ):
             self.assertIn(marker, self.script)
 
@@ -34,6 +40,16 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
         self.assertEqual(self.report["evidence"]["snapshotCount"], 2)
         self.assertTrue(self.report["quality"]["blockedOnFailure"])
         self.assertTrue(self.report["quality"]["reopenedAfterPass"])
+        policy = self.report["evidence"]["schemaPolicy"]
+        self.assertEqual(policy["rename"]["decision"], "approval_required")
+        self.assertEqual(policy["rename"]["reviewedStatus"], "approved")
+        self.assertTrue(policy["rename"]["readyForExecution"])
+        self.assertTrue(policy["rename"]["destructive"])
+        self.assertEqual(policy["drop"]["reviewedStatus"], "rejected")
+        self.assertTrue(policy["drop"]["planRejected"])
+        self.assertEqual(policy["narrow"]["decision"], "isolate")
+        self.assertEqual(policy["narrow"]["isolatedStatus"], "isolated")
+        self.assertTrue(policy["narrow"]["planRejected"])
         self.assertTrue(self.report["cleanup"]["tableRowsRemoved"])
         serialized = json.dumps(self.report).lower()
         self.assertNotIn("password", serialized)

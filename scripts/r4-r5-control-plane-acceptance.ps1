@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $reportFile = Join-Path $repoRoot $ReportPath
 $report = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     gate = "R4-R5-lakehouse-control-plane-runtime-gate"
     status = "failed"
     startedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
@@ -17,7 +17,7 @@ $report = [ordered]@{
     refIds = @()
     schemaChangeId = $null
     quality = [ordered]@{ blockedOnFailure = $false; reopenedAfterPass = $false }
-    evidence = [ordered]@{}
+    evidence = [ordered]@{ schemaPolicy = [ordered]@{} }
     cleanup = [ordered]@{ tableRowsRemoved = $false; error = $null }
     error = $null
 }
@@ -91,6 +91,70 @@ try {
     $report.schemaChangeId = [long]$schema.id
     $plan = Invoke-MetadataJson GET "/api/metadata/lakehouse/schema-changes/$($report.schemaChangeId)/plan?tableId=$($report.tableId)"
     $report.evidence.schemaPlan = [ordered]@{ decision = [string]$schema.decision; status = [string]$schema.status; readyForExecution = [bool]$plan.readyForExecution; statement = [string]$plan.statement }
+
+    # Destructive changes must be reviewed before a plan is executable. The
+    # acceptance intentionally exercises metadata state transitions only; it
+    # never dispatches destructive SQL to the maintenance runner.
+    $rename = Invoke-MetadataJson POST "$tablePath/schema-changes" @{
+        operation = "rename_column"; columnName = "ingested_at"; newColumnName = "ingested_time"; reason = "R4 rename approval acceptance"
+    }
+    $renameApproved = Invoke-MetadataJson POST "/api/metadata/lakehouse/schema-changes/$($rename.id)/review?tableId=$($report.tableId)" @{ approved = $true }
+    $renamePlan = Invoke-MetadataJson GET "/api/metadata/lakehouse/schema-changes/$($rename.id)/plan?tableId=$($report.tableId)"
+    $report.evidence.schemaPolicy.rename = [ordered]@{
+        decision = [string]$rename.decision
+        proposedStatus = [string]$rename.status
+        reviewedStatus = [string]$renameApproved.status
+        readyForExecution = [bool]$renamePlan.readyForExecution
+        destructive = [bool]$renamePlan.destructive
+        statement = [string]$renamePlan.statement
+    }
+    if ([string]$rename.decision -ne "approval_required" -or [string]$rename.status -ne "proposed" -or
+        [string]$renameApproved.status -ne "approved" -or -not [bool]$renamePlan.readyForExecution -or
+        -not [bool]$renamePlan.destructive) {
+        throw "rename_column did not follow approval_required -> approved policy"
+    }
+
+    $drop = Invoke-MetadataJson POST "$tablePath/schema-changes" @{
+        operation = "drop_column"; columnName = "legacy_note"; reason = "R4 drop rejection acceptance"
+    }
+    $dropRejected = Invoke-MetadataJson POST "/api/metadata/lakehouse/schema-changes/$($drop.id)/review?tableId=$($report.tableId)" @{ approved = $false }
+    $dropPlanRejected = $false
+    try {
+        $null = Invoke-MetadataJson GET "/api/metadata/lakehouse/schema-changes/$($drop.id)/plan?tableId=$($report.tableId)"
+    } catch {
+        $dropPlanRejected = $true
+    }
+    $report.evidence.schemaPolicy.drop = [ordered]@{
+        decision = [string]$drop.decision
+        proposedStatus = [string]$drop.status
+        reviewedStatus = [string]$dropRejected.status
+        planRejected = $dropPlanRejected
+    }
+    if ([string]$drop.decision -ne "approval_required" -or [string]$drop.status -ne "proposed" -or
+        [string]$dropRejected.status -ne "rejected" -or -not $dropPlanRejected) {
+        throw "drop_column did not fail closed after rejection"
+    }
+
+    $narrow = Invoke-MetadataJson POST "$tablePath/schema-changes" @{
+        operation = "narrow_type"; columnName = "amount"; fromType = "bigint"; toType = "int"; reason = "R4 narrow type isolation acceptance"
+    }
+    $narrowIsolated = Invoke-MetadataJson POST "/api/metadata/lakehouse/schema-changes/$($narrow.id)/isolate?tableId=$($report.tableId)"
+    $narrowPlanRejected = $false
+    try {
+        $null = Invoke-MetadataJson GET "/api/metadata/lakehouse/schema-changes/$($narrow.id)/plan?tableId=$($report.tableId)"
+    } catch {
+        $narrowPlanRejected = $true
+    }
+    $report.evidence.schemaPolicy.narrow = [ordered]@{
+        decision = [string]$narrow.decision
+        proposedStatus = [string]$narrow.status
+        isolatedStatus = [string]$narrowIsolated.status
+        planRejected = $narrowPlanRejected
+    }
+    if ([string]$narrow.decision -ne "isolate" -or [string]$narrow.status -ne "proposed" -or
+        [string]$narrowIsolated.status -ne "isolated" -or -not $narrowPlanRejected) {
+        throw "narrow_type did not enter isolation or fail closed"
+    }
 
     $sameTime = "2026-09-20T12:02:00Z"
     $null = Invoke-MetadataJson POST "$tablePath/quality-observations" @{ layer = "gold"; ruleKey = "orders.not_null"; status = "passed"; observedAt = $sameTime; blocksGold = $true; detailsJson = '{}' }
