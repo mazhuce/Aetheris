@@ -17,6 +17,15 @@ class RuntimeEvidenceTests(unittest.TestCase):
         validator.validate_r1(ROOT / "artifacts/r1-empty-fixture/acceptance-manifest.json")
         validator.validate_r2(ROOT / "artifacts/r1-fixture/r2-cdc-acceptance-report.json")
 
+    def test_schema_v2_requires_compatibility_matrix_artifact(self):
+        original = json.loads((ROOT / "artifacts/r1-empty-fixture/acceptance-manifest.json").read_text(encoding="utf-8"))
+        original["schemaVersion"] = 2
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "r1.json"
+            path.write_text(json.dumps(original), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "artifact evidence is incomplete"):
+                validator.validate_r1(path)
+
     def test_r1_checksum_mismatch_is_rejected(self):
         original = json.loads((ROOT / "artifacts/r1-empty-fixture/acceptance-manifest.json").read_text(encoding="utf-8"))
         original["engineChecksums"]["trino"] = "0" * 64

@@ -43,7 +43,9 @@ def validate_r1(path: pathlib.Path) -> dict:
     if not any(item.get("jobId") for item in operations):
         fail("R1 Flink job id is missing")
     artifacts = body.get("artifacts") or {}
-    required_artifacts = ("bom", "connectorAllowlist", "connectorManifest", "compose", "tableContract", "fixtureManifest", "flinkSubmission")
+    required_artifacts = ["bom", "connectorAllowlist", "connectorManifest", "compose", "tableContract", "fixtureManifest", "flinkSubmission"]
+    if body.get("schemaVersion", 1) >= 2:
+        required_artifacts.append("compatibilityMatrix")
     if any(name not in artifacts for name in required_artifacts):
         fail("R1 artifact evidence is incomplete")
     root = pathlib.Path(__file__).resolve().parents[1]

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import pathlib
 import re
 import sys
@@ -21,6 +22,8 @@ TABLE_CONTRACT_TOML = ROOT / "configs" / "lakehouse" / "r1-table-contract.toml"
 FIXTURE_GENERATOR = ROOT / "scripts" / "r1-fixture.py"
 REBUILD_SCRIPT = ROOT / "scripts" / "r1-rebuild.ps1"
 FLINK_SUBMIT_SCRIPT = ROOT / "scripts" / "r1-submit-flink-sql.ps1"
+MATRIX_SCRIPT = ROOT / "scripts" / "r1_compatibility_matrix.py"
+MATRIX = ROOT / "configs" / "lakehouse" / "r1-compatibility-matrix.json"
 
 
 def fail(message: str) -> None:
@@ -176,6 +179,19 @@ def validate_table_contract_and_fixture() -> None:
             fail(f"R1 fixture generator is missing {marker}")
 
 
+def validate_compatibility_matrix() -> None:
+    if not MATRIX_SCRIPT.exists():
+        fail("R1 compatibility matrix generator is missing")
+    spec = importlib.util.spec_from_file_location("r1_compatibility_matrix", MATRIX_SCRIPT)
+    if spec is None or spec.loader is None:
+        fail("R1 compatibility matrix generator cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        module.check_matrix(MATRIX, ROOT)
+    except Exception as error:
+        fail(f"R1 compatibility matrix is stale or invalid: {error}")
+
 def validate_runtime_gate_contract() -> None:
     submit = FLINK_SUBMIT_SCRIPT.read_text(encoding="utf-8")
     if '-notin @("FINISHED", "CANCELED")' in submit:
@@ -229,6 +245,7 @@ def validate(mode: str) -> list[str]:
     if set(bom["acceptance"]["required_engines"]) != {"flink", "spark", "trino"}:
         fail("R1 engine acceptance must cover Flink, Spark and Trino")
     validate_compose(bom)
+    validate_compatibility_matrix()
     validate_table_contract_and_fixture()
     validate_runtime_gate_contract()
 

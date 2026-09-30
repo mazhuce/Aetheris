@@ -234,7 +234,7 @@ if ($RunAcceptance) {
         if (-not $gitCommit) { $gitCommit = $null }
     } catch { $gitCommit = $null }
     $acceptanceManifest = [ordered]@{
-        schemaVersion = 1
+        schemaVersion = 2
         gate = if ($freshRebuild) { "R1-empty-rebuild-hard-gate" } else { "R1-cross-engine-runtime-gate" }
         status = $reconcile.status
         freshRebuild = [bool]$freshRebuild
@@ -258,6 +258,7 @@ if ($RunAcceptance) {
             connectorManifest = [ordered]@{ path = "infrastructure/lakehouse/connectors/CONNECTOR-MANIFEST.json"; sha256 = Get-Sha256 (Join-Path $repoRoot "infrastructure/lakehouse/connectors/CONNECTOR-MANIFEST.json") }
             compose = [ordered]@{ path = "infrastructure/lakehouse/docker-compose.r1.yml"; sha256 = Get-Sha256 $composeFile }
             tableContract = [ordered]@{ path = "configs/lakehouse/r1-table-contract.toml"; sha256 = Get-Sha256 (Join-Path $repoRoot "configs/lakehouse/r1-table-contract.toml") }
+            compatibilityMatrix = [ordered]@{ path = "configs/lakehouse/r1-compatibility-matrix.json"; sha256 = Get-Sha256 (Join-Path $repoRoot "configs/lakehouse/r1-compatibility-matrix.json") }
             fixtureManifest = [ordered]@{ path = (Join-Path $FixtureOutput "manifest.json"); sha256 = Get-Sha256 (Join-Path $fixturePath "manifest.json") }
             flinkSubmission = [ordered]@{ path = (Join-Path $FixtureOutput "results/flink.json"); sha256 = Get-Sha256 $flinkSummaryPath }
         }
