@@ -14,7 +14,9 @@ scripts/r4-flink-event-time-quality-acceptance.ps1 是 R4 的真实运行态门�
 
 前置条件：R1 lakehouse compose 已启动，包含 source-postgres、Flink SQL Gateway/JobManager/TaskManager、Iceberg REST Catalog、MinIO、Trino；若启用 metadata 回写，还需要运行中的 metadata 容器和平台 PostgreSQL。凭据只从 .env.r1 和容器环境读取，不写入报告。
 
-运行命令：pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/r4-flink-event-time-quality-acceptance.ps1 -MetadataContainer aetheris-metadata-service-1
+运行命令：pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/r4-flink-event-time-quality-acceptance.ps1 -ProjectName aetheris-r1-lakehouse -MetadataContainer aetheris-metadata-service-1
+
+`-ProjectName` 用于推导 `<project>-source-postgres-1` 与 `<project>-trino-1`，避免验收误连到其他 Compose 项目；JobManager 只接受 `RUNNING` 状态作为有效提交，`RESTARTING/CREATED/INITIALIZING` 会继续等待而不会被误判成功。
 
 如只需要验证引擎链路，可显式使用 -SkipMetadataCallback；这不会被当作完整 R4 门通过，报告会明确标注 metadataCallback.status=skipped。机器可读报告写入 artifacts/r4-event-time/r4-event-time-quality-report.json。
 

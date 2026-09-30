@@ -12,6 +12,9 @@ class R4FlinkEventTimeQualityTests(unittest.TestCase):
     def test_acceptance_is_a_real_runtime_gate(self):
         for marker in (
             "R4-flink-event-time-quality-runtime-gate",
+            "ProjectName",
+            "$ProjectName-source-postgres-1",
+            "([string]$_.state).ToUpperInvariant() -eq \"RUNNING\"",
             "postgres-cdc",
             "WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND",
             "CURRENT_WATERMARK(event_time)",

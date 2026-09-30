@@ -3,8 +3,9 @@ param(
     [string]$EnvFilePath = "configs/lakehouse/.env.r1",
     [string]$GatewayEndpoint = "http://127.0.0.1:18083",
     [string]$FlinkJobManagerEndpoint = "http://127.0.0.1:18081",
-    [string]$SourceContainer = "aetheris-r1-lakehouse-source-postgres-1",
-    [string]$TrinoContainer = "aetheris-r1-lakehouse-trino-1",
+    [string]$ProjectName = "aetheris-r1-lakehouse",
+    [string]$SourceContainer = "",
+    [string]$TrinoContainer = "",
     [string]$MetadataContainer = "",
     [string]$MetadataDbContainer = "aetheris-postgres-1",
     [string]$ReportPath = "artifacts/r4-event-time/r4-event-time-quality-report.json",
@@ -15,6 +16,8 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $reportFile = Join-Path $repoRoot $ReportPath
+$SourceContainer = if ($SourceContainer) { $SourceContainer } else { "$ProjectName-source-postgres-1" }
+$TrinoContainer = if ($TrinoContainer) { $TrinoContainer } else { "$ProjectName-trino-1" }
 $runKey = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()
 $database = "r4_quality"
 $table = "event_time_quality_$runKey"
@@ -66,7 +69,7 @@ function Invoke-TrinoRows {
 
 function Get-JobId {
     $body = Invoke-RestMethod -Method Get -Uri "$($FlinkJobManagerEndpoint.TrimEnd('/'))/jobs/overview"
-    $jobs = @($body.jobs | Where-Object { $_.name -like "*${table}*" -and $_.state -in @("RUNNING", "RESTARTING", "CREATED", "INITIALIZING") } | Sort-Object start-time -Descending)
+    $jobs = @($body.jobs | Where-Object { $_.name -like "*${table}*" -and ([string]$_.state).ToUpperInvariant() -eq "RUNNING" } | Sort-Object start-time -Descending)
     if ($jobs.Count -eq 0) { return $null }
     return [string]$jobs[0].jid
 }

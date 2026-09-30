@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "gate": "R4-flink-event-time-quality-runtime-gate",
   "status": "passed",
-  "startedAtUtc": "2026-09-29T02:05:01.8377013+00:00",
+  "startedAtUtc": "2026-09-30T08:49:06.2624203+00:00",
   "source": {
     "kind": "postgres-cdc",
-    "table": "event_time_quality_1790647501827",
-    "slot": "aetheris_r4_quality_1790647501827"
+    "table": "event_time_quality_1790758146250",
+    "slot": "aetheris_r4_quality_1790758146250"
   },
   "watermark": {
     "expression": "event_time - INTERVAL '5' SECOND",
@@ -14,9 +14,9 @@
     "observedAt": "2026-09-23T00:00:55.000000Z"
   },
   "job": {
-    "id": "037451225c2fdea9e8f7e782299cb555",
+    "id": "7b08f241bb30b0567aec87903e2c7942",
     "state": "CANCELED",
-    "checkpointId": 20,
+    "checkpointId": 26,
     "canceled": true
   },
   "counts": {
@@ -26,7 +26,7 @@
   },
   "metadataCallback": {
     "status": "passed",
-    "tableId": 8,
+    "tableId": 10,
     "failedClosed": true
   },
   "cleanup": {
@@ -46,5 +46,5 @@
     ]
   },
   "error": null,
-  "finishedAtUtc": "2026-09-29T02:05:36.7811263+00:00"
+  "finishedAtUtc": "2026-09-30T08:50:15.8650292+00:00"
 }
