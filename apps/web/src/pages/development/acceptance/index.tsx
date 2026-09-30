@@ -18,6 +18,7 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { listDataSources, type DataSource } from '@/api/metadata'
+import { getControlPlaneAcceptance, type ControlPlaneAcceptanceSummary } from '@/api/acceptance'
 import { getFlinkHealth, getSparkHealth, listTasks, type FlinkGatewayHealth, type SparkRunnerHealth, type TaskView } from '@/api/workflow'
 import { effectiveConnectionStatus } from '@/pages/datasource/connectionHealth'
 
@@ -73,25 +74,35 @@ function serviceLabel(status?: string) {
     : { label: status || '未探测', tone: 'danger' as const }
 }
 
+function schemaPolicyLabel(status?: string) {
+  if (status === 'approved') return '审批通过，可生成计划'
+  if (status === 'rejected') return '已拒绝，计划已阻断'
+  if (status === 'isolated') return '已隔离，计划已阻断'
+  return status || '未知'
+}
+
 export default function AcceptanceProgressPage() {
   const [sources, setSources] = useState<DataSource[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
   const [flink, setFlink] = useState<FlinkGatewayHealth | null>(null)
   const [spark, setSpark] = useState<SparkRunnerHealth | null>(null)
+  const [controlPlane, setControlPlane] = useState<ControlPlaneAcceptanceSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [errorCount, setErrorCount] = useState(0)
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const results = await Promise.allSettled([listDataSources(), listTasks(), getFlinkHealth(), getSparkHealth()])
-    const [sourceResult, taskResult, flinkResult, sparkResult] = results
+    const results = await Promise.allSettled([listDataSources(), listTasks(), getFlinkHealth(), getSparkHealth(), getControlPlaneAcceptance()])
+    const [sourceResult, taskResult, flinkResult, sparkResult, controlPlaneResult] = results
     if (sourceResult.status === 'fulfilled') setSources(sourceResult.value)
     if (taskResult.status === 'fulfilled') setTasks(taskResult.value)
     if (flinkResult.status === 'fulfilled') setFlink(flinkResult.value)
     else setFlink({ status: 'DOWN', message: 'Flink SQL Gateway 不可达' })
     if (sparkResult.status === 'fulfilled') setSpark(sparkResult.value)
     else setSpark({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0, message: 'Spark Runner 不可达' })
+    if (controlPlaneResult.status === 'fulfilled') setControlPlane(controlPlaneResult.value)
+    else setControlPlane(null)
     setErrorCount(results.filter((item) => item.status === 'rejected').length)
     setLastRefresh(new Date())
     setLoading(false)
@@ -169,6 +180,23 @@ export default function AcceptanceProgressPage() {
         description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单；当前工作区不伪造外部实例，缺失只影响 supplementary evidence，不影响本机九类真实运行门禁。"
       />
 
+      {controlPlane ? (
+        <Alert
+          type={controlPlane.status === 'passed' ? 'success' : 'error'}
+          showIcon
+          className="form-section-space"
+          message={`Schema policy 运行证据 · ${controlPlane.status === 'passed' ? '已通过' : '需核对'}`}
+          description={`重命名：${schemaPolicyLabel(controlPlane.schemaPolicy.rename.status)}；删除：${schemaPolicyLabel(controlPlane.schemaPolicy.drop.status)}；缩窄类型：${schemaPolicyLabel(controlPlane.schemaPolicy.narrow.status)}。质量门禁：${controlPlane.quality.blockedOnFailure && controlPlane.quality.reopenedAfterPass ? '先阻断、后恢复' : '证据不完整'}。生成于 ${new Date(controlPlane.generatedAtUtc).toLocaleString()}`}
+        />
+      ) : (
+        <Alert
+          type="warning"
+          showIcon
+          className="form-section-space"
+          message="Schema policy 运行证据暂不可用"
+          description="前端不会把报告缺失误显示为通过；请重新运行 R4/R5 控制面验收。"
+        />
+      )}
       <DataSurface label="R1-R5 阶段进度">
         <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestones} pagination={false} scroll={{ x: 980 }} />
       </DataSurface>

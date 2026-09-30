@@ -194,6 +194,61 @@ try {
     $report.finishedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $reportFile) | Out-Null
     $report | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $reportFile -Encoding UTF8
+
+    # Publish only a bounded, secret-free summary for the acceptance page. The
+    # full report remains the audit artifact; this file is safe for static web
+    # delivery and is refreshed on every runtime acceptance.
+    try {
+        $uiSummaryFile = Join-Path $repoRoot "apps/web/public/acceptance/r4-r5-control-plane.json"
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $uiSummaryFile) | Out-Null
+        $renamePolicy = if ($null -eq $report.evidence.schemaPolicy.rename) {
+            [ordered]@{ decision = "unknown"; status = "unknown"; readyForExecution = $false; destructive = $false }
+        } else {
+            [ordered]@{
+                decision = [string]$report.evidence.schemaPolicy.rename.decision
+                status = [string]$report.evidence.schemaPolicy.rename.reviewedStatus
+                readyForExecution = [bool]$report.evidence.schemaPolicy.rename.readyForExecution
+                destructive = [bool]$report.evidence.schemaPolicy.rename.destructive
+            }
+        }
+        $dropPolicy = if ($null -eq $report.evidence.schemaPolicy.drop) {
+            [ordered]@{ decision = "unknown"; status = "unknown"; planRejected = $false }
+        } else {
+            [ordered]@{
+                decision = [string]$report.evidence.schemaPolicy.drop.decision
+                status = [string]$report.evidence.schemaPolicy.drop.reviewedStatus
+                planRejected = [bool]$report.evidence.schemaPolicy.drop.planRejected
+            }
+        }
+        $narrowPolicy = if ($null -eq $report.evidence.schemaPolicy.narrow) {
+            [ordered]@{ decision = "unknown"; status = "unknown"; planRejected = $false }
+        } else {
+            [ordered]@{
+                decision = [string]$report.evidence.schemaPolicy.narrow.decision
+                status = [string]$report.evidence.schemaPolicy.narrow.isolatedStatus
+                planRejected = [bool]$report.evidence.schemaPolicy.narrow.planRejected
+            }
+        }
+        $uiSummary = [ordered]@{
+            schemaVersion = 1
+            gate = $report.gate
+            status = $report.status
+            generatedAtUtc = $report.finishedAtUtc
+            source = $ReportPath.Replace("\", "/")
+            quality = [ordered]@{
+                blockedOnFailure = [bool]$report.quality.blockedOnFailure
+                reopenedAfterPass = [bool]$report.quality.reopenedAfterPass
+            }
+            schemaPolicy = [ordered]@{
+                rename = $renamePolicy
+                drop = $dropPolicy
+                narrow = $narrowPolicy
+            }
+        }
+        $uiSummary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $uiSummaryFile -Encoding UTF8
+    } catch {
+        Write-Warning "Unable to refresh frontend acceptance summary: $($_.Exception.Message)"
+    }
 }
 
 Write-Output ($report | ConvertTo-Json -Depth 20 -Compress)

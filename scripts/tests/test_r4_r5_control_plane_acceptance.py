@@ -12,6 +12,9 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
         self.report = json.loads(
             (ROOT / "artifacts" / "r4-r5-control-plane" / "runtime-acceptance-report.json").read_text(encoding="utf-8")
         )
+        self.ui_summary = json.loads(
+            (ROOT / "apps" / "web" / "public" / "acceptance" / "r4-r5-control-plane.json").read_text(encoding="utf-8")
+        )
 
     def test_script_covers_control_plane_and_fail_closed_cleanup(self):
         for marker in (
@@ -29,6 +32,8 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
             "approval_required",
             "planRejected",
             "isolated",
+            "apps/web/public/acceptance/r4-r5-control-plane.json",
+            "secret-free summary",
         ):
             self.assertIn(marker, self.script)
 
@@ -51,6 +56,12 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
         self.assertEqual(policy["narrow"]["isolatedStatus"], "isolated")
         self.assertTrue(policy["narrow"]["planRejected"])
         self.assertTrue(self.report["cleanup"]["tableRowsRemoved"])
+        self.assertEqual(self.ui_summary["status"], "passed")
+        self.assertEqual(self.ui_summary["schemaPolicy"]["rename"]["status"], "approved")
+        self.assertEqual(self.ui_summary["schemaPolicy"]["drop"]["status"], "rejected")
+        self.assertTrue(self.ui_summary["schemaPolicy"]["drop"]["planRejected"])
+        self.assertEqual(self.ui_summary["schemaPolicy"]["narrow"]["status"], "isolated")
+        self.assertNotIn("statement", json.dumps(self.ui_summary).lower())
         serialized = json.dumps(self.report).lower()
         self.assertNotIn("password", serialized)
         self.assertNotIn("aetheris_internal_token", serialized)

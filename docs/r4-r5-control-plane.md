@@ -17,6 +17,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/r4-r5-control-plane-accept
 - 对同一质量规则写入 passed/failed 同时间戳观测，确认 Gold 门禁 fail-closed，再写入新 passed 观测确认恢复；
 - 删除 schema-change、maintenance request 后清理临时表，清理失败会让整项验收失败，不会输出假阳性；
 - 写出机器可读报告 `artifacts/r4-r5-control-plane/runtime-acceptance-report.json`。
+- 同步无敏感摘要 `apps/web/public/acceptance/r4-r5-control-plane.json`，验收页缺失时保持未知，不把旧通过状态当作当前成功。
 
 这项验收证明的是 metadata 控制面契约和状态边界，不等同于真实 Iceberg REST Catalog 提交、Spark maintenance Runner 执行或 Flink 质量事件回写已经在线完成；这些仍需对应 Runner/引擎环境的独立运行验收。
 

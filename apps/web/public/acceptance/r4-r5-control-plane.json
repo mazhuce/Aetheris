@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "gate": "R4-R5-lakehouse-control-plane-runtime-gate",
+  "status": "passed",
+  "generatedAtUtc": "2026-09-30T10:15:04.3761075+00:00",
+  "source": "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
+  "quality": {
+    "blockedOnFailure": true,
+    "reopenedAfterPass": true
+  },
+  "schemaPolicy": {
+    "rename": {
+      "decision": "approval_required",
+      "status": "approved",
+      "readyForExecution": true,
+      "destructive": true
+    },
+    "drop": {
+      "decision": "approval_required",
+      "status": "rejected",
+      "planRejected": true
+    },
+    "narrow": {
+      "decision": "isolate",
+      "status": "isolated",
+      "planRejected": true
+    }
+  }
+}
