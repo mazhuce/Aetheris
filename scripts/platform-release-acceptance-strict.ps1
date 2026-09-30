@@ -17,8 +17,8 @@ if ($OfflineOnly) { $args += "-OfflineOnly" }
 if ($LASTEXITCODE -eq 1) { exit 1 }
 
 $r1Candidates = @(
-    (Join-Path $repoRoot "artifacts/r1-fixture/acceptance-manifest.json"),
     (Join-Path $repoRoot "artifacts/r1-empty-fixture/acceptance-manifest.json")
+    (Join-Path $repoRoot "artifacts/r1-fixture/acceptance-manifest.json")
 )
 $r1Evidence = $r1Candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
 if (-not $r1Evidence) { $r1Evidence = $r1Candidates[0] }
