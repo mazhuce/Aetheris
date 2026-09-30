@@ -191,8 +191,8 @@ def validate_runtime_gate_contract() -> None:
 
     rebuild = REBUILD_SCRIPT.read_text(encoding="utf-8")
     for marker in (
-        "RequireFreshRebuild requires ResetVolumes",
-        "freshRebuild = [bool]$ResetVolumes",
+        "RequireFreshRebuild requires ResetVolumes or FreshProject",
+        "freshRebuild = [bool]$freshRebuild",
         "R1-empty-rebuild-hard-gate",
         "-JobManagerEndpoint $jobManager",
     ):

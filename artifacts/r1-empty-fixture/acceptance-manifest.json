@@ -102,7 +102,7 @@
     },
     "connectorManifest": {
       "path": "infrastructure/lakehouse/connectors/CONNECTOR-MANIFEST.json",
-      "sha256": "4831934027d74db51c856a28b7d0beee58a0f67f3df8b5b17f07926f60b9e0ff"
+      "sha256": "c6c6369949b3bc3de823718425fb1adbf526838de6a76f59667d8fc5237c5248"
     },
     "compose": {
       "path": "infrastructure/lakehouse/docker-compose.r1.yml",

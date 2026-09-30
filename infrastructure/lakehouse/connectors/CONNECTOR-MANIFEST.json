@@ -108,7 +108,7 @@
       "driver": "h2",
       "file": "h2-2.2.220.jar",
       "sha256": "978ab863018d3f965e38880571c36293ea8b10a8086194159c4d5d20b50f0a57",
-      "status": "downloaded"
+      "status": "verified"
     },
     {
       "id": "derby-jdbc",
@@ -120,7 +120,7 @@
       "driver": "derby",
       "file": "derby-10.16.1.1.jar",
       "sha256": "ede804cb04e871d7c52d2414e952ab939f9ef243abb7bd0ce7dbeb6e1e28bd0b",
-      "status": "downloaded"
+      "status": "verified"
     },
     {
       "id": "hive-jdbc",

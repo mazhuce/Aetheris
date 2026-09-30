@@ -5,6 +5,7 @@ param(
     [string]$ProjectName = "aetheris-r1-lakehouse",
     [int]$PortOffset = 0,
     [switch]$ResetVolumes,
+    [switch]$FreshProject,
     [switch]$AllowVolumeReset,
     [switch]$ForceFixture,
     [switch]$Start,
@@ -21,6 +22,7 @@ $envText = if (Test-Path -LiteralPath $envFile) { Get-Content -Raw -LiteralPath 
 $project = $ProjectName
 $fixturePath = Join-Path $repoRoot $FixtureOutput
 $script:R1Phase = "initialization"
+$freshRebuild = [bool]$ResetVolumes
 
 function Write-AcceptanceFailure([object]$ErrorRecord) {
     if (-not $RunAcceptance) { return }
@@ -29,7 +31,7 @@ function Write-AcceptanceFailure([object]$ErrorRecord) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $failurePath) | Out-Null
         [ordered]@{
             schemaVersion = 1
-            gate = if ($ResetVolumes) { "R1-empty-rebuild-hard-gate" } else { "R1-cross-engine-runtime-gate" }
+            gate = if ($freshRebuild) { "R1-empty-rebuild-hard-gate" } else { "R1-cross-engine-runtime-gate" }
             status = "failed"
             project = $project
             fixture = $FixtureOutput
@@ -82,13 +84,28 @@ if ($PortOffset -ne 0) {
     }
 }
 
-if ($RequireFreshRebuild -and -not $ResetVolumes) {
-    throw "RequireFreshRebuild requires ResetVolumes so stale catalog or object-store state cannot satisfy the hard gate"
+if ($RequireFreshRebuild -and -not ($ResetVolumes -or $FreshProject)) {
+    throw "RequireFreshRebuild requires ResetVolumes or FreshProject so stale catalog or object-store state cannot satisfy the hard gate"
 }
+if ($FreshProject -and $ResetVolumes) { throw "FreshProject cannot be combined with ResetVolumes" }
 
 if (-not (Test-Path -LiteralPath $composeFile)) { throw "R1 compose file is missing: $composeFile" }
 if (-not (Test-Path -LiteralPath $envFile)) { throw "R1 env file is missing: $envFile" }
 $composeArgs = @("compose", "--project-name", $project, "--profile", "r1", "-f", $composeFile, "--env-file", $envFile)
+
+if ($FreshProject) {
+    $dockerVersionOutput = @(& docker version --format "{{.Server.Version}}" 2>&1)
+    if ($LASTEXITCODE -ne 0 -or -not $dockerVersionOutput) {
+        $diagnostic = (($dockerVersionOutput | ForEach-Object { $_.ToString() }) -join " ").Trim()
+        throw "Docker engine unavailable for FreshProject: $diagnostic"
+    }
+    if (-not ($Start -or $RunAcceptance)) { throw "FreshProject requires Start or RunAcceptance" }
+    $existingContainers = @(& docker @composeArgs ps -aq 2>$null | Where-Object { $_ -and ([string]$_).Trim() })
+    if ($existingContainers.Count -gt 0) { throw "FreshProject requires no existing containers for project: $project" }
+    $existingVolumes = @(& docker volume ls --filter "label=com.docker.compose.project=$project" --format "{{.Name}}" 2>$null | Where-Object { $_ -and ([string]$_).Trim() })
+    if ($existingVolumes.Count -gt 0) { throw "FreshProject requires no existing volumes for project: $project" }
+    $freshRebuild = $true
+}
 
 # Fixture generation is deterministic and does not touch running services.
 $fixtureArgs = @("generate", "--output", $fixturePath)
@@ -106,7 +123,7 @@ function Get-EnvValue([string]$name, [string]$fallback) {
     return $fallback
 }
 
-if ($Start -or $RunAcceptance -or $ResetVolumes) {
+if ($Start -or $RunAcceptance -or $ResetVolumes -or $FreshProject) {
     if ($envText -match "replace-with|PENDING_CAPTURE") {
         throw "Refusing to change the R1 environment while example or pending values remain in $envFile"
     }
@@ -218,9 +235,10 @@ if ($RunAcceptance) {
     } catch { $gitCommit = $null }
     $acceptanceManifest = [ordered]@{
         schemaVersion = 1
-        gate = if ($ResetVolumes) { "R1-empty-rebuild-hard-gate" } else { "R1-cross-engine-runtime-gate" }
+        gate = if ($freshRebuild) { "R1-empty-rebuild-hard-gate" } else { "R1-cross-engine-runtime-gate" }
         status = $reconcile.status
-        freshRebuild = [bool]$ResetVolumes
+        freshRebuild = [bool]$freshRebuild
+        freshProject = [bool]$FreshProject
         sourceFixtureReset = $true
         generatedAtUtc = (Get-Date).ToUniversalTime().ToString("o")
         project = $project
@@ -246,7 +264,7 @@ if ($RunAcceptance) {
     }
     $acceptancePath = Join-Path $fixturePath "acceptance-manifest.json"
     $acceptanceManifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $acceptancePath -Encoding UTF8
-    if ($ResetVolumes) {
+    if ($freshRebuild) {
         Write-Host "R1 empty-rebuild hard-gate acceptance passed: $reportPath"
     } else {
         Write-Host "R1 cross-engine runtime regression passed (not an empty rebuild): $reportPath"

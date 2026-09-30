@@ -156,9 +156,9 @@ class LakehouseR1ValidatorTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "must never accept CANCELED"):
                     validator.validate("draft")
 
-    def test_empty_rebuild_gate_must_record_destructive_reset(self):
+    def test_empty_rebuild_gate_must_record_fresh_environment(self):
         rebuild = validator.REBUILD_SCRIPT.read_text(encoding="utf-8")
-        modified = rebuild.replace("freshRebuild = [bool]$ResetVolumes", "freshRebuild = $true", 1)
+        modified = rebuild.replace("freshRebuild = [bool]$freshRebuild", "freshRebuild = $true", 1)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "r1-rebuild.ps1"
             path.write_text(modified, encoding="utf-8")
