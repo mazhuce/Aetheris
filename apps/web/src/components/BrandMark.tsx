@@ -7,7 +7,7 @@ export default function BrandMark({ className = 'brand-mark', decorative = true 
   return (
     <img
       className={className}
-      src="/favicon.svg?v=20260930"
+      src="/AETHRIS.png?v=20260930"
       alt={decorative ? '' : 'Aetheris'}
       aria-hidden={decorative || undefined}
     />

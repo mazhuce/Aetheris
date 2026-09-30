@@ -1,0 +1,100 @@
+{
+  "endpoint": "http://127.0.0.1:8082/api/metadata/datasources/test",
+  "total": 9,
+  "passed": 0,
+  "skipped": 0,
+  "failed": 9,
+  "results": [
+    {
+      "name": "postgresql-smoke",
+      "type": "postgresql",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "mysql-smoke",
+      "type": "mysql",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "mariadb-smoke",
+      "type": "mariadb",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "hive2-smoke",
+      "type": "hive2",
+      "required": true,
+      "status": "failed",
+      "message": "metadata connection-test request failed"
+    },
+    {
+      "name": "sqlserver-smoke",
+      "type": "sqlserver",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "oracle-smoke",
+      "type": "oracle",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "clickhouse-smoke",
+      "type": "clickhouse",
+      "status": "failed",
+      "required": true,
+      "message": "password environment variable is not set"
+    },
+    {
+      "name": "trino-smoke",
+      "type": "trino",
+      "required": true,
+      "status": "failed",
+      "message": "metadata connection-test request failed"
+    },
+    {
+      "name": "sqlite-smoke",
+      "type": "sqlite",
+      "required": true,
+      "status": "failed",
+      "message": "metadata connection-test request failed"
+    }
+  ],
+  "requiredTypes": [
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "hive2",
+    "sqlserver",
+    "oracle",
+    "clickhouse",
+    "trino",
+    "sqlite"
+  ],
+  "requiredTypeCount": 9,
+  "missingRequiredTypes": [],
+  "externalGate": "real-connection-required",
+  "unavailableRequiredTypes": [
+    "postgresql",
+    "mysql",
+    "mariadb",
+    "hive2",
+    "sqlserver",
+    "oracle",
+    "clickhouse",
+    "trino",
+    "sqlite"
+  ],
+  "retryable": true,
+  "blockingCondition": "external-endpoint-or-credential-missing",
+  "status": "manual_review_required"
+}

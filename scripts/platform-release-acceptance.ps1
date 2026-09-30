@@ -140,6 +140,7 @@ try {
         source = $ReportPath.Replace("\", "/")
         milestones = $uiMilestones
         datasourceNineStatus = [string]$datasourceNineGate.status
+        externalDatasourceStatus = [string]$externalReport.status
         dockerStatus = [string]$docker.status
         manualReviewRequired = @($result.manualReviewRequired)
     }

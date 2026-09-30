@@ -7,7 +7,7 @@
 - React 18 + TypeScript + Vite
 - Ant Design 5 与 `@ant-design/icons`
 - 样式入口：`apps/web/src/styles/global.css`
-- 站点图标唯一入口：`apps/web/public/favicon.svg`；页面入口和 `BrandMark` 必须引用该路径，旧版本图标文件仅作兼容保留。
+- 站点图标唯一入口：`apps/web/public/AETHRIS.png`；页面入口和 `BrandMark` 必须引用带版本参数的 `/AETHRIS.png?v=20260930`，旧 SVG 图标文件仅作兼容保留。变更图标时必须同步更新路径或版本参数，避免浏览器 favicon 缓存继续显示旧图。
 
 ## 设计原则
 

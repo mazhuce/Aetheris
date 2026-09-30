@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "generatedAtUtc": "2026-09-30T10:28:47.0179621+00:00",
+  "generatedAtUtc": "2026-09-30T10:40:14.0486700+00:00",
   "source": "artifacts/platform-release/platform-release-acceptance-report.json",
   "milestones": [
     {
@@ -27,6 +27,7 @@
     }
   ],
   "datasourceNineStatus": "passed",
+  "externalDatasourceStatus": "manual_review_required",
   "dockerStatus": "available",
   "manualReviewRequired": []
 }

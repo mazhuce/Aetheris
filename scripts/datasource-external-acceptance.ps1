@@ -26,11 +26,24 @@ $summary = $jsonLine.ToString() | ConvertFrom-Json
 $actual = @($summary.results | ForEach-Object { [string]$_.type })
 $missing = @($RequiredTypes | Where-Object { $_ -notin $actual })
 $failed = @($summary.results | Where-Object { $_.status -ne "passed" })
+$unavailable = @($summary.results | Where-Object {
+    $_.status -ne "passed" -and @(
+        "password environment variable is not set",
+        "metadata connection-test request failed"
+    ) -contains [string]$_.message
+})
 $summary | Add-Member -NotePropertyName requiredTypes -NotePropertyValue @($RequiredTypes) -Force
 $summary | Add-Member -NotePropertyName requiredTypeCount -NotePropertyValue $RequiredTypes.Count -Force
 $summary | Add-Member -NotePropertyName missingRequiredTypes -NotePropertyValue @($missing) -Force
 $summary | Add-Member -NotePropertyName externalGate -NotePropertyValue "real-connection-required" -Force
-$summary | Add-Member -NotePropertyName status -NotePropertyValue $(if ($missing.Count -eq 0 -and $failed.Count -eq 0) { "passed" } else { "failed" }) -Force
+$summary | Add-Member -NotePropertyName unavailableRequiredTypes -NotePropertyValue @($unavailable | ForEach-Object { [string]$_.type }) -Force
+$summary | Add-Member -NotePropertyName retryable -NotePropertyValue ($unavailable.Count -gt 0) -Force
+$summary | Add-Member -NotePropertyName blockingCondition -NotePropertyValue $(if ($unavailable.Count -gt 0) { "external-endpoint-or-credential-missing" } else { $null }) -Force
+$summary | Add-Member -NotePropertyName status -NotePropertyValue $(
+    if ($missing.Count -eq 0 -and $failed.Count -eq 0) { "passed" }
+    elseif ($failed.Count -gt 0 -and $unavailable.Count -eq $failed.Count) { "manual_review_required" }
+    else { "failed" }
+) -Force
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $report) | Out-Null
 $summary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $report -Encoding UTF8
 Write-Output ($summary | ConvertTo-Json -Depth 12 -Compress)

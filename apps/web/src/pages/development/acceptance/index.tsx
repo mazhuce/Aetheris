@@ -81,6 +81,13 @@ function schemaPolicyLabel(status?: string) {
   return status || '未知'
 }
 
+function externalDatasourceLabel(status?: string) {
+  if (status === 'passed') return '已通过真实连接'
+  if (status === 'manual_review_required') return '待提供真实实例和凭据'
+  if (status === 'failed') return '连接失败，需修复'
+  return '状态未知'
+}
+
 export default function AcceptanceProgressPage() {
   const [sources, setSources] = useState<DataSource[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -186,7 +193,7 @@ export default function AcceptanceProgressPage() {
         showIcon
         className="form-section-space"
         message="三类外部数据源作为补充环境验收"
-        description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单；当前工作区不伪造外部实例，缺失只影响 supplementary evidence，不影响本机九类真实运行门禁。"
+        description={`HiveServer2、SQL Server、Oracle 已纳入目录与验收清单；当前状态：${externalDatasourceLabel(platformRelease?.externalDatasourceStatus)}。缺失只影响 supplementary evidence，不影响本机九类真实运行门禁。`}
       />
 
       {controlPlane ? (

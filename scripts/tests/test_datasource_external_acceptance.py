@@ -23,6 +23,9 @@ class ExternalDatasourceAcceptanceTests(unittest.TestCase):
         self.assertIn("-RequireAll", script)
         self.assertIn("missingRequiredTypes", script)
         self.assertIn("real-connection-required", script)
+        self.assertIn('manual_review_required', script)
+        self.assertIn('external-endpoint-or-credential-missing', script)
+        self.assertIn('retryable', script)
         self.assertIn("external-9-runtime-report.json", script)
 
 

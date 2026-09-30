@@ -43,6 +43,7 @@ export interface PlatformReleaseAcceptanceSummary {
   source: string
   milestones: PlatformMilestoneEvidence[]
   datasourceNineStatus: AcceptanceGateStatus | 'manual_review_required'
+  externalDatasourceStatus: AcceptanceGateStatus | 'manual_review_required'
   dockerStatus: string
   manualReviewRequired: string[]
 }

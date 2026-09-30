@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/web/public/favicon.svg" width="88" height="88" alt="Aetheris" />
+  <img src="apps/web/public/AETHRIS.png" width="88" height="88" alt="Aetheris" />
 </p>
 
 <h1 align="center">Aetheris</h1>
