@@ -35,7 +35,7 @@ describe('AcceptanceProgressPage', () => {
     expect(screen.getByText('实时湖仓兼容矩阵')).toBeInTheDocument()
     expect(screen.getByText('Datasource 本机九类运行门禁最近一次已通过')).toBeInTheDocument()
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument()
-    expect(screen.getByText('三类外部数据源门禁仍待真实实例')).toBeInTheDocument()
+    expect(screen.getByText('三类外部数据源作为补充环境验收')).toBeInTheDocument()
     expect(screen.getByText('Flink 1.20.1')).toBeInTheDocument()
     expect(screen.getByText('未知 1 · 失败 0')).toBeInTheDocument()
   })

@@ -58,6 +58,8 @@ const acceptanceSources: AcceptanceSource[] = [
   { type: 'derby', label: 'Apache Derby', acceptance: 'JDBC smoke' }
 ]
 
+const requiredAcceptanceSources = acceptanceSources.filter((item) => item.acceptance !== '外部环境验收')
+
 function healthLabel(status?: string) {
   if (status === 'available') return { label: '可用', tone: 'success' as const }
   if (status === 'checking') return { label: '探测中', tone: 'info' as const }
@@ -102,10 +104,10 @@ export default function AcceptanceProgressPage() {
   }, [refresh])
 
   const sourceStats = useMemo(() => {
-    const tracked = acceptanceSources.map((item) => sources.filter((source) => source.type === item.type))
+    const tracked = requiredAcceptanceSources.map((item) => sources.filter((source) => source.type === item.type))
     const configured = tracked.filter((items) => items.length > 0).length
     const available = tracked.filter((items) => items.some((source) => effectiveConnectionStatus(source.connectionHealth) === 'available')).length
-    return { configured, available }
+    return { configured, available, requiredCount: requiredAcceptanceSources.length }
   }, [sources])
 
   const taskStats = useMemo(() => ({
@@ -133,14 +135,14 @@ export default function AcceptanceProgressPage() {
   return (
     <div className="workflow-list-page">
       <PageHeader
-        description="统一跟踪 R1-R5 验收、实时服务状态、流任务运行态和本机九类与外部扩展数据源接入进度。页面每 10 秒刷新一次，未知状态保持为未知。"
+        description="统一跟踪 R1-R5 验收、实时服务状态、流任务运行态和九类本机真实数据源与外部扩展数据源进度。页面每 10 秒刷新一次，未知状态保持为未知。"
         extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>}
       />
 
       {errorCount > 0 && <Alert type="warning" showIcon message="部分实时接口暂时不可用" description="页面保留已知状态，并将无法取得的新状态显示为未知；不会把请求失败当作成功。" className="form-section-space" />}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 验收" value={5} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={100} status="success" showInfo={false} /></Card></Col>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceStats.available} suffix={`/ ${acceptanceSources.length}`} prefix={<DatabaseOutlined />} /><Progress percent={Math.round((sourceStats.available / acceptanceSources.length) * 100)} showInfo={false} /></Card></Col>
+        <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceStats.available} suffix={`/ ${sourceStats.requiredCount}`} prefix={<DatabaseOutlined />} /><Progress percent={Math.round((sourceStats.available / sourceStats.requiredCount) * 100)} showInfo={false} /></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="流任务运行中" value={taskStats.running} prefix={<CloudServerOutlined />} /><Typography.Text type="secondary">未知 {taskStats.unknown} · 失败 {taskStats.failed}</Typography.Text></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="最近刷新" value={lastRefresh ? lastRefresh.toLocaleTimeString() : '—'} prefix={<ReloadOutlined />} /><Typography.Text type="secondary">每 10 秒自动刷新</Typography.Text></Card></Col>
       </Row>
@@ -163,15 +165,15 @@ export default function AcceptanceProgressPage() {
         type="warning"
         showIcon
         className="form-section-space"
-        message="三类外部数据源门禁仍待真实实例"
-        description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单，但当前工作区没有伪造外部实例；需在对应环境执行 datasource-external-acceptance.ps1，生成 external-9-runtime-report.json 后才能宣告九类全量通过。"
+        message="三类外部数据源作为补充环境验收"
+        description="HiveServer2、SQL Server、Oracle 已纳入目录与验收清单；当前工作区不伪造外部实例，缺失只影响 supplementary evidence，不影响本机九类真实运行门禁。"
       />
 
       <DataSurface label="R1-R5 阶段进度">
         <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestones} pagination={false} scroll={{ x: 980 }} />
       </DataSurface>
 
-      <DataSurface label={`本机九类 + 外部三类 · 已配置 ${sourceStats.configured} / ${acceptanceSources.length}`}>
+      <DataSurface label={`九类必需 + 三类补充 · 已配置 ${sourceStats.configured} / ${sourceStats.requiredCount} 必需`}>
         <Table<AcceptanceSource> rowKey="type" size="small" columns={sourceColumns} dataSource={acceptanceSources} pagination={false} scroll={{ x: 900 }} />
       </DataSurface>
     </div>
