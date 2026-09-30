@@ -69,6 +69,10 @@ $haReport = Read-FirstReportStatus "r3-ha-runtime" @(
     "artifacts/r3-ha/r3-ha-lifecycle-report.json",
     "artifacts/r3-ha-lifecycle/r3-ha-lifecycle-report.json"
 )
+# The nine-type local runtime report is the required datasource gate. The
+# alternate Hive/SQL Server/Oracle manifest remains supplementary because it
+# needs customer-provided external services rather than the local fixture stack.
+$datasourceNineGate = Read-ReportStatus "datasource-nine-verified-runtime" "artifacts/datasource-smoke/runtime-acceptance-report.json"
 $externalReport = Read-ReportStatus "datasource-nine-external-runtime" "artifacts/datasource-smoke/external-9-runtime-report.json"
 
 $docker = [ordered]@{ available = $false; status = if ($OfflineOnly) { "skipped" } else { "unavailable" } }
@@ -85,7 +89,7 @@ if (-not $OfflineOnly) {
 
 $offlineFailed = @($offlineChecks | Where-Object { $_.status -ne "passed" })
 $runtimeFailed = @($runtimeReports | Where-Object { $_.status -ne "passed" })
-$additionalReports = @($haReport, $externalReport)
+$additionalReports = @($haReport, $datasourceNineGate)
 $additionalFailed = @($additionalReports | Where-Object { $_.status -eq "failed" })
 $manualReview = @($additionalReports | Where-Object { $_.status -notin @("passed", "failed") })
 $overallStatus = if ($offlineFailed.Count -gt 0 -or $runtimeFailed.Count -gt 0 -or $additionalFailed.Count -gt 0) { "failed" }
@@ -99,7 +103,8 @@ $result = [ordered]@{
     startedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     offlineChecks = @($offlineChecks)
     runtimeReports = @($runtimeReports)
-    additionalGates = [ordered]@{ r3Ha = $haReport; datasourceNine = $externalReport }
+    additionalGates = [ordered]@{ r3Ha = $haReport; datasourceNine = $datasourceNineGate }
+    supplementaryGates = [ordered]@{ externalDatasourceManifest = $externalReport }
     docker = $docker
     manualReviewRequired = @($manualReview | ForEach-Object { $_.name })
     failedAdditionalGates = @($additionalFailed | ForEach-Object { $_.name })

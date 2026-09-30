@@ -20,6 +20,8 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
             "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json",
             "artifacts/datasource-smoke/runtime-acceptance-report.json",
             "datasource-nine-local-runtime",
+            "datasource-nine-verified-runtime",
+            "supplementaryGates",
             "artifacts/r3-ha/r3-ha-lifecycle-report.json",
             "artifacts/r3-ha-lifecycle/r3-ha-lifecycle-report.json",
             "artifacts/datasource-smoke/external-9-runtime-report.json",
