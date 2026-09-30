@@ -3,7 +3,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts import r1_compatibility_matrix as matrix
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+import r1_compatibility_matrix as matrix
 
 
 class R1CompatibilityMatrixTest(unittest.TestCase):
