@@ -10,10 +10,10 @@ describe('brand asset wiring', () => {
     const brandMark = readFileSync(resolve(webRoot, 'src/components/BrandMark.tsx'), 'utf8')
 
     expect(existsSync(resolve(webRoot, 'public/favicon.svg'))).toBe(true)
-    expect(indexHtml).toContain('href="/favicon.svg?v=20260930"')
+    expect(indexHtml).toContain('href="/favicon.svg?v=20260930-mono"')
     expect(indexHtml).not.toContain('/AETHRIS.png')
     expect(indexHtml).not.toContain('/aetheris-mark')
-    expect(brandMark).toContain('src="/favicon.svg?v=20260930"')
+    expect(brandMark).toContain('src="/favicon.svg?v=20260930-mono"')
     expect(brandMark).not.toContain('/AETHRIS.png')
     expect(brandMark).not.toContain('/aetheris-mark')
   })
