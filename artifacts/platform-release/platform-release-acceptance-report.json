@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
-  "status": "failed",
-  "startedAtUtc": "2026-09-29T09:52:31.7260772+00:00",
+  "status": "manual_review_required",
+  "startedAtUtc": "2026-09-30T03:52:05.3377047+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "........................................................................................ ---------------------------------------------------------------------- Ran 88 tests in 3.181s  OK"
+      "output": "........................................................................................ ---------------------------------------------------------------------- Ran 88 tests in 0.875s  OK"
     }
   ],
   "runtimeReports": [
@@ -55,9 +55,9 @@
       "status": "passed"
     },
     {
-      "name": "datasource-seven-runtime",
+      "name": "datasource-nine-local-runtime",
       "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
-      "status": "failed"
+      "status": "passed"
     }
   ],
   "additionalGates": {
@@ -73,13 +73,14 @@
     }
   },
   "docker": {
-    "available": false,
-    "status": "skipped"
+    "available": true,
+    "status": "available",
+    "serverVersion": "28.3.2"
   },
   "manualReviewRequired": [
     "datasource-nine-external-runtime"
   ],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-09-29T09:52:31.7401182+00:00"
+  "finishedAtUtc": "2026-09-30T03:52:05.3416320+00:00"
 }

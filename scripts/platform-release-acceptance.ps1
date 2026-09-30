@@ -63,7 +63,7 @@ $runtimeReports = @(
     (Read-ReportStatus "r4-event-time-quality" "artifacts/r4-event-time/r4-event-time-quality-report.json"),
     (Read-ReportStatus "r4-r5-control-plane" "artifacts/r4-r5-control-plane/runtime-acceptance-report.json"),
     (Read-ReportStatus "r5-maintenance-runner" "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json"),
-    (Read-ReportStatus "datasource-seven-runtime" "artifacts/datasource-smoke/runtime-acceptance-report.json")
+    (Read-ReportStatus "datasource-nine-local-runtime" "artifacts/datasource-smoke/runtime-acceptance-report.json")
 )
 $haReport = Read-FirstReportStatus "r3-ha-runtime" @(
     "artifacts/r3-ha/r3-ha-lifecycle-report.json",

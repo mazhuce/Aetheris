@@ -19,6 +19,7 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
             "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
             "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json",
             "artifacts/datasource-smoke/runtime-acceptance-report.json",
+            "datasource-nine-local-runtime",
             "artifacts/r3-ha/r3-ha-lifecycle-report.json",
             "artifacts/r3-ha-lifecycle/r3-ha-lifecycle-report.json",
             "artifacts/datasource-smoke/external-9-runtime-report.json",

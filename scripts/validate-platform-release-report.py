@@ -16,7 +16,7 @@ REQUIRED_RUNTIME = {
     "r4-event-time-quality",
     "r4-r5-control-plane",
     "r5-maintenance-runner",
-    "datasource-seven-runtime",
+    "datasource-nine-local-runtime",
 }
 
 
