@@ -113,5 +113,41 @@ $result = [ordered]@{
 }
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $reportFile) | Out-Null
 $result | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $reportFile -Encoding UTF8
+
+# Publish a bounded summary for the acceptance page. It deliberately exposes
+# statuses only; the full release report remains the audit artifact.
+try {
+    $milestoneDefinitions = @(
+        @{ code = "R1"; reportName = "r1-empty-rebuild" }
+        @{ code = "R2"; reportName = "r2-cdc" }
+        @{ code = "R3"; reportName = "r3-managed-lifecycle" }
+        @{ code = "R4"; reportName = "r4-event-time-quality" }
+        @{ code = "R5"; reportName = "r5-maintenance-runner" }
+    )
+    $uiMilestones = @($milestoneDefinitions | ForEach-Object {
+        $definition = $_
+        $matched = @($runtimeReports | Where-Object { $_.name -eq $definition.reportName } | Select-Object -First 1)
+        [ordered]@{
+            code = $definition.code
+            status = if ($matched.Count -eq 1) { [string]$matched[0].status } else { "missing" }
+        }
+    })
+    $uiSummary = [ordered]@{
+        schemaVersion = 1
+        gate = $result.gate
+        status = $result.status
+        generatedAtUtc = $result.finishedAtUtc
+        source = $ReportPath.Replace("\", "/")
+        milestones = $uiMilestones
+        datasourceNineStatus = [string]$datasourceNineGate.status
+        dockerStatus = [string]$docker.status
+        manualReviewRequired = @($result.manualReviewRequired)
+    }
+    $uiSummaryFile = Join-Path $repoRoot "apps/web/public/acceptance/platform-release.json"
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $uiSummaryFile) | Out-Null
+    $uiSummary | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $uiSummaryFile -Encoding UTF8
+} catch {
+    Write-Warning "Unable to refresh frontend release summary: $($_.Exception.Message)"
+}
 Write-Output ($result | ConvertTo-Json -Depth 20 -Compress)
 if ($overallStatus -eq "failed") { exit 1 }

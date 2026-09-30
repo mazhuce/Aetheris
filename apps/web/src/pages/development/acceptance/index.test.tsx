@@ -8,12 +8,13 @@ const api = vi.hoisted(() => ({
   listTasks: vi.fn(),
   getFlinkHealth: vi.fn(),
   getSparkHealth: vi.fn(),
-  getControlPlaneAcceptance: vi.fn()
+  getControlPlaneAcceptance: vi.fn(),
+  getPlatformReleaseAcceptance: vi.fn()
 }))
 
 vi.mock('@/api/metadata', () => api)
 vi.mock('@/api/workflow', () => api)
-vi.mock('@/api/acceptance', () => ({ getControlPlaneAcceptance: api.getControlPlaneAcceptance }))
+vi.mock('@/api/acceptance', () => ({ getControlPlaneAcceptance: api.getControlPlaneAcceptance, getPlatformReleaseAcceptance: api.getPlatformReleaseAcceptance }))
 
 describe('AcceptanceProgressPage', () => {
   beforeEach(() => {
@@ -27,6 +28,23 @@ describe('AcceptanceProgressPage', () => {
     ])
     api.getFlinkHealth.mockResolvedValue({ status: 'UP', version: '1.20.1' })
     api.getSparkHealth.mockResolvedValue({ status: 'UP', activeJobs: 1, maxConcurrency: 4 })
+api.getPlatformReleaseAcceptance.mockResolvedValue({
+      schemaVersion: 1,
+      gate: 'platform-release-acceptance',
+      status: 'passed',
+      generatedAtUtc: '2026-09-30T10:19:06Z',
+      source: 'artifacts/platform-release/platform-release-acceptance-report.json',
+      milestones: [
+        { code: 'R1', status: 'passed' },
+        { code: 'R2', status: 'passed' },
+        { code: 'R3', status: 'passed' },
+        { code: 'R4', status: 'passed' },
+        { code: 'R5', status: 'passed' }
+      ],
+      datasourceNineStatus: 'passed',
+      dockerStatus: 'available',
+      manualReviewRequired: []
+    })
     api.getControlPlaneAcceptance.mockResolvedValue({
       schemaVersion: 1,
       gate: 'R4-R5-lakehouse-control-plane-runtime-gate',

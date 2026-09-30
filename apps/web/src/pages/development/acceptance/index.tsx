@@ -18,7 +18,7 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { listDataSources, type DataSource } from '@/api/metadata'
-import { getControlPlaneAcceptance, type ControlPlaneAcceptanceSummary } from '@/api/acceptance'
+import { getControlPlaneAcceptance, getPlatformReleaseAcceptance, type ControlPlaneAcceptanceSummary, type PlatformReleaseAcceptanceSummary } from '@/api/acceptance'
 import { getFlinkHealth, getSparkHealth, listTasks, type FlinkGatewayHealth, type SparkRunnerHealth, type TaskView } from '@/api/workflow'
 import { effectiveConnectionStatus } from '@/pages/datasource/connectionHealth'
 
@@ -27,7 +27,7 @@ type Milestone = {
   title: string
   summary: string
   evidence: string
-  status: '已通过' | '待重跑'
+  status: '已通过' | '待核对' | '待重跑'
 }
 
 type AcceptanceSource = {
@@ -87,14 +87,15 @@ export default function AcceptanceProgressPage() {
   const [flink, setFlink] = useState<FlinkGatewayHealth | null>(null)
   const [spark, setSpark] = useState<SparkRunnerHealth | null>(null)
   const [controlPlane, setControlPlane] = useState<ControlPlaneAcceptanceSummary | null>(null)
+  const [platformRelease, setPlatformRelease] = useState<PlatformReleaseAcceptanceSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [errorCount, setErrorCount] = useState(0)
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const results = await Promise.allSettled([listDataSources(), listTasks(), getFlinkHealth(), getSparkHealth(), getControlPlaneAcceptance()])
-    const [sourceResult, taskResult, flinkResult, sparkResult, controlPlaneResult] = results
+    const results = await Promise.allSettled([listDataSources(), listTasks(), getFlinkHealth(), getSparkHealth(), getControlPlaneAcceptance(), getPlatformReleaseAcceptance()])
+    const [sourceResult, taskResult, flinkResult, sparkResult, controlPlaneResult, platformReleaseResult] = results
     if (sourceResult.status === 'fulfilled') setSources(sourceResult.value)
     if (taskResult.status === 'fulfilled') setTasks(taskResult.value)
     if (flinkResult.status === 'fulfilled') setFlink(flinkResult.value)
@@ -103,6 +104,8 @@ export default function AcceptanceProgressPage() {
     else setSpark({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0, message: 'Spark Runner 不可达' })
     if (controlPlaneResult.status === 'fulfilled') setControlPlane(controlPlaneResult.value)
     else setControlPlane(null)
+    if (platformReleaseResult.status === 'fulfilled') setPlatformRelease(platformReleaseResult.value)
+    else setPlatformRelease(null)
     setErrorCount(results.filter((item) => item.status === 'rejected').length)
     setLastRefresh(new Date())
     setLoading(false)
@@ -121,6 +124,12 @@ export default function AcceptanceProgressPage() {
     return { configured, available, requiredCount: requiredAcceptanceSources.length }
   }, [sources])
 
+  const milestoneRows = useMemo<Milestone[]>(() => milestones.map((milestone) => {
+    const status = platformRelease?.milestones.find((item) => item.code === milestone.code)?.status
+    return { ...milestone, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
+  }), [platformRelease])
+
+  const milestonePassed = milestoneRows.filter((milestone) => milestone.status === '已通过').length
   const taskStats = useMemo(() => ({
     running: tasks.filter((view) => view.lastStatus === 'running' || view.lastStatus === 'submitting').length,
     unknown: tasks.filter((view) => view.lastStatus === 'unknown').length,
@@ -152,7 +161,7 @@ export default function AcceptanceProgressPage() {
 
       {errorCount > 0 && <Alert type="warning" showIcon message="部分实时接口暂时不可用" description="页面保留已知状态，并将无法取得的新状态显示为未知；不会把请求失败当作成功。" className="form-section-space" />}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 验收" value={5} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={100} status="success" showInfo={false} /></Card></Col>
+        <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 验收" value={milestonePassed} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={Math.round((milestonePassed / milestones.length) * 100)} status={milestonePassed === milestones.length ? 'success' : 'active'} showInfo={false} /></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceStats.available} suffix={`/ ${sourceStats.requiredCount}`} prefix={<DatabaseOutlined />} /><Progress percent={Math.round((sourceStats.available / sourceStats.requiredCount) * 100)} showInfo={false} /></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="流任务运行中" value={taskStats.running} prefix={<CloudServerOutlined />} /><Typography.Text type="secondary">未知 {taskStats.unknown} · 失败 {taskStats.failed}</Typography.Text></Card></Col>
         <Col xs={24} sm={12} lg={6}><Card><Statistic title="最近刷新" value={lastRefresh ? lastRefresh.toLocaleTimeString() : '—'} prefix={<ReloadOutlined />} /><Typography.Text type="secondary">每 10 秒自动刷新</Typography.Text></Card></Col>
@@ -198,7 +207,7 @@ export default function AcceptanceProgressPage() {
         />
       )}
       <DataSurface label="R1-R5 阶段进度">
-        <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestones} pagination={false} scroll={{ x: 980 }} />
+        <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestoneRows} pagination={false} scroll={{ x: 980 }} />
       </DataSurface>
 
       <DataSurface label={`九类必需 + 三类补充 · 已配置 ${sourceStats.configured} / ${sourceStats.requiredCount} 必需`}>

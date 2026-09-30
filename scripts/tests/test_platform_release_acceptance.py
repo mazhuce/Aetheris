@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 class PlatformReleaseAcceptanceTests(unittest.TestCase):
     def setUp(self):
         self.script = (ROOT / "scripts" / "platform-release-acceptance.ps1").read_text(encoding="utf-8")
+        self.summary = __import__('json').loads((ROOT / 'apps' / 'web' / 'public' / 'acceptance' / 'platform-release.json').read_text(encoding='utf-8'))
 
     def test_orchestrator_covers_all_runtime_reports_and_offline_gates(self):
         for marker in (
@@ -26,8 +27,16 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
             "artifacts/r3-ha-lifecycle/r3-ha-lifecycle-report.json",
             "artifacts/datasource-smoke/external-9-runtime-report.json",
             "manual_review_required",
+            "apps/web/public/acceptance/platform-release.json",
+            "milestoneDefinitions",
         ):
             self.assertIn(marker, self.script)
+
+    def test_frontend_summary_tracks_all_milestones(self):
+        self.assertEqual(self.summary["status"], "passed")
+        self.assertEqual([item["code"] for item in self.summary["milestones"]], ["R1", "R2", "R3", "R4", "R5"])
+        self.assertTrue(all(item["status"] == "passed" for item in self.summary["milestones"]))
+        self.assertEqual(self.summary["datasourceNineStatus"], "passed")
 
     def test_docker_unavailable_is_not_success(self):
         self.assertIn('"manual_review_required"', self.script)

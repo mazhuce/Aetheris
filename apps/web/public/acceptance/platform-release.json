@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "gate": "platform-release-acceptance",
+  "status": "passed",
+  "generatedAtUtc": "2026-09-30T10:28:47.0179621+00:00",
+  "source": "artifacts/platform-release/platform-release-acceptance-report.json",
+  "milestones": [
+    {
+      "code": "R1",
+      "status": "passed"
+    },
+    {
+      "code": "R2",
+      "status": "passed"
+    },
+    {
+      "code": "R3",
+      "status": "passed"
+    },
+    {
+      "code": "R4",
+      "status": "passed"
+    },
+    {
+      "code": "R5",
+      "status": "passed"
+    }
+  ],
+  "datasourceNineStatus": "passed",
+  "dockerStatus": "available",
+  "manualReviewRequired": []
+}
