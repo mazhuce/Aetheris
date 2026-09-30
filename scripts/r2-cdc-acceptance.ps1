@@ -11,7 +11,7 @@ param(
     [switch]$ResetSource,
     [switch]$RestartTaskManagerAfterSnapshot,
     [string]$ComposeFilePath = "infrastructure/lakehouse/docker-compose.r1.yml",
-    [string]$ReportPath = "artifacts/r1-fixture/r2-cdc-acceptance-report.json"
+    [string]$ReportPath = "artifacts/r2-cdc/r2-cdc-acceptance-report.json"
 )
 
 $ErrorActionPreference = "Stop"

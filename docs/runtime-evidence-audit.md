@@ -13,5 +13,5 @@
 ```powershell
 py -3 scripts/validate-runtime-evidence.py `
   --r1 artifacts/r1-empty-fixture/acceptance-manifest.json `
-  --r2 artifacts/r1-fixture/r2-cdc-acceptance-report.json
+  --r2 artifacts/r2-cdc/r2-cdc-acceptance-report.json
 ```

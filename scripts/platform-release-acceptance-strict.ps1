@@ -22,7 +22,7 @@ $r1Candidates = @(
 )
 $r1Evidence = $r1Candidates | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf } | Select-Object -First 1
 if (-not $r1Evidence) { $r1Evidence = $r1Candidates[0] }
-& py -3 $evidence --r1 $r1Evidence --r2 (Join-Path $repoRoot "artifacts/r1-fixture/r2-cdc-acceptance-report.json")
+& py -3 $evidence --r1 $r1Evidence --r2 (Join-Path $repoRoot "artifacts/r2-cdc/r2-cdc-acceptance-report.json")
 if ($LASTEXITCODE -ne 0) { exit 1 }
 & py -3 $reportValidator --report $report
 if ($LASTEXITCODE -ne 0) { exit 1 }

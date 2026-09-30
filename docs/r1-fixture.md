@@ -85,7 +85,7 @@ powershell -File scripts/r2-postgres-cdc-smoke.ps1 -Confirm:$false
 powershell -File scripts/r2-cdc-acceptance.ps1 -RestartTaskManagerAfterSnapshot
 ```
 
-该入口顺序执行 PostgreSQL 和 MySQL，任何一个源的 snapshot、checkpoint、重启后第二个 checkpoint、变更和 Trino 对账未通过，合并报告都会是 `failed`，不会把部分成功标成整体成功。报告默认写入 `artifacts/r1-fixture/r2-cdc-acceptance-report.json`。
+该入口顺序执行 PostgreSQL 和 MySQL，任何一个源的 snapshot、checkpoint、重启后第二个 checkpoint、变更和 Trino 对账未通过，合并报告都会是 `failed`，不会把部分成功标成整体成功。报告默认写入 `artifacts/r2-cdc/r2-cdc-acceptance-report.json`。
 
 2026-09-23 14:09–14:10（Asia/Shanghai）在当前隔离 R1 栈使用 `-ResetSource -RestartTaskManagerAfterSnapshot` 重新验收通过；PostgreSQL 与 MySQL 均为 5 行最终状态、5 个唯一主键、无重复 ID，且重启后继续产生 checkpoint。R1 JobManager 已配置 10 次、10 秒固定延迟恢复窗口，覆盖 Docker Desktop 上 TaskManager 冷启动超过单次重试间隔的情况。
 

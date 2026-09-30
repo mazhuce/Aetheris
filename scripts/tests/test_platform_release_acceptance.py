@@ -13,7 +13,7 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
         for marker in (
             "artifacts/r1-empty-fixture/acceptance-manifest.json",
             "artifacts/r1-fixture/acceptance-manifest.json",
-            "artifacts/r1-fixture/r2-cdc-acceptance-report.json",
+            "artifacts/r2-cdc/r2-cdc-acceptance-report.json",
             "artifacts/r3-lifecycle/r3-managed-stream-report.json",
             "artifacts/r4-event-time/r4-event-time-quality-report.json",
             "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",

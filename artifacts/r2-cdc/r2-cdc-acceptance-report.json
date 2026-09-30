@@ -1,0 +1,211 @@
+{
+  "status": "passed",
+  "startedAt": "2026-09-30T06:30:03.7544347+00:00",
+  "sources": {
+    "postgres": {
+      "status": "passed",
+      "sourceKind": "postgres",
+      "fixture": "aetheris-r1-postgres-iceberg-v1",
+      "sourceContainer": "aetheris-r1-empty-gate-20260930-matrix-source-postgres-1",
+      "targetTable": "r1_orders_cdc",
+      "startedAt": "2026-09-30T14:30:04.4529648+08:00",
+      "snapshotRowCount": 5,
+      "mutationApplied": true,
+      "cdcVerification": {
+        "fixture": "aetheris-r1-postgres-iceberg-v1",
+        "sourceKind": "postgres",
+        "bronzeTable": "bronze.r1_orders_cdc",
+        "status": "passed",
+        "expectedRows": [
+          [
+            1001,
+            "A",
+            "10.00"
+          ],
+          [
+            1002,
+            "A",
+            "21.50"
+          ],
+          [
+            1004,
+            "B",
+            "12.75"
+          ],
+          [
+            1005,
+            "C",
+            "4.00"
+          ],
+          [
+            1006,
+            "C",
+            "6.00"
+          ]
+        ],
+        "actualRows": [
+          [
+            1001,
+            "A",
+            "10.00"
+          ],
+          [
+            1002,
+            "A",
+            "21.50"
+          ],
+          [
+            1004,
+            "B",
+            "12.75"
+          ],
+          [
+            1005,
+            "C",
+            "4.00"
+          ],
+          [
+            1006,
+            "C",
+            "6.00"
+          ]
+        ],
+        "rowCount": 5,
+        "uniqueKeyCount": 5,
+        "duplicateIds": [],
+        "deduplication": {
+          "key": "id",
+          "passed": true
+        }
+      },
+      "checkpoint": {
+        "id": 19,
+        "status": "completed",
+        "triggerTimestamp": 1790749859665,
+        "latestAckTimestamp": 1790749860068
+      },
+      "restart": {
+        "requested": true,
+        "completed": true,
+        "checkpointAfterRestart": {
+          "id": 22,
+          "status": "completed",
+          "triggerTimestamp": 1790749863422,
+          "latestAckTimestamp": 1790749863658
+        },
+        "jobIdAfterRestart": "1e8472c0b0224625a367f0782c349f54"
+      },
+      "jobIdBeforeRestart": "1e8472c0b0224625a367f0782c349f54",
+      "failureClass": null,
+      "jobId": "1e8472c0b0224625a367f0782c349f54",
+      "error": null,
+      "finishedAt": "2026-09-30T14:31:33.0514865+08:00"
+    },
+    "mysql": {
+      "status": "passed",
+      "sourceKind": "mysql",
+      "fixture": "aetheris-r1-mysql-iceberg-v1",
+      "sourceContainer": "aetheris-r1-empty-gate-20260930-matrix-source-mysql-1",
+      "targetTable": "r1_orders_mysql_cdc",
+      "startedAt": "2026-09-30T14:31:33.9260123+08:00",
+      "snapshotRowCount": 5,
+      "mutationApplied": true,
+      "cdcVerification": {
+        "fixture": "aetheris-r1-postgres-iceberg-v1",
+        "sourceKind": "mysql",
+        "bronzeTable": "bronze.r1_orders_mysql_cdc",
+        "status": "passed",
+        "expectedRows": [
+          [
+            1001,
+            "A",
+            "10.00"
+          ],
+          [
+            1002,
+            "A",
+            "21.50"
+          ],
+          [
+            1004,
+            "B",
+            "12.75"
+          ],
+          [
+            1005,
+            "C",
+            "4.00"
+          ],
+          [
+            1006,
+            "C",
+            "6.00"
+          ]
+        ],
+        "actualRows": [
+          [
+            1001,
+            "A",
+            "10.00"
+          ],
+          [
+            1002,
+            "A",
+            "21.50"
+          ],
+          [
+            1004,
+            "B",
+            "12.75"
+          ],
+          [
+            1005,
+            "C",
+            "4.00"
+          ],
+          [
+            1006,
+            "C",
+            "6.00"
+          ]
+        ],
+        "rowCount": 5,
+        "uniqueKeyCount": 5,
+        "duplicateIds": [],
+        "deduplication": {
+          "key": "id",
+          "passed": true
+        }
+      },
+      "checkpoint": {
+        "id": 12,
+        "status": "completed",
+        "triggerTimestamp": 1790749925645,
+        "latestAckTimestamp": 1790749925737
+      },
+      "restart": {
+        "requested": true,
+        "completed": true,
+        "checkpointAfterRestart": {
+          "id": 15,
+          "status": "completed",
+          "triggerTimestamp": 1790749926261,
+          "latestAckTimestamp": 1790749926365
+        },
+        "jobIdAfterRestart": "e8aed1681b352c2c83aa03c3d78c2810"
+      },
+      "jobIdBeforeRestart": "e8aed1681b352c2c83aa03c3d78c2810",
+      "failureClass": null,
+      "jobId": "e8aed1681b352c2c83aa03c3d78c2810",
+      "error": null,
+      "finishedAt": "2026-09-30T14:32:29.0617773+08:00"
+    }
+  },
+  "passedSources": [
+    "postgres",
+    "mysql"
+  ],
+  "failedSources": [],
+  "error": null,
+  "finishedAt": "2026-09-30T06:32:29.2566953+00:00"
+}

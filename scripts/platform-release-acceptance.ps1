@@ -58,7 +58,7 @@ $offlineChecks = @(
 )
 $runtimeReports = @(
     (Read-FirstReportStatus "r1-empty-rebuild" @("artifacts/r1-empty-fixture/acceptance-manifest.json", "artifacts/r1-fixture/acceptance-manifest.json"))
-    (Read-ReportStatus "r2-cdc" "artifacts/r1-fixture/r2-cdc-acceptance-report.json"),
+    (Read-ReportStatus "r2-cdc" "artifacts/r2-cdc/r2-cdc-acceptance-report.json"),
     (Read-ReportStatus "r3-managed-lifecycle" "artifacts/r3-lifecycle/r3-managed-stream-report.json"),
     (Read-ReportStatus "r4-event-time-quality" "artifacts/r4-event-time/r4-event-time-quality-report.json"),
     (Read-ReportStatus "r4-r5-control-plane" "artifacts/r4-r5-control-plane/runtime-acceptance-report.json"),
