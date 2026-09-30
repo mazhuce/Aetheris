@@ -127,6 +127,8 @@ if ($Start -or $RunAcceptance -or $ResetVolumes -or $FreshProject) {
     if ($envText -match "replace-with|PENDING_CAPTURE") {
         throw "Refusing to change the R1 environment while example or pending values remain in $envFile"
     }
+    & py -3 (Join-Path $repoRoot "scripts/r1_compatibility_matrix.py") check --matrix (Join-Path $repoRoot "configs/lakehouse/r1-compatibility-matrix.json")
+    if ($LASTEXITCODE -ne 0) { throw "R1 compatibility matrix validation failed" }
     & docker @composeArgs config --quiet
     if ($LASTEXITCODE -ne 0) { throw "R1 compose configuration is invalid" }
 }

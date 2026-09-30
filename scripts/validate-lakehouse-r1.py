@@ -211,6 +211,7 @@ def validate_runtime_gate_contract() -> None:
         "freshRebuild = [bool]$freshRebuild",
         "R1-empty-rebuild-hard-gate",
         "-JobManagerEndpoint $jobManager",
+        "r1_compatibility_matrix.py\") check --matrix",
     ):
         if marker not in rebuild:
             fail(f"R1 rebuild gate is missing: {marker}")
