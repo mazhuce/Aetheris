@@ -6,6 +6,7 @@ param(
     [string]$FixtureOutput = "artifacts/r1-fixture",
     [string]$GatewayEndpoint = "http://127.0.0.1:18083",
     [string]$SourceContainer = "",
+    [string]$ProjectName = "aetheris-r1-lakehouse",
     [string]$TrinoContainer = "aetheris-r1-lakehouse-trino-1",
     [string]$FlinkJobManagerEndpoint = "http://127.0.0.1:18081",
     [int]$SnapshotTimeoutSeconds = 180,
@@ -22,7 +23,7 @@ $fixture = Join-Path $repoRoot $FixtureOutput
 $envFile = Join-Path $repoRoot $EnvFilePath
 $defaults = if ($SourceKind -eq "mysql") {
     [ordered]@{
-        sourceContainer = "aetheris-r1-lakehouse-source-mysql-1"
+        sourceContainer = ("{0}-source-mysql-1" -f $ProjectName)
         rendered = "flink/rendered/003_mysql_cdc.sql"
         init = "mysql/001_source_orders.sql"
         mutation = "mysql/002_cdc_mutations.sql"
@@ -32,7 +33,7 @@ $defaults = if ($SourceKind -eq "mysql") {
     }
 } else {
     [ordered]@{
-        sourceContainer = "aetheris-r1-lakehouse-source-postgres-1"
+        sourceContainer = ("{0}-source-postgres-1" -f $ProjectName)
         rendered = "flink/rendered/002_postgres_cdc.sql"
         init = "postgres/001_source_orders.sql"
         mutation = "postgres/002_cdc_mutations.sql"
@@ -84,7 +85,7 @@ function Get-CdcRowCount {
 function Get-CdcJobId {
     $body = Invoke-RestMethod -Method Get -Uri "$($FlinkJobManagerEndpoint.TrimEnd('/'))/jobs/overview"
     $job = @($body.jobs | Where-Object {
-        $_.name -eq $defaults.jobName -and $_.state -in @('RUNNING', 'RESTARTING', 'CREATED', 'INITIALIZING')
+        $_.name -eq $defaults.jobName -and $_.state -eq 'RUNNING'
     } | Sort-Object start-time -Descending | Select-Object -First 1)
     if ($job.Count -eq 0) { return $null }
     return [string]$job[0].jid
@@ -96,6 +97,10 @@ function Wait-CdcCheckpoint {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         try {
+            $job = Invoke-RestMethod -Method Get -Uri "$($FlinkJobManagerEndpoint.TrimEnd('/'))/jobs/$JobId"
+            $state = ([string]$job.state).ToUpperInvariant()
+            if ($state -in @("FAILED", "CANCELED", "FINISHED", "SUSPENDED")) { throw "Flink CDC job $JobId reached terminal state $state" }
+            if ($state -ne "RUNNING") { Start-Sleep -Seconds 2; continue }
             $body = Invoke-RestMethod -Method Get -Uri "$($FlinkJobManagerEndpoint.TrimEnd('/'))/jobs/$JobId/checkpoints"
             $completed = $body.latest.completed
             if ($completed -and $completed.id -ne $null) {
@@ -115,7 +120,7 @@ function Wait-CdcCheckpoint {
 function Restart-CdcTaskManager {
     $compose = Join-Path $repoRoot $ComposeFilePath
     if (-not (Test-Path -LiteralPath $compose -PathType Leaf)) { throw "R1 Compose file is missing: $compose" }
-    & docker compose --profile r1 --env-file $envFile -f $compose restart flink-taskmanager | Out-Null
+    & docker compose --project-name $ProjectName --profile r1 --env-file $envFile -f $compose restart flink-taskmanager | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Flink TaskManager restart failed" }
 }
 

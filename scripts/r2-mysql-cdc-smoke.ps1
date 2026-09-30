@@ -3,7 +3,8 @@ param(
     [string]$EnvFilePath = "configs/lakehouse/.env.r1",
     [string]$FixtureOutput = "artifacts/r1-fixture",
     [string]$GatewayEndpoint = "http://127.0.0.1:18083",
-    [string]$SourceContainer = "aetheris-r1-lakehouse-source-mysql-1",
+    [string]$SourceContainer = "",
+    [string]$ProjectName = "aetheris-r1-lakehouse",
     [string]$TrinoContainer = "aetheris-r1-lakehouse-trino-1",
     [string]$FlinkJobManagerEndpoint = "http://127.0.0.1:18081",
     [int]$SnapshotTimeoutSeconds = 180,
@@ -20,6 +21,7 @@ $arguments = @{
     FixtureOutput = $FixtureOutput
     GatewayEndpoint = $GatewayEndpoint
     SourceContainer = $SourceContainer
+    ProjectName = $ProjectName
     TrinoContainer = $TrinoContainer
     FlinkJobManagerEndpoint = $FlinkJobManagerEndpoint
     SnapshotTimeoutSeconds = $SnapshotTimeoutSeconds

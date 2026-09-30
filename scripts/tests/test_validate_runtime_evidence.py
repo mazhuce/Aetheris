@@ -20,6 +20,7 @@ class RuntimeEvidenceTests(unittest.TestCase):
     def test_schema_v2_requires_compatibility_matrix_artifact(self):
         original = json.loads((ROOT / "artifacts/r1-empty-fixture/acceptance-manifest.json").read_text(encoding="utf-8"))
         original["schemaVersion"] = 2
+        original["artifacts"].pop("compatibilityMatrix", None)
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "r1.json"
             path.write_text(json.dumps(original), encoding="utf-8")

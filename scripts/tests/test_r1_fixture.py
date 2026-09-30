@@ -44,7 +44,7 @@ class R1FixtureTests(unittest.TestCase):
                 self.assertIn("'state.savepoints.dir' = 's3://warehouse/savepoints/'", cdc_sql)
                 self.assertIn("RETAIN_ON_CANCELLATION", cdc_sql)
                 self.assertIn("'restart-strategy.type' = 'fixed-delay'", cdc_sql)
-                self.assertIn("'restart-strategy.fixed-delay.attempts' = '3'", cdc_sql)
+                self.assertIn("'restart-strategy.fixed-delay.attempts' = '10'", cdc_sql)
                 self.assertIn("'write.upsert.enabled' = 'true'", cdc_sql)
 
     def test_generate_refuses_to_overwrite_without_force(self):
@@ -228,14 +228,18 @@ class R1FixtureTests(unittest.TestCase):
         self.assertIn("RestartTaskManagerAfterSnapshot", script)
         self.assertIn("Wait-CdcCheckpoint", script)
         self.assertIn("Restart-CdcTaskManager", script)
+        self.assertIn("[string]$ProjectName", script)
+        self.assertIn("--project-name $ProjectName", script)
         self.assertIn("checkpointAfterRestart", script)
         self.assertIn("failureClass", script)
         self.assertIn("sourceKind", script)
         mysql_script = (ROOT / "scripts" / "r2-mysql-cdc-smoke.ps1").read_text(encoding="utf-8")
         self.assertIn("RestartTaskManagerAfterSnapshot", mysql_script)
+        self.assertIn("ProjectName = $ProjectName", mysql_script)
         acceptance = (ROOT / "scripts" / "r2-cdc-acceptance.ps1").read_text(encoding="utf-8")
         self.assertIn('foreach ($source in @("postgres", "mysql"))', acceptance)
         self.assertIn("r2-cdc-acceptance-report.json", acceptance)
+        self.assertIn("-ProjectName", acceptance)
         self.assertIn("-Confirm:$false", acceptance)
 
 
