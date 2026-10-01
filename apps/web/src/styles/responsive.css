@@ -239,6 +239,16 @@
     display: inline-flex;
   }
 
+  .assistant-mode {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .assistant-mode > div {
+    width: auto;
+    flex: 0 1 auto;
+  }
+
   .assistant-mode small {
     display: none;
   }
@@ -289,8 +299,7 @@
     gap: var(--space-3);
   }
 
-  .settings-select,
-  .theme-mode-control {
+  .settings-select {
     width: 100%;
   }
 

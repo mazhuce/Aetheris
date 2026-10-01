@@ -714,7 +714,26 @@
 }
 
 .assistant-mode {
+  width: 304px;
+  flex: 0 0 304px;
+  justify-content: space-between;
   cursor: pointer;
+}
+
+.assistant-mode > div {
+  width: 260px;
+  min-width: 0;
+  flex: 0 0 260px;
+}
+
+.assistant-mode small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-mode .ant-switch {
+  flex: 0 0 auto;
 }
 
 .assistant-messages {
@@ -980,6 +999,8 @@
 }
 
 .theme-mode-control {
+  align-self: flex-start;
+  width: max-content;
   min-width: 196px;
 }
 
