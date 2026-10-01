@@ -17,7 +17,7 @@ SET 'state.checkpoints.dir' = 's3://warehouse/checkpoints/';
 SET 'execution.checkpointing.savepoint-dir' = 's3://warehouse/savepoints/';
 SET 'execution.checkpointing.externalized-checkpoint-retention' = 'RETAIN_ON_CANCELLATION';
 SET 'restart-strategy.type' = 'fixed-delay';
-SET 'restart-strategy.fixed-delay.attempts' = '3';
+SET 'restart-strategy.fixed-delay.attempts' = '10';
 SET 'restart-strategy.fixed-delay.delay' = '5 s';
 SET 'execution.runtime-mode' = 'streaming';
 CREATE TABLE IF NOT EXISTS bronze.r3_orders_lifecycle (
