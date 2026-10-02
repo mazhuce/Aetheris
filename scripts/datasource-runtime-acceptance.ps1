@@ -82,8 +82,8 @@ function SqlLiteral([string]$Value) {
 function Wait-SmokeHealthy {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
-        $rows = @(Invoke-Docker @("ps", "--filter", "label=com.docker.compose.project=$ProjectName", "--format", "{{.Names}}\t{{.Status}}"))
-        $healthy = @($rows | Where-Object { $_ -match 'datasource-smoke-(mariadb|clickhouse|cockroachdb)-1\s+Up .*healthy' })
+        $rows = @(Invoke-Docker @("ps", "--filter", "label=com.docker.compose.project=$ProjectName", "--format", '{{.Label "com.docker.compose.service"}} {{.Status}}'))
+        $healthy = @($rows | Where-Object { $_ -match '^(mariadb|clickhouse|cockroachdb)\s+Up .*healthy' })
         if ($healthy.Count -eq 3) { return }
         Start-Sleep -Seconds 2
     } while ((Get-Date) -lt $deadline)

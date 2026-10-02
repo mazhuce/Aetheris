@@ -26,6 +26,11 @@ class DataSourceRuntimeAcceptanceTests(unittest.TestCase):
         self.assertIn("127.0.0.1:18123", self.compose)
         self.assertIn("127.0.0.1:26258", self.compose)
 
+    def test_health_check_uses_compose_service_labels_for_custom_projects(self):
+        self.assertIn('com.docker.compose.service', self.script)
+        self.assertIn(r'^(mariadb|clickhouse|cockroachdb)\s+Up .*healthy', self.script)
+        self.assertNotIn(r'datasource-smoke-(mariadb|clickhouse|cockroachdb)-1\s+Up .*healthy', self.script)
+
     def test_report_has_no_credentials(self):
         report_path = ROOT / "artifacts" / "datasource-smoke" / "runtime-acceptance-report.json"
         report = json.loads(report_path.read_text(encoding="utf-8"))

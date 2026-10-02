@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "datasource-jdbc-runtime-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-09-29T17:06:42.1341322+00:00",
+  "startedAtUtc": "2026-10-02T04:52:26.2262102+00:00",
   "testedTypes": [
     "postgresql",
     "mysql",
@@ -83,5 +83,5 @@
     "smokeStackStopped": true
   },
   "error": null,
-  "finishedAtUtc": "2026-09-29T17:07:42.3999689+00:00"
+  "finishedAtUtc": "2026-10-02T04:53:08.7601045+00:00"
 }
