@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
+import json
 import pathlib
 import re
 import sys
@@ -24,6 +26,8 @@ REBUILD_SCRIPT = ROOT / "scripts" / "r1-rebuild.ps1"
 FLINK_SUBMIT_SCRIPT = ROOT / "scripts" / "r1-submit-flink-sql.ps1"
 MATRIX_SCRIPT = ROOT / "scripts" / "r1_compatibility_matrix.py"
 MATRIX = ROOT / "configs" / "lakehouse" / "r1-compatibility-matrix.json"
+CONNECTOR_DIR = ROOT / "infrastructure" / "lakehouse" / "connectors"
+CONNECTOR_MANIFEST = CONNECTOR_DIR / "CONNECTOR-MANIFEST.json"
 
 
 def fail(message: str) -> None:
@@ -192,6 +196,33 @@ def validate_compatibility_matrix() -> None:
     except Exception as error:
         fail(f"R1 compatibility matrix is stale or invalid: {error}")
 
+
+def validate_connector_manifest(allowlist: dict) -> None:
+    """Ensure the checked-in connector manifest is backed by real digests."""
+    try:
+        manifest = json.loads(CONNECTOR_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        fail(f"connector manifest cannot be read: {error}")
+    if manifest.get("schemaVersion") != 1 or manifest.get("allowlist") != ALLOWLIST.name:
+        fail("connector manifest header is stale")
+    declared = {str(item.get("id")): item for item in allowlist.get("connector", [])}
+    captured = manifest.get("connectors")
+    if not isinstance(captured, list) or set(item.get("id") for item in captured) != set(declared):
+        fail("connector manifest entries do not match the allowlist")
+    for item in captured:
+        connector_id = str(item.get("id"))
+        source = declared[connector_id]
+        artifact = CONNECTOR_DIR / str(item.get("file", ""))
+        if item.get("status") != "verified":
+            fail(f"connector artifact is not verified: {connector_id}")
+        if item.get("sha256", "").lower() != str(source.get("sha256", "")).lower():
+            fail(f"connector manifest digest drift: {connector_id}")
+        if not artifact.is_file():
+            fail(f"connector artifact is missing: {artifact.name}")
+        digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+        if digest != str(source.get("sha256", "")).lower():
+            fail(f"connector artifact SHA-256 mismatch: {artifact.name}")
+
 def validate_runtime_gate_contract() -> None:
     submit = FLINK_SUBMIT_SCRIPT.read_text(encoding="utf-8")
     if '-notin @("FINISHED", "CANCELED")' in submit:
@@ -247,6 +278,7 @@ def validate(mode: str) -> list[str]:
         fail("R1 engine acceptance must cover Flink, Spark and Trino")
     validate_compose(bom)
     validate_compatibility_matrix()
+    validate_connector_manifest(allowlist)
     validate_table_contract_and_fixture()
     validate_runtime_gate_contract()
 

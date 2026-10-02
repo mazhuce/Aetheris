@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T04:08:08.6075134+00:00",
+  "startedAtUtc": "2026-10-02T04:24:11.8559475+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "............................................................................................. ---------------------------------------------------------------------- Ran 93 tests in 0.564s  OK"
+      "output": ".............................................................................................. ---------------------------------------------------------------------- Ran 94 tests in 7.655s  OK"
     }
   ],
   "runtimeReports": [
@@ -87,5 +87,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-02T04:08:08.6116322+00:00"
+  "finishedAtUtc": "2026-10-02T04:24:11.8608425+00:00"
 }

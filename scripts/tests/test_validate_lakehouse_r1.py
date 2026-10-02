@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 import importlib.util
@@ -166,6 +167,16 @@ class LakehouseR1ValidatorTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "freshRebuild"):
                     validator.validate("draft")
 
+
+    def test_connector_manifest_digest_drift_is_rejected(self):
+        manifest = json.loads(validator.CONNECTOR_MANIFEST.read_text(encoding="utf-8"))
+        manifest["connectors"][0]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "CONNECTOR-MANIFEST.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+            with patch.object(validator, "CONNECTOR_MANIFEST", path):
+                with self.assertRaisesRegex(ValueError, "manifest digest drift"):
+                    validator.validate("draft")
 
 if __name__ == "__main__":
     unittest.main()
