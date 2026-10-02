@@ -89,7 +89,8 @@ export const navModules: NavModule[] = [
       { key: 'metrics', label: '指标管理', path: '/modeling/metrics', status: 'available', description: '定义业务指标的计算口径、归属与版本。' },
       { key: 'logical-models', label: '逻辑模型', path: '/modeling/logical-models', status: 'available', description: '面向业务的概念与逻辑模型设计。' },
       { key: 'reviews', label: '语义资产评审', path: '/modeling/reviews', status: 'available' },
-      { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' }
+      { key: 'physical-models', label: '物理模型', path: '/modeling/physical-models', status: 'available' },
+      { key: 'lakehouse', label: '湖仓控制面', path: '/modeling/lakehouse', status: 'available', description: '管理 Iceberg 快照、分支、标签和维护作业。' }
     ]
   },
   {

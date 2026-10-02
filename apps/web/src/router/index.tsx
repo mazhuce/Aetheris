@@ -15,6 +15,7 @@ const IngestionPage = lazy(() => import('@/pages/ingestion'))
 const GovernancePage = lazy(() => import('@/pages/governance'))
 const MetadataTablePage = lazy(() => import('@/pages/metadata/tables'))
 const WarehouseMapPage = lazy(() => import('@/pages/metadata/warehouse'))
+const LakehouseControlPlanePage = lazy(() => import('@/pages/metadata/lakehouse'))
 const LineagePage = lazy(() => import('@/pages/metadata/lineage'))
 const WorkflowPage = lazy(() => import('@/pages/workflow'))
 const QualityRulePage = lazy(() => import('@/pages/quality/rules'))
@@ -119,6 +120,7 @@ export const router = createBrowserRouter([
 
       // 数据建模
       { path: 'modeling/physical-models', element: <WarehouseMapPage /> },
+      { path: 'modeling/lakehouse', element: <LakehouseControlPlanePage /> },
 
       // 数据治理
       { path: 'governance/metadata', element: <MetadataTablePage /> },
