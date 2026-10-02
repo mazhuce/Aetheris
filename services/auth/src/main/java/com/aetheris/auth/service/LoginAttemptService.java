@@ -43,7 +43,7 @@ public class LoginAttemptService {
     }
 
     private String key(String username) {
-        return username == null ? "" : username.toLowerCase();
+        return username == null ? "" : username.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static final class Attempt {

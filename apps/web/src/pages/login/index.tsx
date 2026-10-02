@@ -19,7 +19,7 @@ export default function LoginPage() {
   const handleSubmit = async (values: LoginForm) => {
     setLoading(true)
     try {
-      const result = await login(values.username, values.password)
+      const result = await login(values.username.trim(), values.password)
       localStorage.setItem(TOKEN_KEY, result.token)
       localStorage.setItem(USERNAME_KEY, result.username)
       localStorage.setItem(ROLE_KEY, result.role)

@@ -47,6 +47,29 @@ class AuthControllerTest {
     }
 
     @Test
+    void trimsUsernameBeforeLookupAndTokenIssue() {
+        AuthUserService userService = mock(AuthUserService.class);
+        PasswordEncoder encoder = mock(PasswordEncoder.class);
+        JwtService jwtService = mock(JwtService.class);
+        AuthUser user = new AuthUser();
+        user.setId(8L);
+        user.setUsername("alice");
+        user.setPasswordHash("hash");
+        user.setRole("viewer");
+        user.setStatus("active");
+        when(userService.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(encoder.matches("password", "hash")).thenReturn(true);
+        when(jwtService.generateToken(8L, "alice", "viewer")).thenReturn("token");
+        when(jwtService.getExpirationMs()).thenReturn(60_000L);
+
+        ResponseEntity<Map<String, Object>> response =
+                new AuthController(userService, encoder, jwtService, new LoginAttemptService())
+                        .login(new LoginRequest("  alice  ", "password"));
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("alice", response.getBody().get("username"));
+    }
+    @Test
     void locksAccountAfterRepeatedFailures() {
         AuthUserService userService = mock(AuthUserService.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);

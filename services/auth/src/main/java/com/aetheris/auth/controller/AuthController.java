@@ -40,18 +40,21 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
-        if (!loginAttempts.allow(request.username())) {
+        // 用户名是标识，不是密码：容忍复制/自动填充带来的首尾空格，
+        // 同时让限流键、数据库查询和响应中的用户名保持一致。
+        String username = request.username().trim();
+        if (!loginAttempts.allow(username)) {
             return ResponseEntity.status(429).body(Map.of("message", "登录尝试过于频繁，请稍后再试"));
         }
-        AuthUser user = authUserService.findByUsername(request.username()).orElse(null);
+        AuthUser user = authUserService.findByUsername(username).orElse(null);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            loginAttempts.recordFailure(request.username());
+            loginAttempts.recordFailure(username);
             return ResponseEntity.status(401).body(Map.of("message", "用户名或密码错误"));
         }
         if (!"active".equals(user.getStatus())) {
             return ResponseEntity.status(403).body(Map.of("message", "账号已禁用"));
         }
-        loginAttempts.reset(request.username());
+        loginAttempts.reset(username);
         String role = user.getRole() == null ? "viewer" : user.getRole();
         String token = jwtService.generateToken(user.getId(), user.getUsername(), role);
         Map<String, Object> response = new LinkedHashMap<>();

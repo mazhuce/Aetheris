@@ -86,6 +86,14 @@ class LoginAttemptServiceTest {
     }
 
     @Test
+    @DisplayName("用户名首尾空格与大小写共用同一计数器")
+    void usernameWhitespaceIsNormalized() {
+        for (int i = 0; i < 5; i++) {
+            service.recordFailure(i == 0 ? "  Alice  " : "alice");
+        }
+        assertFalse(service.allow(" Alice "));
+    }
+    @Test
     @DisplayName("null 用户名按空字符串处理，不抛 NPE")
     void nullUsernameIsTolerated() {
         service.recordFailure(null);
