@@ -31,6 +31,7 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
             "milestoneDefinitions",
             "Read-LatestReportStatus",
             "evidence = if ($matched.Count -eq 1)",
+            "evidenceGeneratedAtUtc",
         ):
             self.assertIn(marker, self.script)
 

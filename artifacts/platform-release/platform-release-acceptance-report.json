@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T07:37:28.1907465+00:00",
+  "startedAtUtc": "2026-10-02T08:04:50.1130951+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,63 +20,73 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "............................................................................................... ---------------------------------------------------------------------- Ran 95 tests in 5.768s  OK"
+      "output": "............................................................................................... ---------------------------------------------------------------------- Ran 95 tests in 5.262s  OK"
     }
   ],
   "runtimeReports": [
     {
       "name": "r1-empty-rebuild",
       "path": "artifacts/r1-empty-20261002/acceptance-manifest.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T06:31:52.4161541+00:00"
     },
     {
       "name": "r2-cdc",
       "path": "artifacts/r2-cdc/r2-cdc-20261002-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T06:34:12.9178477+00:00"
     },
     {
       "name": "r3-managed-lifecycle",
       "path": "artifacts/r3-lifecycle/r3-managed-stream-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T04:04:32.5526058+00:00"
     },
     {
       "name": "r4-event-time-quality",
       "path": "artifacts/r4-event-time/r4-event-time-quality-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T07:31:55.8641080+00:00"
     },
     {
       "name": "r4-r5-control-plane",
       "path": "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-09-30T10:15:04.3761075+00:00"
     },
     {
       "name": "r5-maintenance-runner",
       "path": "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T07:36:17.3583970+00:00"
     },
     {
       "name": "datasource-nine-local-runtime",
       "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T04:53:08.7601045+00:00"
     }
   ],
   "additionalGates": {
     "r3Ha": {
       "name": "r3-ha-runtime",
       "path": "artifacts/r3-ha/r3-ha-lifecycle-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T06:12:09.1092375+00:00"
     },
     "datasourceNine": {
       "name": "datasource-nine-verified-runtime",
       "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
-      "status": "passed"
+      "status": "passed",
+      "generatedAtUtc": "2026-10-02T04:53:08.7601045+00:00"
     }
   },
   "supplementaryGates": {
     "externalDatasourceManifest": {
       "name": "datasource-nine-external-runtime",
       "path": "artifacts/datasource-smoke/external-9-runtime-report.json",
-      "status": "manual_review_required"
+      "status": "manual_review_required",
+      "generatedAtUtc": null
     }
   },
   "docker": {
@@ -87,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-02T07:37:28.1931597+00:00"
+  "finishedAtUtc": "2026-10-02T08:04:50.1149323+00:00"
 }

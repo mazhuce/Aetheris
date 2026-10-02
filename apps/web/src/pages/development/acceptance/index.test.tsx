@@ -36,7 +36,7 @@ api.getPlatformReleaseAcceptance.mockResolvedValue({
       source: 'artifacts/platform-release/platform-release-acceptance-report.json',
       milestones: [
         { code: 'R1', status: 'passed', evidence: 'artifacts/r1-empty-20261002/acceptance-manifest.json' },
-        { code: 'R2', status: 'passed', evidence: 'artifacts/r2-cdc/r2-cdc-20261002-report.json' },
+        { code: 'R2', status: 'passed', evidence: 'artifacts/r2-cdc/r2-cdc-20261002-report.json', evidenceGeneratedAtUtc: '2026-10-02T07:34:12Z' },
         { code: 'R3', status: 'passed' },
         { code: 'R4', status: 'passed' },
         { code: 'R5', status: 'passed' }
@@ -71,6 +71,7 @@ api.getPlatformReleaseAcceptance.mockResolvedValue({
     expect(screen.getByLabelText('R1-R5 阶段进度')).toBeInTheDocument()
     expect(screen.getByText('实时湖仓兼容矩阵')).toBeInTheDocument()
     expect(screen.getByText('artifacts/r2-cdc/r2-cdc-20261002-report.json')).toBeInTheDocument()
+    expect(screen.getAllByText(/生成于/).length).toBeGreaterThan(0)
     expect(screen.getByText('Datasource 本机九类运行门禁最近一次已通过')).toBeInTheDocument()
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument()
     expect(screen.getAllByText('真实运行验收').length).toBeGreaterThan(0)

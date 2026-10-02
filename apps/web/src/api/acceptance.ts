@@ -34,6 +34,7 @@ export interface PlatformMilestoneEvidence {
   code: 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | string
   status: AcceptanceGateStatus | 'manual_review_required'
   evidence?: string | null
+  evidenceGeneratedAtUtc?: string | null
 }
 
 export interface PlatformReleaseAcceptanceSummary {

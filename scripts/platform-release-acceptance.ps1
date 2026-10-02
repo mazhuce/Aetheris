@@ -27,9 +27,28 @@ function Read-ReportStatus {
         return [ordered]@{ name = $Name; path = $RelativePath; status = "missing" }
     }
     try {
-        $body = Get-Content -Raw -LiteralPath $path | ConvertFrom-Json
+        $raw = Get-Content -Raw -LiteralPath $path
+        $body = $raw | ConvertFrom-Json
         $status = [string]$body.$StatusField
-        return [ordered]@{ name = $Name; path = $RelativePath; status = if ($status) { $status } else { "invalid" } }
+        $timestamp = $null
+        foreach ($field in @("finishedAtUtc", "generatedAtUtc", "generatedAt", "startedAtUtc")) {
+            $match = [regex]::Match($raw, '"' + $field + '": "([^"]+)"')
+            if ($match.Success) {
+                try { $timestamp = ([DateTimeOffset]::Parse($match.Groups[1].Value)).ToUniversalTime().ToString("O") } catch { $timestamp = $match.Groups[1].Value }
+                break
+            }
+        }
+        if (-not $timestamp) {
+            $phaseMatches = [regex]::Matches($raw, '"finishedAt": "([^"]+)"')
+            $parsed = @($phaseMatches | ForEach-Object { try { [DateTimeOffset]::Parse($_.Groups[1].Value) } catch { $null } } | Where-Object { $_ })
+            if ($parsed.Count -gt 0) { $timestamp = ($parsed | Sort-Object | Select-Object -Last 1).ToUniversalTime().ToString("O") }
+        }
+        if (-not $timestamp) {
+            $startMatch = [regex]::Match($raw, '"startedAt": "([^"]+)"')
+            if ($startMatch.Success) {
+                try { $timestamp = ([DateTimeOffset]::Parse($startMatch.Groups[1].Value)).ToUniversalTime().ToString("O") } catch { $timestamp = $startMatch.Groups[1].Value }
+            }
+        }        return [ordered]@{ name = $Name; path = $RelativePath; status = if ($status) { $status } else { "invalid" }; generatedAtUtc = $timestamp }
     } catch {
         return [ordered]@{ name = $Name; path = $RelativePath; status = "invalid" }
     }
@@ -45,7 +64,7 @@ function Read-LatestReportStatus {
                 $body = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
                 if ([string]$body.status -eq "passed") {
                     $relativePath = [IO.Path]::GetRelativePath($repoRoot, $file.FullName).Replace("\", "/")
-                    return [ordered]@{ name = $Name; path = $relativePath; status = "passed" }
+                    return Read-ReportStatus $Name $relativePath
                 }
             } catch {
                 continue
@@ -155,6 +174,7 @@ try {
             code = $definition.code
             status = if ($matched.Count -eq 1) { [string]$matched[0].status } else { "missing" }
             evidence = if ($matched.Count -eq 1) { [string]$matched[0].path } else { $null }
+            evidenceGeneratedAtUtc = if ($matched.Count -eq 1) { [string]$matched[0].generatedAtUtc } else { $null }
         }
     })
     $uiSummary = [ordered]@{

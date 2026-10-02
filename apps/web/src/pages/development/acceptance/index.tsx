@@ -27,6 +27,7 @@ type Milestone = {
   title: string
   summary: string
   evidence: string
+  evidenceGeneratedAtUtc?: string
   status: '已通过' | '待核对' | '待重跑'
 }
 
@@ -140,7 +141,7 @@ export default function AcceptanceProgressPage() {
   const milestoneRows = useMemo<Milestone[]>(() => milestones.map((milestone) => {
     const evidence = platformRelease?.milestones.find((item) => item.code === milestone.code)
     const status = evidence?.status
-    return { ...milestone, evidence: evidence?.evidence || milestone.evidence, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
+    return { ...milestone, evidence: evidence?.evidence || milestone.evidence, evidenceGeneratedAtUtc: evidence?.evidenceGeneratedAtUtc || undefined, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
   }), [platformRelease])
 
   const milestonePassed = milestoneRows.filter((milestone) => milestone.status === '已通过').length
@@ -164,7 +165,7 @@ export default function AcceptanceProgressPage() {
     { title: '能力', dataIndex: 'title', key: 'title', width: 180 },
     { title: '当前进度', key: 'status', width: 100, render: (_, row) => <StatusBadge tone={row.status === '已通过' ? 'success' : 'warning'} dot={false}>{row.status}</StatusBadge> },
     { title: '验证内容', dataIndex: 'summary', key: 'summary' },
-    { title: '证据', dataIndex: 'evidence', key: 'evidence', width: 240, render: (value: string) => <Typography.Text code>{value}</Typography.Text> }
+    { title: '证据', dataIndex: 'evidence', key: 'evidence', width: 280, render: (value: string, row) => <Space direction='vertical' size={0}><Typography.Text code>{value}</Typography.Text>{row.evidenceGeneratedAtUtc && <Typography.Text type='secondary'>生成于 {new Date(row.evidenceGeneratedAtUtc).toLocaleString()}</Typography.Text>}</Space> }
   ], [])
 
   return (
