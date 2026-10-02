@@ -36,6 +36,9 @@ export interface PlatformMilestoneEvidence {
 }
 
 export interface PlatformReleaseAcceptanceSummary {
+  datasourceRuntimeResults?: Array<{ type: string; status: AcceptanceGateStatus | string }>
+  datasourceNineTypes?: string[]
+  datasourceNineFinishedAtUtc?: string
   schemaVersion: number
   gate: string
   status: AcceptanceGateStatus | 'manual_review_required'

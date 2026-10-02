@@ -88,6 +88,12 @@ function externalDatasourceLabel(status?: string) {
   return '状态未知'
 }
 
+function datasourceRuntimeLabel(status?: string) {
+  if (status === 'passed') return { label: '通过', tone: 'success' as const }
+  if (status === 'failed') return { label: '失败', tone: 'danger' as const }
+  if (status === 'manual_review_required') return { label: '待人工核对', tone: 'warning' as const }
+  return { label: '未验收', tone: 'neutral' as const }
+}
 export default function AcceptanceProgressPage() {
   const [sources, setSources] = useState<DataSource[]>([])
   const [tasks, setTasks] = useState<TaskView[]>([])
@@ -148,8 +154,9 @@ export default function AcceptanceProgressPage() {
     { title: '当前配置', key: 'configured', width: 110, render: (_, source) => sources.some((item) => item.type === source.type) ? <StatusBadge tone="success" dot={false}>已配置</StatusBadge> : <StatusBadge tone="neutral" dot={false}>未配置</StatusBadge> },
     { title: '最近连接健康', key: 'health', width: 150, render: (_, source) => { const item = sources.find((candidate) => candidate.type === source.type); const meta = healthLabel(effectiveConnectionStatus(item?.connectionHealth)); return <StatusBadge tone={meta.tone} dot={false}>{meta.label}</StatusBadge> } },
     { title: '验收路径', dataIndex: 'acceptance', key: 'acceptance', width: 180 },
+    { title: '真实运行验收', key: 'runtime', width: 130, render: (_, source) => { const status = platformRelease?.datasourceRuntimeResults?.find((item) => item.type === source.type)?.status; const meta = datasourceRuntimeLabel(status); return <StatusBadge tone={meta.tone} dot={false}>{meta.label}</StatusBadge> } },
     { title: '说明', key: 'description', render: (_, source) => source.acceptance === '外部环境验收' ? <Typography.Text type="secondary">目录已实现，本机未伪造实例</Typography.Text> : <Typography.Text type="secondary">配置健康不等于完整运行门禁</Typography.Text> }
-  ], [sources])
+  ], [sources, platformRelease])
 
   const milestoneColumns = useMemo<TableColumnsType<Milestone>>(() => [
     { title: '阶段', dataIndex: 'code', key: 'code', width: 70, render: (value: string) => <Tag color="blue">{value}</Tag> },

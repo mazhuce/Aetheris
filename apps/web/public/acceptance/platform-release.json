@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "generatedAtUtc": "2026-10-02T04:56:53.6402270+00:00",
+  "generatedAtUtc": "2026-10-02T05:16:01.5468317+00:00",
   "source": "artifacts/platform-release/platform-release-acceptance-report.json",
   "milestones": [
     {
@@ -27,6 +27,56 @@
     }
   ],
   "datasourceNineStatus": "passed",
+  "datasourceNineTypes": [
+    "postgresql",
+    "mysql",
+    "trino",
+    "mariadb",
+    "clickhouse",
+    "cockroachdb",
+    "sqlite",
+    "h2",
+    "derby"
+  ],
+  "datasourceNineFinishedAtUtc": "2026-10-02T04:53:08.7601045Z",
+  "datasourceRuntimeResults": [
+    {
+      "type": "postgresql",
+      "status": "passed"
+    },
+    {
+      "type": "mysql",
+      "status": "passed"
+    },
+    {
+      "type": "trino",
+      "status": "passed"
+    },
+    {
+      "type": "mariadb",
+      "status": "passed"
+    },
+    {
+      "type": "clickhouse",
+      "status": "passed"
+    },
+    {
+      "type": "cockroachdb",
+      "status": "passed"
+    },
+    {
+      "type": "sqlite",
+      "status": "passed"
+    },
+    {
+      "type": "h2",
+      "status": "passed"
+    },
+    {
+      "type": "derby",
+      "status": "passed"
+    }
+  ],
   "externalDatasourceStatus": "manual_review_required",
   "dockerStatus": "available",
   "manualReviewRequired": []

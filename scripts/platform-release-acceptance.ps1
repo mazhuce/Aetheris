@@ -74,6 +74,11 @@ $haReport = Read-FirstReportStatus "r3-ha-runtime" @(
 # needs customer-provided external services rather than the local fixture stack.
 $datasourceNineGate = Read-ReportStatus "datasource-nine-verified-runtime" "artifacts/datasource-smoke/runtime-acceptance-report.json"
 $externalReport = Read-ReportStatus "datasource-nine-external-runtime" "artifacts/datasource-smoke/external-9-runtime-report.json"
+$datasourceNineBody = $null
+$datasourceNinePath = Join-Path $repoRoot "artifacts/datasource-smoke/runtime-acceptance-report.json"
+if (Test-Path -LiteralPath $datasourceNinePath -PathType Leaf) {
+    try { $datasourceNineBody = Get-Content -Raw -LiteralPath $datasourceNinePath | ConvertFrom-Json } catch { $datasourceNineBody = $null }
+}
 
 $docker = [ordered]@{ available = $false; status = if ($OfflineOnly) { "skipped" } else { "unavailable" } }
 if (-not $OfflineOnly) {
@@ -140,6 +145,9 @@ try {
         source = $ReportPath.Replace("\", "/")
         milestones = $uiMilestones
         datasourceNineStatus = [string]$datasourceNineGate.status
+        datasourceNineTypes = @($datasourceNineBody.testedTypes | ForEach-Object { [string]$_ })
+        datasourceNineFinishedAtUtc = if ($datasourceNineBody.finishedAtUtc -is [datetime]) { $datasourceNineBody.finishedAtUtc.ToUniversalTime().ToString("O") } else { [string]$datasourceNineBody.finishedAtUtc }
+        datasourceRuntimeResults = @($datasourceNineBody.results | ForEach-Object { [ordered]@{ type = [string]$_.type; status = [string]$_.status } })
         externalDatasourceStatus = [string]$externalReport.status
         dockerStatus = [string]$docker.status
         manualReviewRequired = @($result.manualReviewRequired)

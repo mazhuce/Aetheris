@@ -42,6 +42,9 @@ api.getPlatformReleaseAcceptance.mockResolvedValue({
         { code: 'R5', status: 'passed' }
       ],
       datasourceNineStatus: 'passed',
+      datasourceNineTypes: ['postgresql', 'mysql', 'trino'],
+      datasourceNineFinishedAtUtc: '2026-10-02T04:53:08Z',
+      datasourceRuntimeResults: [{ type: 'postgresql', status: 'passed' }, { type: 'mysql', status: 'passed' }, { type: 'trino', status: 'passed' }],
       externalDatasourceStatus: 'manual_review_required',
       dockerStatus: 'available',
       manualReviewRequired: []
@@ -69,6 +72,7 @@ api.getPlatformReleaseAcceptance.mockResolvedValue({
     expect(screen.getByText('实时湖仓兼容矩阵')).toBeInTheDocument()
     expect(screen.getByText('Datasource 本机九类运行门禁最近一次已通过')).toBeInTheDocument()
     expect(screen.getByText('PostgreSQL')).toBeInTheDocument()
+    expect(screen.getAllByText('真实运行验收').length).toBeGreaterThan(0)
     expect(screen.getByText('三类外部数据源作为补充环境验收')).toBeInTheDocument()
     expect(screen.getByText(/待提供真实实例和凭据/)).toBeInTheDocument()
     expect(screen.getByText('Schema policy 运行证据 · 已通过')).toBeInTheDocument()

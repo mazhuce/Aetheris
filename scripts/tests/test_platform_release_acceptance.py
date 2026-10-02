@@ -37,6 +37,9 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
         self.assertEqual([item["code"] for item in self.summary["milestones"]], ["R1", "R2", "R3", "R4", "R5"])
         self.assertTrue(all(item["status"] == "passed" for item in self.summary["milestones"]))
         self.assertEqual(self.summary["datasourceNineStatus"], "passed")
+        self.assertEqual(set(self.summary["datasourceNineTypes"]), {"postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite", "h2", "derby"})
+        self.assertTrue(all(item["status"] == "passed" for item in self.summary["datasourceRuntimeResults"]))
+        self.assertTrue(self.summary["datasourceNineFinishedAtUtc"].endswith("Z"))
 
     def test_docker_unavailable_is_not_success(self):
         self.assertIn('"manual_review_required"', self.script)
