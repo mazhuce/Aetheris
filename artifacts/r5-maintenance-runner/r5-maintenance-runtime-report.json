@@ -13,16 +13,16 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:20:22.461136+00:00",
-      "heartbeatAt": "2026-09-29T03:20:22.461146+00:00",
-      "id": "613073f8d0d44268b8af515abd4edd5f",
+      "finishedAt": "2026-10-02T07:33:38.280482+00:00",
+      "heartbeatAt": "2026-10-02T07:33:38.280491+00:00",
+      "id": "9a5fff76aff14fb18748d52ca2e43c01",
       "mainClass": null,
       "parameters": {
         "attemptId": "1",
         "bizDate": "2026-09-20"
       },
-      "pid": 16886,
-      "processStart": "677421",
+      "pid": 1428,
+      "processStart": "31748",
       "requestKey": "r5-setup-20260920",
       "resources": {
         "cores": 1,
@@ -32,14 +32,14 @@
         "rowCount": 3,
         "snapshotCount": 2,
         "snapshotIds": [
-          "2748639995003246425",
-          "8237865856058155380"
+          "2840986187382159400",
+          "4716290611551428875"
         ],
         "table": "iceberg.acceptance.r5_runner_acceptance"
       },
-      "startedAt": "2026-09-29T03:19:58.805741+00:00",
+      "startedAt": "2026-10-02T07:33:07.569954+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:19:58.798485+00:00",
+      "submittedAt": "2026-10-02T07:33:07.557331+00:00",
       "timeoutSeconds": 300
     },
     "storageEstimate": {
@@ -49,9 +49,9 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:20:42.523865+00:00",
-      "heartbeatAt": "2026-09-29T03:20:42.523878+00:00",
-      "id": "78f10508e552429e86a82fc9d07e716a",
+      "finishedAt": "2026-10-02T07:33:58.236966+00:00",
+      "heartbeatAt": "2026-10-02T07:33:58.236977+00:00",
+      "id": "8f113975b11f44c5b227bc3cb2e40cde",
       "mainClass": null,
       "parameters": {
         "attemptId": "2",
@@ -61,8 +61,8 @@
           "statement": "SELECT COUNT(*) AS file_count, COALESCE(SUM(file_size_in_bytes), 0) AS total_bytes FROM iceberg.acceptance.r5_runner_acceptance.files"
         }
       },
-      "pid": 17201,
-      "processStart": "679943",
+      "pid": 1767,
+      "processStart": "34869",
       "requestKey": "r5-storage-20260920",
       "resources": {
         "cores": 1,
@@ -80,9 +80,9 @@
           }
         ]
       },
-      "startedAt": "2026-09-29T03:20:24.028359+00:00",
+      "startedAt": "2026-10-02T07:33:38.777705+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:20:24.023144+00:00",
+      "submittedAt": "2026-10-02T07:33:38.763743+00:00",
       "timeoutSeconds": 300
     },
     "timeTravel": {
@@ -92,20 +92,20 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:21:01.939988+00:00",
-      "heartbeatAt": "2026-09-29T03:21:01.939996+00:00",
-      "id": "1eb87057814f4b909ca58d78f5d59d7b",
+      "finishedAt": "2026-10-02T07:34:20.034853+00:00",
+      "heartbeatAt": "2026-10-02T07:34:20.034864+00:00",
+      "id": "4c66228e109e428a953ba1b6adf4cd18",
       "mainClass": null,
       "parameters": {
         "attemptId": "3",
         "bizDate": "2026-09-20",
         "maintenance": {
           "operation": "time_travel",
-          "statement": "SELECT COUNT(*) AS row_count FROM iceberg.acceptance.r5_runner_acceptance VERSION AS OF 2748639995003246425"
+          "statement": "SELECT COUNT(*) AS row_count FROM iceberg.acceptance.r5_runner_acceptance VERSION AS OF 2840986187382159400"
         }
       },
-      "pid": 17467,
-      "processStart": "681828",
+      "pid": 2051,
+      "processStart": "36943",
       "requestKey": "r5-travel-20260920",
       "resources": {
         "cores": 1,
@@ -122,9 +122,9 @@
           }
         ]
       },
-      "startedAt": "2026-09-29T03:20:42.879827+00:00",
+      "startedAt": "2026-10-02T07:33:59.516362+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:20:42.871679+00:00",
+      "submittedAt": "2026-10-02T07:33:59.504115+00:00",
       "timeoutSeconds": 300
     },
     "rewriteDataFiles": {
@@ -134,9 +134,9 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:21:23.986185+00:00",
-      "heartbeatAt": "2026-09-29T03:21:23.986195+00:00",
-      "id": "1646c9160aac4061b4773a2d7db6267d",
+      "finishedAt": "2026-10-02T07:34:39.148097+00:00",
+      "heartbeatAt": "2026-10-02T07:34:39.148109+00:00",
+      "id": "bfad8fbfcae84746a5bc20e02e8fb92c",
       "mainClass": null,
       "parameters": {
         "attemptId": "4",
@@ -146,8 +146,8 @@
           "statement": "CALL iceberg.system.rewrite_data_files(table => 'acceptance.r5_runner_acceptance')"
         }
       },
-      "pid": 17730,
-      "processStart": "683763",
+      "pid": 2324,
+      "processStart": "39036",
       "requestKey": "r5-rewrite-20260920",
       "resources": {
         "cores": 1,
@@ -167,9 +167,9 @@
           }
         ]
       },
-      "startedAt": "2026-09-29T03:21:02.223207+00:00",
+      "startedAt": "2026-10-02T07:34:20.456399+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:21:02.191110+00:00",
+      "submittedAt": "2026-10-02T07:34:20.420598+00:00",
       "timeoutSeconds": 300
     },
     "expireSnapshots": {
@@ -179,9 +179,9 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:21:50.843318+00:00",
-      "heartbeatAt": "2026-09-29T03:21:50.843328+00:00",
-      "id": "2ac86a27f3f14442b7ebc6f34a230a8c",
+      "finishedAt": "2026-10-02T07:34:59.575712+00:00",
+      "heartbeatAt": "2026-10-02T07:34:59.575745+00:00",
+      "id": "d82b63d80bc042e29f47ad17f43a8f33",
       "mainClass": null,
       "parameters": {
         "attemptId": "5",
@@ -191,8 +191,8 @@
           "statement": "CALL iceberg.system.expire_snapshots(table => 'acceptance.r5_runner_acceptance', older_than => TIMESTAMP '2026-08-21 00:00:00')"
         }
       },
-      "pid": 17999,
-      "processStart": "686061",
+      "pid": 2580,
+      "processStart": "41107",
       "requestKey": "r5-expire-20260920",
       "resources": {
         "cores": 1,
@@ -214,9 +214,9 @@
           }
         ]
       },
-      "startedAt": "2026-09-29T03:21:25.198991+00:00",
+      "startedAt": "2026-10-02T07:34:41.154592+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:21:25.191964+00:00",
+      "submittedAt": "2026-10-02T07:34:41.138812+00:00",
       "timeoutSeconds": 300
     },
     "removeOrphanFiles": {
@@ -226,9 +226,9 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:22:18.759879+00:00",
-      "heartbeatAt": "2026-09-29T03:22:18.759906+00:00",
-      "id": "94ae23d022774c6a876e3dcd93f2ad7a",
+      "finishedAt": "2026-10-02T07:35:20.632243+00:00",
+      "heartbeatAt": "2026-10-02T07:35:20.632255+00:00",
+      "id": "7cbcde1185f44e3889ebcd727ab44e88",
       "mainClass": null,
       "parameters": {
         "attemptId": "6",
@@ -238,8 +238,8 @@
           "statement": "CALL iceberg.system.remove_orphan_files(table => 'acceptance.r5_runner_acceptance', older_than => TIMESTAMP '2026-08-21 00:00:00')"
         }
       },
-      "pid": 18319,
-      "processStart": "688757",
+      "pid": 2860,
+      "processStart": "42980",
       "requestKey": "r5-orphan-20260920",
       "resources": {
         "cores": 1,
@@ -252,9 +252,9 @@
         "rowCount": 0,
         "rows": []
       },
-      "startedAt": "2026-09-29T03:21:52.165732+00:00",
+      "startedAt": "2026-10-02T07:34:59.875553+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:21:52.143407+00:00",
+      "submittedAt": "2026-10-02T07:34:59.861997+00:00",
       "timeoutSeconds": 300
     },
     "rollback": {
@@ -264,20 +264,20 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:22:37.833717+00:00",
-      "heartbeatAt": "2026-09-29T03:22:37.833727+00:00",
-      "id": "3b1a58c49092415da8888bec17f8b953",
+      "finishedAt": "2026-10-02T07:35:34.169256+00:00",
+      "heartbeatAt": "2026-10-02T07:35:34.169266+00:00",
+      "id": "17dc9410f18b4e8c8b29938960697659",
       "mainClass": null,
       "parameters": {
         "attemptId": "7",
         "bizDate": "2026-09-20",
         "maintenance": {
           "operation": "rollback",
-          "statement": "CALL iceberg.system.rollback_to_snapshot('acceptance.r5_runner_acceptance', 2748639995003246425)"
+          "statement": "CALL iceberg.system.rollback_to_snapshot('acceptance.r5_runner_acceptance', 2840986187382159400)"
         }
       },
-      "pid": 18723,
-      "processStart": "691459",
+      "pid": 3232,
+      "processStart": "45079",
       "requestKey": "r5-rollback-20260920",
       "resources": {
         "cores": 1,
@@ -290,14 +290,14 @@
         "rowCount": 1,
         "rows": [
           {
-            "current_snapshot_id": 2748639995003246425,
-            "previous_snapshot_id": 8237865856058155380
+            "current_snapshot_id": 2840986187382159400,
+            "previous_snapshot_id": 4716290611551428875
           }
         ]
       },
-      "startedAt": "2026-09-29T03:22:19.178448+00:00",
+      "startedAt": "2026-10-02T07:35:20.867950+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:22:19.172019+00:00",
+      "submittedAt": "2026-10-02T07:35:20.855491+00:00",
       "timeoutSeconds": 300
     },
     "schemaChange": {
@@ -307,9 +307,9 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:22:55.822964+00:00",
-      "heartbeatAt": "2026-09-29T03:22:55.822974+00:00",
-      "id": "f6e8902b0072414a97171f60a2b42e45",
+      "finishedAt": "2026-10-02T07:35:47.988346+00:00",
+      "heartbeatAt": "2026-10-02T07:35:47.988356+00:00",
+      "id": "ac764fbd8b334171b33983c9a34ee855",
       "mainClass": null,
       "parameters": {
         "attemptId": "8",
@@ -319,8 +319,8 @@
           "statement": "ALTER TABLE `iceberg`.`acceptance`.`r5_runner_acceptance` ADD COLUMN `ingested_at` TIMESTAMP"
         }
       },
-      "pid": 18987,
-      "processStart": "693408",
+      "pid": 3464,
+      "processStart": "46555",
       "requestKey": "r5-schema-20260920",
       "resources": {
         "cores": 1,
@@ -333,9 +333,9 @@
         "rowCount": 0,
         "rows": []
       },
-      "startedAt": "2026-09-29T03:22:38.666705+00:00",
+      "startedAt": "2026-10-02T07:35:35.630995+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:22:38.661022+00:00",
+      "submittedAt": "2026-10-02T07:35:35.605789+00:00",
       "timeoutSeconds": 300
     },
     "verify": {
@@ -345,16 +345,16 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:23:14.889468+00:00",
-      "heartbeatAt": "2026-09-29T03:23:14.889481+00:00",
-      "id": "5b6806a88b914082bcf5d2c0b049439d",
+      "finishedAt": "2026-10-02T07:36:02.740166+00:00",
+      "heartbeatAt": "2026-10-02T07:36:02.740192+00:00",
+      "id": "351f88bfffef405596ebaef63bac39a1",
       "mainClass": null,
       "parameters": {
         "attemptId": "9",
         "bizDate": "2026-09-20"
       },
-      "pid": 19234,
-      "processStart": "695270",
+      "pid": 3693,
+      "processStart": "47813",
       "requestKey": "r5-verify-20260920",
       "resources": {
         "cores": 1,
@@ -371,9 +371,9 @@
         "rowCount": 2,
         "table": "iceberg.acceptance.r5_runner_acceptance"
       },
-      "startedAt": "2026-09-29T03:22:57.290937+00:00",
+      "startedAt": "2026-10-02T07:35:48.209277+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:22:57.271275+00:00",
+      "submittedAt": "2026-10-02T07:35:48.193339+00:00",
       "timeoutSeconds": 300
     },
     "cleanup": {
@@ -383,16 +383,16 @@
       "errorCode": null,
       "errorMessage": null,
       "exitCode": 0,
-      "finishedAt": "2026-09-29T03:23:32.986003+00:00",
-      "heartbeatAt": "2026-09-29T03:23:32.986011+00:00",
-      "id": "b92a40041f384d78a961f5e26b0ed7e2",
+      "finishedAt": "2026-10-02T07:36:17.358397+00:00",
+      "heartbeatAt": "2026-10-02T07:36:17.358422+00:00",
+      "id": "c2f37fc6bf71420d85d6a2ea7ce1e847",
       "mainClass": null,
       "parameters": {
         "attemptId": "10",
         "bizDate": "2026-09-20"
       },
-      "pid": 19505,
-      "processStart": "697202",
+      "pid": 3940,
+      "processStart": "49497",
       "requestKey": "r5-cleanup-20260920",
       "resources": {
         "cores": 1,
@@ -401,9 +401,9 @@
       "result": {
         "dropped": true
       },
-      "startedAt": "2026-09-29T03:23:16.612591+00:00",
+      "startedAt": "2026-10-02T07:36:05.046207+00:00",
       "status": "succeeded",
-      "submittedAt": "2026-09-29T03:23:16.596432+00:00",
+      "submittedAt": "2026-10-02T07:36:05.025966+00:00",
       "timeoutSeconds": 300
     }
   },
