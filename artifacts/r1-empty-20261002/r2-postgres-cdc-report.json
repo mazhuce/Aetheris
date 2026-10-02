@@ -2,9 +2,9 @@
   "status": "passed",
   "sourceKind": "postgres",
   "fixture": "aetheris-r1-postgres-iceberg-v1",
-  "sourceContainer": "aetheris-r1-verify-20261002-source-postgres-1",
+  "sourceContainer": "aetheris-r2-full-20261002-source-postgres-1",
   "targetTable": "r1_orders_cdc",
-  "startedAt": "2026-10-02T06:33:05.6476478+00:00",
+  "startedAt": "2026-10-02T15:23:04.4112823+00:00",
   "snapshotRowCount": 5,
   "mutationApplied": true,
   "cdcVerification": {
@@ -75,25 +75,25 @@
     }
   },
   "checkpoint": {
-    "id": 4,
+    "id": 8,
     "status": "completed",
-    "triggerTimestamp": 1790922801907,
-    "latestAckTimestamp": 1790922802089
+    "triggerTimestamp": 1790954615172,
+    "latestAckTimestamp": 1790954615246
   },
   "restart": {
     "requested": true,
     "completed": true,
     "checkpointAfterRestart": {
-      "id": 4,
+      "id": 8,
       "status": "completed",
-      "triggerTimestamp": 1790922801907,
-      "latestAckTimestamp": 1790922802089
+      "triggerTimestamp": 1790954615172,
+      "latestAckTimestamp": 1790954615246
     },
-    "jobIdAfterRestart": "77d17684422ae711719fff1e0746469e"
+    "jobIdAfterRestart": "a35b2a97ceaebea20c459c3cd75f282e"
   },
-  "jobIdBeforeRestart": "77d17684422ae711719fff1e0746469e",
+  "jobIdBeforeRestart": "a35b2a97ceaebea20c459c3cd75f282e",
   "failureClass": null,
-  "jobId": "77d17684422ae711719fff1e0746469e",
+  "jobId": "a35b2a97ceaebea20c459c3cd75f282e",
   "error": null,
-  "finishedAt": "2026-10-02T06:33:37.6534453+00:00"
+  "finishedAt": "2026-10-02T15:23:51.8381943+00:00"
 }

@@ -1,14 +1,14 @@
 {
   "status": "passed",
-  "startedAt": "2026-10-02T06:33:04.8550070+00:00",
+  "startedAt": "2026-10-02T15:23:03.6971469+00:00",
   "sources": {
     "postgres": {
       "status": "passed",
       "sourceKind": "postgres",
       "fixture": "aetheris-r1-postgres-iceberg-v1",
-      "sourceContainer": "aetheris-r1-verify-20261002-source-postgres-1",
+      "sourceContainer": "aetheris-r2-full-20261002-source-postgres-1",
       "targetTable": "r1_orders_cdc",
-      "startedAt": "2026-10-02T14:33:05.6476478+08:00",
+      "startedAt": "2026-10-02T23:23:04.4112823+08:00",
       "snapshotRowCount": 5,
       "mutationApplied": true,
       "cdcVerification": {
@@ -79,35 +79,35 @@
         }
       },
       "checkpoint": {
-        "id": 4,
+        "id": 8,
         "status": "completed",
-        "triggerTimestamp": 1790922801907,
-        "latestAckTimestamp": 1790922802089
+        "triggerTimestamp": 1790954615172,
+        "latestAckTimestamp": 1790954615246
       },
       "restart": {
         "requested": true,
         "completed": true,
         "checkpointAfterRestart": {
-          "id": 4,
+          "id": 8,
           "status": "completed",
-          "triggerTimestamp": 1790922801907,
-          "latestAckTimestamp": 1790922802089
+          "triggerTimestamp": 1790954615172,
+          "latestAckTimestamp": 1790954615246
         },
-        "jobIdAfterRestart": "77d17684422ae711719fff1e0746469e"
+        "jobIdAfterRestart": "a35b2a97ceaebea20c459c3cd75f282e"
       },
-      "jobIdBeforeRestart": "77d17684422ae711719fff1e0746469e",
+      "jobIdBeforeRestart": "a35b2a97ceaebea20c459c3cd75f282e",
       "failureClass": null,
-      "jobId": "77d17684422ae711719fff1e0746469e",
+      "jobId": "a35b2a97ceaebea20c459c3cd75f282e",
       "error": null,
-      "finishedAt": "2026-10-02T14:33:37.6534453+08:00"
+      "finishedAt": "2026-10-02T23:23:51.8381943+08:00"
     },
     "mysql": {
       "status": "passed",
       "sourceKind": "mysql",
       "fixture": "aetheris-r1-mysql-iceberg-v1",
-      "sourceContainer": "aetheris-r1-verify-20261002-source-mysql-1",
+      "sourceContainer": "aetheris-r2-full-20261002-source-mysql-1",
       "targetTable": "r1_orders_mysql_cdc",
-      "startedAt": "2026-10-02T14:33:38.451068+08:00",
+      "startedAt": "2026-10-02T23:23:52.6099231+08:00",
       "snapshotRowCount": 5,
       "mutationApplied": true,
       "cdcVerification": {
@@ -180,8 +180,8 @@
       "checkpoint": {
         "id": 5,
         "status": "completed",
-        "triggerTimestamp": 1790922834059,
-        "latestAckTimestamp": 1790922834113
+        "triggerTimestamp": 1790954648951,
+        "latestAckTimestamp": 1790954649024
       },
       "restart": {
         "requested": true,
@@ -189,16 +189,16 @@
         "checkpointAfterRestart": {
           "id": 5,
           "status": "completed",
-          "triggerTimestamp": 1790922834059,
-          "latestAckTimestamp": 1790922834113
+          "triggerTimestamp": 1790954648951,
+          "latestAckTimestamp": 1790954649024
         },
-        "jobIdAfterRestart": "cdae144a735a05990d32ce0a54e32663"
+        "jobIdAfterRestart": "4e0ac8d3105d561d85d47527d2fc2aaf"
       },
-      "jobIdBeforeRestart": "cdae144a735a05990d32ce0a54e32663",
+      "jobIdBeforeRestart": "4e0ac8d3105d561d85d47527d2fc2aaf",
       "failureClass": null,
-      "jobId": "cdae144a735a05990d32ce0a54e32663",
+      "jobId": "4e0ac8d3105d561d85d47527d2fc2aaf",
       "error": null,
-      "finishedAt": "2026-10-02T14:34:12.7985165+08:00"
+      "finishedAt": "2026-10-02T23:24:24.896421+08:00"
     }
   },
   "passedSources": [
@@ -207,5 +207,5 @@
   ],
   "failedSources": [],
   "error": null,
-  "finishedAt": "2026-10-02T06:34:12.9178477+00:00"
+  "finishedAt": "2026-10-02T15:24:24.9932884+00:00"
 }
