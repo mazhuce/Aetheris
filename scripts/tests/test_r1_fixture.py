@@ -47,6 +47,22 @@ class R1FixtureTests(unittest.TestCase):
                 self.assertIn("'restart-strategy.fixed-delay.attempts' = '10'", cdc_sql)
                 self.assertIn("'write.upsert.enabled' = 'true'", cdc_sql)
 
+    def test_force_replaces_generated_files_without_deleting_runtime_evidence(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "fixture"
+            fixture.generate(output)
+            (output / "r2-cdc-report.json").write_text('{"status":"passed"}', encoding="utf-8")
+            (output / "results").mkdir(exist_ok=True)
+            (output / "results/r2-cdc.json").write_text('{"status":"passed"}', encoding="utf-8")
+            (output / "flink/rendered").mkdir(parents=True, exist_ok=True)
+            (output / "flink/rendered/old.sql").write_text("secret", encoding="utf-8")
+
+            fixture.generate(output, force=True)
+
+            self.assertTrue((output / "r2-cdc-report.json").exists())
+            self.assertTrue((output / "results/r2-cdc.json").exists())
+            self.assertFalse((output / "flink/rendered/old.sql").exists())
+            self.assertTrue((output / "flink/001_bronze_orders.sql").exists())
     def test_generate_refuses_to_overwrite_without_force(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary) / "fixture"

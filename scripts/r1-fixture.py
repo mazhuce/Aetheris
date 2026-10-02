@@ -458,7 +458,29 @@ def generate(output: Path, force: bool = False) -> dict[str, Any]:
     if output.exists() and any(output.iterdir()) and not force:
         raise FixtureError(f"fixture output is not empty: {output}; use --force to replace it")
     if output.exists() and force:
-        shutil.rmtree(output)
+        # Force only replaces files owned by this generator. The fixture directory
+        # also stores R2/R3 acceptance reports; deleting the whole directory here
+        # silently destroys those historical/runtime artifacts during a rebuild.
+        generated_paths = (
+            "manifest.json",
+            "postgres/001_source_orders.sql",
+            "postgres/002_cdc_mutations.sql",
+            "mysql/001_source_orders.sql",
+            "mysql/002_cdc_mutations.sql",
+            "flink/001_bronze_orders.sql",
+            "flink/002_postgres_cdc.sql",
+            "flink/003_mysql_cdc.sql",
+            "flink/004_r3_flink_lifecycle.sql",
+            "flink/rendered",
+            "spark/001_reconcile.sql",
+            "trino/001_reconcile.sql",
+        )
+        for relative_path in generated_paths:
+            generated_path = output / relative_path
+            if generated_path.is_dir():
+                shutil.rmtree(generated_path)
+            elif generated_path.exists():
+                generated_path.unlink()
     (output / "postgres").mkdir(parents=True, exist_ok=True)
     (output / "mysql").mkdir(parents=True, exist_ok=True)
     (output / "flink").mkdir(parents=True, exist_ok=True)
