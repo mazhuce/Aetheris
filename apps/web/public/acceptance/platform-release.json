@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "generatedAtUtc": "2026-10-02T05:36:24.5764447+00:00",
+  "generatedAtUtc": "2026-10-02T06:15:01.2111786+00:00",
   "source": "artifacts/platform-release/platform-release-acceptance-report.json",
   "milestones": [
     {

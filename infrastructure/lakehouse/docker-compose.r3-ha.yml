@@ -28,6 +28,15 @@ services:
       - "127.0.0.1:13307:3306"
 
   catalog:
+    # The image defaults to an in-memory SQLite JDBC catalog. That is fine for
+    # a single-process demo but SQLite serializes metadata commits and returns
+    # SQLITE_BUSY under the R3 HA restart/failover workload. Use the isolated
+    # PostgreSQL source database for transactional catalog commits instead.
+    environment:
+      CATALOG_CATALOG__IMPL: org.apache.iceberg.jdbc.JdbcCatalog
+      CATALOG_URI: jdbc:postgresql://source-postgres:5432/r1_source
+      CATALOG_JDBC_USER: ${R1_SOURCE_POSTGRES_USER:?R1_SOURCE_POSTGRES_USER is required}
+      CATALOG_JDBC_PASSWORD: ${R1_SOURCE_POSTGRES_PASSWORD:?R1_SOURCE_POSTGRES_PASSWORD is required}
     ports: !override
       - "127.0.0.1:18182:8181"
 

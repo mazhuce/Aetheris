@@ -1,4 +1,4 @@
-SET 'execution.savepoint.path' = 's3://warehouse/savepoints/r3-upgrade/savepoint-0b8a2f-e89c06aaacaf';
+SET 'execution.savepoint.path' = 's3://warehouse/savepoints/r3-upgrade/savepoint-2db3b4-5306b7cf5d2e';
 -- R3 replacement SQL v2
 -- R3 Flink lifecycle fixture. This statement remains RUNNING.
 -- It is intentionally savepoint-compatible and must only run in the isolated R1 profile.

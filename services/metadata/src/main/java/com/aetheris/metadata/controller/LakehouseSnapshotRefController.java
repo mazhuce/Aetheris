@@ -39,13 +39,17 @@ public class LakehouseSnapshotRefController {
     @PostMapping("/refs/{refId}/move")
     public LakehouseSnapshotRef move(HttpServletRequest request, @PathVariable Long refId,
                                      @RequestBody Map<String, String> body) {
-        security.require(request, "lakehouse_table", null, "update", Map.of());
+        LakehouseSnapshotRef ref = service.getById(refId);
+        if (ref == null) throw new IllegalArgumentException("快照引用不存在");
+        security.require(request, "lakehouse_table", ref.getLakehouseTableId(), "update", Map.of());
         return service.move(refId, body == null ? null : body.get("snapshotId"), security.requireIdentity(request).username());
     }
 
     @DeleteMapping("/refs/{refId}")
     public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable Long refId) {
-        security.require(request, "lakehouse_table", null, "update", Map.of());
+        LakehouseSnapshotRef ref = service.getById(refId);
+        if (ref == null) throw new IllegalArgumentException("快照引用不存在");
+        security.require(request, "lakehouse_table", ref.getLakehouseTableId(), "update", Map.of());
         service.removeRef(refId);
         return ResponseEntity.noContent().build();
     }

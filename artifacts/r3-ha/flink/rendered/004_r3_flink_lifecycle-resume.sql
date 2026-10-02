@@ -1,4 +1,4 @@
-SET 'execution.savepoint.path' = 's3://warehouse/savepoints/r3-pause/savepoint-b54d80-02986fff2143';
+SET 'execution.savepoint.path' = 's3://warehouse/savepoints/r3-pause/savepoint-5039c0-90a70dad8d36';
 -- R3 Flink lifecycle fixture. This statement remains RUNNING.
 -- It is intentionally savepoint-compatible and must only run in the isolated R1 profile.
 CREATE CATALOG lakehouse WITH (
