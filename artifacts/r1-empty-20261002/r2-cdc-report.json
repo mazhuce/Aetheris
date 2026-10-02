@@ -1,0 +1,67 @@
+{
+  "fixture": "aetheris-r1-postgres-iceberg-v1",
+  "sourceKind": "mysql",
+  "bronzeTable": "bronze.r1_orders_mysql_cdc",
+  "status": "passed",
+  "expectedRows": [
+    [
+      1001,
+      "A",
+      "10.00"
+    ],
+    [
+      1002,
+      "A",
+      "21.50"
+    ],
+    [
+      1004,
+      "B",
+      "12.75"
+    ],
+    [
+      1005,
+      "C",
+      "4.00"
+    ],
+    [
+      1006,
+      "C",
+      "6.00"
+    ]
+  ],
+  "actualRows": [
+    [
+      1001,
+      "A",
+      "10.00"
+    ],
+    [
+      1002,
+      "A",
+      "21.50"
+    ],
+    [
+      1004,
+      "B",
+      "12.75"
+    ],
+    [
+      1005,
+      "C",
+      "4.00"
+    ],
+    [
+      1006,
+      "C",
+      "6.00"
+    ]
+  ],
+  "rowCount": 5,
+  "uniqueKeyCount": 5,
+  "duplicateIds": [],
+  "deduplication": {
+    "key": "id",
+    "passed": true
+  }
+}

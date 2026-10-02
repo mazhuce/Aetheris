@@ -35,6 +35,25 @@ function Read-ReportStatus {
     }
 }
 
+function Read-LatestReportStatus {
+    param([string]$Name, [string]$Directory, [string]$FilePattern, [string[]]$FallbackPaths)
+    $directoryPath = Join-Path $repoRoot $Directory
+    if (Test-Path -LiteralPath $directoryPath -PathType Container) {
+        $files = @(Get-ChildItem -LiteralPath $directoryPath -Filter $FilePattern -File -Recurse | Sort-Object LastWriteTimeUtc -Descending)
+        foreach ($file in $files) {
+            try {
+                $body = Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
+                if ([string]$body.status -eq "passed") {
+                    $relativePath = [IO.Path]::GetRelativePath($repoRoot, $file.FullName).Replace("\", "/")
+                    return [ordered]@{ name = $Name; path = $relativePath; status = "passed" }
+                }
+            } catch {
+                continue
+            }
+        }
+    }
+    return Read-FirstReportStatus $Name $FallbackPaths
+}
 function Read-FirstReportStatus {
     param([string]$Name, [string[]]$RelativePaths)
     foreach ($relativePath in $RelativePaths) {
@@ -57,8 +76,8 @@ $offlineChecks = @(
     (Invoke-PythonCheck "script-regression-suite" @("-m", "unittest", "discover", "-s", "scripts/tests", "-p", "test_*.py"))
 )
 $runtimeReports = @(
-    (Read-FirstReportStatus "r1-empty-rebuild" @("artifacts/r1-empty-fixture/acceptance-manifest.json", "artifacts/r1-fixture/acceptance-manifest.json"))
-    (Read-ReportStatus "r2-cdc" "artifacts/r2-cdc/r2-cdc-acceptance-report.json"),
+    (Read-LatestReportStatus "r1-empty-rebuild" "artifacts" "acceptance-manifest.json" @("artifacts/r1-empty-fixture/acceptance-manifest.json", "artifacts/r1-fixture/acceptance-manifest.json"))
+    (Read-LatestReportStatus "r2-cdc" "artifacts/r2-cdc" "r2-cdc*.json" @("artifacts/r2-cdc/r2-cdc-acceptance-report.json")),
     (Read-ReportStatus "r3-managed-lifecycle" "artifacts/r3-lifecycle/r3-managed-stream-report.json"),
     (Read-ReportStatus "r4-event-time-quality" "artifacts/r4-event-time/r4-event-time-quality-report.json"),
     (Read-ReportStatus "r4-r5-control-plane" "artifacts/r4-r5-control-plane/runtime-acceptance-report.json"),
@@ -135,6 +154,7 @@ try {
         [ordered]@{
             code = $definition.code
             status = if ($matched.Count -eq 1) { [string]$matched[0].status } else { "missing" }
+            evidence = if ($matched.Count -eq 1) { [string]$matched[0].path } else { $null }
         }
     })
     $uiSummary = [ordered]@{

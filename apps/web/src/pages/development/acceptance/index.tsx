@@ -138,8 +138,9 @@ export default function AcceptanceProgressPage() {
   }, [sources])
 
   const milestoneRows = useMemo<Milestone[]>(() => milestones.map((milestone) => {
-    const status = platformRelease?.milestones.find((item) => item.code === milestone.code)?.status
-    return { ...milestone, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
+    const evidence = platformRelease?.milestones.find((item) => item.code === milestone.code)
+    const status = evidence?.status
+    return { ...milestone, evidence: evidence?.evidence || milestone.evidence, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
   }), [platformRelease])
 
   const milestonePassed = milestoneRows.filter((milestone) => milestone.status === '已通过').length

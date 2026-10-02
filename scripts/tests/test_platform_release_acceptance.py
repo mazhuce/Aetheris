@@ -29,6 +29,8 @@ class PlatformReleaseAcceptanceTests(unittest.TestCase):
             "manual_review_required",
             "apps/web/public/acceptance/platform-release.json",
             "milestoneDefinitions",
+            "Read-LatestReportStatus",
+            "evidence = if ($matched.Count -eq 1)",
         ):
             self.assertIn(marker, self.script)
 

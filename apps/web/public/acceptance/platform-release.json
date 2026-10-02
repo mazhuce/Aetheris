@@ -2,28 +2,33 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "generatedAtUtc": "2026-10-02T06:15:01.2111786+00:00",
+  "generatedAtUtc": "2026-10-02T07:04:27.6448394+00:00",
   "source": "artifacts/platform-release/platform-release-acceptance-report.json",
   "milestones": [
     {
       "code": "R1",
-      "status": "passed"
+      "status": "passed",
+      "evidence": "artifacts/r1-empty-20261002/acceptance-manifest.json"
     },
     {
       "code": "R2",
-      "status": "passed"
+      "status": "passed",
+      "evidence": "artifacts/r2-cdc/r2-cdc-20261002-report.json"
     },
     {
       "code": "R3",
-      "status": "passed"
+      "status": "passed",
+      "evidence": "artifacts/r3-lifecycle/r3-managed-stream-report.json"
     },
     {
       "code": "R4",
-      "status": "passed"
+      "status": "passed",
+      "evidence": "artifacts/r4-event-time/r4-event-time-quality-report.json"
     },
     {
       "code": "R5",
-      "status": "passed"
+      "status": "passed",
+      "evidence": "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json"
     }
   ],
   "datasourceNineStatus": "passed",

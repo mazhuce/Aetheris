@@ -33,6 +33,7 @@ export async function getControlPlaneAcceptance(): Promise<ControlPlaneAcceptanc
 export interface PlatformMilestoneEvidence {
   code: 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | string
   status: AcceptanceGateStatus | 'manual_review_required'
+  evidence?: string | null
 }
 
 export interface PlatformReleaseAcceptanceSummary {
