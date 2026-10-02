@@ -3,10 +3,10 @@
   "gate": "R1-empty-rebuild-hard-gate",
   "status": "passed",
   "freshRebuild": true,
-  "freshProject": false,
+  "freshProject": true,
   "sourceFixtureReset": true,
-  "generatedAtUtc": "2026-10-02T06:31:52.4161541Z",
-  "project": "aetheris-r1-verify-20261002",
+  "generatedAtUtc": "2026-10-02T14:36:08.9629823Z",
+  "project": "aetheris-r1-full-20261002",
   "fixture": "aetheris-r1-postgres-iceberg-v1",
   "bronzeTable": "bronze.r1_orders",
   "expectedChecksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b",
@@ -20,78 +20,78 @@
     "statementCount": 17,
     "operations": [
       {
-        "operation": "6ccad4fd-c949-4985-a058-0ff70c623ef6",
+        "operation": "f75c9ae5-bf42-4e0a-951c-dad8c41e6c2a",
         "status": "FINISHED"
       },
       {
-        "operation": "f9eab1c4-7331-40b9-afad-8173f0fdc411",
+        "operation": "81166fa7-4f40-45b2-866f-0351d23d5b5b",
         "status": "FINISHED"
       },
       {
-        "operation": "4cf3bc9b-79c9-43ba-a00d-8c27c7261d5e",
+        "operation": "462962ca-133d-4dc8-9845-9e77724ac72e",
         "status": "FINISHED"
       },
       {
-        "operation": "ec884222-d6ae-40e0-b457-7e4b8b857824",
+        "operation": "a9b46600-47c0-41dc-b8a5-4a0aa8d45ed5",
         "status": "FINISHED"
       },
       {
-        "operation": "34ff02ee-353a-4dd4-a2ac-ef2e71637a81",
+        "operation": "de45603f-ba1a-4e2b-9a1d-cc50a0358647",
         "status": "FINISHED"
       },
       {
-        "operation": "c4ef210f-a357-4d82-a2d5-8532ea50e12a",
+        "operation": "52fa0365-fe5a-4a58-a9ef-966c8999cb23",
         "status": "FINISHED"
       },
       {
-        "operation": "ec35a0fd-f94b-4e84-92a1-ef38f5001f06",
+        "operation": "8f85bd2d-fb03-46eb-b97c-44f2a1a6997b",
         "status": "FINISHED"
       },
       {
-        "operation": "3756057f-8c3a-4d7d-bafb-89975c3ac16d",
+        "operation": "e3481e72-7230-46a9-a150-e9fe8f2fd058",
         "status": "FINISHED"
       },
       {
-        "operation": "642b4a4e-ff48-4647-8b09-6ccd11a0b3b3",
+        "operation": "4032b0bf-b07e-4d7e-b63d-293690297c3b",
         "status": "FINISHED"
       },
       {
-        "operation": "25aa8ceb-32ca-40af-aaa0-6ed80955da5e",
+        "operation": "b9846382-d7af-4d0e-8a28-5b1f0e4a4904",
         "status": "FINISHED"
       },
       {
-        "operation": "676fb438-681d-4644-bf4c-36dd361cab58",
+        "operation": "25a28116-cdaf-4309-9977-84e1efec847d",
         "status": "FINISHED"
       },
       {
-        "operation": "52043c1d-48a3-4ffa-8703-e7c9e729c0e7",
+        "operation": "a0544b65-291c-407a-b6ea-1ab5cbd8020f",
         "status": "FINISHED"
       },
       {
-        "operation": "e3b0ca1a-2b63-434b-8239-ae7c4877f692",
+        "operation": "4467e0b9-d196-408d-aba1-3d53271b0950",
         "status": "FINISHED"
       },
       {
-        "operation": "4e54c796-8be8-4e7c-b642-f507200cf7bb",
+        "operation": "ff11f567-b895-4a55-8aa9-dea38d7ebe20",
         "status": "FINISHED"
       },
       {
-        "operation": "613a1487-5119-4544-bace-ff089ba0765a",
+        "operation": "0a8be11b-dba2-4c6d-9856-16dc88ce5549",
         "status": "FINISHED"
       },
       {
-        "operation": "2e2e394c-5e8c-49f1-a36b-8f5f0ac7b56f",
+        "operation": "8bb381b0-ae3a-4d2e-a092-59aab9837a9f",
         "status": "FINISHED"
       },
       {
-        "operation": "46903534-02a7-4e26-9a7a-d6491db66764",
+        "operation": "e1c11bda-03cc-4857-83c8-ba6036ca9854",
         "status": "FINISHED",
-        "jobId": "1084637e8ca402a46f6503c255599f7b",
+        "jobId": "9c09db9ce05d77a5f88a2105af521a58",
         "jobStatus": "FINISHED"
       }
     ]
   },
-  "gitCommit": "cf8124241dfc60ef4ce42c0f829569f2bec3a13f",
+  "gitCommit": "71bbb84466749f79c11b80d6735c6acc5c5147e3",
   "artifacts": {
     "bom": {
       "path": "configs/lakehouse/r1-bom.toml",
@@ -123,7 +123,7 @@
     },
     "flinkSubmission": {
       "path": "artifacts\\r1-empty-20261002\\results\\flink.json",
-      "sha256": "36acb19183fc74c51bc0bb883f1e524911747ade3fca50f5b4c6118cc22cfef6"
+      "sha256": "6a15861115b00eda61636eedf779285b9817b28ca646419809a458ad65766a9e"
     }
   }
 }

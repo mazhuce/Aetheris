@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T08:11:14.1105532+00:00",
+  "startedAtUtc": "2026-10-02T14:43:05.5889368+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "............................................................................................... ---------------------------------------------------------------------- Ran 95 tests in 6.668s  OK"
+      "output": "............................................................................................... ---------------------------------------------------------------------- Ran 95 tests in 7.974s  OK"
     }
   ],
   "runtimeReports": [
@@ -28,7 +28,7 @@
       "name": "r1-empty-rebuild",
       "path": "artifacts/r1-empty-20261002/acceptance-manifest.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T06:31:52.4161541+00:00"
+      "generatedAtUtc": "2026-10-02T14:36:08.9629823+00:00"
     },
     {
       "name": "r2-cdc",
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-02T08:11:14.1131394+00:00"
+  "finishedAtUtc": "2026-10-02T14:43:05.5911326+00:00"
 }
