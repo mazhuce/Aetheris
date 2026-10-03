@@ -27,6 +27,9 @@ jobs:
       - name: Validate approved R1 release contract
         run: python scripts/validate-lakehouse-r1.py --mode release
 
+      - name: Install R1 contract parser dependency
+        run: python -m pip install --disable-pip-version-check --no-input PyYAML==6.0.2
+
       - name: Validate Compose profile topology without starting services
         run: |
           python - <<'PY'

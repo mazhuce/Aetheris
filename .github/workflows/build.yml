@@ -97,7 +97,7 @@ jobs:
           sbom: true
 
       - name: Scan published image
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.30.0
         with:
           image-ref: ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}@${{ steps.build.outputs.digest }}
           severity: HIGH,CRITICAL
