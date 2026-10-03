@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-03T03:52:01.4988133+00:00",
+  "startedAtUtc": "2026-10-03T04:09:39.5007273+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 4.378s  OK"
+      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 4.864s  OK"
     }
   ],
   "runtimeReports": [
@@ -72,7 +72,7 @@
       "name": "r3-ha-runtime",
       "path": "artifacts/r3-ha/r3-ha-lifecycle-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T06:12:09.1092375+00:00"
+      "generatedAtUtc": "2026-10-03T04:06:09.7577586+00:00"
     },
     "datasourceNine": {
       "name": "datasource-nine-verified-runtime",
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-03T03:52:01.5003334+00:00"
+  "finishedAtUtc": "2026-10-03T04:09:39.5023267+00:00"
 }

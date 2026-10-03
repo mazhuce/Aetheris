@@ -2,27 +2,27 @@
   "schemaVersion": 1,
   "gate": "R3-flink-lifecycle-runtime-gate",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T06:10:05.7176800+00:00",
+  "startedAtUtc": "2026-10-03T04:04:30.8284191+00:00",
   "fixture": "aetheris-r3-flink-lifecycle-v1",
   "phases": {
     "submit": {
       "status": "passed",
-      "session": "770d86b1-f64f-4d0d-a5e5-b0b21897cc7a",
-      "operation": "83143490-776e-459f-b1af-17c00b8fda61",
-      "jobId": "5039c03afd2bfdf1c921fe47d540616f",
+      "session": "b8bf5d4b-5d46-4bc9-957a-626637af4719",
+      "operation": "d1d21ede-9ab8-4049-9985-d51f0e4ce6c0",
+      "jobId": "3ae7f08fc80527c1f44af71b43d1186f",
       "jobState": "RUNNING"
     },
     "checkpoint": {
-      "id": 2,
+      "id": 4,
       "status": "completed",
-      "triggerTimestamp": 1790921427165,
-      "latestAckTimestamp": 1790921427635
+      "triggerTimestamp": 1791000289473,
+      "latestAckTimestamp": 1791000289520
     },
     "taskManagerRestart": {
       "status": "passed",
-      "jobId": "5039c03afd2bfdf1c921fe47d540616f",
+      "jobId": "3ae7f08fc80527c1f44af71b43d1186f",
       "stable": {
-        "jobId": "5039c03afd2bfdf1c921fe47d540616f",
+        "jobId": "3ae7f08fc80527c1f44af71b43d1186f",
         "state": "RUNNING",
         "stableSeconds": 5,
         "vertices": 3
@@ -30,75 +30,51 @@
       "checkpoint": {
         "id": 11,
         "status": "completed",
-        "triggerTimestamp": 1790921461460,
-        "latestAckTimestamp": 1790921461537
+        "triggerTimestamp": 1791000307001,
+        "latestAckTimestamp": 1791000307045
       }
     },
     "pause": {
       "status": "passed",
-      "jobId": "5039c03afd2bfdf1c921fe47d540616f",
+      "jobId": "3ae7f08fc80527c1f44af71b43d1186f",
       "savepoint": {
-        "requestId": "ad637942c25afeb050363cb8161ea481",
+        "requestId": "19d4d8f0a79f8df0f7f317cbb5a4aca0",
         "status": "COMPLETED",
-        "location": "s3://warehouse/savepoints/r3-pause/savepoint-5039c0-90a70dad8d36",
+        "location": "s3://warehouse/savepoints/r3-pause/savepoint-3ae7f0-06f8063dc5d0",
         "target": "s3://warehouse/savepoints/r3-pause"
       },
       "terminalState": "FINISHED"
     },
     "resume": {
       "status": "passed",
-      "session": "82564628-45a8-4aa3-ac44-ffa1ee541da3",
-      "operation": "04ad8887-7821-44f5-95bc-f114fdfe5d01",
-      "savepoint": "s3://warehouse/savepoints/r3-pause/savepoint-5039c0-90a70dad8d36",
-      "jobId": "2db3b471b45cc4febd8a2ea4a0d3157f",
+      "session": "005267c7-a91d-4d83-a14e-a240827718a0",
+      "operation": "325babde-32b7-40bd-ad84-79b8dd3b71b6",
+      "savepoint": "s3://warehouse/savepoints/r3-pause/savepoint-3ae7f0-06f8063dc5d0",
+      "jobId": "ed5a7a3464e88701bd172d27f784acd7",
       "stable": {
-        "jobId": "2db3b471b45cc4febd8a2ea4a0d3157f",
+        "jobId": "ed5a7a3464e88701bd172d27f784acd7",
         "state": "RUNNING",
         "stableSeconds": 5,
         "vertices": 3
       },
       "checkpoint": {
-        "id": 23,
+        "id": 24,
         "status": "completed",
-        "triggerTimestamp": 1790921485760,
-        "latestAckTimestamp": 1790921485858
+        "triggerTimestamp": 1791000330264,
+        "latestAckTimestamp": 1791000330300
       }
     },
     "upgrade": {
       "status": "passed",
-      "oldJobId": "2db3b471b45cc4febd8a2ea4a0d3157f",
+      "oldJobId": "ed5a7a3464e88701bd172d27f784acd7",
       "oldTerminalState": "FINISHED",
-      "session": "653a55cc-c06b-4d6d-85d1-8841fae1d241",
-      "operation": "448fb8f6-8949-4186-9427-1d2b54d206d9",
-      "savepoint": "s3://warehouse/savepoints/r3-upgrade/savepoint-2db3b4-5306b7cf5d2e",
-      "replacementSqlSha256": "dd0b830866a9a82e5dc092a93e74e4ba7cbfa270dd2fa3b8951d249bd38b53f2",
-      "jobId": "5bd1390ccaed8a38e89ffcedca603ddc",
+      "session": "98174614-4dbf-4134-bc2e-7f46e04450ab",
+      "operation": "58307f13-1bff-46bc-b255-dc5dd7a9fa9e",
+      "savepoint": "s3://warehouse/savepoints/r3-upgrade/savepoint-ed5a7a-86e155851323",
+      "replacementSqlSha256": "a75be3caf7070ad5e43140220de6b23835b29fc39faef382a48e271b6d5bcf0f",
+      "jobId": "5561b82de02884e3e6003dcbd5b52c5c",
       "stable": {
-        "jobId": "5bd1390ccaed8a38e89ffcedca603ddc",
-        "state": "RUNNING",
-        "stableSeconds": 5,
-        "vertices": 3
-      },
-      "checkpoint": {
-        "id": 31,
-        "status": "completed",
-        "triggerTimestamp": 1790921504706,
-        "latestAckTimestamp": 1790921504791
-      }
-    },
-    "networkInterruption": {
-      "status": "passed",
-      "network": "aetheris-r3-ha_default",
-      "taskManagerContainer": "9bc07bddacb578f4611ee055d044900f8a5d4ad8baaf259507c1bfe9def4ae08",
-      "during": {
-        "jobId": "5bd1390ccaed8a38e89ffcedca603ddc",
-        "taskManagerContainer": "9bc07bddacb578f4611ee055d044900f8a5d4ad8baaf259507c1bfe9def4ae08",
-        "network": "aetheris-r3-ha_default",
-        "observed": true
-      },
-      "recoveredJobId": "5bd1390ccaed8a38e89ffcedca603ddc",
-      "stable": {
-        "jobId": "5bd1390ccaed8a38e89ffcedca603ddc",
+        "jobId": "5561b82de02884e3e6003dcbd5b52c5c",
         "state": "RUNNING",
         "stableSeconds": 5,
         "vertices": 3
@@ -106,8 +82,32 @@
       "checkpoint": {
         "id": 32,
         "status": "completed",
-        "triggerTimestamp": 1790921505707,
-        "latestAckTimestamp": 1790921505784
+        "triggerTimestamp": 1791000348532,
+        "latestAckTimestamp": 1791000348572
+      }
+    },
+    "networkInterruption": {
+      "status": "passed",
+      "network": "aetheris-r3-ha-try_default",
+      "taskManagerContainer": "8d7e330a006d971d52c51a490f33526505fa22eacbe704b7a4d43aeebe40eb95",
+      "during": {
+        "jobId": "5561b82de02884e3e6003dcbd5b52c5c",
+        "taskManagerContainer": "8d7e330a006d971d52c51a490f33526505fa22eacbe704b7a4d43aeebe40eb95",
+        "network": "aetheris-r3-ha-try_default",
+        "observed": true
+      },
+      "recoveredJobId": "5561b82de02884e3e6003dcbd5b52c5c",
+      "stable": {
+        "jobId": "5561b82de02884e3e6003dcbd5b52c5c",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 33,
+        "status": "completed",
+        "triggerTimestamp": 1791000349532,
+        "latestAckTimestamp": 1791000349568
       }
     }
   },
@@ -124,5 +124,5 @@
     "completed": true
   },
   "error": null,
-  "finishedAtUtc": "2026-10-02T06:12:09.1092375+00:00"
+  "finishedAtUtc": "2026-10-03T04:06:09.7577586+00:00"
 }
