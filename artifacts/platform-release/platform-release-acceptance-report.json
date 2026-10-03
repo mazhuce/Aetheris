@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-03T03:22:37.5355821+00:00",
+  "startedAtUtc": "2026-10-03T03:40:00.7522075+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 7.646s  OK"
+      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 5.174s  OK"
     }
   ],
   "runtimeReports": [
@@ -40,7 +40,7 @@
       "name": "r3-managed-lifecycle",
       "path": "artifacts/r3-lifecycle/r3-managed-stream-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T04:04:32.5526058+00:00"
+      "generatedAtUtc": "2026-10-03T03:34:55.2481321+00:00"
     },
     {
       "name": "r4-event-time-quality",
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-03T03:22:37.5387290+00:00"
+  "finishedAtUtc": "2026-10-03T03:40:00.7555837+00:00"
 }

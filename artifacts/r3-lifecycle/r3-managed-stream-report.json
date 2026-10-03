@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "gate": "R3-managed-flink-stream-runtime-gate",
-  "generatedAt": "2026-10-02T04:04:32.5526058+00:00",
+  "generatedAt": "2026-10-03T03:34:55.2481321+00:00",
   "status": "passed",
   "configuration": {
     "flinkEndpoint": "http://flink-sql-gateway:8083",
@@ -10,58 +10,58 @@
   },
   "phases": {
     "submit": {
+      "taskId": 57,
       "instanceStatus": "running",
-      "taskId": 55,
-      "attemptId": 77,
-      "instanceId": 103,
-      "remoteHandle": "c7c21ad7-b795-434f-81b7-6b7f30340d81/60764c05-c64b-43ea-8fb2-4f5ee8076314",
-      "jobId": "411a5fe84bfacdc2257eeb3fe0ef6afe"
+      "remoteHandle": "a3f93e25-832a-4d58-92a3-3044eefc6386/40d8063d-2982-4351-bc73-5687a51d8421",
+      "attemptId": 78,
+      "jobId": "c1f990f6a0f03353f8565180913c1e3d",
+      "instanceId": 104
     },
     "checkpoint": {
-      "id": 9,
-      "jobId": "411a5fe84bfacdc2257eeb3fe0ef6afe"
+      "id": 8,
+      "jobId": "c1f990f6a0f03353f8565180913c1e3d"
     },
     "leaseRenewal": {
-      "second": "2026-10-02T12:05:52.0000000+08:00",
-      "first": "2026-10-02T12:05:47.0000000+08:00"
+      "first": "2026-10-03T11:36:10.0000000+08:00",
+      "second": "2026-10-03T11:36:20.0000000+08:00"
     },
     "admission": {
-      "duplicateHttp": 409,
-      "capacityHttp": 409
+      "capacityHttp": 409,
+      "duplicateHttp": 409
     },
     "pause": {
-      "state": "paused",
-      "savepoint": "s3://warehouse/savepoints/r3-managed-1790913872933/savepoint-411a5f-fdcc06e420f5",
-      "requestId": "40d9412ef95d8b1337bd5bc80fa118b9",
-      "oldJobId": "411a5fe84bfacdc2257eeb3fe0ef6afe"
+      "oldJobId": "c1f990f6a0f03353f8565180913c1e3d",
+      "savepoint": "s3://warehouse/savepoints/r3-managed-1790998495548/savepoint-c1f990-4a3c0455df5f",
+      "requestId": "80f730672c4b825d0a4c67762f92761b",
+      "state": "paused"
     },
     "resume": {
-      "jobId": "c4ca4dfe16eee43f26b034f370381225",
-      "checkpoint": 26,
-      "fromSavepoint": "s3://warehouse/savepoints/r3-managed-1790913872933/savepoint-411a5f-fdcc06e420f5"
+      "checkpoint": 25,
+      "fromSavepoint": "s3://warehouse/savepoints/r3-managed-1790998495548/savepoint-c1f990-4a3c0455df5f",
+      "jobId": "5bf34a9f1594e3a71d631997de9278ba"
     },
     "upgrade": {
-      "requestId": "f282207a89debb0f2447513bf5c94494",
+      "oldJobId": "5bf34a9f1594e3a71d631997de9278ba",
+      "requestId": "31faf0ab5bf27cc60b9b7b2b9b68594f",
       "definitionDigest": "20dfa92bdb31e820c2f377caa0156d41b1f00f62b462d692f3f8be98c5748326",
       "definitionVersion": 2,
-      "oldJobId": "c4ca4dfe16eee43f26b034f370381225",
-      "jobId": "4136d0c4fa73ac714b86a2e6cf6b79f0",
-      "savepoint": "s3://warehouse/savepoints/r3-managed-upgrade-1790913872933/savepoint-c4ca4d-2606fd06b8e4",
-      "checkpoint": 36,
-      "replacementPublished": true
+      "checkpoint": 37,
+      "savepoint": "s3://warehouse/savepoints/r3-managed-upgrade-1790998495548/savepoint-5bf34a-d7521b1f95d0",
+      "replacementPublished": true,
+      "jobId": "83265014f5b3388c7a61e8539005ed18"
     },
     "networkUnknown": {
-      "jobId": "4136d0c4fa73ac714b86a2e6cf6b79f0",
+      "jobId": "83265014f5b3388c7a61e8539005ed18",
       "instanceStatus": "unknown",
-      "wasNotSuccess": true,
-      "attemptStatus": "unknown"
+      "attemptStatus": "unknown",
+      "wasNotSuccess": true
     },
     "networkRecovery": {
       "status": "running",
-      "jobId": "4136d0c4fa73ac714b86a2e6cf6b79f0"
+      "jobId": "83265014f5b3388c7a61e8539005ed18"
     },
     "cancel": {
-      "jobId": "4136d0c4fa73ac714b86a2e6cf6b79f0",
+      "jobId": "83265014f5b3388c7a61e8539005ed18",
       "instanceStatus": "cancelled",
       "attemptStatus": "cancelled"
     }
