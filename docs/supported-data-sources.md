@@ -56,7 +56,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/datasource-runtime-accepta
   -StartSmokeStack -TimeoutSeconds 180
 ```
 
-该门禁在平台 metadata 容器内真实执行 `SELECT 1`，并临时写入、清理 7 条数据源记录；当前已通过 PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite 七类路径。报告写入 `artifacts/datasource-smoke/runtime-acceptance-report.json`，不包含密码。MariaDB、ClickHouse、CockroachDB 夹具位于独立的 `infrastructure/datasources/docker-compose.smoke.yml`，只绑定 loopback 端口，不共享 R1 卷。
+该门禁在平台 metadata 容器内真实执行 `SELECT 1`，并临时写入、清理 9 条数据源记录；当前已通过 PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite、H2、Derby 九类路径。报告写入 `artifacts/datasource-smoke/runtime-acceptance-report.json`，不包含密码。MariaDB、ClickHouse、CockroachDB 夹具位于独立的 `infrastructure/datasources/docker-compose.smoke.yml`，只绑定 loopback 端口，不共享 R1 卷。
 
 SQL Server、Oracle、Hive/Spark 等仍属于外部环境型连接：目录和 JDBC 适配已实现，但本地门禁没有伪造实例，因此不能把它们写成“本机运行已通过”。
 

@@ -18,4 +18,4 @@ pwsh -NoProfile -ExecutionPolicy Bypass `
 
 报告默认写入 `artifacts/datasource-smoke/external-9-runtime-report.json`。报告只保留类型、状态、延迟和受限诊断，不写入密码或授权头。通过条件是九类全部 `passed`，并且 `missingRequiredTypes` 为空。当前环境缺失外部实例时仍会生成报告，不能把 `manual_review_required` 当作通过。
 
-本地独立 Compose 门禁目前已真实通过 PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite 七类。HiveServer2、SQL Server、Oracle 没有被伪造为本地容器；要将九类门禁标为通过，必须在目标环境注入这三类真实服务和临时凭据后执行上面的入口。
+本地独立 Compose 门禁目前已真实通过 PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite、H2、Derby 九类。HiveServer2、SQL Server、Oracle 没有被伪造为本地容器；它们仍需在目标环境注入真实服务和临时凭据后执行上面的外部入口，不能用本地九类结果替代。

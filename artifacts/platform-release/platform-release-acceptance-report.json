@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-03T04:09:39.5007273+00:00",
+  "startedAtUtc": "2026-10-03T04:16:17.6877666+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 4.864s  OK"
+      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 4.844s  OK"
     }
   ],
   "runtimeReports": [
@@ -64,7 +64,7 @@
       "name": "datasource-nine-local-runtime",
       "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T04:53:08.7601045+00:00"
+      "generatedAtUtc": "2026-10-03T04:14:41.9147105+00:00"
     }
   ],
   "additionalGates": {
@@ -78,7 +78,7 @@
       "name": "datasource-nine-verified-runtime",
       "path": "artifacts/datasource-smoke/runtime-acceptance-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T04:53:08.7601045+00:00"
+      "generatedAtUtc": "2026-10-03T04:14:41.9147105+00:00"
     }
   },
   "supplementaryGates": {
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-03T04:09:39.5023267+00:00"
+  "finishedAtUtc": "2026-10-03T04:16:17.6892986+00:00"
 }

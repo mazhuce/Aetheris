@@ -11,11 +11,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/datasource-runtime-accepta
 
 `-StartSmokeStack` 使用 `infrastructure/datasources/docker-compose.smoke.yml` 启动固定版本的 MariaDB 11.4.3、ClickHouse 24.8.14.39 和 CockroachDB 24.3.6。所有端口仅绑定 `127.0.0.1`，项目名独立于 R1；脚本从容器环境读取临时凭据，不把凭据写入报告。若脚本自行启动 smoke 栈，默认会在结束时停止它；调试时才使用 `-KeepStack`。
 
-## 2026-09-20 运行证据
+## 2026-10-03 运行证据
 
-报告 `artifacts/datasource-smoke/runtime-acceptance-report.json` 为 `status=passed`，七类均返回单行 `SELECT 1`：
+报告 `artifacts/datasource-smoke/runtime-acceptance-report.json` 为 `status=passed`，九类均返回单行 `SELECT 1`（Derby 使用系统表探测）：
 
-`postgresql`、`mysql`、`trino`、`mariadb`、`clickhouse`、`cockroachdb`、`sqlite`。
+`postgresql`、`mysql`、`trino`、`mariadb`、`clickhouse`、`cockroachdb`、`sqlite`、`h2`、`derby`。
 
 临时数据源记录已清理；报告只包含类型、状态、行数和清理状态，不含密码。SQL Server、Oracle、Hive/Spark 尚未在本地夹具中启动实例，仍按外部环境型连接管理，不能从这份报告外推为本机已验收。
 
