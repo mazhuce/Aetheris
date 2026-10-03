@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-03T03:40:00.7522075+00:00",
+  "startedAtUtc": "2026-10-03T03:52:01.4988133+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,21 +20,21 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 5.174s  OK"
+      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 4.378s  OK"
     }
   ],
   "runtimeReports": [
     {
       "name": "r1-empty-rebuild",
-      "path": "artifacts/r1-empty-20261002/acceptance-manifest.json",
+      "path": "artifacts/r1-empty-20261003/acceptance-manifest.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T14:36:08.9629823+00:00"
+      "generatedAtUtc": "2026-10-03T03:45:43.3828513+00:00"
     },
     {
       "name": "r2-cdc",
-      "path": "artifacts/r2-cdc/r2-cdc-20261002-report.json",
+      "path": "artifacts/r2-cdc/r2-cdc-20261003-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T15:24:24.9932884+00:00"
+      "generatedAtUtc": "2026-10-03T03:47:15.0971674+00:00"
     },
     {
       "name": "r3-managed-lifecycle",
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-03T03:40:00.7555837+00:00"
+  "finishedAtUtc": "2026-10-03T03:52:01.5003334+00:00"
 }

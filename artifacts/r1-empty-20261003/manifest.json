@@ -1,0 +1,81 @@
+{
+  "fixture": "aetheris-r1-postgres-iceberg-v1",
+  "formatVersion": 2,
+  "sourceTable": "r1_fixture.source_orders",
+  "bronzeTable": "bronze.r1_orders",
+  "sourceColumns": [
+    "id",
+    "category",
+    "amount",
+    "event_time"
+  ],
+  "sourceRowCount": 5,
+  "expected": {
+    "columns": [
+      "category",
+      "order_count",
+      "total_amount"
+    ],
+    "rows": [
+      [
+        "A",
+        2,
+        "30.50"
+      ],
+      [
+        "B",
+        2,
+        "20.00"
+      ],
+      [
+        "C",
+        1,
+        "4.00"
+      ]
+    ],
+    "rowCount": 3,
+    "checksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b"
+  },
+  "cdcMutation": {
+    "operations": [
+      "UPDATE id=1002 amount=21.50",
+      "DELETE id=1003",
+      "INSERT id=1006"
+    ],
+    "expectedSourceRowCount": 5,
+    "expectedSourceIds": [
+      1001,
+      1002,
+      1004,
+      1005,
+      1006
+    ],
+    "expectedRows": [
+      [
+        1001,
+        "A",
+        "10.00"
+      ],
+      [
+        1002,
+        "A",
+        "21.50"
+      ],
+      [
+        1004,
+        "B",
+        "12.75"
+      ],
+      [
+        1005,
+        "C",
+        "4.00"
+      ],
+      [
+        1006,
+        "C",
+        "6.00"
+      ]
+    ]
+  }
+}

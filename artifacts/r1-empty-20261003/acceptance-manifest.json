@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 2,
+  "gate": "R1-empty-rebuild-hard-gate",
+  "status": "passed",
+  "freshRebuild": true,
+  "freshProject": true,
+  "sourceFixtureReset": true,
+  "generatedAtUtc": "2026-10-03T03:45:43.3828513Z",
+  "project": "aetheris-r1-full-20261003",
+  "fixture": "aetheris-r1-postgres-iceberg-v1",
+  "bronzeTable": "bronze.r1_orders",
+  "expectedChecksum": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b",
+  "engineChecksums": {
+    "flink": "write-verified-by-gateway",
+    "spark": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b",
+    "trino": "739f3d97baf777c566c71a133a2a7b030fdfc31eed036f52589db2d279a07a6b"
+  },
+  "flinkSubmission": {
+    "status": "passed",
+    "statementCount": 17,
+    "operations": [
+      {
+        "operation": "a535ea52-8863-4ed3-913d-531d1afcab3a",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "eb04838e-6443-4aa2-b909-17125f6ddce8",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "c3a4ac58-6d79-490b-b6a9-3ede5b29c4ae",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "3e44ed5f-c329-4ab9-a4c7-a32228b0a604",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "70b42f57-63ec-4e64-8fd9-f52a3877cbc5",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "a78303e6-6ce0-483b-923e-cf23e9be504c",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "20300f43-a25c-4faf-9064-23c7f2122c88",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "5ebeb76e-9ab9-487d-8c19-0af0a5a86960",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "3658979b-543a-43a9-be2d-5053a5fe657c",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "41fe9eb9-aff5-4a00-82f5-50cb70c44142",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "e4264591-48b5-4f8d-ba0d-e2f056641d1d",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "9fbd66c7-00ec-41d1-8345-5bafb25fd8af",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "2a5dff1f-2146-4eaf-a188-6cca01dce0cc",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "c39a93e0-fd48-4e6e-aac0-6481efaeb4ea",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "c300e910-df69-4548-ae44-b460d643de17",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "f3173b1e-06b3-4f8e-b9af-260896a771bc",
+        "status": "FINISHED"
+      },
+      {
+        "operation": "81484422-c479-4f86-b6ce-9dd668f96cbe",
+        "status": "FINISHED",
+        "jobId": "30a7149873523f970d332741b6adb160",
+        "jobStatus": "FINISHED"
+      }
+    ]
+  },
+  "gitCommit": "1d30c3e23b1703fcf62cd83f4a332555775e68a0",
+  "artifacts": {
+    "bom": {
+      "path": "configs/lakehouse/r1-bom.toml",
+      "sha256": "0e0dcb64e07a26b27ebb23403d6f5cc24985f3416cce499b3aaf48028c2e8c89"
+    },
+    "connectorAllowlist": {
+      "path": "configs/lakehouse/connector-allowlist.toml",
+      "sha256": "9a7a7c7a428f327cc6bf9998f2c50a14bce89a6075a4f015069524e01ab6b76a"
+    },
+    "connectorManifest": {
+      "path": "infrastructure/lakehouse/connectors/CONNECTOR-MANIFEST.json",
+      "sha256": "c6c6369949b3bc3de823718425fb1adbf526838de6a76f59667d8fc5237c5248"
+    },
+    "compose": {
+      "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+      "sha256": "9748477c5edffd3789e7aa0dede98014302ab5ce4ffcedec05cde23e55a4896e"
+    },
+    "tableContract": {
+      "path": "configs/lakehouse/r1-table-contract.toml",
+      "sha256": "73f591e5c0985dba4ad9994beffb6b4626d7a768c8966ba73b5527717712aefa"
+    },
+    "compatibilityMatrix": {
+      "path": "configs/lakehouse/r1-compatibility-matrix.json",
+      "sha256": "5a3826720c126ec76766909465bc53190e815204630903b36dae7608ebf0a29a"
+    },
+    "fixtureManifest": {
+      "path": "artifacts\\r1-empty-20261003\\manifest.json",
+      "sha256": "62340a89641108e40cfbd92769e103239dabcce48cc385b4617d0197e6b12201"
+    },
+    "flinkSubmission": {
+      "path": "artifacts\\r1-empty-20261003\\results\\flink.json",
+      "sha256": "c8a6360aa2fed326d5b212764e7827c6dcc63551abb51eb2e035f3421652949b"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+﻿{
+    "columns":  [
+                    "category",
+                    "order_count",
+                    "total_amount"
+                ],
+    "rows":  [
+                 {
+                     "category":  "A",
+                     "order_count":  2,
+                     "total_amount":  30.50
+                 },
+                 {
+                     "category":  "B",
+                     "order_count":  2,
+                     "total_amount":  20.00
+                 },
+                 {
+                     "category":  "C",
+                     "order_count":  1,
+                     "total_amount":  4.00
+                 }
+             ]
+}
