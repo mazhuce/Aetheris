@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$MetadataContainer = "aetheris-metadata-service-1",
+    [string]$MetadataDbContainer = "aetheris-postgres-1",
     [string]$ReportPath = "artifacts/r4-r5-control-plane/runtime-acceptance-report.json"
 )
 
@@ -176,14 +177,14 @@ try {
 } finally {
     if ($report.tableId) {
         try {
-            $envLines = Invoke-Docker @("inspect", "aetheris-postgres-1", "--format", "{{range .Config.Env}}{{println .}}{{end}}")
+            $envLines = Invoke-Docker @("inspect", $MetadataDbContainer, "--format", "{{range .Config.Env}}{{println .}}{{end}}")
             $db = ($envLines | Where-Object { $_ -like "POSTGRES_DB=*" } | Select-Object -First 1).ToString().Substring(12)
             $user = ($envLines | Where-Object { $_ -like "POSTGRES_USER=*" } | Select-Object -First 1).ToString().Substring(14)
             # Schema-change and maintenance records intentionally use RESTRICT;
             # remove those request records first, then let table-level CASCADE
             # remove snapshots, refs and quality observations.
             $sql = "BEGIN; DELETE FROM metadata.lakehouse_schema_change WHERE lakehouse_table_id=$($report.tableId); DELETE FROM metadata.lakehouse_maintenance_job WHERE lakehouse_table_id=$($report.tableId); DELETE FROM metadata.lakehouse_table WHERE id=$($report.tableId); COMMIT;"
-            Invoke-Docker @("exec", "aetheris-postgres-1", "psql", "-q", "-v", "ON_ERROR_STOP=1", "-U", $user, "-d", $db, "-c", $sql) | Out-Null
+            Invoke-Docker @("exec", $MetadataDbContainer, "psql", "-q", "-v", "ON_ERROR_STOP=1", "-U", $user, "-d", $db, "-c", $sql) | Out-Null
             $report.cleanup.tableRowsRemoved = $true
         } catch {
             $report.cleanup.error = $_.Exception.Message

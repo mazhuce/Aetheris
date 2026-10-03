@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "R4-R5-lakehouse-control-plane-runtime-gate",
   "status": "passed",
-  "generatedAtUtc": "2026-10-02T08:10:31.3276314+00:00",
+  "generatedAtUtc": "2026-10-03T02:40:56.3537486+00:00",
   "source": "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
   "quality": {
     "blockedOnFailure": true,

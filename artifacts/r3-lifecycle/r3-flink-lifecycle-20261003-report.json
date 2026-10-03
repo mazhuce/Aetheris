@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "gate": "R3-flink-lifecycle-runtime-gate",
+  "status": "passed",
+  "startedAtUtc": "2026-10-03T02:21:18.5219817+00:00",
+  "fixture": "aetheris-r3-flink-lifecycle-v1",
+  "phases": {
+    "submit": {
+      "status": "passed",
+      "session": "274ff15e-540e-4e67-96dc-f2ac75bb203a",
+      "operation": "1f8c3be3-9cda-4fef-af20-8a54b0bca36f",
+      "jobId": "e553fe87a3601a5309471d9b12c3069d",
+      "jobState": "RUNNING"
+    },
+    "checkpoint": {
+      "id": 1,
+      "status": "completed",
+      "triggerTimestamp": 1790994097738,
+      "latestAckTimestamp": 1790994098913
+    },
+    "taskManagerRestart": {
+      "status": "passed",
+      "jobId": "e553fe87a3601a5309471d9b12c3069d",
+      "stable": {
+        "jobId": "e553fe87a3601a5309471d9b12c3069d",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 8,
+        "status": "completed",
+        "triggerTimestamp": 1790994119644,
+        "latestAckTimestamp": 1790994119689
+      }
+    },
+    "pause": {
+      "status": "passed",
+      "jobId": "e553fe87a3601a5309471d9b12c3069d",
+      "savepoint": {
+        "requestId": "8fa6ded9fa50d527f4e4596bcbce7351",
+        "status": "COMPLETED",
+        "location": "s3://warehouse/savepoints/r3-pause/savepoint-e553fe-a627f408dff5",
+        "target": "s3://warehouse/savepoints/r3-pause"
+      },
+      "terminalState": "FINISHED"
+    },
+    "resume": {
+      "status": "passed",
+      "session": "2ac35534-98a2-4742-a1bd-f6519849d0d9",
+      "operation": "0a94726f-1f83-42a4-8e8b-8a7c59dcd11c",
+      "savepoint": "s3://warehouse/savepoints/r3-pause/savepoint-e553fe-a627f408dff5",
+      "jobId": "8c76a6134020f86217980ea3866c63c8",
+      "stable": {
+        "jobId": "8c76a6134020f86217980ea3866c63c8",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 21,
+        "status": "completed",
+        "triggerTimestamp": 1790994142431,
+        "latestAckTimestamp": 1790994142471
+      }
+    },
+    "upgrade": {
+      "status": "passed",
+      "oldJobId": "8c76a6134020f86217980ea3866c63c8",
+      "oldTerminalState": "FINISHED",
+      "session": "bcda14b6-fdc7-49f7-bace-0711923234e8",
+      "operation": "938eaf83-c6de-4134-a0b5-672e786c2c2f",
+      "savepoint": "s3://warehouse/savepoints/r3-upgrade/savepoint-8c76a6-df409fa4a8a8",
+      "replacementSqlSha256": "8b7ee8853015184dbb269ef93854f14412003cf064162383dc16701736f87f4e",
+      "jobId": "4a9b1bf95b1630cbc105b46afcefdbd4",
+      "stable": {
+        "jobId": "4a9b1bf95b1630cbc105b46afcefdbd4",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 29,
+        "status": "completed",
+        "triggerTimestamp": 1790994160811,
+        "latestAckTimestamp": 1790994160876
+      }
+    },
+    "networkInterruption": {
+      "status": "passed",
+      "network": "aetheris-r3-r45-20261003_default",
+      "taskManagerContainer": "f916f0d601bc6fe96a12d2460b5cf890f8cb889539bda55f2166932b6ec7ddfc",
+      "during": {
+        "jobId": "4a9b1bf95b1630cbc105b46afcefdbd4",
+        "taskManagerContainer": "f916f0d601bc6fe96a12d2460b5cf890f8cb889539bda55f2166932b6ec7ddfc",
+        "network": "aetheris-r3-r45-20261003_default",
+        "observed": true
+      },
+      "recoveredJobId": "4a9b1bf95b1630cbc105b46afcefdbd4",
+      "stable": {
+        "jobId": "4a9b1bf95b1630cbc105b46afcefdbd4",
+        "state": "RUNNING",
+        "stableSeconds": 5,
+        "vertices": 3
+      },
+      "checkpoint": {
+        "id": 30,
+        "status": "completed",
+        "triggerTimestamp": 1790994161812,
+        "latestAckTimestamp": 1790994161872
+      }
+    }
+  },
+  "reconciliation": {
+    "attempted": true,
+    "outageInjected": true,
+    "remoteUnavailableObserved": true,
+    "unknownWasNotSuccess": true,
+    "networkOutageInjected": true,
+    "networkRecoveryObserved": true,
+    "mode": "manual_review_required"
+  },
+  "cleanup": {
+    "completed": true
+  },
+  "error": null,
+  "finishedAtUtc": "2026-10-03T02:23:07.2995597+00:00"
+}

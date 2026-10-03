@@ -19,6 +19,7 @@ class R4R5ControlPlaneAcceptanceTests(unittest.TestCase):
     def test_script_covers_control_plane_and_fail_closed_cleanup(self):
         for marker in (
             "R4-R5-lakehouse-control-plane-runtime-gate",
+            "MetadataDbContainer",
             "/api/metadata/lakehouse/tables",
             "/schema-changes/",
             "/gold-quality-gate",

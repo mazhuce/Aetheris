@@ -14,6 +14,10 @@ set -a
 source "$env_file"
 set +a
 
+# Keep local Spark driver networking deterministic on WSL/Linux. Callers can
+# override this for a VM/host-side interface when the runner needs one.
+export SPARK_LOCAL_IP="${SPARK_LOCAL_IP:-127.0.0.1}"
+
 report_dir="$repo_root/artifacts/r5-maintenance-runner"
 artifact_dir="$report_dir/approved"
 state_dir="$report_dir/state"

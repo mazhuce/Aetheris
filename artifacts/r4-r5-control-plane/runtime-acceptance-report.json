@@ -2,17 +2,17 @@
   "schemaVersion": 2,
   "gate": "R4-R5-lakehouse-control-plane-runtime-gate",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T08:10:23.2998821+00:00",
-  "tableId": 17,
+  "startedAtUtc": "2026-10-03T02:40:50.1477406+00:00",
+  "tableId": 4,
   "snapshotIds": [
     "1001",
     "1002"
   ],
   "refIds": [
-    21,
-    22
+    3,
+    4
   ],
-  "schemaChangeId": 21,
+  "schemaChangeId": 5,
   "quality": {
     "blockedOnFailure": true,
     "reopenedAfterPass": true
@@ -25,7 +25,7 @@
         "reviewedStatus": "approved",
         "readyForExecution": true,
         "destructive": true,
-        "statement": "ALTER TABLE `iceberg`.`acceptance`.`r4_r5_acceptance_1790928623540` RENAME COLUMN `ingested_at` TO `ingested_time`"
+        "statement": "ALTER TABLE `iceberg`.`acceptance`.`r4_r5_acceptance_1790995250354` RENAME COLUMN `ingested_at` TO `ingested_time`"
       },
       "drop": {
         "decision": "approval_required",
@@ -44,7 +44,7 @@
       "decision": "auto_apply",
       "status": "proposed",
       "readyForExecution": true,
-      "statement": "ALTER TABLE `iceberg`.`acceptance`.`r4_r5_acceptance_1790928623540` ADD COLUMN `ingested_at` TIMESTAMP"
+      "statement": "ALTER TABLE `iceberg`.`acceptance`.`r4_r5_acceptance_1790995250354` ADD COLUMN `ingested_at` TIMESTAMP"
     },
     "table": {
       "formatVersion": 2,
@@ -58,5 +58,5 @@
     "error": null
   },
   "error": null,
-  "finishedAtUtc": "2026-10-02T08:10:31.3276314+00:00"
+  "finishedAtUtc": "2026-10-03T02:40:56.3537486+00:00"
 }

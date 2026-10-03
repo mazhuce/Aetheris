@@ -19,6 +19,7 @@ class R5MaintenanceRunnerAcceptanceTests(unittest.TestCase):
         for marker in (
             "R5-maintenance-runner-runtime-gate",
             "AETHERIS_RUNNER_SPARK_CATALOG_MODE=rest",
+            "SPARK_LOCAL_IP",
             "v1/jobs",
             "remove_orphan_files",
             "rewrite_data_files",

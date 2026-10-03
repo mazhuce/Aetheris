@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "gate": "R4-flink-event-time-quality-runtime-gate",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T07:31:08.9413126+00:00",
+  "startedAtUtc": "2026-10-03T02:32:29.3061865+00:00",
   "source": {
     "kind": "postgres-cdc",
-    "table": "event_time_quality_1790926268935",
-    "slot": "aetheris_r4_quality_1790926268935"
+    "table": "event_time_quality_1790994749302",
+    "slot": "aetheris_r4_quality_1790994749302"
   },
   "watermark": {
     "expression": "event_time - INTERVAL '5' SECOND",
@@ -14,9 +14,9 @@
     "observedAt": "2026-09-23T00:00:55.000000Z"
   },
   "job": {
-    "id": "60b66572b871b91ab6e402c303402a24",
+    "id": "9d4617081c1f36036c110def39b4f26f",
     "state": "CANCELED",
-    "checkpointId": 18,
+    "checkpointId": 16,
     "canceled": true
   },
   "counts": {
@@ -26,7 +26,7 @@
   },
   "metadataCallback": {
     "status": "passed",
-    "tableId": 16,
+    "tableId": 2,
     "failedClosed": true
   },
   "cleanup": {
@@ -40,12 +40,12 @@
   "evidence": {
     "watermarkedRows": 2,
     "rows": [
-      "Oct 02, 2026 7:31:45 AM org.jline.utils.Log logr",
+      "Oct 03, 2026 2:32:51 AM org.jline.utils.Log logr",
       "route\t_col1",
       "accepted\t2",
       "dead_letter\t1"
     ]
   },
   "error": null,
-  "finishedAtUtc": "2026-10-02T07:31:55.8641080+00:00"
+  "finishedAtUtc": "2026-10-03T02:32:57.9929491+00:00"
 }

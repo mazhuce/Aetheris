@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "gate": "platform-release-acceptance",
   "status": "passed",
-  "startedAtUtc": "2026-10-02T15:26:20.9946026+00:00",
+  "startedAtUtc": "2026-10-03T03:22:37.5355821+00:00",
   "offlineChecks": [
     {
       "name": "r1-release-validator",
@@ -20,7 +20,7 @@
       "name": "script-regression-suite",
       "status": "passed",
       "exitCode": 0,
-      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 5.179s  OK"
+      "output": "................................................................................................ ---------------------------------------------------------------------- Ran 96 tests in 7.646s  OK"
     }
   ],
   "runtimeReports": [
@@ -46,19 +46,19 @@
       "name": "r4-event-time-quality",
       "path": "artifacts/r4-event-time/r4-event-time-quality-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T07:31:55.8641080+00:00"
+      "generatedAtUtc": "2026-10-03T02:32:57.9929491+00:00"
     },
     {
       "name": "r4-r5-control-plane",
       "path": "artifacts/r4-r5-control-plane/runtime-acceptance-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T08:10:31.3276314+00:00"
+      "generatedAtUtc": "2026-10-03T02:40:56.3537486+00:00"
     },
     {
       "name": "r5-maintenance-runner",
       "path": "artifacts/r5-maintenance-runner/r5-maintenance-runtime-report.json",
       "status": "passed",
-      "generatedAtUtc": "2026-10-02T07:36:17.3583970+00:00"
+      "generatedAtUtc": "2026-10-03T02:59:26.0141520+00:00"
     },
     {
       "name": "datasource-nine-local-runtime",
@@ -97,5 +97,5 @@
   "manualReviewRequired": [],
   "failedAdditionalGates": [],
   "note": "manual_review_required means a required real-runtime report is missing or Docker is unavailable; it is not a success state",
-  "finishedAtUtc": "2026-10-02T15:26:20.9966382+00:00"
+  "finishedAtUtc": "2026-10-03T03:22:37.5387290+00:00"
 }
