@@ -33,6 +33,11 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
             git pull --ff-only
+            # Compose defaults to local build tags for development. Production
+            # must pull the images published by build.yml from GHCR instead of
+            # attempting to resolve the non-existent aetheris-local registry.
+            export AETHERIS_IMAGE_PREFIX=ghcr.io/mazhuce/aetheris
+            export AETHERIS_IMAGE_TAG=latest
             docker compose pull
             docker compose up -d --remove-orphans
             docker image prune -f

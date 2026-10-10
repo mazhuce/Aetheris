@@ -24,11 +24,14 @@ public class PermissionAuditClient {
 
     public PermissionAuditClient(
             RestClient.Builder builder,
-            @Value("${aetheris.system.base-url:http://localhost:8081}") String baseUrl) {
+            @Value("${aetheris.system.base-url:http://localhost:8081}") String baseUrl,
+            @Value("${aetheris.internal-token:}") String internalToken) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(500);
         factory.setReadTimeout(1500);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl).build();
+        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken == null ? "" : internalToken)
+                .build();
     }
 
     public void record(PermissionEventRequest event) {

@@ -18,7 +18,8 @@ services:
       - ./apps/web/vite.config.ts:/app/vite.config.ts
       - ./apps/web/tsconfig.json:/app/tsconfig.json
     ports: !override
-      - "${WEB_PORT:-5173}:5173"
+      # Vite 开发服务器默认仅供本机浏览器使用，避免 HMR/API 代理暴露到 LAN。
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"]
       interval: 5s

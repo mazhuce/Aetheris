@@ -1,8 +1,12 @@
 package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.AuditLog;
+import com.aetheris.system.security.AetherisIdentity;
+import com.aetheris.system.security.AuthPermissionClient;
+import com.aetheris.system.security.SystemIdentityInterceptor;
 import com.aetheris.system.service.AuditLogService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -45,5 +49,21 @@ class ActivityControllerTest {
         verify(service).list(captor.capture());
         assertEquals(1, ActivityController.safeLimit(0));
         assertTrue(ActivityController.canViewAll("admin"));
+    }
+
+    @Test
+    void httpActivityUsesLivePermissionInsteadOfRoleHeader() {
+        AuditLogService service = mock(AuditLogService.class);
+        AuthPermissionClient auth = mock(AuthPermissionClient.class);
+        when(service.list(any(LambdaQueryWrapper.class))).thenReturn(List.of());
+        when(auth.mayManage("alice")).thenReturn(false);
+        ActivityController controller = new ActivityController(service, auth);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/system/activity");
+        request.setAttribute(SystemIdentityInterceptor.IDENTITY_ATTRIBUTE,
+                new AetherisIdentity(42L, "alice"));
+
+        controller.list(request, 12);
+
+        verify(auth).mayManage("alice");
     }
 }

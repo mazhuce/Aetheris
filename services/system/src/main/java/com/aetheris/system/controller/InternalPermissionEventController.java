@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 权限审计事件内部写入端点：auth-service 的授权、撤销、拒绝与越权尝试
- * 在这里统一落库。与 /internal/audit/logs 一致仅在内网可达（网关不路由
- * /internal/**，system-service 不映射宿主端口）。
+ * 在这里统一落库。端点由 system-service 的共享内部令牌拦截器保护；网关不路由
+ * /internal/**，system-service 也不映射宿主端口。
  */
 @RestController
 @RequestMapping("/internal/audit/permission-events")

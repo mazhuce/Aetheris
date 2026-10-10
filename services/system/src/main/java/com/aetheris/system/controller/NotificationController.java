@@ -1,14 +1,16 @@
 package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.Notification;
+import com.aetheris.system.security.AetherisIdentity;
+import com.aetheris.system.security.SystemIdentityInterceptor;
 import com.aetheris.system.service.NotificationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,8 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 面向当前用户的通知（我的待办）。用户名来自网关注入的 X-User-Name，
- * 客户端不可伪造。
+ * 面向当前用户的通知（我的待办）。用户名来自网关签名身份，
+ * 服务自身不再信任客户端可伪造的 X-User-Name。
  */
 @RestController
 @RequestMapping("/api/system/notifications")
@@ -32,8 +34,9 @@ public class NotificationController {
 
     @GetMapping
     public List<Notification> list(
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
+            HttpServletRequest request,
             @RequestParam(required = false) Boolean unread) {
+        String username = username(request);
         return notificationService.list(new LambdaQueryWrapper<Notification>()
                 .eq(Notification::getRecipient, username)
                 .eq(Boolean.TRUE.equals(unread), Notification::getIsRead, false)
@@ -43,7 +46,8 @@ public class NotificationController {
 
     @GetMapping("/unread-count")
     public Map<String, Long> unreadCount(
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
+            HttpServletRequest request) {
+        String username = username(request);
         long count = notificationService.count(new LambdaQueryWrapper<Notification>()
                 .eq(Notification::getRecipient, username)
                 .eq(Notification::getIsRead, false));
@@ -53,7 +57,8 @@ public class NotificationController {
     @PutMapping("/{id}/read")
     public ResponseEntity<Void> markRead(
             @PathVariable Long id,
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
+            HttpServletRequest request) {
+        String username = username(request);
         // 条件带 recipient：不能把别人的通知标记为已读。
         boolean updated = notificationService.update(new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getId, id)
@@ -64,11 +69,21 @@ public class NotificationController {
 
     @PutMapping("/read-all")
     public ResponseEntity<Void> markAllRead(
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username) {
+            HttpServletRequest request) {
+        String username = username(request);
         notificationService.update(new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getRecipient, username)
                 .eq(Notification::getIsRead, false)
                 .set(Notification::getIsRead, true));
         return ResponseEntity.noContent().build();
+    }
+
+    private String username(HttpServletRequest request) {
+        AetherisIdentity identity = (AetherisIdentity) request.getAttribute(
+                SystemIdentityInterceptor.IDENTITY_ATTRIBUTE);
+        if (identity == null || identity.username() == null || identity.username().isBlank()) {
+            throw new IllegalStateException("缺少有效的系统身份");
+        }
+        return identity.username();
     }
 }

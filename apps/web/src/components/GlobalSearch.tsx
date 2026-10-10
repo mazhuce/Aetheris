@@ -45,6 +45,16 @@ export default function GlobalSearch() {
   const [tableLoading, setTableLoading] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<InputRef>(null)
+  const searchRequestRef = useRef(0)
+  const mountedRef = useRef(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      searchRequestRef.current += 1
+    }
+  }, [])
 
   // 保留 ⌘K / Ctrl+K 快捷操作，但不在紧凑的顶部栏里占用额外空间。
   useEffect(() => {
@@ -74,20 +84,30 @@ export default function GlobalSearch() {
 
   // 元数据表搜索做防抖，避免每敲一个字都打一次后端。
   useEffect(() => {
+    const requestId = ++searchRequestRef.current
     const trimmed = keyword.trim()
     if (!trimmed) {
-      setTables([])
-      setTableLoading(false)
+      if (mountedRef.current) {
+        setTables([])
+        setTableLoading(false)
+      }
       return
     }
-    setTableLoading(true)
+    if (mountedRef.current) setTableLoading(true)
     const timer = setTimeout(async () => {
       try {
-        setTables(await searchTables(trimmed, 8))
+        const nextTables = await searchTables(trimmed, 8)
+        if (mountedRef.current && searchRequestRef.current === requestId) {
+          setTables(nextTables)
+        }
       } catch {
-        setTables([])
+        if (mountedRef.current && searchRequestRef.current === requestId) {
+          setTables([])
+        }
       } finally {
-        setTableLoading(false)
+        if (mountedRef.current && searchRequestRef.current === requestId) {
+          setTableLoading(false)
+        }
       }
     }, 250)
     return () => clearTimeout(timer)

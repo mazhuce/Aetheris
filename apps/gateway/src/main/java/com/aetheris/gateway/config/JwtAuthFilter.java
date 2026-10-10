@@ -18,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,25 +125,39 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return unauthorized(exchange);
         }
 
-        Claims claims;
+        String username;
+        Long uid;
+        String authenticatedRole;
+        String jti;
+        Instant expiresAt;
         try {
-            claims = Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(key)
                     .build()
                     .parseSignedClaims(authorization.substring(7))
                     .getPayload();
+            // Validate claim types inside the authentication boundary as well:
+            // a signed token with malformed claims must produce 401, not 500.
+            username = claims.getSubject();
+            uid = claims.get("uid", Long.class);
+            String role = claims.get("role", String.class);
+            authenticatedRole = role == null ? "viewer" : role;
+            jti = claims.getId();
+            expiresAt = claims.getExpiration() == null ? null : claims.getExpiration().toInstant();
+            if (username == null || username.isBlank() || uid == null || uid <= 0 || expiresAt == null) {
+                return unauthorized(exchange);
+            }
         } catch (Exception malformed) {
             return unauthorized(exchange);
         }
 
         String rawToken = authorization.substring(7);
-        String jti = claims.getId();
         String revocationKey = jti == null ? TokenRevocationStore.fingerprint(rawToken) : jti;
         return revocationStore.isRevoked(revocationKey)
                 .flatMap(revoked -> revoked
                         ? unauthorized(exchange)
-                        : continueAuthenticated(exchange, chain, path, method, claims,
-                                revocationKey))
+                        : continueAuthenticated(exchange, chain, path, method,
+                                username, uid, authenticatedRole, expiresAt, revocationKey))
                 // Revocation state is an authentication boundary. If the shared
                 // store is unavailable, accepting tokens would silently undo logout.
                 .onErrorResume(error -> serviceUnavailable(exchange));
@@ -150,16 +165,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     private Mono<Void> continueAuthenticated(
             ServerWebExchange exchange, GatewayFilterChain chain, String path,
-            HttpMethod method, Claims claims, String revocationKey) {
+            HttpMethod method, String username, Long uid, String authenticatedRole,
+            Instant expiresAt, String revocationKey) {
         Mono<Void> revoke = "/api/auth/logout".equals(path)
-                ? revocationStore.revoke(revocationKey, claims.getExpiration() == null
-                        ? null : claims.getExpiration().toInstant())
+                ? revocationStore.revoke(revocationKey, expiresAt)
                 : Mono.empty();
-
-        String username = claims.getSubject();
-        String role = claims.get("role", String.class);
-        String authenticatedRole = role == null ? "viewer" : role;
-        Long uid = claims.get("uid", Long.class);
 
         exchange.getAttributes().put(AUTHENTICATED_USER_ATTRIBUTE, username);
         exchange.getAttributes().put(AUTHENTICATED_ROLE_ATTRIBUTE, authenticatedRole);
@@ -177,9 +187,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 .headers(headers -> {
                     headers.set("X-User-Name", username);
                     headers.set("X-User-Role", authenticatedRole);
-                    if (uid != null) {
-                        headers.set("X-User-Id", String.valueOf(uid));
-                    }
+                    // Never preserve a client-provided identity header.  uid is
+                    // required above, so this is always the JWT value.
+                    headers.set("X-User-Id", String.valueOf(uid));
                     if (identitySignature != null) {
                         headers.set(IdentitySigner.IDENTITY_HEADER, identitySignature);
                     }
@@ -190,15 +200,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         return revoke.then(Mono.defer(() -> {
             String service = serviceOf(path, method);
-            if (service != null) {
-                return permissionGate.mayMutate(username, service)
+            if (isSensitive(path)) {
+                return permissionGate.mayManage(username)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
                     .onErrorResume(error -> serviceUnavailable(exchange));
             }
-            if (isSensitive(path)) {
-                return permissionGate.mayManage(username)
+            if (service != null) {
+                return permissionGate.mayMutate(username, service)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
@@ -209,11 +219,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isPublic(String path) {
-        return PUBLIC_PREFIXES.stream().anyMatch(path::startsWith);
+        return PUBLIC_PREFIXES.stream().anyMatch(prefix -> path.equals(prefix)
+                || path.equals(prefix + "/"));
     }
 
     private boolean isSensitive(String path) {
-        return SENSITIVE_PREFIXES.stream().anyMatch(path::startsWith);
+        return SENSITIVE_PREFIXES.stream().anyMatch(prefix -> path.equals(prefix)
+                || path.startsWith(prefix + "/"));
     }
 
     /** 管理类服务的写请求 → 粗粒度判定；读请求与其它前缀返回 null（不拦）。 */

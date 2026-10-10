@@ -93,6 +93,19 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void doesNotTreatLookalikeLoginPathAsPublic() {
+        JwtAuthFilter filter = filter(neverCalledGate());
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/auth/login-evil").build());
+
+        filter.filter(exchange, ignored -> {
+            throw new AssertionError("lookalike login path must not be public");
+        }).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
     void replacesSpoofedHeadersWithTokenIdentityAndSignsIt() {
         String token = token("alice", "viewer", 42L);
         MockServerWebExchange exchange = MockServerWebExchange.from(
@@ -164,6 +177,66 @@ class JwtAuthFilterTest {
         }).block();
 
         assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void sensitiveSystemWritesRequireManagePermissionBeforeServiceMutationGate() {
+        PermissionGate mutateOnly = new PermissionGate() {
+            @Override
+            public Mono<Boolean> mayMutate(String username, String service) {
+                return Mono.just(true);
+            }
+
+            @Override
+            public Mono<Boolean> mayManage(String username) {
+                return Mono.just(false);
+            }
+        };
+        MockServerWebExchange exchange = exchange("POST", "/api/system/audit-logs", token("alice", "viewer", 42L));
+
+        filter(mutateOnly).filter(exchange, ignored -> {
+            throw new AssertionError("audit writes must not reach downstream without manage permission");
+        }).block();
+
+        assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void rejectsAuthenticatedTokenWithoutStableUserId() {
+        String malformed = Jwts.builder()
+                .subject("alice")
+                .claim("role", "admin")
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(KEY)
+                .compact();
+        MockServerWebExchange exchange = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/quality/rules")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + malformed)
+                        .header("X-User-Id", "1")
+                        .build());
+
+        filter(neverCalledGate()).filter(exchange, ignored -> {
+            throw new AssertionError("malformed identity must not reach downstream");
+        }).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
+    void rejectsMalformedClaimTypesWithoutThrowing() {
+        for (String malformed : new String[]{
+                Jwts.builder().subject("alice").claim("uid", "not-a-number")
+                        .expiration(new Date(System.currentTimeMillis() + 60_000)).signWith(KEY).compact(),
+                Jwts.builder().subject("alice").claim("uid", 42L).claim("role", 7)
+                        .expiration(new Date(System.currentTimeMillis() + 60_000)).signWith(KEY).compact(),
+                Jwts.builder().subject("alice").claim("uid", 42L).signWith(KEY).compact()
+        }) {
+            MockServerWebExchange exchange = exchange("GET", "/api/quality/rules", malformed);
+            filter(neverCalledGate()).filter(exchange, ignored -> {
+                throw new AssertionError("malformed claims must not reach downstream");
+            }).block();
+            assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+        }
     }
 
     @Test

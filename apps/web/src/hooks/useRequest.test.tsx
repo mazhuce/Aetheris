@@ -41,4 +41,34 @@ describe('useRequest', () => {
     })
     expect(result.current.data).toBe(2)
   })
+
+  it('并发请求只接受最后一次结果，旧请求不能覆盖新状态', async () => {
+    let resolveFirst!: (value: string) => void
+    let resolveSecond!: (value: string) => void
+    const first = new Promise<string>((resolve) => { resolveFirst = resolve })
+    const second = new Promise<string>((resolve) => { resolveSecond = resolve })
+    const fetcher = vi.fn(() => fetcher.mock.calls.length === 1 ? first : second)
+    const { result } = renderHook(() => useRequest(fetcher, false))
+
+    let firstRun!: Promise<void>
+    let secondRun!: Promise<void>
+    await act(async () => {
+      firstRun = result.current.run()
+      secondRun = result.current.run()
+    })
+
+    await act(async () => {
+      resolveSecond('new')
+      await secondRun
+    })
+    expect(result.current.loading).toBe(false)
+    expect(result.current.data).toBe('new')
+
+    await act(async () => {
+      resolveFirst('old')
+      await firstRun
+    })
+    expect(result.current.loading).toBe(false)
+    expect(result.current.data).toBe('new')
+  })
 })

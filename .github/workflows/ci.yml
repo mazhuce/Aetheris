@@ -78,11 +78,16 @@ jobs:
       JWT_SECRET: smoke-jwt-secret-that-is-longer-than-32-bytes
       INITIAL_ADMIN_PASSWORD: smoke-admin-password
       AETHERIS_INTERNAL_TOKEN: smoke-internal-token-that-is-longer-than-32-bytes
-      AETHERIS_DATASOURCE_MASTER_KEY: smoke-datasource-master-key-that-is-long-enough
+      # DataSourceSecretService requires a base64-encoded key of exactly 32 bytes.
+      # This deterministic value is test-only and must never be reused in deployments.
+      AETHERIS_DATASOURCE_MASTER_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       REDIS_PASSWORD: smoke-redis-password
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate Compose interpolation before build
+        run: docker compose config --quiet
 
       - name: Start stack
         run: docker compose up --build -d

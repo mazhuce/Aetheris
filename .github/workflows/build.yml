@@ -1,7 +1,7 @@
 name: Build Images
 
 # CI 通过后，在 main 分支 / v* 标签推送时构建全部 11 个镜像并发布到 GHCR。
-# 镜像命名与 docker-compose.yml 中各服务的 image: 字段保持一致：
+# 镜像命名与 docker-compose.yml 中的 AETHERIS_IMAGE_PREFIX 保持一致：
 #   ghcr.io/mazhuce/aetheris-<name>:latest + :sha-xxxxxxx
 # 服务器部署时 docker compose pull 即可拉取，无需在服务器上构建。
 

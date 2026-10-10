@@ -2,9 +2,13 @@ package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.AuditLog;
 import com.aetheris.system.service.AuditLogService;
+import com.aetheris.system.security.AetherisIdentity;
+import com.aetheris.system.security.AuthPermissionClient;
+import com.aetheris.system.security.SystemIdentityInterceptor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,17 +20,43 @@ import java.util.List;
 @RequestMapping("/api/system/activity")
 public class ActivityController {
     private final AuditLogService auditLogService;
+    private final AuthPermissionClient authPermissionClient;
 
-    public ActivityController(AuditLogService auditLogService) { this.auditLogService = auditLogService; }
+    @Autowired
+    public ActivityController(AuditLogService auditLogService,
+                              AuthPermissionClient authPermissionClient) {
+        this.auditLogService = auditLogService;
+        this.authPermissionClient = authPermissionClient;
+    }
+
+    /** Test-friendly constructor; production wiring uses the dynamic auth check. */
+    public ActivityController(AuditLogService auditLogService) {
+        this(auditLogService, null);
+    }
 
     @GetMapping
+    public List<AuditLog> list(HttpServletRequest request,
+                               @RequestParam(defaultValue = "12") int limit) {
+        AetherisIdentity identity = (AetherisIdentity) request.getAttribute(
+                SystemIdentityInterceptor.IDENTITY_ATTRIBUTE);
+        if (identity == null) {
+            throw new IllegalStateException("缺少有效的系统身份");
+        }
+        boolean canViewAll = authPermissionClient != null
+                && authPermissionClient.mayManage(identity.username());
+        return listForScope(identity.username(), canViewAll, limit);
+    }
+
+    /** Kept for focused unit tests and non-HTTP callers. */
     public List<AuditLog> list(
-            @RequestHeader(value = "X-User-Name", defaultValue = "unknown") String username,
-            @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role,
-            @RequestParam(defaultValue = "12") int limit) {
+            String username, String role, int limit) {
+        return listForScope(username, canViewAll(role), limit);
+    }
+
+    private List<AuditLog> listForScope(String username, boolean canViewAll, int limit) {
         int safeLimit = safeLimit(limit);
         return auditLogService.list(new LambdaQueryWrapper<AuditLog>()
-                .eq(!canViewAll(role), AuditLog::getUsername, username)
+                .eq(!canViewAll, AuditLog::getUsername, username)
                 .ne(AuditLog::getPath, "/api/auth/login")
                 .orderByDesc(AuditLog::getId)
                 .last("LIMIT " + safeLimit));

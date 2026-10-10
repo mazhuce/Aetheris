@@ -18,8 +18,11 @@ public class AuditLogClient {
 
     public AuditLogClient(
             WebClient.Builder builder,
-            @Value("${audit.base-url}") String baseUrl) {
-        this.webClient = builder.baseUrl(baseUrl).build();
+            @Value("${audit.base-url}") String baseUrl,
+            @Value("${aetheris.internal-token:}") String internalToken) {
+        this.webClient = builder.baseUrl(baseUrl)
+                .defaultHeader("X-Internal-Token", internalToken == null ? "" : internalToken)
+                .build();
     }
 
     public Mono<Void> record(AuditEvent event) {

@@ -89,7 +89,7 @@ services:
 
   system-service:
     <<: *java-runtime
-    image: aetheris-local/system:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-system:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/system/Dockerfile
@@ -116,7 +116,7 @@ services:
     # only in this JDBC adapter's isolated tmpfs.
     tmpfs:
       - /tmp:size=64m,mode=1777,exec
-    image: aetheris-local/metadata:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-metadata:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/metadata/Dockerfile
@@ -139,7 +139,7 @@ services:
 
   serving-service:
     <<: *java-runtime
-    image: aetheris-local/serving:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-serving:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/serving/Dockerfile
@@ -167,7 +167,7 @@ services:
 
   quality-service:
     <<: *java-runtime
-    image: aetheris-local/quality:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-quality:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/quality/Dockerfile
@@ -196,7 +196,7 @@ services:
 
   ingestion-service:
     <<: *java-runtime
-    image: aetheris-local/ingestion:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-ingestion:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/ingestion/Dockerfile
@@ -225,7 +225,7 @@ services:
 
   governance-service:
     <<: *java-runtime
-    image: aetheris-local/governance:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-governance:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/governance/Dockerfile
@@ -247,7 +247,7 @@ services:
 
   workflow-service:
     <<: *java-runtime
-    image: aetheris-local/workflow:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-workflow:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/workflow/Dockerfile
@@ -286,6 +286,9 @@ services:
       AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:-5000}
       AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:-2000}
       # Flink SQL Gateway 的连接/轮询参数；任务定义仍可覆盖 endpoint，便于多集群部署。
+      # 容器内的 127.0.0.1 指向 workflow 自身；默认应指向宿主机上
+      # 由 R1 profile 暴露的 SQL Gateway，避免默认健康检查/任务端点打到错误容器。
+      AETHERIS_FLINK_SQL_GATEWAY_BASE_URL: ${AETHERIS_FLINK_SQL_GATEWAY_BASE_URL:-http://host.docker.internal:18083}
       AETHERIS_FLINK_SQL_GATEWAY_CONNECT_TIMEOUT: ${AETHERIS_FLINK_SQL_GATEWAY_CONNECT_TIMEOUT:-PT5S}
       AETHERIS_FLINK_SQL_GATEWAY_POLL_INTERVAL_MS: ${AETHERIS_FLINK_SQL_GATEWAY_POLL_INTERVAL_MS:-1000}
 
@@ -310,7 +313,7 @@ services:
 
   ai-agent:
     <<: *java-runtime
-    image: aetheris-local/ai-agent:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-ai-agent:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/ai-agent/Dockerfile
@@ -339,7 +342,7 @@ services:
 
   auth-service:
     <<: *java-runtime
-    image: aetheris-local/auth:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-auth:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: services/auth/Dockerfile
@@ -365,7 +368,7 @@ services:
 
   gateway:
     <<: *java-runtime
-    image: aetheris-local/gateway:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-gateway:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: .
       dockerfile: apps/gateway/Dockerfile
@@ -422,7 +425,7 @@ services:
       - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
 
   web:
-    image: aetheris-local/web:${AETHERIS_IMAGE_TAG:-security-20260908}
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-web:${AETHERIS_IMAGE_TAG:-security-20260908}
     build:
       context: ./apps/web
       dockerfile: Dockerfile
