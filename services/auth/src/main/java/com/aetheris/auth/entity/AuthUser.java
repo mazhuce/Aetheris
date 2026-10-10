@@ -17,6 +17,7 @@ public class AuthUser {
     private String phone;
     private String role;
     private String status;
+    private Long sessionVersion;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -36,6 +37,8 @@ public class AuthUser {
     public void setRole(String role) { this.role = role; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public Long getSessionVersion() { return sessionVersion == null ? 0L : sessionVersion; }
+    public void setSessionVersion(Long sessionVersion) { this.sessionVersion = sessionVersion; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

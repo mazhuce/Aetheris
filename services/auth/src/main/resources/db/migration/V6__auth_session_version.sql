@@ -1,0 +1,2 @@
+ALTER TABLE auth.auth_user
+    ADD COLUMN IF NOT EXISTS session_version BIGINT NOT NULL DEFAULT 0;

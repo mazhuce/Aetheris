@@ -33,6 +33,7 @@ class JwtServiceTest {
         assertEquals("alice", claims.getSubject());
         assertEquals("admin", claims.get("role", String.class));
         assertEquals(42L, claims.get("uid", Long.class));
+        assertEquals("access", claims.get("typ", String.class));
     }
 
     @Test

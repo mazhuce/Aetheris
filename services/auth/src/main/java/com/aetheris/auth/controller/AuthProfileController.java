@@ -51,7 +51,7 @@ public class AuthProfileController {
     @GetMapping
     public ResponseEntity<?> profile(@RequestHeader(USER_HEADER) String username) {
         AuthUser user = findByUsername(username);
-        if (user == null) {
+        if (user == null || !"active".equals(user.getStatus())) {
             // 令牌有效但账号已被删除：让前端把这种情况当作需要重新登录，而非服务故障。
             return ResponseEntity.status(401).body(Map.of("message", "账号不存在，请重新登录"));
         }
@@ -63,7 +63,7 @@ public class AuthProfileController {
             @RequestHeader(USER_HEADER) String username,
             @Valid @RequestBody UpdateProfileRequest request) {
         AuthUser user = findByUsername(username);
-        if (user == null) {
+        if (user == null || !"active".equals(user.getStatus())) {
             return ResponseEntity.status(401).body(Map.of("message", "账号不存在，请重新登录"));
         }
 
@@ -85,7 +85,7 @@ public class AuthProfileController {
             @RequestHeader(USER_HEADER) String username,
             @Valid @RequestBody ChangePasswordRequest request) {
         AuthUser user = findByUsername(username);
-        if (user == null) {
+        if (user == null || !"active".equals(user.getStatus())) {
             return ResponseEntity.status(401).body(Map.of("message", "账号不存在，请重新登录"));
         }
 
@@ -99,6 +99,9 @@ public class AuthProfileController {
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        // Password changes terminate all refresh sessions. Access JWTs remain
+        // short-lived and are additionally revoked by the browser logout path.
+        user.setSessionVersion(user.getSessionVersion() + 1);
         user.setUpdatedAt(OffsetDateTime.now());
         authUserService.updateById(user);
         log.info("Password changed for {}", username);

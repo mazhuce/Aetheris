@@ -50,6 +50,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/api/auth/login",
+            "/api/auth/refresh",
             "/actuator/health",
             "/actuator/info"
     );
@@ -121,7 +122,18 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        if (authorization == null || !authorization.startsWith("Bearer ")) {
+        String rawToken = authorization != null && authorization.startsWith("Bearer ")
+                ? authorization.substring(7)
+                : exchange.getRequest().getCookies().getFirst("aetheris_access") == null
+                        ? null
+                        : exchange.getRequest().getCookies().getFirst("aetheris_access").getValue();
+        if (rawToken == null || rawToken.isBlank()) {
+            // Logout is idempotent and must clear cookies even when the access
+            // token already expired. If a valid access cookie exists, the path
+            // continues through the normal revocation branch below.
+            if ("/api/auth/logout".equals(path)) {
+                return chain.filter(exchange);
+            }
             return unauthorized(exchange);
         }
 
@@ -133,8 +145,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
+                    .require("typ", "access")
                     .build()
-                    .parseSignedClaims(authorization.substring(7))
+                    .parseSignedClaims(rawToken)
                     .getPayload();
             // Validate claim types inside the authentication boundary as well:
             // a signed token with malformed claims must produce 401, not 500.
@@ -148,14 +161,18 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                 return unauthorized(exchange);
             }
         } catch (Exception malformed) {
-            return unauthorized(exchange);
+            // Logout remains idempotent when the short-lived access cookie has
+            // expired or is malformed: auth-service must still clear and
+            // rotate the refresh session.
+            return "/api/auth/logout".equals(path)
+                    ? chain.filter(exchange)
+                    : unauthorized(exchange);
         }
 
-        String rawToken = authorization.substring(7);
         String revocationKey = jti == null ? TokenRevocationStore.fingerprint(rawToken) : jti;
         return revocationStore.isRevoked(revocationKey)
                 .flatMap(revoked -> revoked
-                        ? unauthorized(exchange)
+                        ? "/api/auth/logout".equals(path) ? chain.filter(exchange) : unauthorized(exchange)
                         : continueAuthenticated(exchange, chain, path, method,
                                 username, uid, authenticatedRole, expiresAt, revocationKey))
                 // Revocation state is an authentication boundary. If the shared

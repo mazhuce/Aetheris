@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
-import { USERNAME_KEY } from '@/api/http'
+import { useAuthSession } from '@/hooks/useAuthSession'
 import { clearRecentVisits, readRecentVisits, type RecentVisit } from '@/utils/recentVisits'
 import { flattenNavItems } from '@/constants/navigation'
 
@@ -26,19 +26,21 @@ function relativeTime(timestamp: number): string {
 export default function RecentVisitsPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const session = useAuthSession()
+  const username = session.status === 'authenticated' ? session.user.username : undefined
   const [visits, setVisits] = useState<RecentVisit[]>([])
   const [page, setPage] = useState(1)
 
   const refresh = useCallback(() => {
-    setVisits(readRecentVisits(localStorage.getItem(USERNAME_KEY) ?? undefined))
-  }, [])
+    setVisits(readRecentVisits(username))
+  }, [username])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
   const handleClear = () => {
-    clearRecentVisits(localStorage.getItem(USERNAME_KEY) ?? undefined)
+    clearRecentVisits(username)
     message.success('已清空最近访问记录')
     setPage(1)
     refresh()

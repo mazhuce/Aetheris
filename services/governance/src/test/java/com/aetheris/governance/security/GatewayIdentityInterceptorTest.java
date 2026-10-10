@@ -47,6 +47,18 @@ class GatewayIdentityInterceptorTest {
         }
     }
 
+    @Test
+    void blankUsernameAndNonPositiveUidAreRejected() throws Exception {
+        GatewayIdentityInterceptor interceptor = new GatewayIdentityInterceptor(TOKEN, 300_000, user -> true);
+        for (String signed : new String[]{sign("0", "alice"), sign("1", "")}) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/test");
+            request.addHeader(GatewayIdentityInterceptor.IDENTITY_HEADER, signed);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            assertFalse(interceptor.preHandle(request, response, new Object()));
+            assertEquals(401, response.getStatus());
+        }
+    }
+
     private static String sign(String uid, String username) throws Exception {
         String payload = uid + "|" + username + "|" + System.currentTimeMillis();
         String encoded = Base64.getUrlEncoder().withoutPadding()

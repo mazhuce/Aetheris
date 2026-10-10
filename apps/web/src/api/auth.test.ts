@@ -33,7 +33,7 @@ beforeEach(() => {
 
 describe('auth api', () => {
   it('login 向 /api/auth/login 发送用户名密码并返回 data', async () => {
-    const result = { token: 'tk', username: 'alice', role: 'admin' as const, expiresIn: 3600 }
+    const result = { username: 'alice', role: 'admin' as const, expiresIn: 3600 }
     mockedHttp.post.mockReturnValueOnce(resolved(result))
 
     await expect(login('alice', 'secret')).resolves.toEqual(result)

@@ -2,12 +2,14 @@ package com.aetheris.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -28,22 +30,27 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    private final String allowedOrigins;
+
+    public CorsConfig(@Value("${aetheris.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}") String allowedOrigins) {
+        this.allowedOrigins = allowedOrigins;
+    }
+
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // 用 pattern 而非 setAllowedOrigins("*")：前端宿主端口可能变化
-        // （本机 Hyper-V 保留端口会导致 5173 不可用而改用其他端口），
-        // 用通配端口避免每次改端口都要动网关配置。
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        ));
+        // Credentialed cookies must use an explicit allow-list. Add a dev
+        // origin through AETHERIS_CORS_ALLOWED_ORIGINS when Vite runs elsewhere.
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim).filter(origin -> !origin.isBlank()).toList();
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(List.of("*"));
-        // 前端用 Authorization 头携带 JWT，不依赖 Cookie，因此不开启 credentials，
-        // 避免不必要地放宽跨站凭据传递。
-        configuration.setAllowCredentials(false);
+        // Browser auth uses same-site HttpOnly cookies. Credentials must be
+        // enabled for the Vite dev origin; production is served same-origin by
+        // nginx and does not widen this allow-list.
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

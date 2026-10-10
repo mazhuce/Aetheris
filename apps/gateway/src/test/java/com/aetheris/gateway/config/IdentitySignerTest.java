@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 class IdentitySignerTest {
 
-    private static final String TOKEN = "internal-test-token";
+    private static final String TOKEN = "internal-test-token-with-at-least-32-bytes";
 
     /** 固定时间戳必须落在新鲜度窗口内（测试执行时刻附近）。 */
     private static final long FIXED_TIME = System.currentTimeMillis();

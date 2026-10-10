@@ -1,7 +1,7 @@
 import http from './http'
+import { markLoggedOut } from '@/auth/session'
 
 export interface LoginResult {
-  token: string
   username: string
   nickname?: string
   role: UserRole
@@ -46,7 +46,7 @@ export function login(username: string, password: string): Promise<LoginResult> 
 }
 
 export function logout(): Promise<void> {
-  return http.post('/api/auth/logout').then(() => undefined)
+  return http.post('/api/auth/logout').then(() => undefined).finally(markLoggedOut)
 }
 
 export function listAuthUsers(): Promise<AuthUser[]> {

@@ -3,12 +3,11 @@ import { Avatar, Button, Dropdown } from 'antd'
 import { DownOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { availableNavModules, firstAvailablePath, findModule } from '@/constants/navigation'
-import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
 import GlobalSearch from '@/components/GlobalSearch'
 import BrandMark from '@/components/BrandMark'
-import { getCurrentRole } from '@/utils/access'
 import { logout } from '@/api/auth'
 import { usePreferences } from '@/contexts/PreferencesContext'
+import { useAuthSession } from '@/hooks/useAuthSession'
 
 /** 「更多」按钮预留宽度，用于计算一级模块能放下多少个。 */
 const MORE_RESERVE = 64
@@ -16,10 +15,11 @@ const MORE_RESERVE = 64
 export default function TopNav() {
   const location = useLocation()
   const navigate = useNavigate()
-  const role = getCurrentRole()
+  const session = useAuthSession()
+  const role = session.status === 'authenticated' ? session.user.role : 'viewer'
   const { homePath } = usePreferences()
   const modules = useMemo(() => availableNavModules(role), [role])
-  const username = localStorage.getItem(USERNAME_KEY) ?? '用户'
+  const username = session.status === 'authenticated' ? session.user.username : '用户'
 
   const navRef = useRef<HTMLElement>(null)
   const itemRefs = useRef<(HTMLSpanElement | null)[]>([])
@@ -76,9 +76,6 @@ export default function TopNav() {
       await logout()
     } catch {
     }
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(USERNAME_KEY)
-    localStorage.removeItem(ROLE_KEY)
     navigate('/login', { replace: true })
   }
 

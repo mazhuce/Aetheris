@@ -15,11 +15,12 @@ import StatusBadge from '@/components/StatusBadge'
 import {
   changeMyPassword,
   getMyProfile,
+  logout,
   updateMyProfile,
   type AuthUser,
   type UpdateProfileInput
 } from '@/api/auth'
-import { TOKEN_KEY, USERNAME_KEY, ROLE_KEY } from '@/api/http'
+import { markLoggedOut } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { formatDateTime } from '@/utils/format'
 
@@ -98,10 +99,11 @@ export default function AccountPage() {
       passwordForm.resetFields()
       // 改密成功后旧 JWT 在过期前仍有效，但按约定提示重新登录，避免继续使用旧凭据。
       if (result.reloginRequired) {
-        setTimeout(() => {
-          localStorage.removeItem(TOKEN_KEY)
-          localStorage.removeItem(USERNAME_KEY)
-          localStorage.removeItem(ROLE_KEY)
+        setTimeout(async () => {
+          // Clear the server-side refresh session as well as the in-memory
+          // identity; an HttpOnly cookie cannot be removed by JavaScript.
+          await logout().catch(() => undefined)
+          markLoggedOut()
           navigate('/login', { replace: true })
         }, 1200)
       }

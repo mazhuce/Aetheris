@@ -21,6 +21,8 @@ spring:
 
 aetheris:
   internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
   auth:
     base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
   rate-limit:

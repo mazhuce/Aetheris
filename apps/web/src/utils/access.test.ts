@@ -1,15 +1,15 @@
 import { getCurrentRole, canManagePlatform } from './access'
-import { ROLE_KEY } from '@/api/http'
+import { setAuthenticated } from '@/auth/authState'
 
 describe('access', () => {
-  it('本地存储为 admin 时返回 admin 并可管理平台', () => {
-    localStorage.setItem(ROLE_KEY, 'admin')
+  it('内存会话为 admin 时返回 admin 并可管理平台', () => {
+    setAuthenticated({ username: 'alice', role: 'admin' })
     expect(getCurrentRole()).toBe('admin')
     expect(canManagePlatform()).toBe(true)
   })
 
-  it('本地存储为 viewer 时返回 viewer 且不可管理平台', () => {
-    localStorage.setItem(ROLE_KEY, 'viewer')
+  it('内存会话为 viewer 时返回 viewer 且不可管理平台', () => {
+    setAuthenticated({ username: 'alice', role: 'viewer' })
     expect(getCurrentRole()).toBe('viewer')
     expect(canManagePlatform()).toBe(false)
   })

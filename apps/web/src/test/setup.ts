@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { resetAuthState } from '@/auth/authState'
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -19,5 +20,6 @@ Object.defineProperty(window, 'matchMedia', {
 afterEach(() => {
   cleanup()
   localStorage.clear()
+  resetAuthState()
   vi.restoreAllMocks()
 })

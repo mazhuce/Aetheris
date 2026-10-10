@@ -15,7 +15,16 @@ env:
   IMAGE_PREFIX: ghcr.io/mazhuce/aetheris
 
 jobs:
+  validate-deployment-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Validate Flyway migration versions
+        run: python scripts/verify-flyway-migrations.py
+
   build:
+    needs: validate-deployment-contracts
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -109,3 +118,10 @@ jobs:
 
       - name: Sign image digest
         run: cosign sign --yes "${{ env.IMAGE_PREFIX }}-${{ matrix.name }}@${{ steps.build.outputs.digest }}"
+
+      - name: Verify image signature
+        run: |
+          cosign verify \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/build.yml@${{ github.ref }}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            "${{ env.IMAGE_PREFIX }}-${{ matrix.name }}@${{ steps.build.outputs.digest }}"

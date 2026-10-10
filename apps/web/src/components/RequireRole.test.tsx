@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import RequireRole from './RequireRole'
-import { ROLE_KEY } from '@/api/http'
+import { setAuthenticated } from '@/auth/authState'
 
 function renderAt(path: string) {
   return render(
@@ -23,13 +23,13 @@ function renderAt(path: string) {
 
 describe('RequireRole', () => {
   it('角色匹配时渲染子内容', () => {
-    localStorage.setItem(ROLE_KEY, 'admin')
+    setAuthenticated({ username: 'alice', role: 'admin' })
     renderAt('/system/users')
     expect(screen.getByText('admin-content')).toBeInTheDocument()
   })
 
   it('角色不匹配时重定向到 /workbench', () => {
-    localStorage.setItem(ROLE_KEY, 'viewer')
+    setAuthenticated({ username: 'alice', role: 'viewer' })
     renderAt('/system/users')
     expect(screen.getByText('workbench-page')).toBeInTheDocument()
     expect(screen.queryByText('admin-content')).not.toBeInTheDocument()

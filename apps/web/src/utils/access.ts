@@ -1,8 +1,9 @@
 import type { UserRole } from '@/api/auth'
-import { ROLE_KEY } from '@/api/http'
+import { getAuthSnapshot } from '@/auth/authState'
 
 export function getCurrentRole(): UserRole {
-  return localStorage.getItem(ROLE_KEY) === 'admin' ? 'admin' : 'viewer'
+  const snapshot = getAuthSnapshot()
+  return snapshot.status === 'authenticated' && snapshot.user.role === 'admin' ? 'admin' : 'viewer'
 }
 
 export function canManagePlatform(): boolean {

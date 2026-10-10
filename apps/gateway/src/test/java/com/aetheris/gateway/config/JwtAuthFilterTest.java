@@ -5,6 +5,7 @@ import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.server.ServerWebExchange;
@@ -24,7 +25,7 @@ class JwtAuthFilterTest {
 
     private static final String SECRET = "aetheris-test-secret-with-32-bytes";
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
-    private static final String INTERNAL_TOKEN = "internal-test-token";
+    private static final String INTERNAL_TOKEN = "internal-test-token-with-at-least-32-bytes";
 
     /** 决策门桩：admin 放行、其余拒绝；被探测调用时可选择抛错。 */
     private PermissionGate adminOnlyGate() {
@@ -223,6 +224,25 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void rejectsRefreshTokenUsedAsAccessBearer() {
+        String refresh = Jwts.builder()
+                .subject("alice")
+                .claim("uid", 42L)
+                .claim("sv", 0L)
+                .claim("typ", "refresh")
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(KEY)
+                .compact();
+        MockServerWebExchange exchange = exchange("GET", "/api/quality/rules", refresh);
+
+        filter(neverCalledGate()).filter(exchange, ignored -> {
+            throw new AssertionError("refresh token must not reach downstream");
+        }).block();
+
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
+
+    @Test
     void rejectsMalformedClaimTypesWithoutThrowing() {
         for (String malformed : new String[]{
                 Jwts.builder().subject("alice").claim("uid", "not-a-number")
@@ -389,6 +409,24 @@ class JwtAuthFilterTest {
         assertEquals(HttpStatus.UNAUTHORIZED, subsequent.getResponse().getStatusCode());
     }
 
+    @Test
+    void acceptsAccessCookieAndLogoutRevokesIt() {
+        String token = token("alice", "viewer", 42L);
+        JwtAuthFilter filter = filter(neverCalledGate());
+        MockServerWebExchange logout = MockServerWebExchange.from(
+                MockServerHttpRequest.post("/api/auth/logout")
+                        .cookie(ResponseCookie.from("aetheris_access", token).build()).build());
+        filter.filter(logout, forwarded -> forwarded.getResponse().setComplete()).block();
+
+        MockServerWebExchange subsequent = MockServerWebExchange.from(
+                MockServerHttpRequest.get("/api/quality/rules")
+                        .cookie(ResponseCookie.from("aetheris_access", token).build()).build());
+        filter.filter(subsequent, ignored -> {
+            throw new AssertionError("revoked cookie must not reach downstream");
+        }).block();
+        assertEquals(HttpStatus.UNAUTHORIZED, subsequent.getResponse().getStatusCode());
+    }
+
     private MockServerWebExchange exchange(String method, String path, String token) {
         return MockServerWebExchange.from(
                 MockServerHttpRequest.method(org.springframework.http.HttpMethod.valueOf(method), path)
@@ -401,6 +439,7 @@ class JwtAuthFilterTest {
                 .subject(username)
                 .claim("uid", uid)
                 .claim("role", role)
+                .claim("typ", "access")
                 .expiration(new Date(System.currentTimeMillis() + 60_000))
                 .signWith(KEY)
                 .compact();

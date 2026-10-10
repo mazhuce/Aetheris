@@ -6,6 +6,17 @@ on:
   pull_request:
 
 jobs:
+  deployment-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Flyway migration versions
+        run: python scripts/verify-flyway-migrations.py
+      - name: Test deployment gate scripts
+        run: python -m unittest scripts/tests/test_deployment_gates.py -v
+      - name: Shell-check deployment gate scripts
+        run: shellcheck scripts/verify-image-signatures.sh scripts/deploy-healthcheck.sh scripts/deploy-remote.sh
+
   security:
     runs-on: ubuntu-latest
     steps:

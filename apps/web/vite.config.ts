@@ -36,7 +36,12 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks: {
-            antd: ['antd', '@ant-design/icons'],
+            // Keep the UI framework and its icon registry independent so the
+            // login/workbench path does not pull icon-only code into the same
+            // large vendor file. Feature libraries are loaded by their route
+            // chunks (dashboard/editor/AI pages) when needed.
+            'antd-core': ['antd'],
+            'antd-icons': ['@ant-design/icons'],
             charts: ['echarts'],
             dashboard: ['react-grid-layout'],
             markdown: ['react-markdown', 'remark-gfm'],

@@ -37,6 +37,7 @@ public class IdentitySigner {
             @Value("${aetheris.identity.max-skew-ms:300000}") long maxSkewMillis) {
         this.tokenBytes = internalToken == null
                 ? new byte[0] : internalToken.getBytes(StandardCharsets.UTF_8);
+        requireStrongToken(this.tokenBytes);
         this.maxSkewMillis = maxSkewMillis;
     }
 
@@ -109,6 +110,12 @@ public class IdentitySigner {
             return mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
         } catch (Exception e) {
             throw new IllegalStateException("HMAC 初始化失败", e);
+        }
+    }
+
+    private static void requireStrongToken(byte[] bytes) {
+        if (bytes.length > 0 && bytes.length < 32) {
+            throw new IllegalStateException("AETHERIS_INTERNAL_TOKEN must be at least 32 UTF-8 bytes");
         }
     }
 

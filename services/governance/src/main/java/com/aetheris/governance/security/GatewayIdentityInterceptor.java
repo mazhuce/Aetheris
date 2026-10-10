@@ -37,6 +37,7 @@ public class GatewayIdentityInterceptor implements HandlerInterceptor {
             @Value("${aetheris.identity.max-skew-ms:300000}") long maxSkewMillis,
             @Value("${aetheris.auth.base-url:http://localhost:8087}") String authBaseUrl) {
         this.tokenBytes = bytes(internalToken);
+        requireStrongToken(this.tokenBytes);
         this.maxSkewMillis = maxSkewMillis;
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(500);
@@ -49,6 +50,7 @@ public class GatewayIdentityInterceptor implements HandlerInterceptor {
     GatewayIdentityInterceptor(String internalToken, long maxSkewMillis,
                                Function<String, Boolean> mayManage) {
         this.tokenBytes = bytes(internalToken);
+        requireStrongToken(this.tokenBytes);
         this.maxSkewMillis = maxSkewMillis;
         this.mayManage = mayManage;
     }
@@ -89,10 +91,11 @@ public class GatewayIdentityInterceptor implements HandlerInterceptor {
         try {
             String[] parts = new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8)
                     .split("\\|", -1);
-            if (parts.length != 3 || Math.abs(Clock.systemUTC().millis() - Long.parseLong(parts[2])) > maxSkewMillis) {
+            if (parts.length != 3 || parts[1].isBlank()
+                    || Math.abs(Clock.systemUTC().millis() - Long.parseLong(parts[2])) > maxSkewMillis) {
                 return null;
             }
-            if (!"-".equals(parts[0])) Long.parseLong(parts[0]);
+            if (!"-".equals(parts[0]) && Long.parseLong(parts[0]) <= 0) return null;
             return parts[1];
         } catch (IllegalArgumentException malformed) {
             return null;
@@ -124,6 +127,12 @@ public class GatewayIdentityInterceptor implements HandlerInterceptor {
 
     private static byte[] bytes(String value) {
         return value == null ? new byte[0] : value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static void requireStrongToken(byte[] bytes) {
+        if (bytes.length > 0 && bytes.length < 32) {
+            throw new IllegalStateException("AETHERIS_INTERNAL_TOKEN must be at least 32 UTF-8 bytes");
+        }
     }
 
     private static String hex(byte[] bytes) {

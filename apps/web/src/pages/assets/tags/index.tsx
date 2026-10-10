@@ -10,7 +10,7 @@ import StatCard from '@/components/StatCard'
 import { addTableTag, listTableTagGroups, listTables, removeTableTag, type TableTagGroup } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import { getCurrentRole } from '@/utils/access'
-import { USERNAME_KEY } from '@/api/http'
+import { useAuthSession } from '@/hooks/useAuthSession'
 
 interface TagTableRow {
   tag: string
@@ -31,7 +31,8 @@ export default function TagAssetsPage() {
   const [form, setForm] = useState<{ tableId?: number; tag?: string }>({})
   const [submitting, setSubmitting] = useState(false)
 
-  const username = localStorage.getItem(USERNAME_KEY)
+  const session = useAuthSession()
+  const username = session.status === 'authenticated' ? session.user.username : undefined
   const isAdmin = getCurrentRole() === 'admin'
 
   const refresh = useCallback(async () => {

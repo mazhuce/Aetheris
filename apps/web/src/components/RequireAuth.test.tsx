@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import RequireAuth from './RequireAuth'
-import { TOKEN_KEY } from '@/api/http'
+import { clearAuthenticated, setAuthenticated } from '@/auth/authState'
 
 function renderAt(path: string) {
   return render(
@@ -23,12 +23,13 @@ function renderAt(path: string) {
 
 describe('RequireAuth', () => {
   it('已登录时渲染子内容', () => {
-    localStorage.setItem(TOKEN_KEY, 't-123')
+    setAuthenticated({ username: 'alice', role: 'viewer' })
     renderAt('/system/users')
     expect(screen.getByText('protected-content')).toBeInTheDocument()
   })
 
   it('未登录时重定向到 /login', () => {
+    clearAuthenticated()
     renderAt('/system/users')
     expect(screen.getByText('login-page')).toBeInTheDocument()
     expect(screen.queryByText('protected-content')).not.toBeInTheDocument()

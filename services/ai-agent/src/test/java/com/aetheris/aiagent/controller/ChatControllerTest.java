@@ -7,9 +7,12 @@ import com.aetheris.aiagent.llm.LlmException;
 import com.aetheris.aiagent.llm.LlmReply;
 import com.aetheris.aiagent.service.ChatService;
 import com.aetheris.aiagent.service.UserRateLimiter;
+import com.aetheris.aiagent.security.AetherisIdentity;
+import com.aetheris.aiagent.security.IdentityInterceptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,20 @@ class ChatControllerTest {
         controller.createConversation("alice");
 
         verify(chatService).createConversation("alice");
+    }
+
+    @Test
+    @DisplayName("HTTP 入口忽略可伪造的 X-User-Name，只使用签名身份")
+    void httpEntryUsesSignedIdentityInsteadOfHeader() {
+        ChatService chatService = mock(ChatService.class);
+        ChatController controller = new ChatController(chatService, permissiveLimiter());
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/ai/conversations");
+        request.addHeader("X-User-Name", "attacker");
+        request.setAttribute(IdentityInterceptor.IDENTITY_ATTRIBUTE, new AetherisIdentity(7L, "alice"));
+
+        controller.listConversations(request);
+
+        verify(chatService).listConversations("alice");
     }
 
     @Test

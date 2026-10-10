@@ -14,9 +14,30 @@ name: Deploy
 #   2. 在 DEPLOY_PATH 创建 .env（JWT_SECRET、DEEPSEEK_API_KEY 等，参考 .env.example）
 #   3. 若镜像仓库为私有：docker login ghcr.io（用 PAT with read:packages）
 #   4. 首次启动：docker compose up -d（自动创建 pgdata 卷并执行 Flyway 迁移）
+#   5. 服务器 PATH 中安装 cosign；部署默认拒绝未签名镜像。仅在明确的
+#      紧急旁路场景下，手动选择 cosign_policy=disabled。
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Immutable image tag; blank uses the checked-out commit sha-<7>'
+        required: false
+        default: ''
+        type: string
+      cosign_policy:
+        description: 'Signature policy; disabled is an explicit emergency bypass'
+        required: true
+        default: required
+        type: choice
+        options:
+          - required
+          - disabled
+      cosign_identity:
+        description: 'Expected GitHub OIDC certificate identity; required for tag builds'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   deploy:
@@ -34,12 +55,10 @@ jobs:
             cd ${{ secrets.DEPLOY_PATH }}
             git pull --ff-only
             # Compose defaults to local build tags for development. Production
-            # must pull the images published by build.yml from GHCR instead of
-            # attempting to resolve the non-existent aetheris-local registry.
+            # must pull the immutable sha tag published by build.yml from GHCR.
             export AETHERIS_IMAGE_PREFIX=ghcr.io/mazhuce/aetheris
-            export AETHERIS_IMAGE_TAG=latest
-            docker compose pull
-            docker compose up -d --remove-orphans
-            docker image prune -f
-            echo "---- 容器状态 ----"
-            docker compose ps
+            export AETHERIS_IMAGE_TAG='${{ inputs.image_tag }}'
+            export AETHERIS_COSIGN_POLICY='${{ inputs.cosign_policy }}'
+            export AETHERIS_COSIGN_CERT_IDENTITY='${{ inputs.cosign_identity }}'
+            export AETHERIS_COOKIE_SECURE=true
+            bash scripts/deploy-remote.sh

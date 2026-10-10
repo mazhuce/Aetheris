@@ -86,5 +86,6 @@ ${system:java.io.tmpdir}/
 # 其他
 *.bak
 *.orig
+.aetheris-last-good-image-tag
 # Generated R1 fixture SQL/results (recreate with scripts/r1-fixture.py)
 /artifacts/r1-fixture/

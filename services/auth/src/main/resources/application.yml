@@ -31,7 +31,12 @@ mybatis-plus:
 
 jwt:
   secret: ${JWT_SECRET:}
-  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  expiration-ms: ${JWT_EXPIRATION_MS:900000}
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+
+auth:
+  cookies:
+    secure: ${AETHERIS_COOKIE_SECURE:false}
 
 aetheris:
   # /internal/** 端点共享令牌：未配置时内部权限判定端点拒绝所有调用（fail-closed）

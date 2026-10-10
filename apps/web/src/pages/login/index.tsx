@@ -3,7 +3,7 @@ import { App, Button, Card, Form, Input, Typography } from 'antd'
 import { ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { login } from '@/api/auth'
-import { ROLE_KEY, TOKEN_KEY, USERNAME_KEY } from '@/api/http'
+import { markLoggedIn } from '@/auth/session'
 import BrandMark from '@/components/BrandMark'
 
 interface LoginForm {
@@ -20,9 +20,9 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const result = await login(values.username.trim(), values.password)
-      localStorage.setItem(TOKEN_KEY, result.token)
-      localStorage.setItem(USERNAME_KEY, result.username)
-      localStorage.setItem(ROLE_KEY, result.role)
+      // The access and refresh tokens are HttpOnly cookies. Keep only the
+      // non-sensitive display identity in memory for this tab.
+      markLoggedIn(result)
       message.success('登录成功')
       navigate('/workbench', { replace: true })
     } catch (error) {

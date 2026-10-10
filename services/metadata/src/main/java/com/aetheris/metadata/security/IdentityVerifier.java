@@ -30,6 +30,9 @@ public class IdentityVerifier {
             @Value("${aetheris.identity.max-skew-ms:300000}") long maxSkewMillis) {
         this.tokenBytes = internalToken == null
                 ? new byte[0] : internalToken.getBytes(StandardCharsets.UTF_8);
+        if (tokenBytes.length > 0 && tokenBytes.length < 32) {
+            throw new IllegalStateException("AETHERIS_INTERNAL_TOKEN must be at least 32 UTF-8 bytes");
+        }
         this.maxSkewMillis = maxSkewMillis;
     }
 
@@ -58,7 +61,7 @@ public class IdentityVerifier {
             return null;
         }
         String[] parts = payload.split("\\|", -1);
-        if (parts.length != 3) {
+        if (parts.length != 3 || parts[1].isBlank()) {
             return null;
         }
         long timestamp;
@@ -84,7 +87,8 @@ public class IdentityVerifier {
 
     private static Long parseUid(String value) {
         try {
-            return Long.parseLong(value);
+            long parsed = Long.parseLong(value);
+            return parsed > 0 ? parsed : null;
         } catch (NumberFormatException malformed) {
             return null;
         }

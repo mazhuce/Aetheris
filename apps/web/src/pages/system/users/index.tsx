@@ -26,7 +26,7 @@ import {
   type CreateAuthUserInput,
   type UpdateAuthUserInput
 } from '@/api/auth'
-import { USERNAME_KEY } from '@/api/http'
+import { useAuthSession } from '@/hooks/useAuthSession'
 import { formatDateTime } from '@/utils/format'
 
 const statusMeta = {
@@ -38,7 +38,8 @@ type UserFormInput = CreateAuthUserInput
 
 export default function UserPage() {
   const { message, modal } = App.useApp()
-  const currentUsername = localStorage.getItem(USERNAME_KEY)
+  const session = useAuthSession()
+  const currentUsername = session.status === 'authenticated' ? session.user.username : undefined
   const [allData, setAllData] = useState<AuthUser[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')

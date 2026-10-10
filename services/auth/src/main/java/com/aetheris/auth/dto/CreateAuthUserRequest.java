@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record CreateAuthUserRequest(
-        @NotBlank @Size(max = 64) String username,
+        @NotBlank @Size(max = 64) @Pattern(regexp = "[^|\\p{Cntrl}]{1,64}") String username,
         @NotBlank @Size(min = 12, max = 128) String password,
         @Size(max = 64) String nickname,
         @Email @Size(max = 128) String email,
