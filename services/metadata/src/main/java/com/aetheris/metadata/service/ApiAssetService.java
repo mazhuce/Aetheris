@@ -155,14 +155,14 @@ public class ApiAssetService {
             if (!asset.getTargetRef().matches("[A-Za-z][A-Za-z0-9_]{1,63}")) {
                 throw new IllegalArgumentException("metric 执行目标编码格式无效");
             }
-            Integer count = jdbc.queryForObject("SELECT count(*) FROM metric_definition WHERE metric_code = ? AND status = 'published' AND published_version IS NOT NULL", Integer.class, asset.getTargetRef());
+            Integer count = jdbc.queryForObject("SELECT count(*) FROM metadata.metric_definition WHERE metric_code = ? AND status = 'published' AND published_version IS NOT NULL", Integer.class, asset.getTargetRef());
             if (count == null || count == 0) throw new IllegalArgumentException("执行目标指标不存在或未发布");
         } else {
             long tableId;
             try { tableId = Long.parseLong(asset.getTargetRef()); }
             catch (NumberFormatException error) { throw new IllegalArgumentException("table 执行目标必须是正整数 ID"); }
             if (tableId <= 0) throw new IllegalArgumentException("table 执行目标必须是正整数 ID");
-            Integer count = jdbc.queryForObject("SELECT count(*) FROM metadata_table WHERE id = ? AND status <> 'stale'", Integer.class, tableId);
+            Integer count = jdbc.queryForObject("SELECT count(*) FROM metadata.metadata_table WHERE id = ? AND status <> 'stale'", Integer.class, tableId);
             if (count == null || count == 0) throw new IllegalArgumentException("执行目标数据表不存在或已失效");
         }
     }

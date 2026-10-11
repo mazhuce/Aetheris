@@ -7,6 +7,9 @@ import com.aetheris.metadata.entity.MetadataTable;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.MetadataTableService;
+import com.aetheris.metadata.service.QueryAuditService;
+import com.aetheris.metadata.security.MetadataSecurity;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,20 +23,29 @@ public class InternalTableQueryController {
     private final MetadataTableService tables;
     private final DataSourceService dataSources;
     private final JdbcService jdbc;
+    private final MetadataSecurity security;
+    private final QueryAuditService auditService;
 
-    public InternalTableQueryController(MetadataTableService tables, DataSourceService dataSources, JdbcService jdbc) {
+    public InternalTableQueryController(MetadataTableService tables, DataSourceService dataSources, JdbcService jdbc,
+                                        MetadataSecurity security, QueryAuditService auditService) {
         this.tables = tables;
         this.dataSources = dataSources;
         this.jdbc = jdbc;
+        this.security = security;
+        this.auditService = auditService;
     }
 
     @PostMapping("/{id}/query")
-    public ResponseEntity<Map<String, Object>> query(@PathVariable Long id,
+    public ResponseEntity<Map<String, Object>> query(HttpServletRequest httpRequest, @PathVariable Long id,
                                                        @Valid @RequestBody(required = false) TableQueryRequest request) {
         MetadataTable table = tables.getById(id);
         if (table == null || "stale".equalsIgnoreCase(table.getStatus())) {
             return ResponseEntity.notFound().build();
         }
+        String username = security.require(httpRequest, "table", id, "query",
+                table.getBusinessDomainId() == null ? Map.of()
+                        : Map.of("domainId", String.valueOf(table.getBusinessDomainId())))
+                .username();
         DataSource source = table.getDatasourceId() == null ? null : dataSources.getById(table.getDatasourceId());
         if (source == null) return ResponseEntity.badRequest().body(Map.of("message", "表所属数据源不可用"));
 
@@ -47,7 +59,29 @@ public class InternalTableQueryController {
         String projection = selected.stream().map(value -> quote(value, source)).reduce((left, right) -> left + ", " + right).orElseThrow();
         String tableName = (table.getSchemaName() == null || table.getSchemaName().isBlank() ? "" : quote(table.getSchemaName(), source) + ".") + quote(table.getTableName(), source);
         int limit = Math.clamp(actual.limit() == null ? 100 : actual.limit(), 1, 100);
-        return ResponseEntity.ok(jdbc.query(source, "SELECT " + projection + " FROM " + tableName + " LIMIT " + limit));
+        String sql = "SELECT " + projection + " FROM " + tableName + " LIMIT " + limit;
+        long startedAt = System.currentTimeMillis();
+        try {
+            Map<String, Object> result = jdbc.query(source, sql);
+            audit(username, table, source, sql, "success", result, null, startedAt);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException error) {
+            audit(username, table, source, sql, "failed", null, error, startedAt);
+            throw error;
+        }
+    }
+
+    private void audit(String username, MetadataTable table, DataSource source, String sql, String status,
+                       Map<String, Object> result, RuntimeException error, long startedAt) {
+        try {
+            Long rows = result != null && result.get("rowCount") instanceof Number number ? number.longValue() : null;
+            auditService.record("table", null, table.getId(), source.getId(), username, status, rows,
+                    System.currentTimeMillis() - startedAt, false,
+                    error == null ? null : "QUERY_FAILED",
+                    error == null ? null : error.getMessage(), sql);
+        } catch (RuntimeException ignored) {
+            // 审计旁路失败不能改变查询结果。
+        }
     }
 
     private List<String> validateColumns(List<String> requested, Map<String, String> known) {

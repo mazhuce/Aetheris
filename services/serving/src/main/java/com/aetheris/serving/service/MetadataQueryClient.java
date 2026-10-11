@@ -56,8 +56,13 @@ public class MetadataQueryClient {
     }
 
     public Map<String, Object> queryTable(Long tableId, Object query) {
+        return queryTable(tableId, query, null);
+    }
+
+    public Map<String, Object> queryTable(Long tableId, Object query, String identityHeader) {
         Map<String, Object> body = restClient.post()
                 .uri("/internal/tables/{id}/query", tableId)
+                .header("X-Aetheris-Identity", identityHeader == null ? "" : identityHeader)
                 .body(query == null ? Map.of() : query)
                 .retrieve()
                 .body(new ParameterizedTypeReference<Map<String, Object>>() {});

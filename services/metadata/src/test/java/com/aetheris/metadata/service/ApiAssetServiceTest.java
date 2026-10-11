@@ -10,7 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ApiAssetServiceTest {
@@ -51,6 +53,23 @@ class ApiAssetServiceTest {
 
         assertEquals("published", result.getStatus());
         assertEquals("alice", result.getPublishedBy());
+        verify(jdbc).queryForObject(startsWith("SELECT count(*) FROM metadata.metric_definition"), eq(Integer.class), eq("GMV_DAILY"));
+    }
+
+    @Test
+    void publishValidatesPublishedTableUsingMetadataSchema() {
+        ApiAsset asset = asset();
+        asset.setTargetType("table");
+        asset.setTargetRef("42");
+        when(mapper.selectById(7L)).thenReturn(asset);
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(42L))).thenReturn(1);
+        when(mapper.updateById(any(ApiAsset.class))).thenReturn(1);
+
+        ApiAsset result = service.publish(7L, "alice");
+
+        assertEquals("published", result.getStatus());
+        assertEquals("alice", result.getPublishedBy());
+        verify(jdbc).queryForObject(startsWith("SELECT count(*) FROM metadata.metadata_table"), eq(Integer.class), eq(42L));
     }
 
     @Test

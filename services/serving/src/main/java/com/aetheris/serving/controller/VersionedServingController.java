@@ -9,6 +9,7 @@ import com.aetheris.serving.service.ApiKeyService;
 import com.aetheris.serving.service.ApiUsageService;
 import com.aetheris.serving.service.DistributedApiRateLimiter;
 import com.aetheris.serving.security.ServingIdentity;
+import com.aetheris.serving.security.ServiceIdentitySigner;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.ConstraintViolationException;
@@ -24,26 +25,27 @@ import java.util.*;
 @RequestMapping("/api/serving/v1")
 @Validated
 public class VersionedServingController {
-    private final MetadataQueryClient metadata; private final ServingSecurity security; private final ServingRateLimiter rateLimiter; private final ApiKeyService apiKeys; private final ApiUsageService usage; private final DistributedApiRateLimiter distributedRateLimiter;
-    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter){this(metadata,security,rateLimiter,null,null,null);}
-    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys){this(metadata,security,rateLimiter,apiKeys,null,null);}
-    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage){this(metadata,security,rateLimiter,apiKeys,usage,null);}
+    private final MetadataQueryClient metadata; private final ServingSecurity security; private final ServingRateLimiter rateLimiter; private final ApiKeyService apiKeys; private final ApiUsageService usage; private final DistributedApiRateLimiter distributedRateLimiter; private final ServiceIdentitySigner serviceIdentitySigner;
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter){this(metadata,security,rateLimiter,null,null,null,null);}
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys){this(metadata,security,rateLimiter,apiKeys,null,null,null);}
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage){this(metadata,security,rateLimiter,apiKeys,usage,null,null);}
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter){this(metadata,security,rateLimiter,apiKeys,usage,distributedRateLimiter,null);}
     @Autowired
-    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter){this.metadata=metadata;this.security=security;this.rateLimiter=rateLimiter;this.apiKeys=apiKeys;this.usage=usage;this.distributedRateLimiter=distributedRateLimiter;}
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter, ServiceIdentitySigner serviceIdentitySigner){this.metadata=metadata;this.security=security;this.rateLimiter=rateLimiter;this.apiKeys=apiKeys;this.usage=usage;this.distributedRateLimiter=distributedRateLimiter;this.serviceIdentitySigner=serviceIdentitySigner;}
     @PostMapping("/metrics/{code}/query")
     public Map<String,Object> metric(HttpServletRequest request,@PathVariable String code,@RequestParam(required=false) String dimensions,@RequestParam(required=false) String timeGrain,@RequestParam(required=false) String startDate,@RequestParam(required=false) String endDate,@RequestParam(defaultValue="100") @Min(1) @Max(100) Integer limit){
         if(!code.matches("[A-Za-z][A-Za-z0-9_]{1,63}"))throw new IllegalArgumentException("指标编码格式无效");
         var identity=security.requireIdentity(request);
         security.require(request,"metric",null,"query");
         if(!rateLimiter.allow(identity.username(),"metric:"+code))throw new RateLimitException();
-        Map<String,Object> body=new LinkedHashMap<>();body.put("dimensions",parseDimensions(dimensions));body.put("timeGrain",timeGrain);body.put("startDate",startDate);body.put("endDate",endDate);body.put("limit",limit);return metadata.queryMetric(code,body);
+        Map<String,Object> body=new LinkedHashMap<>();body.put("dimensions",parseDimensions(dimensions));body.put("timeGrain",timeGrain);body.put("startDate",startDate);body.put("endDate",endDate);body.put("limit",limit);return metadata.queryMetric(code,body,request.getHeader("X-Aetheris-Identity"));
     }
     @PostMapping("/query")
-    public Map<String,Object> sql(HttpServletRequest request,@Valid @RequestBody VersionedSqlQueryRequest body){var identity=security.requireIdentity(request);security.require(request,"datasource",body.datasourceId(),"query");if(!rateLimiter.allow(identity.username(),"sql:"+body.datasourceId()))throw new RateLimitException();return metadata.query(body.datasourceId(),body.sql().trim());}
+    public Map<String,Object> sql(HttpServletRequest request,@Valid @RequestBody VersionedSqlQueryRequest body){var identity=security.requireIdentity(request);security.require(request,"datasource",body.datasourceId(),"query");if(!rateLimiter.allow(identity.username(),"sql:"+body.datasourceId()))throw new RateLimitException();return metadata.query(body.datasourceId(),body.sql().trim(),request.getHeader("X-Aetheris-Identity"));}
     @PostMapping("/tables/{id}/query")
     public Map<String,Object> table(HttpServletRequest request,@PathVariable Long id,@RequestParam(required=false) String columns,@RequestParam(defaultValue="100") @Min(1) @Max(100) Integer limit){
         var identity=security.requireIdentity(request);security.require(request,"table",id,"query");if(!rateLimiter.allow(identity.username(),"table:"+id))throw new RateLimitException();
-        Map<String,Object> body=new LinkedHashMap<>();body.put("columns",parseColumns(columns));body.put("limit",limit);return metadata.queryTable(id,body);
+        Map<String,Object> body=new LinkedHashMap<>();body.put("columns",parseColumns(columns));body.put("limit",limit);return metadata.queryTable(id,body,request.getHeader("X-Aetheris-Identity"));
     }
 
     /** Execute only a published API asset; callers never submit SQL or choose the target. */
@@ -63,6 +65,7 @@ public class VersionedServingController {
         try {
             var identity = requireApiAssetIdentity(request);
             resolved[0] = identity;
+            String downstreamIdentity = downstreamIdentity(request, identity);
             Map<String, Object> contract = metadata.publishedApiAsset(assetCode);
             Long assetId = number(contract.get("id"), "API 资产契约缺少 ID");
             security.require(request, "data_service", assetId, "execute");
@@ -81,14 +84,14 @@ public class VersionedServingController {
                 body.put("startDate", actual.startDate());
                 body.put("endDate", actual.endDate());
                 body.put("limit", actual.limit() == null ? 100 : actual.limit());
-                return metadata.queryMetric(targetRef, body);
+                return metadata.queryMetric(targetRef, body, downstreamIdentity);
             }
             if ("table".equals(targetType)) {
                 Long tableId = number(targetRef, "table 执行目标无效");
                 Map<String, Object> body = new LinkedHashMap<>();
                 body.put("columns", parseColumnList(actual.columns()));
                 body.put("limit", actual.limit() == null ? 100 : actual.limit());
-                return metadata.queryTable(tableId, body);
+                return metadata.queryTable(tableId, body, downstreamIdentity);
             }
             throw new IllegalStateException("API 资产执行目标类型不受支持");
         } catch (RuntimeException exception) {
@@ -123,6 +126,15 @@ public class VersionedServingController {
         ServingIdentity identity = new ServingIdentity(null, principal.ownerUsername());
         request.setAttribute(ServingSecurity.ATTRIBUTE, identity);
         return identity;
+    }
+    private String downstreamIdentity(HttpServletRequest request, ServingIdentity identity) {
+        String presentedApiKey = request.getHeader("X-API-Key");
+        if (presentedApiKey != null && !presentedApiKey.isBlank()) {
+            return serviceIdentitySigner == null ? "" : serviceIdentitySigner.sign(identity.username());
+        }
+        String presented = request.getHeader("X-Aetheris-Identity");
+        if (presented != null && !presented.isBlank()) return presented;
+        return serviceIdentitySigner == null ? "" : serviceIdentitySigner.sign(identity.username());
     }
     private List<String> parseDimensions(String value){
         if(value==null||value.isBlank())return List.of();

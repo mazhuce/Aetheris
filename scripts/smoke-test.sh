@@ -63,11 +63,22 @@ ingestion_id=""
 quality_id=""
 workflow_id=""
 dataset_id=""
+metadata_table_id=""
+api_asset_id=""
+api_asset_code=""
 viewer_id=""
 
 cleanup() {
   set +e
   [[ -n "$dataset_id" ]] && curl --silent --request DELETE "$base_url/api/analytics/datasets/$dataset_id" >/dev/null
+  [[ -n "$api_asset_id" ]] && curl --silent --request DELETE "$base_url/api/metadata/api-assets/$api_asset_id" >/dev/null
+  if [[ -n "$api_asset_code" ]]; then
+    docker compose exec -T postgres psql -U "$db_user" -d "$db_name" \
+      -c "DELETE FROM metadata.api_asset WHERE asset_code = '$api_asset_code'" >/dev/null 2>&1
+  fi
+  [[ -n "$metadata_table_id" ]] && curl --silent --request DELETE "$base_url/api/metadata/tables/$metadata_table_id" >/dev/null
+  [[ -n "$metadata_table_id" ]] && docker compose exec -T postgres psql -U "$db_user" -d "$db_name" \
+    -c "DELETE FROM metadata.semantic_query_audit WHERE query_kind = 'table' AND asset_id = $metadata_table_id AND username = '$admin_username'" >/dev/null 2>&1
   [[ -n "$quality_id" ]] && curl --silent --request DELETE "$base_url/api/quality/rules/$quality_id" >/dev/null
   [[ -n "$ingestion_id" ]] && curl --silent --request DELETE "$base_url/api/ingestion/tasks/$ingestion_id" >/dev/null
   [[ -n "$workflow_id" ]] && curl --silent --request DELETE "$base_url/api/workflow/tasks/$workflow_id" >/dev/null
@@ -131,6 +142,28 @@ quality_id=$(json_get id <<<"$quality")
 quality_run=$(curl --silent --fail --request POST "$base_url/api/quality/rules/$quality_id/run")
 [[ "$(json_get status <<<"$quality_run")" == "passed" ]]
 [[ "$(json_get violationCount <<<"$quality_run")" == "0" ]]
+
+echo "Verifying published table API and query audit"
+api_asset_code="SMOKE_TABLE_API_${BASHPID}"
+metadata_sync_payload=$(json_object datasourceId:int "$datasource_id" schemaName smoke)
+curl --silent --fail --request POST "$base_url/api/metadata/tables/sync" \
+  --header 'Content-Type: application/json' --data "$metadata_sync_payload" >/dev/null
+metadata_table=$(curl --silent --fail --get "$base_url/api/metadata/tables/search" \
+  --data-urlencode 'keyword=target_orders' --data-urlencode 'limit=10')
+metadata_table_id=$(json_get 0.id <<<"$metadata_table")
+api_asset_payload=$(json_object assetCode "$api_asset_code" assetName "Smoke table API" \
+  apiPath "/api/serving/v1/apis/${api_asset_code}/query" httpMethod POST version v1 \
+  targetType table targetRef "$metadata_table_id")
+api_asset=$(curl --silent --fail --request POST "$base_url/api/metadata/api-assets" \
+  --header 'Content-Type: application/json' --data "$api_asset_payload")
+api_asset_id=$(json_get id <<<"$api_asset")
+curl --silent --fail --request POST "$base_url/api/metadata/api-assets/$api_asset_id/publish" >/dev/null
+api_result=$(curl --silent --fail --request POST "$base_url/api/serving/v1/apis/${api_asset_code}/query" \
+  --header 'Content-Type: application/json' --data '{"columns":["id","amount"],"limit":10}')
+[[ "$(json_get rowCount <<<"$api_result")" == "4" ]]
+table_audit_count=$(docker compose exec -T postgres psql -U "$db_user" -d "$db_name" -Atc \
+  "SELECT count(*) FROM metadata.semantic_query_audit WHERE query_kind = 'table' AND asset_id = $metadata_table_id AND username = '$admin_username' AND status = 'success'")
+[[ "$table_audit_count" -ge 1 ]]
 
 echo "Verifying analytics query"
 dataset_payload=$(json_object name smoke-dataset datasourceId:int "$datasource_id" datasourceName smoke-postgres \
