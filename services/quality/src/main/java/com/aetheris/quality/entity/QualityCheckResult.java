@@ -16,6 +16,7 @@ public class QualityCheckResult {
     private Long thresholdValue;
     private Long durationMs;
     private String message;
+    private String failureCode;
     private String triggeredBy;
     private OffsetDateTime startedAt;
     private OffsetDateTime finishedAt;
@@ -34,6 +35,8 @@ public class QualityCheckResult {
     public void setDurationMs(Long durationMs) { this.durationMs = durationMs; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+    public String getFailureCode() { return failureCode; }
+    public void setFailureCode(String failureCode) { this.failureCode = failureCode; }
     public String getTriggeredBy() { return triggeredBy; }
     public void setTriggeredBy(String triggeredBy) { this.triggeredBy = triggeredBy; }
     public OffsetDateTime getStartedAt() { return startedAt; }

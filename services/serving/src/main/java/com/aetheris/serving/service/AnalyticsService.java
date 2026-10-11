@@ -52,23 +52,51 @@ public class AnalyticsService {
         return repository.updateDataset(id, input).orElseThrow(() -> new NotFoundException("数据集不存在"));
     }
 
+    public AnalyticsDataset publishDataset(Long id, String username) {
+        queryCache.invalidate(id);
+        return repository.publishDataset(id, username)
+                .orElseThrow(() -> new NotFoundException("数据集不存在或已废弃"));
+    }
+
     public void deleteDataset(Long id) {
         queryCache.invalidate(id);
         if (!repository.deleteDataset(id)) throw new NotFoundException("数据集不存在");
     }
 
     public Map<String, Object> queryDataset(Long id, boolean refresh) {
+        return queryDataset(id, refresh, null);
+    }
+
+    public Map<String, Object> queryDataset(Long id, boolean refresh, String identityHeader) {
         AnalyticsDataset dataset = dataset(id);
+        if (!isPublished(dataset)) {
+            throw new DatasetNotPublishedException();
+        }
         if (refresh) queryCache.invalidate(id);
-        return queryCache.get(id, ignored -> {
+        // 用户查询必须在每次请求中走 metadata 的权限/审计链路。共享结果缓存
+        // 只保留给没有请求上下文的内部调用，避免把一个用户的行级结果复用给另一个用户。
+        if (identityHeader != null && !identityHeader.isBlank()) {
+            return executeQuery(id, dataset, identityHeader);
+        }
+        return queryCache.get(id, ignored -> executeQuery(id, dataset, null));
+    }
+
+    private Map<String, Object> executeQuery(Long id, AnalyticsDataset dataset, String identityHeader) {
             Map<String, Object> result = "metric".equals(dataset.sourceType())
-                    ? queryClient.queryMetric(dataset.metricCode(), dataset.metricQuery())
-                    : queryClient.query(dataset.datasourceId(), dataset.querySql());
+                    ? (identityHeader == null
+                        ? queryClient.queryMetric(dataset.metricCode(), dataset.metricQuery())
+                        : queryClient.queryMetric(dataset.metricCode(), dataset.metricQuery(), identityHeader))
+                    : (identityHeader == null
+                        ? queryClient.query(dataset.datasourceId(), dataset.querySql())
+                        : queryClient.query(dataset.datasourceId(), dataset.querySql(), identityHeader));
             Object columns = result.get("columns");
             JsonNode schema = objectMapper.valueToTree(Map.of("columns", columns == null ? List.of() : columns));
             repository.updateDatasetSchema(id, schema);
             return result;
-        });
+    }
+
+    private boolean isPublished(AnalyticsDataset dataset) {
+        return "published".equalsIgnoreCase(dataset.status());
     }
 
     private void validateDataset(DatasetInput input) {
@@ -137,5 +165,9 @@ public class AnalyticsService {
 
     public static class PublishConflictException extends RuntimeException {
         public PublishConflictException(String message) { super(message); }
+    }
+
+    public static class DatasetNotPublishedException extends RuntimeException {
+        public DatasetNotPublishedException() { super("数据集尚未发布，不能执行查询"); }
     }
 }

@@ -65,6 +65,9 @@ public class IngestionRunListController {
             item.put("rowsWritten", run.getRowsWritten());
             item.put("durationMs", run.getDurationMs());
             item.put("errorMessage", run.getErrorMessage());
+            item.put("failureCode", run.getFailureCode());
+            item.put("requestKey", run.getRequestKey());
+            item.put("replayOfRunId", run.getReplayOfRunId());
             item.put("triggeredBy", run.getTriggeredBy());
             item.put("startedAt", run.getStartedAt());
             item.put("finishedAt", run.getFinishedAt());

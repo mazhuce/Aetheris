@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { findChild } from '@/constants/navigation'
 import { getCurrentRole } from '@/utils/access'
+import { prefetchRoute } from '@/router/prefetch'
 
 /** 当前模块的二级导航（横向 Tab 风格）。 */
 export default function SubNav() {
@@ -22,6 +23,8 @@ export default function SubNav() {
             <Link
               key={item.key}
               to={item.path}
+              onMouseEnter={() => prefetchRoute(item.path)}
+              onFocus={() => prefetchRoute(item.path)}
               className={`subnav-item${item.key === child.key ? ' active' : ''}`}
             >
               {item.label}

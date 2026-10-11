@@ -44,6 +44,21 @@ export interface QualityCheckResult {
   triggeredBy?: string
   startedAt: string
   finishedAt?: string
+  failureCode?: string
+}
+
+export interface QualityQuarantineRecord {
+  id: number
+  resultId?: number
+  ruleId: number
+  targetTable: string
+  violationCount?: number
+  thresholdValue?: number
+  reason?: string
+  status: 'open' | 'released' | 'discarded'
+  createdAt: string
+  releasedAt?: string
+  releasedBy?: string
 }
 
 export function listRules(): Promise<QualityRule[]> {
@@ -89,4 +104,14 @@ export interface QualitySummary {
 
 export function getQualitySummary(): Promise<QualitySummary> {
   return http.get<QualitySummary>('/api/quality/rules/results/summary').then((res) => res.data)
+}
+
+export function listQualityQuarantine(status = 'open', limit = 100): Promise<QualityQuarantineRecord[]> {
+  return http
+    .get<QualityQuarantineRecord[]>('/api/quality/quarantine', { params: { status, limit } })
+    .then((res) => res.data)
+}
+
+export function releaseQualityQuarantine(id: number): Promise<QualityQuarantineRecord> {
+  return http.post<QualityQuarantineRecord>(`/api/quality/quarantine/${id}/release`).then((res) => res.data)
 }

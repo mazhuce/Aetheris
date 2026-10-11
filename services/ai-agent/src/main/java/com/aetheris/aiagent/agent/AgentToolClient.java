@@ -8,6 +8,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,7 @@ public class AgentToolClient {
                             .queryParam("keyword", keyword)
                             .queryParam("layer", layer)
                             .build())
+                    .header("X-Aetheris-Identity", identityHeader())
                     .retrieve()
                     .body(LIST_TYPE);
             return result == null ? List.of() : result;
@@ -71,6 +74,7 @@ public class AgentToolClient {
                     .uri(uriBuilder -> uriBuilder.path("/internal/agent/tables/describe")
                             .queryParam("tableId", tableId)
                             .build())
+                    .header("X-Aetheris-Identity", identityHeader())
                     .retrieve()
                     .body(MAP_TYPE);
             return result == null ? Map.of("error", "未获取到表结构") : result;
@@ -85,6 +89,7 @@ public class AgentToolClient {
         try {
             Map<String, Object> result = restClient.post()
                     .uri("/internal/agent/query")
+                    .header("X-Aetheris-Identity", identityHeader())
                     .body(Map.of("datasourceId", datasourceId, "sql", sql))
                     .retrieve()
                     .body(MAP_TYPE);
@@ -102,6 +107,7 @@ public class AgentToolClient {
                     .uri(uriBuilder -> uriBuilder.path("/internal/semantic/metrics")
                             .queryParam("keyword", keyword == null ? "" : keyword)
                             .build())
+                    .header("X-Aetheris-Identity", identityHeader())
                     .retrieve()
                     .body(LIST_TYPE);
             return result == null ? List.of() : result;
@@ -123,6 +129,7 @@ public class AgentToolClient {
             body.put("limit", 100);
             Map<String, Object> result = restClient.post()
                     .uri("/internal/semantic/metrics/{code}/query", metricCode)
+                    .header("X-Aetheris-Identity", identityHeader())
                     .body(body)
                     .retrieve()
                     .body(MAP_TYPE);
@@ -131,5 +138,15 @@ public class AgentToolClient {
             log.warn("Tool queryMetric failed: metricCode={}", metricCode, error);
             return Map.of("error", "指标查询失败，请检查指标状态、维度或日期条件");
         }
+    }
+
+    /** 工具调用发生在当前 HTTP 请求线程，透传网关签名而不是可伪造的用户名头。 */
+    private String identityHeader() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servlet) {
+            String value = servlet.getRequest().getHeader("X-Aetheris-Identity");
+            return value == null ? "" : value;
+        }
+        return "";
     }
 }

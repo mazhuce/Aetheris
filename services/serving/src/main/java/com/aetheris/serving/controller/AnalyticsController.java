@@ -82,6 +82,14 @@ public class AnalyticsController {
         return service.updateDataset(id, input);
     }
 
+    @PostMapping("/datasets/{id}/publish")
+    public AnalyticsDataset publishDataset(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        security.requireManage(request);
+        return service.publishDataset(id, security.requireIdentity(request).username());
+    }
+
     @DeleteMapping("/datasets/{id}")
     public ResponseEntity<Void> deleteDataset(
             @PathVariable Long id,
@@ -97,7 +105,7 @@ public class AnalyticsController {
             HttpServletRequest request,@PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean refresh) {
         security.require(request,"dataset",id,"query");
-        return service.queryDataset(id, refresh);
+        return service.queryDataset(id, refresh, request.getHeader("X-Aetheris-Identity"));
     }
 
     @GetMapping("/dashboard-templates")
@@ -168,6 +176,11 @@ public class AnalyticsController {
 
     @org.springframework.web.bind.annotation.ExceptionHandler(AnalyticsService.PublishConflictException.class)
     public ResponseEntity<Map<String, String>> conflict(AnalyticsService.PublishConflictException error) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
+    }
+
+    @org.springframework.web.bind.annotation.ExceptionHandler(AnalyticsService.DatasetNotPublishedException.class)
+    public ResponseEntity<Map<String, String>> datasetNotPublished(AnalyticsService.DatasetNotPublishedException error) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("message", error.getMessage()));
     }
 

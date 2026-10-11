@@ -61,13 +61,30 @@ export interface IngestionRun {
   rowsWritten?: number
   durationMs?: number
   errorMessage?: string
+  failureCode?: string
+  requestKey?: string
+  replayOfRunId?: number
   triggeredBy?: string
   startedAt: string
   finishedAt?: string
 }
 
-export function runTask(id: number): Promise<IngestionRun> {
-  return http.post<IngestionRun>(`/api/ingestion/tasks/${id}/run`, undefined, { timeout: 3660000 }).then((res) => res.data)
+export function runTask(id: number, requestKey = crypto.randomUUID()): Promise<IngestionRun> {
+  return http
+    .post<IngestionRun>(`/api/ingestion/tasks/${id}/run`, undefined, {
+      timeout: 3660000,
+      headers: { 'Idempotency-Key': requestKey }
+    })
+    .then((res) => res.data)
+}
+
+export function replayRun(id: number, requestKey = crypto.randomUUID()): Promise<IngestionRun> {
+  return http
+    .post<IngestionRun>(`/api/ingestion/runs/${id}/replay`, undefined, {
+      timeout: 3660000,
+      headers: { 'Idempotency-Key': requestKey }
+    })
+    .then((res) => res.data)
 }
 
 export function listRuns(id: number, limit = 30): Promise<IngestionRun[]> {
@@ -85,6 +102,9 @@ export interface SyncRunRecord {
   rowsWritten?: number
   durationMs?: number
   errorMessage?: string
+  failureCode?: string
+  requestKey?: string
+  replayOfRunId?: number
   triggeredBy?: string
   startedAt: string
   finishedAt?: string

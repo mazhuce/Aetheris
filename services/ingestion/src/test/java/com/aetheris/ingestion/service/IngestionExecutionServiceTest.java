@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 
 class IngestionExecutionServiceTest {
 
@@ -60,6 +62,35 @@ class IngestionExecutionServiceTest {
         when(taskService.getById(1L)).thenReturn(task);
 
         assertThrows(IllegalArgumentException.class, () -> service.execute(1L, "admin"));
+    }
+
+    @Test
+    void reusesCompletedRunForSameIdempotencyKey() {
+        IngestionTask task = configuredTask();
+        when(taskService.getById(1L)).thenReturn(task);
+        when(client.execute(task)).thenReturn(new MetadataIngestionClient.TransferResult(2, 2, 10));
+        IngestionRun completed = service.execute(1L, "admin", "request-42");
+        completed.setId(42L);
+        when(runService.getOne(any(), eq(false))).thenReturn(completed);
+
+        IngestionRun retry = service.execute(1L, "admin", "request-42");
+
+        assertEquals(completed, retry);
+        verify(client).execute(task);
+    }
+
+    @Test
+    void classifiesUpstreamFailureForDiagnosis() {
+        IngestionTask task = configuredTask();
+        when(taskService.getById(1L)).thenReturn(task);
+        when(client.execute(task)).thenThrow(new MetadataIngestionClient.IngestionExecutionException("连接失败"));
+
+        assertThrows(MetadataIngestionClient.IngestionExecutionException.class,
+                () -> service.execute(1L, "admin", "request-failed"));
+
+        ArgumentCaptor<IngestionRun> captor = ArgumentCaptor.forClass(IngestionRun.class);
+        verify(runService).updateById(captor.capture());
+        assertEquals("UPSTREAM_TRANSFER_FAILED", captor.getValue().getFailureCode());
     }
 
     private IngestionTask configuredTask() {

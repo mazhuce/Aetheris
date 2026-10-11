@@ -110,8 +110,42 @@ public class DataTools {
             Long datasourceId,
             @ToolParam(description = "要执行的只读 SQL 语句")
             String sql) {
+        String validationError = readOnlyValidationError(sql);
+        if (validationError != null) {
+            // metadata 仍是最终安全边界；这里提前拒绝可以避免把明显的写操作
+            // 发送到内部服务，也让模型收到稳定、可改写的错误结构。
+            return toJson(Map.of("error", validationError));
+        }
         log.info("Agent query: datasourceId={}, sql={}", datasourceId, abbreviate(sql));
         return toJson(client.query(datasourceId, sql));
+    }
+
+    /**
+     * Agent 的查询工具只允许单条只读语句。metadata 侧会再次执行完整的 SQL
+     * 校验，这个轻量检查用于在网络调用前拦截写操作和多语句注入。
+     */
+    static String readOnlyValidationError(String sql) {
+        if (sql == null || sql.isBlank()) {
+            return "SQL 不能为空";
+        }
+        String statement = sql.trim()
+                .replaceFirst("(?s)^/\\*.*?\\*/\\s*", "")
+                .replaceFirst("(?m)^\\s*--[^\\r\\n]*[\\r\\n]", "")
+                .trim();
+        if (statement.isEmpty()) {
+            return "SQL 不能为空";
+        }
+        // 只允许结尾分号；中间出现分号代表多语句。
+        int semicolon = statement.indexOf(';');
+        if (semicolon >= 0 && !statement.substring(semicolon + 1).trim().isEmpty()) {
+            return "只允许执行单条只读 SQL";
+        }
+        String first = statement.substring(0, Math.min(statement.length(), 16))
+                .split("\\s+", 2)[0].toLowerCase(java.util.Locale.ROOT);
+        if (!java.util.Set.of("select", "show", "describe", "desc", "explain", "with").contains(first)) {
+            return "仅支持 SELECT、SHOW、DESCRIBE、EXPLAIN 查询";
+        }
+        return null;
     }
 
     /** 序列化失败不应中断对话，退化成纯文本仍能让模型继续。 */

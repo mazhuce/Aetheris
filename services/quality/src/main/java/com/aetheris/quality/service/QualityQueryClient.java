@@ -6,6 +6,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,9 @@ public class QualityQueryClient {
         try {
             body = restClient.post()
                     .uri("/internal/agent/query")
+                    // 质量检查由用户请求触发时，沿用网关验签身份，让 metadata
+                    // 的 datasource.query 权限和查询审计与主链路保持一致。
+                    .header("X-Aetheris-Identity", identityHeader())
                     .body(Map.of("datasourceId", datasourceId, "sql", sql))
                     .retrieve()
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
@@ -54,6 +59,15 @@ public class QualityQueryClient {
         } catch (NumberFormatException error) {
             throw new QualityExecutionException("violation_count 不是整数");
         }
+    }
+
+    private String identityHeader() {
+        var attributes = RequestContextHolder.getRequestAttributes();
+        if (attributes instanceof ServletRequestAttributes servlet) {
+            String value = servlet.getRequest().getHeader("X-Aetheris-Identity");
+            return value == null ? "" : value;
+        }
+        return "";
     }
 
     public static class QualityExecutionException extends RuntimeException {

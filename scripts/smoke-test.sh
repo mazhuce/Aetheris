@@ -102,9 +102,14 @@ ingestion_payload=$(json_object name smoke-ingestion sourceType jdbc \
 ingestion=$(curl --silent --fail --request POST "$base_url/api/ingestion/tasks" \
   --header 'Content-Type: application/json' --data "$ingestion_payload")
 ingestion_id=$(json_get id <<<"$ingestion")
-ingestion_run=$(curl --silent --fail --request POST "$base_url/api/ingestion/tasks/$ingestion_id/run")
+ingestion_request_key="smoke-ingestion-${ingestion_id}"
+ingestion_run=$(curl --silent --fail --request POST "$base_url/api/ingestion/tasks/$ingestion_id/run" \
+  --header "Idempotency-Key: $ingestion_request_key")
 [[ "$(json_get status <<<"$ingestion_run")" == "success" ]]
 [[ "$(json_get rowsWritten <<<"$ingestion_run")" == "3" ]]
+ingestion_retry=$(curl --silent --fail --request POST "$base_url/api/ingestion/tasks/$ingestion_id/run" \
+  --header "Idempotency-Key: $ingestion_request_key")
+[[ "$(json_get id <<<"$ingestion_retry")" == "$(json_get id <<<"$ingestion_run")" ]]
 
 echo "Verifying workflow execution"
 workflow_payload=$(json_object name smoke-workflow datasourceId:int "$datasource_id" \
@@ -133,6 +138,7 @@ dataset_payload=$(json_object name smoke-dataset datasourceId:int "$datasource_i
 dataset=$(curl --silent --fail --request POST "$base_url/api/analytics/datasets" \
   --header 'Content-Type: application/json' --data "$dataset_payload")
 dataset_id=$(json_get id <<<"$dataset")
+curl --silent --fail --request POST "$base_url/api/analytics/datasets/$dataset_id/publish" >/dev/null
 dataset_result=$(curl --silent --fail --request POST "$base_url/api/analytics/datasets/$dataset_id/query")
 [[ "$(json_get rows.0.0 <<<"$dataset_result")" == "4" ]]
 

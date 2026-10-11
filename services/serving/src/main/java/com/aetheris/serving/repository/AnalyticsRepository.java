@@ -54,12 +54,29 @@ public class AnalyticsRepository {
                 UPDATE serving.bi_dataset
                    SET name = ?, description = ?, source_type = ?, datasource_id = ?, datasource_name = ?, query_sql = ?,
                        metric_code = ?, metric_query_json = ?::jsonb, refresh_seconds = ?,
-                       schema_json = '{}'::jsonb, updated_at = now()
+                       schema_json = '{}'::jsonb, status = 'draft',
+                       published_by = NULL, published_at = NULL, updated_at = now()
                  WHERE id = ?
                 """,
                 input.name().trim(), clean(input.description()), sourceType(input), sqlDatasourceId(input), sqlValue(input.datasourceName(), input),
                 sqlValue(input.querySql(), input), metricCode(input), metricQuery(input),
                 input.refreshSeconds() == null ? 30 : input.refreshSeconds(), id);
+        return changed == 0 ? Optional.empty() : findDataset(id);
+    }
+
+    @Transactional
+    public Optional<AnalyticsDataset> publishDataset(Long id, String username) {
+        if (jdbc.query("SELECT id FROM serving.bi_dataset WHERE id = ? FOR UPDATE",
+                (rs, row) -> rs.getLong("id"), id).isEmpty()) {
+            return Optional.empty();
+        }
+        int changed = jdbc.update("""
+                UPDATE serving.bi_dataset
+                   SET status = 'published',
+                       published_version = published_version + 1,
+                       published_by = ?, published_at = now(), updated_at = now()
+                 WHERE id = ? AND status <> 'deprecated'
+                """, username, id);
         return changed == 0 ? Optional.empty() : findDataset(id);
     }
 

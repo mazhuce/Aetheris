@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -111,8 +112,6 @@ class DataToolsTest {
     @DisplayName("查询错误原样返回给模型，便于其自行改写重试")
     void surfacesQueryErrorToModel() {
         AgentToolClient client = mock(AgentToolClient.class);
-        when(client.query(anyLong(), anyString()))
-                .thenReturn(Map.of("error", "SQL 不被允许：仅支持 SELECT 查询"));
         DataTools tools = new DataTools(client, objectMapper);
 
         String result = tools.query(6L, "DELETE FROM dwd.dwd_order");
@@ -120,6 +119,7 @@ class DataToolsTest {
         // 抛异常会中断整轮对话；返回 error 能让模型看到原因并改写。
         assertTrue(result.contains("error"));
         assertTrue(result.contains("仅支持 SELECT"));
+        verify(client, never()).query(anyLong(), anyString());
     }
 
     @Test
@@ -137,6 +137,18 @@ class DataToolsTest {
         assertTrue(result.contains("家用电器"));
         assertTrue(result.contains("category_name"));
         assertTrue(result.contains("\"rowCount\":1"));
+    }
+
+    @Test
+    @DisplayName("查询工具拒绝多语句，即使第一条是 SELECT")
+    void rejectsMultipleStatementsBeforeCallingMetadata() {
+        AgentToolClient client = mock(AgentToolClient.class);
+        DataTools tools = new DataTools(client, objectMapper);
+
+        String result = tools.query(6L, "SELECT 1; DELETE FROM dwd.dwd_order");
+
+        assertTrue(result.contains("单条只读 SQL"));
+        verify(client, never()).query(anyLong(), anyString());
     }
 
     @Test

@@ -37,13 +37,13 @@ class AnalyticsServiceTest {
 
     private AnalyticsDataset dataset(Long id) {
         return new AnalyticsDataset(id, "订单数据集", null, "sql", 10L, "订单库",
-                "SELECT * FROM dwd.orders", null, null, null, 30, "active", "admin", null, null);
+                "SELECT * FROM dwd.orders", null, null, null, 30, "published", "admin", null, null);
     }
 
     private AnalyticsDataset metricDataset(Long id) {
         return new AnalyticsDataset(id, "成交金额", null, "metric", null, null,
                 null, "GMV", objectMapper.createObjectNode().put("timeGrain", "day"),
-                null, 30, "active", "admin", null, null);
+                null, 30, "published", "admin", null, null);
     }
 
     private Dashboard dashboard(Long id, String status, int publishedVersion) {
@@ -180,6 +180,18 @@ class AnalyticsServiceTest {
 
         verify(queryClient).queryMetric(eq("GMV"), any());
         verify(queryClient, never()).query(anyLong(), anyString());
+    }
+
+    @Test
+    void queryDatasetRejectsDraftAssetBeforeCallingQueryEngine() {
+        AnalyticsDataset draft = new AnalyticsDataset(3L, "草稿数据集", null, "sql", 10L, "订单库",
+                "SELECT * FROM dwd.orders", null, null, null, 30, "draft", "admin", null, null);
+        when(repository.findDataset(3L)).thenReturn(Optional.of(draft));
+
+        assertThrows(AnalyticsService.DatasetNotPublishedException.class,
+                () -> service.queryDataset(3L, false));
+        verify(queryClient, never()).query(anyLong(), anyString());
+        verify(queryClient, never()).queryMetric(anyString(), any());
     }
 
     @Test

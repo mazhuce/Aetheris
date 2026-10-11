@@ -23,8 +23,14 @@ public class MetadataQueryClient {
     }
 
     public Map<String, Object> query(Long datasourceId, String sql) {
+        return query(datasourceId, sql, null);
+    }
+
+    /** 传递网关签名身份，让 metadata 的内部查询仍走同一权限和审计链路。 */
+    public Map<String, Object> query(Long datasourceId, String sql, String identityHeader) {
         Map<String, Object> body = restClient.post()
                 .uri("/internal/agent/query")
+                .header("X-Aetheris-Identity", identityHeader == null ? "" : identityHeader)
                 .body(Map.of("datasourceId", datasourceId, "sql", sql))
                 .retrieve()
                 .body(new ParameterizedTypeReference<Map<String, Object>>() {});
@@ -34,8 +40,13 @@ public class MetadataQueryClient {
     }
 
     public Map<String, Object> queryMetric(String metricCode, Object query) {
+        return queryMetric(metricCode, query, null);
+    }
+
+    public Map<String, Object> queryMetric(String metricCode, Object query, String identityHeader) {
         Map<String, Object> body = restClient.post()
                 .uri("/internal/semantic/metrics/{code}/query", metricCode)
+                .header("X-Aetheris-Identity", identityHeader == null ? "" : identityHeader)
                 .body(query == null ? Map.of() : query)
                 .retrieve()
                 .body(new ParameterizedTypeReference<Map<String, Object>>() {});

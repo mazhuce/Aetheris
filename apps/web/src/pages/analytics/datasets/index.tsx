@@ -22,6 +22,7 @@ import {
   createAnalyticsDataset,
   deleteAnalyticsDataset,
   listAnalyticsDatasets,
+  publishAnalyticsDataset,
   queryAnalyticsDataset,
   updateAnalyticsDataset,
   type AnalyticsDataset,
@@ -111,9 +112,9 @@ export default function AnalyticsDatasetPage() {
         ? await updateAnalyticsDataset(editing.id, input)
         : await createAnalyticsDataset(input)
       setEditorOpen(false)
-      message.success(editing ? '数据集已更新' : '数据集已创建')
+      message.success(editing ? '数据集已保存，请发布后供查询和看板使用' : '数据集已创建，请发布后供查询和看板使用')
       await reload()
-      await runPreview(saved)
+      if (saved.status === 'published') await runPreview(saved)
     } catch (error: any) {
       message.error(error.response?.data?.message || '数据集保存失败')
     }
@@ -132,6 +133,16 @@ export default function AnalyticsDatasetPage() {
     }
   }
 
+  const publish = async (dataset: AnalyticsDataset) => {
+    try {
+      await publishAnalyticsDataset(dataset.id)
+      message.success('数据集已发布，可用于查询和看板')
+      await reload()
+    } catch (error: any) {
+      message.error(error.response?.data?.message || '数据集发布失败')
+    }
+  }
+
   const columns: TableColumnsType<AnalyticsDataset> = [
     {
       title: '数据集',
@@ -142,6 +153,7 @@ export default function AnalyticsDatasetPage() {
       )
     },
     { title: '来源类型', dataIndex: 'sourceType', width: 100, render: (value) => <Tag color={value === 'metric' ? 'purple' : 'default'}>{value === 'metric' ? '语义指标' : '只读 SQL'}</Tag> },
+    { title: '状态', dataIndex: 'status', width: 100, render: (value: AnalyticsDataset['status']) => <Tag color={value === 'published' ? 'green' : value === 'draft' ? 'gold' : 'default'}>{value === 'published' ? '已发布' : value === 'draft' ? '草稿' : '已废弃'}</Tag> },
     { title: '数据来源', width: 190, render: (_, row) => row.sourceType === 'metric' ? <Typography.Text code>{row.metricCode}</Typography.Text> : row.datasourceName || '—' },
     {
       title: '字段',
@@ -157,7 +169,8 @@ export default function AnalyticsDatasetPage() {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          <Button type="text" loading={querying === record.id} onClick={() => void runPreview(record)}>预览</Button>
+          <Button type="text" disabled={record.status !== 'published'} loading={querying === record.id} onClick={() => void runPreview(record)}>预览</Button>
+          {isAdmin && record.status === 'draft' && <Button type="text" onClick={() => void publish(record)}>发布</Button>}
           {isAdmin && <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
           {isAdmin && (
             <Popconfirm title="删除这个数据集？" description="已绑定的看板组件会失去数据。" onConfirm={async () => {

@@ -27,7 +27,7 @@ function DashboardStage({ mode }: { mode: 'preview' | 'published' }) {
     Promise.all([loadDashboard, listAnalyticsDatasets()])
       .then(([nextDashboard, nextDatasets]) => {
         setDashboard(nextDashboard)
-        setDatasets(nextDatasets)
+        setDatasets(nextDatasets.filter((dataset) => dataset.status === 'published'))
         setSpec(mode === 'preview' ? nextDashboard.draftSpec : nextDashboard.publishedSpec)
       })
       .catch(() => message.error('看板加载失败'))

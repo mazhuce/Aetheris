@@ -6,6 +6,9 @@ import com.aetheris.metadata.entity.MetadataTable;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.MetadataTableService;
+import com.aetheris.metadata.service.QueryAuditService;
+import com.aetheris.metadata.security.MetadataSecurity;
+import jakarta.servlet.http.HttpServletRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,14 +50,20 @@ public class InternalAgentToolController {
     private final MetadataTableService metadataTableService;
     private final DataSourceService dataSourceService;
     private final JdbcService jdbcService;
+    private final MetadataSecurity security;
+    private final QueryAuditService auditService;
 
     public InternalAgentToolController(
             MetadataTableService metadataTableService,
             DataSourceService dataSourceService,
-            JdbcService jdbcService) {
+            JdbcService jdbcService,
+            MetadataSecurity security,
+            QueryAuditService auditService) {
         this.metadataTableService = metadataTableService;
         this.dataSourceService = dataSourceService;
         this.jdbcService = jdbcService;
+        this.security = security;
+        this.auditService = auditService;
     }
 
     /**
@@ -65,8 +74,10 @@ public class InternalAgentToolController {
      */
     @GetMapping("/tables/search")
     public List<Map<String, Object>> searchTables(
+            HttpServletRequest httpRequest,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String layer) {
+        String username = security.requireIdentity(httpRequest).username();
         LambdaQueryWrapper<MetadataTable> query = new LambdaQueryWrapper<>();
         // 已消失的表不该出现在 agent 的候选里，否则它会对着不存在的表写 SQL。
         query.ne(MetadataTable::getStatus, "stale");
@@ -84,6 +95,15 @@ public class InternalAgentToolController {
         query.orderByAsc(MetadataTable::getLayer).orderByAsc(MetadataTable::getTableName);
 
         List<MetadataTable> tables = metadataTableService.list(query);
+        MetadataSecurity.Scope scope = security.visibility(httpRequest, "table", "view");
+        tables = switch (scope.mode()) {
+            case ALL -> tables;
+            case IDS -> tables.stream().filter(table -> table.getBusinessDomainId() != null
+                    && scope.ids().contains(table.getBusinessDomainId())).toList();
+            case OPAQUE -> tables.stream().filter(table -> security.isAllowed(username, "table", table.getId(),
+                    "view", table.getBusinessDomainId() == null ? Map.of()
+                            : Map.of("domainId", String.valueOf(table.getBusinessDomainId())))).toList();
+        };
         List<Map<String, Object>> results = new ArrayList<>();
         for (MetadataTable table : tables.stream().limit(MAX_SEARCH_RESULTS).toList()) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -104,11 +124,13 @@ public class InternalAgentToolController {
      * <p>字段注释是 NL2SQL 准确率的关键：没有注释，LLM 只能靠字段名猜测语义。
      */
     @GetMapping("/tables/describe")
-    public ResponseEntity<?> describeTable(@RequestParam Long tableId) {
+    public ResponseEntity<?> describeTable(HttpServletRequest httpRequest, @RequestParam Long tableId) {
         MetadataTable table = metadataTableService.getById(tableId);
         if (table == null) {
             return ResponseEntity.ok(Map.of("error", "表不存在，请先用 search_tables 检索"));
         }
+        security.require(httpRequest, "table", tableId, "view", table.getBusinessDomainId() == null ? Map.of()
+                : Map.of("domainId", String.valueOf(table.getBusinessDomainId())));
         DataSource dataSource = table.getDatasourceId() == null
                 ? null
                 : dataSourceService.getById(table.getDatasourceId());
@@ -149,7 +171,8 @@ public class InternalAgentToolController {
      * 这里不放宽任何限制——agent 生成的 SQL 与人工输入的查询受同一套约束。
      */
     @PostMapping("/query")
-    public ResponseEntity<Map<String, Object>> query(@RequestBody Map<String, Object> request) {
+    public ResponseEntity<Map<String, Object>> query(HttpServletRequest httpRequest,
+                                                     @RequestBody Map<String, Object> request) {
         Object datasourceId = request.get("datasourceId");
         Object sql = request.get("sql");
         if (!(datasourceId instanceof Number id) || !(sql instanceof String statement)) {
@@ -161,16 +184,41 @@ public class InternalAgentToolController {
             return ResponseEntity.ok(Map.of("error", "数据源不存在"));
         }
 
+        String username = security.require(httpRequest, "datasource", dataSource.getId(), "query", Map.of()).username();
+        long startedAt = System.currentTimeMillis();
         try {
-            return ResponseEntity.ok(jdbcService.query(dataSource, statement));
+            Map<String, Object> result = jdbcService.query(dataSource, statement);
+            audit(username, dataSource, statement, "success", asLong(result.get("rowCount")),
+                    System.currentTimeMillis() - startedAt, null);
+            return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
             // 语句被守卫拒绝：把原因返回给 agent，让它自己改写重试，而不是直接失败。
+            audit(username, dataSource, statement, "failed", null,
+                    System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.ok(Map.of("error", "SQL 不被允许：" + error.getMessage()));
         } catch (IllegalStateException error) {
             log.warn("Agent query failed on datasource {}", id, error);
             // 执行错误（语法、表不存在）同样返回给 agent 用于自我修正。
+            audit(username, dataSource, statement, "failed", null,
+                    System.currentTimeMillis() - startedAt, error.getMessage());
             return ResponseEntity.ok(Map.of("error", "查询失败：" + error.getMessage()));
         }
+    }
+
+    private void audit(String username, DataSource dataSource, String sql, String status,
+                       Long rows, Long duration, String error) {
+        try {
+            auditService.record("agent", null, null, dataSource.getId(), username, status,
+                    rows, duration, false, error == null ? null : "QUERY_FAILED",
+                    error, sql);
+        } catch (RuntimeException auditError) {
+            // 审计是旁路记录，不能把一个已经完成的只读查询变成失败。
+            log.warn("Failed to persist agent query audit for {}", username, auditError);
+        }
+    }
+
+    private static Long asLong(Object value) {
+        return value instanceof Number number ? number.longValue() : null;
     }
 
     private String qualifiedName(MetadataTable table) {

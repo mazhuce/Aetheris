@@ -18,7 +18,7 @@ export interface AnalyticsDataset {
   }
   schema?: { columns?: string[] }
   refreshSeconds: number
-  status: string
+  status: 'draft' | 'published' | 'deprecated'
   createdBy: string
   createdAt: string
   updatedAt: string
@@ -118,6 +118,10 @@ export function createAnalyticsDataset(input: DatasetInput): Promise<AnalyticsDa
 
 export function updateAnalyticsDataset(id: number, input: DatasetInput): Promise<AnalyticsDataset> {
   return http.put<AnalyticsDataset>(`/api/analytics/datasets/${id}`, input).then((response) => response.data)
+}
+
+export function publishAnalyticsDataset(id: number): Promise<AnalyticsDataset> {
+  return http.post<AnalyticsDataset>(`/api/analytics/datasets/${id}/publish`).then((response) => response.data)
 }
 
 export function deleteAnalyticsDataset(id: number): Promise<void> {

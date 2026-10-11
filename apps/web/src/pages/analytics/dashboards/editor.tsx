@@ -80,7 +80,7 @@ export default function DashboardEditorPage() {
       .then(([nextDashboard, nextDatasets]) => {
         setDashboard(nextDashboard)
         setSpec(nextDashboard.draftSpec)
-        setDatasets(nextDatasets)
+        setDatasets(nextDatasets.filter((dataset) => dataset.status === 'published'))
       })
       .catch(() => message.error('看板编辑器加载失败'))
   }, [dashboardId])

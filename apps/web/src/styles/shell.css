@@ -335,3 +335,56 @@
   gap: var(--page-section-gap-tight);
   padding-block: var(--page-pad-block-tight);
 }
+
+.route-error {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--space-7);
+  background: var(--bg-app);
+}
+
+.route-error-card {
+  width: min(100%, 30rem);
+  padding: var(--space-7);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.route-error-code {
+  color: var(--text-tertiary);
+  font: 600 0.75rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+}
+
+.route-error-card h1 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: 1.35rem;
+}
+
+.route-error-card p {
+  color: var(--text-secondary);
+}
+
+.route-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.route-error-actions button {
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-surface);
+  cursor: pointer;
+}
+
+.route-error-actions button.secondary {
+  border-color: var(--border-default);
+  background: transparent;
+  color: var(--text-primary);
+}

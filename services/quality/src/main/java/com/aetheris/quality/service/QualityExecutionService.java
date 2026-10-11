@@ -2,9 +2,13 @@ package com.aetheris.quality.service;
 
 import com.aetheris.quality.entity.QualityCheckResult;
 import com.aetheris.quality.entity.QualityRule;
+import com.aetheris.quality.entity.QualityQuarantineRecord;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.OffsetDateTime;
 import java.util.Locale;
@@ -13,29 +17,42 @@ import java.util.Set;
 @Service
 public class QualityExecutionService {
 
+    private static final Logger log = LoggerFactory.getLogger(QualityExecutionService.class);
+
     private static final Set<String> PREDICATE_TYPES = Set.of("not_null", "range", "enum");
 
     private final QualityRuleService ruleService;
     private final QualityCheckResultService resultService;
     private final QualityQueryClient queryClient;
     private final NotificationClient notificationClient;
+    private final QualityQuarantineService quarantineService;
 
+    @Autowired
     public QualityExecutionService(
             QualityRuleService ruleService,
             QualityCheckResultService resultService,
             QualityQueryClient queryClient,
-            NotificationClient notificationClient) {
+            NotificationClient notificationClient,
+            QualityQuarantineService quarantineService) {
         this.ruleService = ruleService;
         this.resultService = resultService;
         this.queryClient = queryClient;
         this.notificationClient = notificationClient;
+        this.quarantineService = quarantineService;
+    }
+
+    /** 保留单元测试及旧调用方构造方式；运行时由 Spring 使用带隔离服务的构造器。 */
+    public QualityExecutionService(QualityRuleService ruleService,
+                                   QualityCheckResultService resultService,
+                                   QualityQueryClient queryClient,
+                                   NotificationClient notificationClient) {
+        this(ruleService, resultService, queryClient, notificationClient, null);
     }
 
     public QualityCheckResult execute(Long ruleId, String username) {
         QualityRule rule = ruleService.getById(ruleId);
         if (rule == null) throw new IllegalArgumentException("质量规则不存在");
         if (!"enabled".equals(rule.getStatus())) throw new IllegalStateException("质量规则已停用");
-        String sql = buildSql(rule);
         long threshold = rule.getThreshold() == null ? 0L : rule.getThreshold();
 
         QualityCheckResult result = new QualityCheckResult();
@@ -52,6 +69,7 @@ public class QualityExecutionService {
 
         long startedAt = System.currentTimeMillis();
         try {
+            String sql = buildSql(rule);
             long violations = queryClient.violationCount(rule.getDatasourceId(), sql);
             boolean passed = violations <= threshold;
             result.setStatus(passed ? "passed" : "failed");
@@ -62,6 +80,7 @@ public class QualityExecutionService {
             resultService.updateById(result);
             updateRule(rule, result.getStatus(), violations, null);
             if (!passed) {
+                createQuarantineRecord(rule, result, violations, threshold);
                 notificationClient.notifyAdmin(ruleId, "warning",
                         "质量检查未通过：" + rule.getName(),
                         "目标表 " + rule.getTargetTable() + " 发现 " + violations + " 条违规（阈值 " + threshold + "）");
@@ -70,6 +89,7 @@ public class QualityExecutionService {
         } catch (RuntimeException error) {
             String message = safeMessage(error);
             result.setStatus("error");
+            result.setFailureCode(failureCode(error));
             result.setDurationMs(System.currentTimeMillis() - startedAt);
             result.setMessage(message);
             result.setFinishedAt(OffsetDateTime.now());
@@ -79,6 +99,31 @@ public class QualityExecutionService {
                     "质量检查执行失败：" + rule.getName(), message);
             throw new QualityQueryClient.QualityExecutionException(message);
         }
+    }
+
+    private void createQuarantineRecord(QualityRule rule, QualityCheckResult result,
+                                        long violations, long threshold) {
+        if (quarantineService == null) return;
+        QualityQuarantineRecord record = new QualityQuarantineRecord();
+        record.setResultId(result.getId());
+        record.setRuleId(rule.getId());
+        record.setTargetTable(rule.getTargetTable());
+        record.setViolationCount(violations);
+        record.setThresholdValue(threshold);
+        record.setReason("违规数超过阈值");
+        record.setStatus("open");
+        try {
+            quarantineService.save(record);
+        } catch (RuntimeException error) {
+            // 隔离记录失败不应把已经完成的质量检查改报成执行错误；日志保留诊断线索。
+            log.error("Unable to persist quality quarantine record for rule {}", rule.getId(), error);
+        }
+    }
+
+    private String failureCode(RuntimeException error) {
+        if (error instanceof IllegalArgumentException) return "INVALID_RULE";
+        if (error instanceof QualityQueryClient.QualityExecutionException) return "QUERY_FAILED";
+        return "QUALITY_EXECUTION_FAILED";
     }
 
     String buildSql(QualityRule rule) {

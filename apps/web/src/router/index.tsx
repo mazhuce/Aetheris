@@ -6,6 +6,7 @@ import RequireRole from '@/components/RequireRole'
 import { firstAvailablePath, navModules } from '@/constants/navigation'
 import { getCurrentRole } from '@/utils/access'
 import { usePreferences } from '@/contexts/PreferencesContext'
+import RouteErrorBoundary from './RouteErrorBoundary'
 
 const LoginPage = lazy(() => import('@/pages/login'))
 const Dashboard = lazy(() => import('@/pages/dashboard'))
@@ -88,14 +89,16 @@ function HomeRedirect() {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <Deferred><LoginPage /></Deferred> },
+  { path: '/login', element: <Deferred><LoginPage /></Deferred>, errorElement: <RouteErrorBoundary /> },
   {
     path: '/analytics/dashboards/:id/preview',
-    element: <RequireAuth><Deferred><DashboardPreviewPage /></Deferred></RequireAuth>
+    element: <RequireAuth><Deferred><DashboardPreviewPage /></Deferred></RequireAuth>,
+    errorElement: <RouteErrorBoundary />
   },
   {
     path: '/d/:slug',
-    element: <RequireAuth><Deferred><PublishedDashboardPage /></Deferred></RequireAuth>
+    element: <RequireAuth><Deferred><PublishedDashboardPage /></Deferred></RequireAuth>,
+    errorElement: <RouteErrorBoundary />
   },
   {
     path: '/',
@@ -104,6 +107,7 @@ export const router = createBrowserRouter([
         <Deferred><BasicLayout /></Deferred>
       </RequireAuth>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <HomeRedirect /> },
 

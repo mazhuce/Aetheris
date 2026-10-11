@@ -2,6 +2,7 @@ package com.aetheris.quality.service;
 
 import com.aetheris.quality.entity.QualityCheckResult;
 import com.aetheris.quality.entity.QualityRule;
+import com.aetheris.quality.entity.QualityQuarantineRecord;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -10,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.any;
 
 class QualityExecutionServiceTest {
 
@@ -48,6 +50,27 @@ class QualityExecutionServiceTest {
     }
 
     @Test
+    void recordsFailedCheckInQuarantine() {
+        QualityQuarantineService quarantineService = mock(QualityQuarantineService.class);
+        QualityExecutionService quarantiningService = new QualityExecutionService(
+                ruleService, resultService, queryClient, notificationClient, quarantineService);
+        QualityRule rule = rule("range", "amount >= 0");
+        rule.setThreshold(2);
+        when(ruleService.getById(1L)).thenReturn(rule);
+        when(queryClient.violationCount(7L,
+                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"))
+                .thenReturn(3L);
+
+        quarantiningService.execute(1L, "admin");
+
+        org.mockito.ArgumentCaptor<QualityQuarantineRecord> captor =
+                org.mockito.ArgumentCaptor.forClass(QualityQuarantineRecord.class);
+        verify(quarantineService).save(captor.capture());
+        assertEquals("open", captor.getValue().getStatus());
+        assertEquals(3L, captor.getValue().getViolationCount());
+    }
+
+    @Test
     void buildsDuplicateRuleUsingExcessRows() {
         QualityRule rule = rule("duplicate", "order_id, line_no");
 
@@ -71,6 +94,7 @@ class QualityExecutionServiceTest {
         ArgumentCaptor<QualityCheckResult> result = ArgumentCaptor.forClass(QualityCheckResult.class);
         verify(resultService).updateById(result.capture());
         assertEquals("error", result.getValue().getStatus());
+        assertEquals("QUERY_FAILED", result.getValue().getFailureCode());
         assertEquals("error", rule.getLastCheckStatus());
     }
 

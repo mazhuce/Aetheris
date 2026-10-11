@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -91,7 +92,21 @@ public class IngestionTaskController {
     @PostMapping("/{id}/run")
     public ResponseEntity<?> run(
             @PathVariable Long id,
-            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username,
+            @RequestHeader(value = "Idempotency-Key", required = false) String requestKey) {
+        try {
+            return ResponseEntity.ok(executionService.execute(id, username, requestKey));
+        } catch (IllegalArgumentException error) {
+            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+        } catch (IllegalStateException error) {
+            return ResponseEntity.status(409).body(Map.of("message", error.getMessage()));
+        } catch (RuntimeException error) {
+            return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
+        }
+    }
+
+    /** 保留 Java 调用方的兼容入口；HTTP 调用应使用带 Idempotency-Key 的方法。 */
+    public ResponseEntity<?> run(Long id, String username) {
         try {
             return ResponseEntity.ok(executionService.execute(id, username));
         } catch (IllegalArgumentException error) {
