@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { App, Button, Col, Row, Select, Table, Tag, Typography } from 'antd'
+import { App, Button, Col, Popconfirm, Row, Select, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CheckCircleOutlined, CloseCircleOutlined, ExclamationCircleOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -9,13 +9,17 @@ import StatCard from '@/components/StatCard'
 import {
   getQualitySummary,
   listAllResults,
+  listQualityQuarantine,
   listRules,
+  releaseQualityQuarantine,
   type QualityCheckResult,
+  type QualityQuarantineRecord,
   type QualityRule,
   type QualitySummary
 } from '@/api/quality'
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { canManagePlatform } from '@/utils/access'
 
 const statusMeta: Record<string, { label: string; color: string }> = {
   passed: { label: '通过', color: 'success' },
@@ -29,28 +33,34 @@ export default function QualityTrendPage() {
   const [results, setResults] = useState<QualityCheckResult[]>([])
   const [rules, setRules] = useState<QualityRule[]>([])
   const [summary, setSummary] = useState<QualitySummary>()
+  const [quarantine, setQuarantine] = useState<QualityQuarantineRecord[]>([])
+  const [quarantineStatus, setQuarantineStatus] = useState('open')
+  const [quarantineLoading, setQuarantineLoading] = useState(false)
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
   const [ruleId, setRuleId] = useState<number>()
   const pageSize = useResponsivePageSize(6, 5, 4, 3)
+  const canManage = canManagePlatform()
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const [resultList, ruleList, summaryData] = await Promise.all([
+      const [resultList, ruleList, summaryData, quarantineList] = await Promise.all([
         listAllResults(status, ruleId, 100),
         listRules(),
-        getQualitySummary()
+        getQualitySummary(),
+        listQualityQuarantine(quarantineStatus, 100)
       ])
       setResults(resultList)
       setRules(ruleList)
       setSummary(summaryData)
+      setQuarantine(quarantineList)
     } catch {
       message.error('质量检查历史加载失败')
     } finally {
       setLoading(false)
     }
-  }, [message, status, ruleId])
+  }, [message, status, ruleId, quarantineStatus])
 
   useEffect(() => {
     void refresh()
@@ -60,6 +70,19 @@ export default function QualityTrendPage() {
     (id: number) => rules.find((rule) => rule.id === id)?.name ?? `规则 ${id}`,
     [rules]
   )
+
+  const release = async (id: number) => {
+    setQuarantineLoading(true)
+    try {
+      await releaseQualityQuarantine(id)
+      message.success('隔离记录已释放')
+      setQuarantine((items) => items.filter((item) => item.id !== id))
+    } catch {
+      message.error('隔离记录释放失败')
+    } finally {
+      setQuarantineLoading(false)
+    }
+  }
 
   const columns: TableColumnsType<QualityCheckResult> = [
     {
@@ -106,6 +129,33 @@ export default function QualityTrendPage() {
       render: (value?: string) => value || '—'
     }
   ]
+  if (results.some((result) => result.failureCode)) columns.push({
+    title: '失败诊断',
+    dataIndex: 'failureCode',
+    key: 'failureCode',
+    width: 170,
+    render: (value?: string) => value || '—'
+  })
+
+  const quarantineColumns: TableColumnsType<QualityQuarantineRecord> = [
+    { title: '目标表', dataIndex: 'targetTable', key: 'targetTable', width: 220 },
+    { title: '违规数', dataIndex: 'violationCount', key: 'violationCount', width: 90 },
+    { title: '阈值', dataIndex: 'thresholdValue', key: 'thresholdValue', width: 80 },
+    { title: '原因', dataIndex: 'reason', key: 'reason', ellipsis: true },
+    { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (value: string) => formatDateTime(value) },
+    {
+      title: '状态', dataIndex: 'status', key: 'status', width: 90,
+      render: (value: QualityQuarantineRecord['status']) => <Tag color={value === 'open' ? 'error' : value === 'released' ? 'success' : 'default'}>{value === 'open' ? '待处理' : value === 'released' ? '已释放' : '已丢弃'}</Tag>
+    }
+  ]
+  if (canManage) quarantineColumns.push({
+    title: '操作', key: 'action', width: 100,
+    render: (_, record) => record.status === 'open' ? (
+      <Popconfirm title="释放这条隔离记录？" onConfirm={() => void release(record.id)}>
+        <Button type="link" size="small" loading={quarantineLoading}>释放</Button>
+      </Popconfirm>
+    ) : '—'
+  })
 
   const scoreText = summary && summary.score >= 0 ? `${summary.score}%` : '暂无数据'
 
@@ -162,6 +212,31 @@ export default function QualityTrendPage() {
           scroll={{ x: 1100 }}
           pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
           locale={{ emptyText: <Typography.Text type="secondary">暂无检查记录。在数据质量页创建并运行规则，或配置定时调度后，历史会出现在这里。</Typography.Text> }}
+        />
+      </DataSurface>
+
+      <DataSurface title="质量隔离区" description="质量未通过的运行记录；释放动作会保留处理人和时间" label="质量隔离记录">
+        <PageToolbar>
+          <div className="filter-bar">
+            <div className="filter-item">
+              <span>状态</span>
+              <Select
+                value={quarantineStatus}
+                onChange={setQuarantineStatus}
+                className="filter-control-sm"
+                options={[{ value: 'open', label: '待处理' }, { value: 'released', label: '已释放' }, { value: 'discarded', label: '已丢弃' }]}
+              />
+            </div>
+          </div>
+        </PageToolbar>
+        <Table<QualityQuarantineRecord>
+          rowKey="id"
+          columns={quarantineColumns}
+          dataSource={quarantine}
+          loading={quarantineLoading || loading}
+          scroll={{ x: 1000 }}
+          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
+          locale={{ emptyText: <Typography.Text type="secondary">当前状态没有隔离记录。</Typography.Text> }}
         />
       </DataSurface>
     </div>

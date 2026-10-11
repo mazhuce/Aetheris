@@ -115,13 +115,16 @@ public class QualityExecutionService {
         try {
             quarantineService.save(record);
         } catch (RuntimeException error) {
-            // 隔离记录失败不应把已经完成的质量检查改报成执行错误；日志保留诊断线索。
+            // 隔离记录是失败质量结果的必要组成部分。写入失败时 fail-closed，
+            // 否则调用方会看到“已完成”但无法在隔离区找到对应诊断。
             log.error("Unable to persist quality quarantine record for rule {}", rule.getId(), error);
+            throw new QuarantinePersistenceException("质量隔离记录写入失败，请重试", error);
         }
     }
 
     private String failureCode(RuntimeException error) {
         if (error instanceof IllegalArgumentException) return "INVALID_RULE";
+        if (error instanceof QuarantinePersistenceException) return "QUARANTINE_WRITE_FAILED";
         if (error instanceof QualityQueryClient.QualityExecutionException) return "QUERY_FAILED";
         return "QUALITY_EXECUTION_FAILED";
     }
@@ -189,5 +192,11 @@ public class QualityExecutionService {
     private String safeMessage(RuntimeException error) {
         String message = error.getMessage();
         return StringUtils.hasText(message) ? message.substring(0, Math.min(message.length(), 512)) : "质量检查执行失败";
+    }
+
+    public static class QuarantinePersistenceException extends RuntimeException {
+        public QuarantinePersistenceException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }

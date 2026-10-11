@@ -71,6 +71,30 @@ class QualityExecutionServiceTest {
     }
 
     @Test
+    void failsClosedWhenQuarantineCannotBePersisted() {
+        QualityQuarantineService quarantineService = mock(QualityQuarantineService.class);
+        when(quarantineService.save(any(QualityQuarantineRecord.class)))
+                .thenThrow(new RuntimeException("database unavailable"));
+        QualityExecutionService quarantiningService = new QualityExecutionService(
+                ruleService, resultService, queryClient, notificationClient, quarantineService);
+        QualityRule rule = rule("range", "amount >= 0");
+        rule.setThreshold(2);
+        when(ruleService.getById(1L)).thenReturn(rule);
+        when(queryClient.violationCount(7L,
+                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"))
+                .thenReturn(3L);
+
+        assertThrows(QualityQueryClient.QualityExecutionException.class,
+                () -> quarantiningService.execute(1L, "admin"));
+
+        ArgumentCaptor<QualityCheckResult> result = ArgumentCaptor.forClass(QualityCheckResult.class);
+        verify(resultService, org.mockito.Mockito.times(2)).updateById(result.capture());
+        QualityCheckResult finalResult = result.getAllValues().getLast();
+        assertEquals("error", finalResult.getStatus());
+        assertEquals("QUARANTINE_WRITE_FAILED", finalResult.getFailureCode());
+    }
+
+    @Test
     void buildsDuplicateRuleUsingExcessRows() {
         QualityRule rule = rule("duplicate", "order_id, line_no");
 

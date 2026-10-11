@@ -1,5 +1,6 @@
 package com.aetheris.quality.service;
 
+import com.aetheris.quality.security.ServiceIdentitySigner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -16,19 +17,26 @@ import java.util.Map;
 public class QualityQueryClient {
 
     private final RestClient restClient;
+    private final ServiceIdentitySigner serviceIdentitySigner;
 
     @Autowired
     public QualityQueryClient(RestClient.Builder builder, @Value("${aetheris.metadata.base-url}") String baseUrl,
-                              @Value("${aetheris.internal-token:}") String internalToken) {
+                              @Value("${aetheris.internal-token:}") String internalToken,
+                              ServiceIdentitySigner serviceIdentitySigner) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
         factory.setReadTimeout(60_000);
         this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
                 .defaultHeader("X-Internal-Token", internalToken).build();
+        this.serviceIdentitySigner = serviceIdentitySigner;
+    }
+
+    public QualityQueryClient(RestClient.Builder builder, String baseUrl, String internalToken) {
+        this(builder, baseUrl, internalToken, null);
     }
 
     public QualityQueryClient(RestClient.Builder builder, String baseUrl) {
-        this(builder, baseUrl, "");
+        this(builder, baseUrl, "", null);
     }
 
     public long violationCount(Long datasourceId, String sql) {
@@ -65,9 +73,9 @@ public class QualityQueryClient {
         var attributes = RequestContextHolder.getRequestAttributes();
         if (attributes instanceof ServletRequestAttributes servlet) {
             String value = servlet.getRequest().getHeader("X-Aetheris-Identity");
-            return value == null ? "" : value;
+            if (value != null && !value.isBlank()) return value;
         }
-        return "";
+        return serviceIdentitySigner == null ? "" : serviceIdentitySigner.sign();
     }
 
     public static class QualityExecutionException extends RuntimeException {
