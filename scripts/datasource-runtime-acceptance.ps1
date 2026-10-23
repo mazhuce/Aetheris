@@ -13,9 +13,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$compose = Join-Path $repoRoot $ComposeFilePath
-$r1Env = Join-Path $repoRoot $R1EnvFile
-$reportFile = Join-Path $repoRoot $ReportPath
+$compose = if ([IO.Path]::IsPathRooted($ComposeFilePath)) { $ComposeFilePath } else { Join-Path $repoRoot $ComposeFilePath }
+$r1Env = if ([IO.Path]::IsPathRooted($R1EnvFile)) { $R1EnvFile } else { Join-Path $repoRoot $R1EnvFile }
+$reportFile = if ([IO.Path]::IsPathRooted($ReportPath)) { $ReportPath } else { Join-Path $repoRoot $ReportPath }
 if (-not (Test-Path -LiteralPath $compose -PathType Leaf)) { throw "Datasource smoke compose is missing: $compose" }
 if (-not (Test-Path -LiteralPath $r1Env -PathType Leaf)) { throw "R1 env file is missing: $r1Env" }
 if ($TimeoutSeconds -lt 30) { throw "TimeoutSeconds must be at least 30" }
@@ -23,7 +23,8 @@ if ($TimeoutSeconds -lt 30) { throw "TimeoutSeconds must be at least 30" }
 function Invoke-Docker {
     param([string[]]$Arguments)
     $output = & docker @Arguments 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "docker $($Arguments -join ' ') failed: $($output -join ' ')" }
+    # SQL arguments and container environments may contain secrets.
+    if ($LASTEXITCODE -ne 0) { throw "Docker datasource probe operation failed (exit $LASTEXITCODE)" }
     return @($output)
 }
 
@@ -101,6 +102,7 @@ function Invoke-MetadataJson([string]$Path, [hashtable]$Body) {
 
 $startedByScript = $false
 $createdIds = [System.Collections.Generic.List[int]]::new()
+$probesPassed = $false
 $report = [ordered]@{
     schemaVersion = 1
     gate = "datasource-jdbc-runtime-acceptance"
@@ -111,7 +113,7 @@ $report = [ordered]@{
     blockingCondition = $null
     retryable = $false
     docker = [ordered]@{ context = $null; serverApiVersion = $null; engineStatus = "unknown"; error = $null }
-    cleanup = [ordered]@{ datasourceRowsRemoved = $false; smokeStackStopped = $false }
+    cleanup = [ordered]@{ datasourceRowsRemoved = $true; smokeStackStopped = $true; errors = @() }
     error = $null
 }
 
@@ -119,8 +121,9 @@ try {
     if ($StartSmokeStack) {
         $env:DATASOURCE_SMOKE_PASSWORD = [Convert]::ToBase64String((1..24 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
         $env:DATASOURCE_SMOKE_ROOT_PASSWORD = [Convert]::ToBase64String((1..24 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
-        Invoke-Docker @("compose", "--project-name", $ProjectName, "-f", $compose, "up", "-d") | Out-Null
         $startedByScript = $true
+        $report.cleanup.smokeStackStopped = $false
+        Invoke-Docker @("compose", "--project-name", $ProjectName, "-f", $compose, "up", "-d") | Out-Null
         Wait-SmokeHealthy
     }
 
@@ -151,16 +154,23 @@ try {
         $idText = (Invoke-Docker @("exec", $PlatformPostgresContainer, "psql", "-q", "-U", "aetheris", "-d", "aetheris", "-Atc", $sql) | Select-Object -Last 1).ToString().Trim()
         $id = [int]$idText
         $createdIds.Add($id)
+        $report.cleanup.datasourceRowsRemoved = $false
         if ($source.Type -eq "sqlite") {
-            Invoke-MetadataJson "/internal/datasources/$id/execute" @{ sql = "CREATE TABLE IF NOT EXISTS smoke_probe (id INTEGER)"; timeoutSeconds = 30 } | Out-Null
+            $setup = Invoke-MetadataJson "/internal/datasources/$id/execute" @{ sql = "CREATE TABLE IF NOT EXISTS smoke_probe (id INTEGER)"; timeoutSeconds = 30 }
+            if ($setup.error) { throw "SQLite probe setup returned an application error" }
         }
         $probeSql = if ($source.Type -eq "derby") { "SELECT 1 FROM SYSIBM.SYSDUMMY1" } else { "SELECT 1 AS connected" }
         $response = Invoke-MetadataJson "/internal/agent/query" @{ datasourceId = $id; sql = $probeSql }
         $passed = $null -eq $response.error -and [int]$response.rowCount -eq 1 -and [int]$response.rows[0][0] -eq 1
-        $report.results += [ordered]@{ type = $source.Type; status = if ($passed) { "passed" } else { "failed" }; rowCount = $response.rowCount; message = if ($passed) { $probeSql } else { [string]$response.error } }
+        $report.results += [ordered]@{ type = $source.Type; status = if ($passed) { "passed" } else { "failed" }; rowCount = $response.rowCount; message = if ($passed) { $probeSql } else { "Application error or unexpected probe result" } }
     }
     $report.testedTypes = @($sources | ForEach-Object Type)
-    $report.status = "passed"
+    $expectedTypes = @("postgresql", "mysql", "trino", "mariadb", "clickhouse", "cockroachdb", "sqlite", "h2", "derby")
+    $actualTypes = @($report.results | ForEach-Object type | Sort-Object -Unique)
+    $probesPassed = $report.results.Count -eq 9 -and $actualTypes.Count -eq 9 -and
+        @(Compare-Object $expectedTypes $actualTypes).Count -eq 0 -and
+        @($report.results | Where-Object { $_.status -ne "passed" }).Count -eq 0
+    if (-not $probesPassed) { $report.error = "One or more required datasource probes failed" }
 } catch {
     $report.error = $_.Exception.Message
     if ($report.error -match '(?i)(docker|engine).*(500|internal server error)|internal server error') {
@@ -171,11 +181,14 @@ try {
 } finally {
     if ($createdIds.Count -gt 0) {
         $idList = ($createdIds -join ",")
-        try { Invoke-Docker @("exec", $PlatformPostgresContainer, "psql", "-U", "aetheris", "-d", "aetheris", "-v", "ON_ERROR_STOP=1", "-c", "DELETE FROM metadata.data_source WHERE id IN ($idList)") | Out-Null; $report.cleanup.datasourceRowsRemoved = $true } catch { }
+        try { Invoke-Docker @("exec", $PlatformPostgresContainer, "psql", "-U", "aetheris", "-d", "aetheris", "-v", "ON_ERROR_STOP=1", "-c", "DELETE FROM metadata.data_source WHERE id IN ($idList)") | Out-Null; $report.cleanup.datasourceRowsRemoved = $true } catch { $report.cleanup.errors += "datasource-row-cleanup-failed" }
     }
     if ($startedByScript -and -not $KeepStack) {
-        try { Invoke-Docker @("compose", "--project-name", $ProjectName, "-f", $compose, "down") | Out-Null; $report.cleanup.smokeStackStopped = $true } catch { }
+        try { Invoke-Docker @("compose", "--project-name", $ProjectName, "-f", $compose, "down") | Out-Null; $report.cleanup.smokeStackStopped = $true } catch { $report.cleanup.smokeStackStopped = $false; $report.cleanup.errors += "smoke-stack-cleanup-failed" }
     }
+    if ($startedByScript -and $KeepStack) { $report.cleanup.smokeStackStopped = $false; $report.cleanup.errors += "smoke-stack-retained-for-diagnostics" }
+    $report.status = if ($probesPassed -and $report.cleanup.datasourceRowsRemoved -and $report.cleanup.smokeStackStopped -and $report.cleanup.errors.Count -eq 0) { "passed" } else { "failed" }
+    if ($report.status -ne "passed" -and -not $report.error) { $report.error = "Datasource probes or cleanup did not complete successfully" }
     $report.finishedAtUtc = [DateTimeOffset]::UtcNow.ToString("O")
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $reportFile) | Out-Null
     $report | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $reportFile -Encoding UTF8

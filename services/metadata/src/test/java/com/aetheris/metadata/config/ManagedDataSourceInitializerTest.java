@@ -2,39 +2,46 @@ package com.aetheris.metadata.config;
 
 import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.service.DataSourceService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class ManagedDataSourceInitializerTest {
+    @Test
+    void quarantinesExistingPlatformConnectionWithoutReplacingCredentials() {
+        DataSourceService service = mock(DataSourceService.class);
+        DataSource source = new DataSource();
+        source.setId(1L); source.setManaged(true); source.setStatus("active");
+        source.setUsername("platform_owner"); source.setPassword("v1:existing-ciphertext");
+        when(service.list(any(LambdaQueryWrapper.class))).thenReturn(List.of(source));
+        when(service.updateById(source)).thenReturn(true);
+        new ManagedDataSourceInitializer(service).run();
+        assertEquals("isolated", source.getStatus());
+        assertEquals("platform_owner", source.getUsername());
+        assertEquals("v1:existing-ciphertext", source.getPassword());
+        verify(service).updateById(source);
+        verify(service, never()).save(any());
+    }
 
     @Test
-    void synchronizesManagedPostgresqlCredentialsFromEnvironment() throws Exception {
-        DataSourceService dataSourceService = mock(DataSourceService.class);
-        DataSource dataSource = new DataSource();
-        dataSource.setId(1L);
-        dataSource.setName("本地 PostgreSQL");
-        dataSource.setType("postgresql");
-        dataSource.setManaged(true);
-        when(dataSourceService.getOne(any(), eq(false))).thenReturn(dataSource);
+    void emptyAndAlreadyIsolatedEnvironmentsDoNotRegisterPlatformCredentials() {
+        DataSourceService service = mock(DataSourceService.class);
+        DataSource source = new DataSource(); source.setStatus("isolated");
+        when(service.list(any(LambdaQueryWrapper.class))).thenReturn(List.of(), List.of(source));
+        ManagedDataSourceInitializer initializer = new ManagedDataSourceInitializer(service);
+        initializer.run(); initializer.run();
+        verify(service, never()).updateById(any());
+        verify(service, never()).save(any());
+    }
 
-        ManagedDataSourceInitializer initializer = new ManagedDataSourceInitializer(
-                dataSourceService, true, "postgres", 5432, "aetheris", "aetheris", "real-secret");
-        initializer.run();
-
-        verify(dataSourceService).updateById(dataSource);
-        assertEquals("postgres", dataSource.getHost());
-        assertEquals(5432, dataSource.getPort());
-        assertEquals("aetheris", dataSource.getDatabaseName());
-        assertEquals("aetheris", dataSource.getUsername());
-        assertEquals("real-secret", dataSource.getPassword());
-        assertEquals("active", dataSource.getStatus());
-        assertTrue(dataSource.getManaged());
+    @Test
+    void refusesToSilentlyIgnorePersistenceFailure() {
+        DataSourceService service = mock(DataSourceService.class);
+        DataSource source = new DataSource(); source.setStatus("active");
+        when(service.list(any(LambdaQueryWrapper.class))).thenReturn(List.of(source));
+        assertThrows(IllegalStateException.class, () -> new ManagedDataSourceInitializer(service).run());
     }
 }

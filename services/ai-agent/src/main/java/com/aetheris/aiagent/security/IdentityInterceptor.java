@@ -14,21 +14,12 @@ import java.nio.charset.StandardCharsets;
 public class IdentityInterceptor implements HandlerInterceptor {
     public static final String IDENTITY_ATTRIBUTE = "aetheris.ai.identity";
 
-    private final IdentityVerifier verifier;
-
-    public IdentityInterceptor(IdentityVerifier verifier) {
-        this.verifier = verifier;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        if (!verifier.configured()) return reject(response, 503, "ai-agent 未配置内部令牌");
-        AetherisIdentity identity = verifier.verify(request);
-        if (identity == null || identity.username() == null || identity.username().isBlank()) {
-            return reject(response, 401, "缺少有效的网关身份签名");
-        }
-        request.setAttribute(IDENTITY_ATTRIBUTE, identity);
+        if (!(request.getAttribute(com.aetheris.security.servlet.TrustedUser.ATTRIBUTE) instanceof com.aetheris.security.servlet.TrustedUser))
+            return reject(response,401,"缺少有效认证身份");
         return true;
     }
 

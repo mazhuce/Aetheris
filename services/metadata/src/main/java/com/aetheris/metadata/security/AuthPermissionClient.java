@@ -3,16 +3,11 @@ package com.aetheris.metadata.security;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +23,7 @@ public class AuthPermissionClient {
 
     private static final Logger log = LoggerFactory.getLogger(AuthPermissionClient.class);
 
-    private final RestClient restClient;
+    private final com.aetheris.security.protocol.authorization.AuthProtocolClient client;
     private final MeterRegistry meterRegistry;
     private final Counter checkRequests;
     private final Counter checkAllowed;
@@ -42,31 +37,8 @@ public class AuthPermissionClient {
     private final Timer batchLatency;
 
     @Autowired
-    public AuthPermissionClient(
-            RestClient.Builder builder,
-            @Value("${aetheris.internal-token:}") String internalToken,
-            @Value("${aetheris.auth.base-url:http://localhost:8087}") String authBaseUrl,
-            MeterRegistry meterRegistry) {
-        this(buildRestClient(builder, internalToken, authBaseUrl), meterRegistry);
-    }
-
-    private static RestClient buildRestClient(RestClient.Builder builder, String internalToken, String authBaseUrl) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(500);
-        factory.setReadTimeout(1500);
-        return builder
-                .requestFactory(factory)
-                .baseUrl(authBaseUrl)
-                .defaultHeader("X-Internal-Token", internalToken)
-                .build();
-    }
-
-    AuthPermissionClient(RestClient restClient) {
-        this(restClient, new SimpleMeterRegistry());
-    }
-
-    AuthPermissionClient(RestClient restClient, MeterRegistry meterRegistry) {
-        this.restClient = restClient;
+    public AuthPermissionClient(com.aetheris.security.protocol.authorization.AuthProtocolClient client, MeterRegistry meterRegistry) {
+        this.client = client;
         this.meterRegistry = meterRegistry;
         this.checkRequests = Counter.builder("aetheris.auth.permission.check.requests").register(meterRegistry);
         this.checkAllowed = Counter.builder("aetheris.auth.permission.check.allowed").register(meterRegistry);
@@ -86,11 +58,7 @@ public class AuthPermissionClient {
         checkRequests.increment();
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            PermissionCheckResponse response = restClient.post()
-                    .uri("/internal/permissions/check")
-                    .body(checkRequestBody(username, resourceType, resourceId, action, ctx))
-                    .retrieve()
-                    .body(PermissionCheckResponse.class);
+            var response = await(client.check(proofFor(username), resourceType, resourceId, action, ctx));
             if (response == null) {
                 checkUnavailable.increment();
                 return Access.unavailable("权限服务不可用");
@@ -111,32 +79,13 @@ public class AuthPermissionClient {
         }
     }
 
-    private Map<String, Object> checkRequestBody(String username, String resourceType,
-                                                  Long resourceId, String action,
-                                                  Map<String, String> ctx) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("username", username);
-        body.put("resourceType", resourceType);
-        body.put("resourceId", resourceId);
-        body.put("action", action);
-        body.put("ctx", ctx == null ? Map.of() : ctx);
-        return body;
-    }
-
     /**
      * 列表可见性判定（与 auth-service VisibilityResponse 对齐）。
      * mode ∈ ALL / IDS / OPAQUE；IDS 时 ids 为根资源（业务域）id 列表。
      */
     public Visibility visibility(String username, String resourceType, String action) {
         try {
-            VisibilityResponse response = restClient.post()
-                    .uri("/internal/permissions/visibility")
-                    .body(Map.of(
-                            "username", username,
-                            "resourceType", resourceType,
-                            "action", action))
-                    .retrieve()
-                    .body(VisibilityResponse.class);
+            var response = await(client.visibility(proofFor(username), resourceType, action));
             if (response == null) return new Visibility("OPAQUE", List.of());
             return new Visibility(response.mode() == null ? "OPAQUE" : response.mode(),
                     response.ids() == null ? List.of() : response.ids());
@@ -156,25 +105,71 @@ public class AuthPermissionClient {
         batchItems.increment(resourceContexts.size());
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
-            BatchResponse response = restClient.post().uri("/internal/permissions/check-batch")
-                    .body(Map.of("username", username, "resourceType", resourceType,
-                            "action", action, "items", resourceContexts.entrySet().stream()
-                                    .map(item -> Map.of("resourceId", item.getKey(), "ctx",
-                                            item.getValue() == null ? Map.of() : item.getValue()))
-                                    .toList()))
-                    .retrieve().body(BatchResponse.class);
-            if (response == null || response.allowedIds() == null) {
+            var response = await(client.checkBatch(proofFor(username), resourceType, action, resourceContexts.entrySet().stream()
+                    .map(item -> new com.aetheris.security.protocol.authorization.AuthProtocolClient.Item(item.getKey(), item.getValue())).toList()));
+            if (response == null) {
                 batchUnavailable.increment();
                 return java.util.Set.of();
             }
-            batchAllowedIds.increment(response.allowedIds().size());
-            return java.util.Set.copyOf(response.allowedIds());
+            batchAllowedIds.increment(response.size());
+            return java.util.Set.copyOf(response);
         } catch (RuntimeException error) {
             batchUnavailable.increment();
             log.warn("auth batch permission check unavailable: {}", error.getMessage());
             return java.util.Set.of();
         } finally {
             sample.stop(batchLatency);
+        }
+    }
+
+    /** Lists must distinguish dependency failure from an authorized empty set. */
+    public Visibility visibilityStrict(String username, String resourceType, String action) {
+        try {
+            var response=await(client.visibility(proofFor(username),resourceType,action));
+            if(response==null || !java.util.Set.of("ALL","IDS","OPAQUE").contains(response.mode()) || response.ids()==null) throw new IllegalStateException();
+            return new Visibility(response.mode(),List.copyOf(response.ids()));
+        } catch(RuntimeException failure) {
+            throw new MetadataSecurity.PermissionServiceUnavailableException("权限服务暂时不可用，请稍后重试");
+        }
+    }
+
+    public java.util.Set<Long> checkBatchStrict(String username,String resourceType,String action,
+                                               Map<Long,Map<String,String>> contexts) {
+        if(contexts==null || contexts.isEmpty()) return java.util.Set.of();
+        var entries=List.copyOf(contexts.entrySet());
+        var allowed=new java.util.HashSet<Long>();
+        for(int offset=0;offset<entries.size();offset+=500) {
+            var batch=entries.subList(offset,Math.min(offset+500,entries.size()));
+            batchRequests.increment();batchItems.increment(batch.size());
+            var sample=Timer.start(meterRegistry);
+            try {
+                var response=await(client.checkBatch(proofFor(username),resourceType,action,batch.stream()
+                        .map(item->new com.aetheris.security.protocol.authorization.AuthProtocolClient.Item(item.getKey(),item.getValue())).toList()));
+                if(response==null) throw new IllegalStateException();
+                var requested=batch.stream().map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet());
+                if(!requested.containsAll(response)) throw new IllegalStateException();
+                allowed.addAll(response);batchAllowedIds.increment(response.size());
+            } catch(RuntimeException failure) {
+                batchUnavailable.increment();
+                throw new MetadataSecurity.PermissionServiceUnavailableException("权限服务暂时不可用，请稍后重试");
+            } finally { sample.stop(batchLatency); }
+        }
+        return java.util.Set.copyOf(allowed);
+    }
+
+    private static String proofFor(String username) {
+        var attributes = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if (!(attributes instanceof org.springframework.web.context.request.ServletRequestAttributes servlet))
+            throw new IllegalStateException("Authenticated request context required");
+        var user = com.aetheris.security.servlet.TrustedUser.require(servlet.getRequest());
+        if (!user.proof().username().equals(username)) throw new IllegalStateException("Authenticated subject mismatch");
+        return user.compactProof();
+    }
+    private static <T> T await(java.util.concurrent.CompletableFuture<T> pending) {
+        try { return pending.get(2500, java.util.concurrent.TimeUnit.MILLISECONDS); }
+        catch (Exception failure) {
+            pending.cancel(true); if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+            throw new IllegalStateException("Auth v2 permission unavailable");
         }
     }
 

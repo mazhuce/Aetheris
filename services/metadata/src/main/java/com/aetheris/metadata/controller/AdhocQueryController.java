@@ -4,6 +4,8 @@ import com.aetheris.metadata.dto.AdhocQueryRequest;
 import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.entity.QueryHistory;
 import com.aetheris.metadata.security.MetadataSecurity;
+import com.aetheris.metadata.security.AetherisIdentity;
+import com.aetheris.metadata.security.QueryRequestContext;
 import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.QueryHistoryService;
@@ -62,8 +64,9 @@ public class AdhocQueryController {
     public ResponseEntity<Map<String, Object>> query(
             HttpServletRequest request,
             @Valid @RequestBody AdhocQueryRequest queryRequest) {
-        String username = security.require(request, "datasource", queryRequest.datasourceId(),
-                "query", Map.of()).username();
+        AetherisIdentity identity = security.require(request, "datasource", queryRequest.datasourceId(),
+                "query", Map.of());
+        String username = identity.username();
         DataSource dataSource = dataSourceService.getById(queryRequest.datasourceId());
         if (dataSource == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "数据源不存在"));
@@ -71,24 +74,31 @@ public class AdhocQueryController {
 
         long startedAt = System.currentTimeMillis();
         try {
-            Map<String, Object> result = jdbcService.query(dataSource, queryRequest.sql());
+            Map<String, Object> result = new java.util.LinkedHashMap<>(jdbcService.query(dataSource, queryRequest.sql()));
             result.put("durationMs", System.currentTimeMillis() - startedAt);
-            recordHistory(username, dataSource, queryRequest.sql(), "success",
+            String requestId = QueryRequestContext.requestId(request, identity);
+            if (requestId != null) result.put("requestId", requestId);
+            recordHistory(request, identity, dataSource, queryRequest.sql(), "success",
                     asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
             audit(username, dataSource, queryRequest.sql(), "success", asLong(result.get("rowCount")), (Long) result.get("durationMs"), null);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
-            // 语句被只读守卫拒绝：原因可安全回显。
-            recordHistory(username, dataSource, queryRequest.sql(), "failed",
-                    null, System.currentTimeMillis() - startedAt, error.getMessage());
-            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, error.getMessage());
-            return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+            recordHistory(request, identity, dataSource, queryRequest.sql(), "failed",
+                    null, System.currentTimeMillis() - startedAt, "SQL_POLICY_REJECTED");
+            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, "SQL_POLICY_REJECTED");
+            return ResponseEntity.badRequest().body(failure(request, identity, "SQL_POLICY_REJECTED"));
         } catch (IllegalStateException error) {
-            log.warn("Adhoc query by {} on datasource {} failed", username, queryRequest.datasourceId(), error);
-            recordHistory(username, dataSource, queryRequest.sql(), "failed",
-                    null, System.currentTimeMillis() - startedAt, error.getMessage());
-            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, error.getMessage());
-            return ResponseEntity.status(502).body(Map.of("message", error.getMessage()));
+            log.warn("Adhoc query failed: datasourceId={}, category={}", queryRequest.datasourceId(), error.getClass().getSimpleName());
+            recordHistory(request, identity, dataSource, queryRequest.sql(), "failed",
+                    null, System.currentTimeMillis() - startedAt, "QUERY_UNAVAILABLE");
+            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, "QUERY_UNAVAILABLE");
+            return ResponseEntity.status(502).body(failure(request, identity, "QUERY_UNAVAILABLE"));
+        } catch (RuntimeException error) {
+            log.warn("Adhoc query failed: datasourceId={}, category={}", queryRequest.datasourceId(), error.getClass().getSimpleName());
+            recordHistory(request, identity, dataSource, queryRequest.sql(), "failed", null,
+                    System.currentTimeMillis() - startedAt, "QUERY_FAILED");
+            audit(username, dataSource, queryRequest.sql(), "failed", null, System.currentTimeMillis() - startedAt, "QUERY_FAILED");
+            return ResponseEntity.internalServerError().body(failure(request, identity, "QUERY_FAILED"));
         }
     }
 
@@ -97,26 +107,38 @@ public class AdhocQueryController {
     }
 
     /** 历史记录是旁路能力：落库失败只记日志，不影响查询本身。 */
-    private void recordHistory(String username, DataSource dataSource, String sql, String status,
-                               Long rowCount, Long durationMs, String errorMessage) {
+    private void recordHistory(HttpServletRequest request, AetherisIdentity identity, DataSource dataSource,
+                               String sql, String status, Long rowCount, Long durationMs, String errorCode) {
         try {
             QueryHistory history = new QueryHistory();
-            history.setUsername(username);
+            history.setUsername(identity.username());
+            history.setOwnerUid(identity.uid());
+            history.setRequestId(QueryRequestContext.requestId(request, identity));
             history.setDatasourceId(dataSource.getId());
             history.setDatasourceName(dataSource.getName());
             history.setSqlText(sql);
             history.setStatus(status);
             history.setRowCount(rowCount);
             history.setDurationMs(durationMs);
-            history.setErrorMessage(errorMessage);
+            history.setErrorCode(errorCode);
+            history.setErrorMessage(com.aetheris.metadata.dto.QueryHistoryResponse.message(errorCode));
             queryHistoryService.record(history);
         } catch (Exception error) {
-            log.warn("Failed to persist query history for {}: {}", username, error.getMessage());
+            log.warn("Failed to persist query history: datasourceId={}, category={}", dataSource.getId(), error.getClass().getSimpleName());
         }
     }
 
     private void audit(String username, DataSource source, String sql, String status, Long rows, Long duration, String error) {
-        try { if (auditService != null) auditService.record("adhoc", null, null, source.getId(), username, status, rows, duration, false, null, error, sql); }
+        try { if (auditService != null) auditService.record("adhoc", null, null, source.getId(), username, status, rows, duration, false, error, null, sql); }
         catch (Exception ignored) { log.warn("Failed to persist query audit for {}", username); }
+    }
+
+    private Map<String, Object> failure(HttpServletRequest request, AetherisIdentity identity, String code) {
+        var result = new java.util.LinkedHashMap<String, Object>();
+        result.put("message", com.aetheris.metadata.dto.QueryHistoryResponse.message(code));
+        result.put("code", code);
+        String requestId = QueryRequestContext.requestId(request, identity);
+        if (requestId != null) result.put("requestId", requestId);
+        return result;
     }
 }

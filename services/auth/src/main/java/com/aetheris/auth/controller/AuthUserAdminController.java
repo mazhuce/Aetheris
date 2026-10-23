@@ -6,6 +6,7 @@ import com.aetheris.auth.dto.UpdateAuthUserRequest;
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AdminGuard;
 import com.aetheris.auth.service.AuthUserService;
+import com.aetheris.auth.validation.UsernameRules;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,7 +32,7 @@ import java.util.Map;
 @RequestMapping("/api/auth/users")
 public class AuthUserAdminController {
 
-    private static final String USER_HEADER = "X-User-Name";
+    private static final String USERNAME_ATTRIBUTE = "aetheris.username";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final AuthUserService authUserService;
@@ -46,7 +48,7 @@ public class AuthUserAdminController {
 
     @GetMapping
     public List<AuthUserResponse> list(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         return authUserService.list(
@@ -58,10 +60,11 @@ public class AuthUserAdminController {
 
     @PostMapping
     public ResponseEntity<?> create(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody CreateAuthUserRequest request) {
         guard(requester, requestId);
+        UsernameRules.requireValid(request.username());
         if (authUserService.findByUsername(request.username()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("message", "用户名已存在"));
@@ -82,7 +85,7 @@ public class AuthUserAdminController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(
             @PathVariable Long id,
-            @RequestHeader(USER_HEADER) String requester,
+            @RequestAttribute(USERNAME_ATTRIBUTE) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody UpdateAuthUserRequest request) {
         guard(requester, requestId);
@@ -103,8 +106,14 @@ public class AuthUserAdminController {
                     .body(Map.of("message", "系统至少需要一个启用的管理员"));
         }
 
+        boolean securityChange = !java.util.Objects.equals(user.getRole(), nextRole)
+                || !java.util.Objects.equals(user.getStatus(), nextStatus)
+                || (request.password() != null && !request.password().isBlank());
         if (request.password() != null && !request.password().isBlank()) {
             user.setPasswordHash(passwordEncoder.encode(request.password()));
+        } else {
+            // An admin profile edit must not restore a concurrently changed password.
+            user.setPasswordHash(null);
         }
         user.setNickname(request.nickname());
         user.setEmail(request.email());
@@ -117,14 +126,15 @@ public class AuthUserAdminController {
                 .eq(AuthUser::getId, id)
                 .set(request.nickname() == null, AuthUser::getNickname, null)
                 .set(request.email() == null, AuthUser::getEmail, null)
-                .set(request.phone() == null, AuthUser::getPhone, null));
+                .set(request.phone() == null, AuthUser::getPhone, null)
+                .setSql(securityChange, "session_version = session_version + 1, access_version = access_version + 1"));
         return ResponseEntity.ok(AuthUserResponse.from(user));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(
             @PathVariable Long id,
-            @RequestHeader(USER_HEADER) String requester,
+            @RequestAttribute(USERNAME_ATTRIBUTE) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         AuthUser user = authUserService.getById(id);

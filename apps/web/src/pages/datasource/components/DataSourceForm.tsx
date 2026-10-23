@@ -12,12 +12,14 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Tag,
   Typography
 } from 'antd'
 import { ApiOutlined, CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import { testDataSourceConfig, type DataSource, type DataSourceInput, type TestResult } from '@/api/metadata'
 import { dataSourceGroups, getDataSourceCapabilities, getDataSourceDefinition, hiveConnectionPresets, isEmbeddedDataSource } from '../sourceCatalog'
+import { credentialInput, readConnectionInput, type CredentialFormValues } from '../credentialInput'
 
 interface DataSourceFormProps {
   open: boolean
@@ -35,18 +37,24 @@ export default function DataSourceForm({
   onSubmit
 }: DataSourceFormProps) {
   const { message } = App.useApp()
-  const [form] = Form.useForm<DataSourceInput>()
+  const [form] = Form.useForm<CredentialFormValues>()
+  const writeEnabled = Form.useWatch('writeEnabled', form)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
+  const [clearLegacyOptions, setClearLegacyOptions] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setTestResult(null)
+    setClearLegacyOptions(false)
     if (editing) {
-      form.setFieldsValue({ ...editing, password: undefined })
+      form.resetFields()
+      form.setFieldsValue({ ...editing, host: editing.host ?? undefined, databaseName: editing.databaseName ?? undefined,
+        jdbcUrl: editing.jdbcUrl ?? undefined, connectionParams: editing.connectionParams ?? undefined,
+        password: undefined, writeUsername: undefined, writePassword: undefined, writeEnabled: editing.writeConfigured === true })
     } else {
       form.resetFields()
-      form.setFieldsValue({ type: 'postgresql', port: 5432, databaseName: 'postgres', status: 'active' })
+      form.setFieldsValue({ type: 'postgresql', port: 5432, databaseName: 'postgres', status: 'active', writeEnabled: false })
     }
   }, [open, editing, form])
 
@@ -69,9 +77,9 @@ export default function DataSourceForm({
       const values = await form.validateFields()
       setTesting(true)
       setTestResult(null)
-      const result = await testDataSourceConfig(values)
+      const result = await testDataSourceConfig(readConnectionInput(values))
       setTestResult(result)
-      if (result.success) message.success('真实连接测试成功')
+      if (result.success) message.success('读取连接测试成功；未验证写入权限')
       else message.error(result.message)
     } catch (error) {
       if (error instanceof Error) message.error(error.message)
@@ -91,7 +99,7 @@ export default function DataSourceForm({
         <Space>
           <Button onClick={onCancel}>取消</Button>
           <Button icon={<ThunderboltOutlined />} loading={testing} onClick={() => void handleTest()}>
-            测试连接
+            测试读取连接
           </Button>
           <Button type="primary" loading={submitting} onClick={() => form.submit()}>
             {editing ? '保存修改' : '确认接入'}
@@ -117,7 +125,25 @@ export default function DataSourceForm({
         </div>
       )}
 
-      <Form form={form} layout="vertical" onFinish={onSubmit} onValuesChange={() => setTestResult(null)}>
+      {editing?.connectionConfigurationRedacted && <Alert
+        className="form-section-space"
+        type="warning"
+        showIcon
+        message="部分历史连接配置已隐藏"
+        description={clearLegacyOptions
+          ? '保存时将清除旧 URL 和连接参数。请确认主机和数据库地址正确；账户与密码仍通过独立字段填写。'
+          : '历史配置含不支持的内容。请填写安全替换值，或清除旧 URL 和连接参数后使用主机、端口与数据库地址；未填写不代表旧值已删除。'}
+        action={<Button disabled={clearLegacyOptions || testing} onClick={() => {
+          form.setFieldsValue({ jdbcUrl: '', connectionParams: '' })
+          setClearLegacyOptions(true)
+          setTestResult(null)
+        }}>清除旧 URL 和连接参数</Button>}
+      />}
+
+      <Form form={form} layout="vertical" onFinish={(values) => {
+        const input = credentialInput(values, editing?.writeConfigured === true)
+        onSubmit(clearLegacyOptions ? { ...input, jdbcUrl: input.jdbcUrl ?? '', connectionParams: input.connectionParams ?? '' } : input)
+      }} onValuesChange={() => setTestResult(null)}>
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="name" label="数据源名称" rules={[{ required: true, message: '请输入名称' }]}>
@@ -168,16 +194,29 @@ export default function DataSourceForm({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="username" label="用户名">
+            <Form.Item name="username" label="查询 / 采集读取账户">
               <Input autoComplete="off" placeholder="无认证时可留空" />
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item name="password" label="密码" extra={editing ? '留空则保存时沿用原密码；重新测试时请填写密码。' : undefined}>
+            <Form.Item name="password" label="读取密码" dependencies={['username']} rules={[{ validator: (_, value) => editing && form.getFieldValue('username') !== editing.username && !value?.trim() ? Promise.reject(new Error('更换读取账户必须填写新密码')) : Promise.resolve() }]} extra={editing ? '仅同一读取账户留空时保留原密码；更换账户或重新测试请填写新密码。' : undefined}>
               <Input.Password autoComplete="new-password" placeholder="无认证时可留空" />
             </Form.Item>
           </Col>
         </Row>
+
+        <Form.Item name="writeEnabled" label="配置独立写入账户" valuePropName="checked" extra="可选。未配置时不能执行数仓加工或作为接入目标；查询、预览与采集始终使用读取账户。关闭并保存会明确禁用原写凭据。">
+          <Switch />
+        </Form.Item>
+        {writeEnabled && <Row gutter={16}>
+          <Col span={12}><Form.Item name="writeUsername" label="写入账户" preserve={false} dependencies={['username']} rules={[
+            { required: !editing?.writeConfigured, message: '请输入独立写入账户' },
+            { validator: (_, value) => value?.trim() && value.trim().toLowerCase() === form.getFieldValue('username')?.trim().toLowerCase() ? Promise.reject(new Error('写入账户必须与读取账户不同')) : Promise.resolve() }
+          ]} extra={editing?.writeConfigured ? '已配置写账户；留空保留。填写账户名称时请同时提供新密码。' : undefined}><Input autoComplete="off" /></Form.Item></Col>
+          <Col span={12}><Form.Item name="writePassword" label="写入密码" preserve={false} dependencies={['writeUsername']} rules={[
+            { validator: (_, value) => (!editing?.writeConfigured || form.getFieldValue('writeUsername')?.trim()) && !value?.trim() ? Promise.reject(new Error('配置或更换写入账户必须填写新密码')) : Promise.resolve() }
+          ]} extra="密码不回显；读取连接测试不证明写入权限。"><Input.Password autoComplete="new-password" /></Form.Item></Col>
+        </Row>}
 
         <Collapse
           ghost
@@ -208,7 +247,7 @@ export default function DataSourceForm({
           type={testResult.success ? 'success' : 'error'}
           showIcon
           icon={testResult.success ? <CheckCircleOutlined /> : undefined}
-          message={testResult.success ? `连接成功 · ${testResult.latencyMs ?? '—'} ms` : '连接失败'}
+          message={testResult.success ? `读取连接成功 · ${testResult.latencyMs ?? '—'} ms（未验证写入）` : '读取连接失败'}
           description={testResult.success
             ? `${testResult.databaseProduct ?? '数据库'} ${testResult.databaseVersion ?? ''} · ${testResult.driverName ?? 'JDBC Driver'} ${testResult.driverVersion ?? ''}`
             : testResult.message}

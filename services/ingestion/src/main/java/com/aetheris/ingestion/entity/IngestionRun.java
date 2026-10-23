@@ -12,6 +12,10 @@ public class IngestionRun {
     private Long id;
     private Long taskId;
     private String status;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String executionSnapshot;
+    public String getExecutionSnapshot() { return executionSnapshot; }
+    public void setExecutionSnapshot(String value) { executionSnapshot=value; }
     /** 客户端提供的幂等键；同一任务同一键只允许产生一个运行记录。 */
     private String requestKey;
     /** 重放来源运行记录，便于追踪失败恢复链。 */

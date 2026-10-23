@@ -120,6 +120,30 @@ export function getAlertStats(): Promise<AlertStats> {
   return http.get<AlertStats>('/api/system/alerts/stats').then((res) => res.data)
 }
 
+export interface AlertAcknowledgement {
+  acknowledged: number
+  hasMore: boolean
+}
+
+function checkedAcknowledgement(value: AlertAcknowledgement, maximum: number): AlertAcknowledgement {
+  if (!value || !Number.isInteger(value.acknowledged) || value.acknowledged < 0 || value.acknowledged > maximum || typeof value.hasMore !== 'boolean') {
+    throw new Error('告警确认结果无效，请刷新后核对')
+  }
+  return value
+}
+
+/** Shared operations acknowledgement; never marks a personal notification read. */
+export function acknowledgeAlert(id: number): Promise<AlertAcknowledgement> {
+  return http.put<AlertAcknowledgement>(`/api/system/alerts/${id}/acknowledge`)
+    .then((res) => checkedAcknowledgement(res.data, 1))
+}
+
+/** One explicit bounded batch. Callers must not silently loop while hasMore is true. */
+export function acknowledgeAlertsBatch(): Promise<AlertAcknowledgement> {
+  return http.put<AlertAcknowledgement>('/api/system/alerts/acknowledge-all')
+    .then((res) => checkedAcknowledgement(res.data, 500))
+}
+
 // —— 服务监控：聚合各微服务健康状态 ——
 
 export interface ServiceStatus {

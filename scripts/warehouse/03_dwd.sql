@@ -27,7 +27,7 @@ CREATE TABLE dwd.dwd_user (
     city          STRING    COMMENT '所在城市',
     register_date DATE      COMMENT '注册日期，已统一两种源格式',
     phone_masked  STRING    COMMENT '手机号脱敏值，保留前3后4位',
-    email         STRING    COMMENT '邮箱，非法格式(缺少@)已置空',
+    email         STRING    COMMENT '邮箱脱敏值，本地部分最多保留前2位，非法格式已置空',
     member_level  STRING    COMMENT '会员等级：普通/银卡/金卡/钻石，非法值归入普通',
     is_valid_user BOOLEAN   COMMENT '是否有效用户：手机号与邮箱至少有一个可用'
 )
@@ -64,7 +64,9 @@ SELECT
          THEN CONCAT(SUBSTR(phone, 1, 3), '****', SUBSTR(phone, 8, 4))
          ELSE NULL
     END                                                        AS phone_masked,
-    CASE WHEN email LIKE '%@%' THEN email ELSE NULL END        AS email,
+    CASE WHEN email LIKE '%@%'
+         THEN CONCAT(SUBSTR(SPLIT(email, '@')[0], 1, 2), '***@', SPLIT(email, '@')[1])
+         ELSE NULL END                                         AS email,
     CASE WHEN member_level IN ('普通','银卡','金卡','钻石')
          THEN member_level ELSE '普通'
     END                                                        AS member_level,

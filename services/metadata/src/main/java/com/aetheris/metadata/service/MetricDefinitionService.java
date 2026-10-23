@@ -25,6 +25,10 @@ import java.util.stream.Stream;
 /** 指标聚合根：定义、校验、查询、发布和不可变版本快照。 */
 @Service
 public class MetricDefinitionService {
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-candidates:100000}")
+    private int compatMaxCandidates=100000;
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-rows:20000}")
+    private int compatMaxRows=20000;
     private static final List<String> LAYERS = List.of("atomic", "derived", "composite");
     public static final int MAX_PAGE_SIZE = 500;
     private final MetricDefinitionMapper mapper;
@@ -69,6 +73,7 @@ public class MetricDefinitionService {
                 .eq(StringUtils.hasText(status), MetricDefinition::getStatus, status)
                 .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
                 .orderByDesc(MetricDefinition::getUpdatedAt)
+                .orderByDesc(MetricDefinition::getId)
                 .last("LIMIT " + size + " OFFSET " + offset);
         if (StringUtils.hasText(keyword)) {
             String trimmed = keyword.trim();
@@ -91,24 +96,27 @@ public class MetricDefinitionService {
 
     public List<MetricDefinition> published(String keyword, Collection<Long> domainIds, int page, int size) {
         validatePage(page, size);
-        LambdaQueryWrapper<MetricDefinition> wrapper = new LambdaQueryWrapper<MetricDefinition>()
-                        .isNotNull(MetricDefinition::getPublishedVersion)
-                        .ne(MetricDefinition::getStatus, "deprecated")
-                        .in(domainIds != null, MetricDefinition::getBusinessDomainId, domainIds)
-                        .orderByAsc(MetricDefinition::getMetricCode);
-        if (StringUtils.hasText(keyword)) {
-            String trimmed = keyword.trim();
-            wrapper.and(w -> w.like(MetricDefinition::getMetricName, trimmed)
-                    .or().like(MetricDefinition::getMetricCode, trimmed)
-                    .or().like(MetricDefinition::getBusinessDomain, trimmed));
+        if(domainIds!=null && domainIds.isEmpty()) return List.of();
+        long from=(long)(page-1)*size, end=from+size;
+        if(end>compatMaxRows) throw new VisibleListPager.ListLimitException();
+        String key=com.aetheris.metadata.mapper.VisibleListMapper.normalizeKeyword(keyword).toLowerCase(Locale.ROOT);
+        List<MetricDefinition> result=new java.util.ArrayList<>();long matched=0;
+        for(int scanned=0;scanned<compatMaxCandidates;scanned+=MAX_PAGE_SIZE) {
+            var wrapper=new LambdaQueryWrapper<MetricDefinition>().isNotNull(MetricDefinition::getPublishedVersion)
+                    .ne(MetricDefinition::getStatus,"deprecated").orderByAsc(MetricDefinition::getMetricCode).orderByAsc(MetricDefinition::getId)
+                    .last("LIMIT "+Math.min(MAX_PAGE_SIZE,compatMaxCandidates-scanned)+" OFFSET "+scanned);
+            var aggregates=mapper.selectList(wrapper);
+            var snapshots=loadPublishedVersions(aggregates);
+            var candidates=aggregates.stream().map(aggregate -> new com.aetheris.metadata.mapper.VisibleListMapper.MetricCandidate(
+                    aggregate,snapshots.get(aggregate.getId()+":"+aggregate.getPublishedVersion()))).toList();
+            for(var metric:resolvePublishedBatch(candidates)) {
+                if(domainIds!=null && (metric.getBusinessDomainId()==null || !domainIds.contains(metric.getBusinessDomainId())) || !key.isEmpty() && !matches(metric,key)) continue;
+                if(matched++>=from) result.add(metric);
+                if(result.size()==size) return result;
+            }
+            if(aggregates.size()<Math.min(MAX_PAGE_SIZE,compatMaxCandidates-scanned)) return result;
         }
-        long offset = (long) (page - 1) * size;
-        List<MetricDefinition> aggregates = mapper.selectList(wrapper.last("LIMIT " + size + " OFFSET " + offset));
-        Map<String, SemanticVersion> snapshots = loadPublishedVersions(aggregates);
-        return aggregates.stream()
-                .map(metric -> resolvePublished(metric,
-                        snapshots.get(metric.getId() + ":" + metric.getPublishedVersion())))
-                .toList();
+        throw new VisibleListPager.ListLimitException();
     }
 
     private void validatePage(int page, int size) {
@@ -179,6 +187,12 @@ public class MetricDefinitionService {
     public Map<String, Object> validate(Long id) { return queryService.validate(require(id)); }
     public Map<String, Object> preview(Long id, MetricQueryRequest request) { return queryService.query(require(id), request); }
     public Map<String, Object> query(String code, MetricQueryRequest request) { return queryService.query(requirePublished(code), request); }
+    /** Execute the same immutable published snapshot that the caller has authorized. */
+    public Map<String,Object> queryPublished(MetricDefinition snapshot,MetricQueryRequest request){
+        if(snapshot==null||snapshot.getId()==null||!"published".equals(snapshot.getStatus())||snapshot.getPublishedVersion()==null
+                ||!snapshot.getPublishedVersion().equals(snapshot.getVersion()))throw new IllegalArgumentException("指标未发布");
+        return queryService.query(snapshot,request);
+    }
 
     @Transactional
     public MetricDefinition publish(Long id, String username) {
@@ -314,11 +328,11 @@ public class MetricDefinitionService {
                 WHERE metric_definition_id = ? AND version_no = ?
                 """, this::mapVersion, aggregate.getId(), aggregate.getPublishedVersion()).stream()
                 .findFirst().orElseThrow(() -> new IllegalStateException("指标在线版本快照缺失：" + aggregate.getMetricCode()));
-        JsonNode node = active.snapshot();
+        JsonNode node = validatedSnapshot(aggregate,active);
         MetricDefinition metric = new MetricDefinition();
         metric.setId(aggregate.getId());
-        metric.setMetricCode(node.path("metricCode").asText(aggregate.getMetricCode()));
-        metric.setMetricName(node.path("metricName").asText(aggregate.getMetricName()));
+        metric.setMetricCode(node.get("metricCode").textValue());
+        metric.setMetricName(node.get("metricName").textValue());
         metric.setBusinessDomainId(nullableId(node.path("businessDomainId")));
         metric.setBusinessDomain(metric.getBusinessDomainId() == null ? null
                 : domainService.require(metric.getBusinessDomainId()).getDomainName());
@@ -350,24 +364,33 @@ public class MetricDefinitionService {
         if (aggregates.isEmpty()) return Map.of();
         String placeholders = String.join(",", java.util.Collections.nCopies(aggregates.size(), "?"));
         Object[] args = aggregates.stream().map(MetricDefinition::getId).toArray();
-        return jdbc.query("SELECT metric_definition_id, id, version_no, snapshot_json, published_by, published_at "
-                        + "FROM metadata.metric_definition_version WHERE metric_definition_id IN (" + placeholders + ")",
+        return jdbc.query("SELECT v.metric_definition_id, v.id, v.version_no, v.snapshot_json, v.published_by, v.published_at "
+                        + "FROM metadata.metric_definition_version v JOIN metadata.metric_definition m ON m.id=v.metric_definition_id AND m.published_version=v.version_no WHERE v.metric_definition_id IN (" + placeholders + ")",
                 (rs, row) -> Map.entry(rs.getLong("metric_definition_id"), mapVersion(rs, row)), args)
                 .stream().collect(java.util.stream.Collectors.toMap(
                         e -> e.getKey() + ":" + e.getValue().versionNo(), Map.Entry::getValue));
     }
 
-    private MetricDefinition resolvePublished(MetricDefinition aggregate, SemanticVersion active) {
-        if (active == null) {
-            throw new IllegalStateException("指标在线版本快照缺失：" + aggregate.getMetricCode());
-        }
-        JsonNode node = active.snapshot();
+    List<MetricDefinition> resolvePublishedBatch(List<com.aetheris.metadata.mapper.VisibleListMapper.MetricCandidate> candidates) {
+        var domainIds=candidates.stream().map(candidate -> {
+            var node=validatedSnapshot(candidate.aggregate(),candidate.version());
+            var domain=node.get("businessDomainId");
+            return domain==null || domain.isNull() || domain.longValue()==0?null:domain.longValue();
+        }).filter(java.util.Objects::nonNull).distinct().toList();
+        var domains=new com.aetheris.metadata.mapper.VisibleListMapper(jdbc,objectMapper).domains(domainIds);
+        return candidates.stream().map(candidate -> resolvePublished(candidate.aggregate(),candidate.version(),domains)).toList();
+    }
+
+    private MetricDefinition resolvePublished(MetricDefinition aggregate, SemanticVersion active,
+            Map<Long,com.aetheris.metadata.mapper.VisibleListMapper.DomainContext> domains) {
+        JsonNode node = validatedSnapshot(aggregate,active);
         MetricDefinition metric = new MetricDefinition();
         metric.setId(aggregate.getId());
-        metric.setMetricCode(node.path("metricCode").asText(aggregate.getMetricCode()));
-        metric.setMetricName(node.path("metricName").asText(aggregate.getMetricName()));
+        metric.setMetricCode(node.get("metricCode").textValue());
+        metric.setMetricName(node.get("metricName").textValue());
         metric.setBusinessDomainId(nullableId(node.path("businessDomainId")));
-        metric.setBusinessDomain(aggregate.getBusinessDomain());
+        var domain=metric.getBusinessDomainId()==null?null:domains.get(metric.getBusinessDomainId());
+        metric.setBusinessDomain(domain==null?null:domain.name());
         metric.setLogicalModelId(nullableId(node.path("logicalModelId")));
         metric.setSourceTableId(nullableId(node.path("sourceTableId")));
         metric.setLayer(node.path("layer").asText("atomic"));
@@ -390,6 +413,19 @@ public class MetricDefinitionService {
         metric.setCreatedAt(aggregate.getCreatedAt());
         metric.setUpdatedAt(aggregate.getUpdatedAt());
         return metric;
+    }
+
+    private JsonNode validatedSnapshot(MetricDefinition aggregate,SemanticVersion active) {
+        if(active==null || active.versionNo()==null || !active.versionNo().equals(aggregate.getPublishedVersion()))
+            throw new com.aetheris.metadata.mapper.VisibleListMapper.InvalidSnapshotException();
+        var node=active.snapshot();
+        if(node==null || !node.isObject()) throw new com.aetheris.metadata.mapper.VisibleListMapper.InvalidSnapshotException();
+        var code=node.get("metricCode");var name=node.get("metricName");var domain=node.get("businessDomainId");
+        if(code==null || !code.isTextual() || code.textValue().isBlank() || !code.textValue().equals(aggregate.getMetricCode())
+                || name==null || !name.isTextual() || name.textValue().isBlank()
+                || domain!=null && !domain.isNull() && (!domain.isIntegralNumber() || !domain.canConvertToLong() || domain.longValue()<0))
+            throw new com.aetheris.metadata.mapper.VisibleListMapper.InvalidSnapshotException();
+        return node;
     }
 
     private boolean matches(MetricDefinition metric, String keyword) {

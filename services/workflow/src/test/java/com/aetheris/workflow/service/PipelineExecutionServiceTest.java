@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,28 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 class PipelineExecutionServiceTest {
+    @Test
+    void actualNodeSnapshotIsAuthorizedBeforeCreatingAnyRunRows() {
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        TaskService tasks=mock(TaskService.class);
+        when(tasks.getById(11L)).thenReturn(task(11L,"target","sql","enabled"));
+        when(tasks.getById(12L)).thenReturn(task(12L,"upstream","sql","enabled"));
+        when(jdbc.query(org.mockito.ArgumentMatchers.contains("SELECT upstream_task_id"),
+                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<Long>>any(),
+                org.mockito.ArgumentMatchers.eq(11L))).thenReturn(List.of(12L));
+        when(jdbc.query(org.mockito.ArgumentMatchers.contains("SELECT upstream_task_id"),
+                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<Long>>any(),
+                org.mockito.ArgumentMatchers.eq(12L))).thenReturn(List.of());
+        var authorization=mock(WorkflowAuthorizationService.class);
+        var service=new PipelineExecutionService(jdbc,tasks,mock(TaskInstanceService.class),
+                mock(TaskExecutionService.class),new SyncTaskExecutor(),120,120);
+        service.setAuthorization(authorization);
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+                ()->service.start(11L,"2026-10-18","alice"));
+        verify(authorization).canExecuteTasks("alice",List.of(12L,11L));
+        verify(jdbc,never()).update(any(String.class),any(Object[].class));
+        verify(jdbc,never()).queryForObject(org.mockito.ArgumentMatchers.contains("INSERT INTO"),eq(Long.class),any(Object[].class));
+    }
 
     @Test
     void rejectsDisabledDependencyBeforeCreatingPipelineRows() {

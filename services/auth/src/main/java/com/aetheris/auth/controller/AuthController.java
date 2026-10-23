@@ -1,6 +1,7 @@
 package com.aetheris.auth.controller;
 
 import com.aetheris.auth.dto.LoginRequest;
+import com.aetheris.auth.validation.UsernameRules;
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AuthUserService;
 import com.aetheris.auth.service.JwtService;
@@ -57,17 +58,24 @@ public class AuthController {
         this.secureCookies = secureCookies;
     }
 
+    public ResponseEntity<Map<String, Object>> login(LoginRequest request) {
+        return login(request, null);
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
-        // 用户名是标识，不是密码：容忍复制/自动填充带来的首尾空格，
-        // 同时让限流键、数据库查询和响应中的用户名保持一致。
-        String username = request.username().trim();
-        if (!loginAttempts.allow(username)) {
+    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request,
+                                                   jakarta.servlet.http.HttpServletRequest servletRequest) {
+        // 逐字验证；不将空白输入规范化成另一个账户。
+        String username = UsernameRules.requireValid(request.username());
+        String source = servletRequest == null ? null : servletRequest.getHeader("X-Aetheris-Client-IP");
+        if (source == null && servletRequest != null) source = servletRequest.getRemoteAddr();
+        if (source != null && source.length() > 128) source = "invalid-source";
+        if (!loginAttempts.allow(username, source)) {
             return ResponseEntity.status(429).body(Map.of("message", "登录尝试过于频繁，请稍后再试"));
         }
         AuthUser user = authUserService.findByUsername(username).orElse(null);
         if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            loginAttempts.recordFailure(username);
+            loginAttempts.recordFailure(username, source);
             return ResponseEntity.status(401).body(Map.of("message", "用户名或密码错误"));
         }
         if (!"active".equals(user.getStatus())) {
@@ -76,7 +84,7 @@ public class AuthController {
         loginAttempts.reset(username);
         String role = user.getRole() == null ? "viewer" : user.getRole();
         long sessionVersion = user.getSessionVersion();
-        String token = jwtService.generateToken(user.getId(), user.getUsername(), role);
+        String token = jwtService.generateToken(user.getId(), user.getUsername(), role, user.getAccessVersion());
         String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getUsername(), sessionVersion);
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("username", user.getUsername());
@@ -122,7 +130,7 @@ public class AuthController {
                 return unauthorized();
             }
             String role = user.getRole() == null ? "viewer" : user.getRole();
-            String access = jwtService.generateToken(user.getId(), user.getUsername(), role);
+            String access = jwtService.generateToken(user.getId(), user.getUsername(), role, user.getAccessVersion());
             String nextRefresh = jwtService.generateRefreshToken(user.getId(), user.getUsername(), nextVersion);
             Map<String, Object> response = new LinkedHashMap<>();
             response.put("username", user.getUsername());
@@ -182,9 +190,9 @@ public class AuthController {
     }
 
     private ResponseEntity<Map<String, Object>> unauthorized() {
+        // A losing concurrent refresh must not erase the winner's new cookies.
+        // Invalid and replayed refresh tokens still fail; explicit logout clears cookies.
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .header(HttpHeaders.SET_COOKIE, expiredCookie(ACCESS_COOKIE, "/").toString())
-                .header(HttpHeaders.SET_COOKIE, expiredCookie(REFRESH_COOKIE, "/api/auth").toString())
                 .body(Map.of("message", "登录状态已失效，请重新登录"));
     }
 }

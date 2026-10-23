@@ -17,22 +17,18 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class IdentityInterceptor implements HandlerInterceptor {
 
-    private final IdentityVerifier verifier;
+    private final MetadataSecurity security;
 
-    public IdentityInterceptor(IdentityVerifier verifier) {
-        this.verifier = verifier;
+    public IdentityInterceptor(MetadataSecurity security) {
+        this.security = security;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        if (!verifier.isConfigured()) {
-            writeJson(response, 503, "metadata-service 未配置内部令牌（AETHERIS_INTERNAL_TOKEN）");
-            return false;
-        }
-        AetherisIdentity identity = verifier.verify(request);
+        AetherisIdentity identity = security.identity(request);
         if (identity == null || identity.username() == null || identity.username().isBlank()) {
-            writeJson(response, 401, "缺少有效的网关身份签名");
+            writeJson(response, 401, "缺少有效的用户证明");
             return false;
         }
         request.setAttribute(MetadataSecurity.IDENTITY_ATTRIBUTE, identity);

@@ -17,12 +17,25 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
 class FlinkSqlExecutionClientTest {
+    private static OutboundTargetPolicy policy() {
+        return new OutboundTargetPolicy(OutboundTargetPolicy.DEFAULT_NETWORKS, "", host ->
+                java.net.InetAddress.getAllByName(host.equals("flink") ? "127.0.0.1" : host));
+    }
+
+    @Test
+    void refusesCloudMetadataWithoutIssuingHttpRequest() {
+        RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        assertThrows(RuntimeException.class, () -> client.health("http://169.254.169.254"));
+        server.verify();
+    }
 
     @Test
     void executesSessionStatementAndClosesSession() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
 
         server.expect(requestTo("http://flink:8083/v1/sessions"))
                 .andExpect(method(POST))
@@ -49,7 +62,7 @@ class FlinkSqlExecutionClientTest {
     @Test
     void rejectsMissingGatewayEndpoint() {
         RestClient.Builder builder = RestClient.builder();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         assertThrows(FlinkSqlExecutionClient.FlinkExecutionException.class,
                 () -> client.execute("", "SELECT 1", 5));
     }
@@ -57,15 +70,15 @@ class FlinkSqlExecutionClientTest {
     @Test
     void reportsMissingActiveOperationWithoutCallingGateway() {
         RestClient.Builder builder = RestClient.builder();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         assertEquals(false, client.cancel("attempt-404"));
     }
 
     @Test
     void readsGatewayInfoHealth() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
 
         server.expect(requestTo("http://flink:8083/v1/info"))
                 .andExpect(method(GET))
@@ -81,8 +94,8 @@ class FlinkSqlExecutionClientTest {
     @Test
     void startsStreamingWithoutClosingSessionAndCancelsPersistedHandle() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
 
         server.expect(requestTo("http://flink:8083/v1/sessions"))
                 .andExpect(method(POST))
@@ -106,8 +119,8 @@ class FlinkSqlExecutionClientTest {
     @Test
     void readsActualGatewayJobIdAfterInsertSubmission() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
         server.expect(requestTo("http://flink:8083/v1/sessions/s-1/operations/o-1/result/0?rowFormat=JSON"))
                 .andExpect(method(GET))
                 .andRespond(withSuccess("{\"jobID\":\"0288779de388defe9e649cfb66b691c8\",\"results\":{\"data\":[]}}",
@@ -121,8 +134,8 @@ class FlinkSqlExecutionClientTest {
     @Test
     void submitsSetupAndStreamingInsertInOneGatewaySession() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
         server.expect(requestTo("http://flink:8083/v1/sessions"))
                 .andExpect(method(POST))
                 .andRespond(withSuccess("{\"sessionHandle\":\"s-setup\"}", MediaType.APPLICATION_JSON));
@@ -150,8 +163,8 @@ class FlinkSqlExecutionClientTest {
     @Test
     void startsStreamingFromCompletedSavepointBeforeReturningHandle() {
         RestClient.Builder builder = RestClient.builder();
+        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100, policy());
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(builder, Duration.ofSeconds(1), 100);
 
         server.expect(requestTo("http://flink:8083/v1/sessions"))
                 .andExpect(method(POST))
@@ -180,7 +193,7 @@ class FlinkSqlExecutionClientTest {
     @Test
     void rejectsUnsafeSavepointPathBeforeCallingGateway() {
         FlinkSqlExecutionClient client = new FlinkSqlExecutionClient(
-                RestClient.builder(), Duration.ofSeconds(1), 100);
+                RestClient.builder(), Duration.ofSeconds(1), 100, policy());
         assertThrows(FlinkSqlExecutionClient.FlinkExecutionException.class, () ->
                 client.startStreamingFromSavepoint("http://flink:8083", "INSERT INTO sink SELECT 1",
                         "http://not-allowed/sp", "attempt-resume"));

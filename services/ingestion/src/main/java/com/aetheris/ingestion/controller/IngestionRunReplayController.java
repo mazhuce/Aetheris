@@ -18,6 +18,9 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/ingestion/runs")
 public class IngestionRunReplayController {
+    private com.aetheris.ingestion.security.ResourceAuthorization authorization = new com.aetheris.ingestion.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.ingestion.security.ResourceAuthorization authorization) { this.authorization = authorization; }
     private final IngestionRunService runService;
     private final IngestionExecutionService executionService;
 
@@ -30,16 +33,17 @@ public class IngestionRunReplayController {
     @PostMapping("/{id}/replay")
     public ResponseEntity<?> replay(
             @PathVariable Long id,
-            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username,
+            @RequestAttribute("com.aetheris.security.servlet.TrustedUser.authenticated") com.aetheris.security.servlet.TrustedUser user,
             @RequestHeader(value = "Idempotency-Key", required = false) String requestKey) {
         IngestionRun source = runService.getById(id);
         if (source == null) return ResponseEntity.notFound().build();
+        authorization.require("ingestion_task", source.getTaskId(), "execute");
         if (!"failed".equals(source.getStatus())) {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", "只有失败运行可以重放"));
         }
         try {
-            return ResponseEntity.ok(executionService.execute(
-                    source.getTaskId(), username,
+            return ResponseEntity.ok(executionService.executeManual(
+                    source.getTaskId(), user,
                     normalizeReplayKey(requestKey, id), id));
         } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", error.getMessage()));

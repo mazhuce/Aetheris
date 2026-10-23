@@ -73,7 +73,8 @@ public class DataSourceHealthService {
     }
 
     ConnectionHealth effective(DataSource source, DataSourceHealthObservation observation) {
-        if (observation == null || observation.configurationRevision() != revision(source))
+        if (!DataSourceAccessPolicy.isActiveBusinessSource(source)
+                || observation == null || observation.configurationRevision() != revision(source))
             return ConnectionHealth.unknown();
         String status = observation.status();
         if (observation.expiresAt() == null || !now().isBefore(observation.expiresAt())) status = "unknown";
@@ -83,7 +84,7 @@ public class DataSourceHealthService {
 
     /** Unsaved tests use the same timeout/concurrency/redaction, but never create persisted observations. */
     public Map<String, Object> testBeforeSave(DataSource source) {
-        ProbeResult result = probe(source);
+        ProbeResult result = probe(DataSourceAccessPolicy.connectionTestDraft(source));
         Map<String, Object> response = result.response();
         OffsetDateTime checkedAt = now();
         response.put("connectionHealth", new ConnectionHealth(result.status(), checkedAt,
@@ -94,6 +95,7 @@ public class DataSourceHealthService {
     }
 
     public Map<String, Object> test(DataSource source) {
+        DataSourceAccessPolicy.requireActiveBusinessSource(source);
         String token = UUID.randomUUID().toString();
         OffsetDateTime startedAt = now();
         long revision = revision(source);

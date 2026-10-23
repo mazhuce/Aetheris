@@ -12,8 +12,8 @@ public class GovernancePolicy {
     @TableId(type = IdType.AUTO)
     private Long id;
     @NotBlank private String name;
-    @NotBlank private String policyType;
-    @NotBlank private String targetTable;
+    @NotBlank(groups = com.aetheris.governance.validation.CreateDefinition.class) private String policyType;
+    @NotBlank(groups = com.aetheris.governance.validation.CreateDefinition.class) private String targetTable;
     private String ruleExpression;
     private String status;
     private String description;

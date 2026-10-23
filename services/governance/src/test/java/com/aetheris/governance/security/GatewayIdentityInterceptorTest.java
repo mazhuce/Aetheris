@@ -1,74 +1,39 @@
 package com.aetheris.governance.security;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.mock.web.MockHttpServletResponse;
-
+import org.springframework.mock.web.*;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class GatewayIdentityInterceptorTest {
-    private static final String TOKEN = "internal-test-token-with-enough-entropy";
-
-    @Test
-    void unsignedDirectRequestIsRejected() throws Exception {
-        GatewayIdentityInterceptor interceptor = new GatewayIdentityInterceptor(TOKEN, 300_000, user -> true);
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        assertFalse(interceptor.preHandle(new MockHttpServletRequest("GET", "/api/test"), response, new Object()));
-        assertEquals(401, response.getStatus());
+    @Test void validLegacySignatureIsNoLongerAnIdentity() throws Exception {
+        String secret="internal-test-token-with-enough-entropy";
+        String payload=Base64.getUrlEncoder().withoutPadding().encodeToString(("42|alice|"+System.currentTimeMillis()).getBytes(StandardCharsets.UTF_8));
+        var mac=Mac.getInstance("HmacSHA256");mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8),"HmacSHA256"));
+        String legacy=payload+"."+java.util.HexFormat.of().formatHex(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
+        var request=new MockHttpServletRequest("GET","/api/governance/policies");request.addHeader("X-Aetheris-Identity",legacy);
+        request.addHeader("X-Internal-Token",secret);request.addHeader("X-User-Name","admin");request.addHeader("X-User-Role","admin");
+        var response=new MockHttpServletResponse();assertFalse(new GatewayIdentityInterceptor(new ResourceAuthorization()).preHandle(request,response,new Object()));
+        assertEquals(401,response.getStatus());
     }
-
-    @Test
-    void forgedRoleCannotGrantMutationPermission() throws Exception {
-        GatewayIdentityInterceptor interceptor = new GatewayIdentityInterceptor(TOKEN, 300_000, user -> false);
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/test");
-        request.addHeader(GatewayIdentityInterceptor.IDENTITY_HEADER, sign("42", "viewer"));
-        request.addHeader("X-User-Role", "admin");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        assertFalse(interceptor.preHandle(request, response, new Object()));
-        assertEquals(403, response.getStatus());
-    }
-
-    @Test
-    void signedReadAndAuthorizedMutationPass() throws Exception {
-        GatewayIdentityInterceptor interceptor = new GatewayIdentityInterceptor(TOKEN, 300_000, user -> true);
-        for (String method : new String[]{"GET", "POST"}) {
-            MockHttpServletRequest request = new MockHttpServletRequest(method, "/api/test");
-            request.addHeader(GatewayIdentityInterceptor.IDENTITY_HEADER, sign("1", "admin"));
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            assertTrue(interceptor.preHandle(request, response, new Object()));
-            assertEquals("admin", request.getAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE));
+    @Test void actualProofEstablishesOnlyAliceAndMutationStillRequiresExplicitPermission() throws Exception {
+        try(var fixture=new V2GovernanceFixture()){
+            fixture.request(request->{
+                try {assertTrue(new GatewayIdentityInterceptor(fixture.authorization).preHandle(request,new MockHttpServletResponse(),new Object()));}
+                catch(Exception error){throw new AssertionError(error);}
+                assertEquals("alice",request.getAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE));
+            });
+            fixture.mutate.set(false);
+            var input=new MockHttpServletRequest("PUT","/api/governance/policies/8");input.addHeader("X-Aetheris-User-Proof",fixture.token());
+            var response=new MockHttpServletResponse();
+            fixture.direct().doFilter(input,response,(r,s)->{
+                org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes((jakarta.servlet.http.HttpServletRequest)r));
+                try{assertFalse(new GatewayIdentityInterceptor(fixture.authorization).preHandle((jakarta.servlet.http.HttpServletRequest)r,(jakarta.servlet.http.HttpServletResponse)s,new Object()));}
+                finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            });assertEquals(403,response.getStatus());
         }
-    }
-
-    @Test
-    void blankUsernameAndNonPositiveUidAreRejected() throws Exception {
-        GatewayIdentityInterceptor interceptor = new GatewayIdentityInterceptor(TOKEN, 300_000, user -> true);
-        for (String signed : new String[]{sign("0", "alice"), sign("1", "")}) {
-            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/test");
-            request.addHeader(GatewayIdentityInterceptor.IDENTITY_HEADER, signed);
-            MockHttpServletResponse response = new MockHttpServletResponse();
-            assertFalse(interceptor.preHandle(request, response, new Object()));
-            assertEquals(401, response.getStatus());
-        }
-    }
-
-    private static String sign(String uid, String username) throws Exception {
-        String payload = uid + "|" + username + "|" + System.currentTimeMillis();
-        String encoded = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(payload.getBytes(StandardCharsets.UTF_8));
-        Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(TOKEN.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-        StringBuilder signature = new StringBuilder();
-        for (byte value : mac.doFinal(encoded.getBytes(StandardCharsets.UTF_8))) {
-            signature.append(String.format("%02x", value));
-        }
-        return encoded + "." + signature;
     }
 }

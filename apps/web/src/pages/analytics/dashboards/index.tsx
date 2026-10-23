@@ -15,11 +15,13 @@ import {
 import { getCurrentRole } from '@/utils/access'
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 export default function DashboardListPage() {
   const navigate = useNavigate()
   const [templates, setTemplates] = useState<DashboardTemplate[]>([])
   const [dashboards, setDashboards] = useState<AnalyticsDashboard[]>([])
+  const permissions = useResourceActions('dashboard', dashboards)
   const [loading, setLoading] = useState(true)
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null)
   const [form] = Form.useForm<{ name: string; description?: string }>()
@@ -134,11 +136,11 @@ export default function DashboardListPage() {
                 <span>更新于 {formatDateTime(dashboard.updatedAt)}</span>
               </div>
               <div className="dashboard-card-actions">
-                {isAdmin && <Button type="text" icon={<EditOutlined />} onClick={() => navigate(`/analytics/dashboards/${dashboard.id}/edit`)}>编辑</Button>}
+                {(isAdmin || permissions.can('update', dashboard.id)) && <Button type="text" icon={<EditOutlined />} onClick={() => navigate(`/analytics/dashboards/${dashboard.id}/edit`)}>编辑</Button>}
                 <Button type="text" icon={<EyeOutlined />} onClick={() => window.open(`/analytics/dashboards/${dashboard.id}/preview`, '_blank', 'noopener')}>预览</Button>
                 {dashboard.status === 'published' && <Button type="text" icon={<RocketOutlined />} onClick={() => window.open(`/d/${dashboard.slug}`, '_blank', 'noopener')}>打开</Button>}
-                {isAdmin && dashboard.status !== 'published' && <Button type="text" icon={<RocketOutlined />} onClick={async () => { await publishAnalyticsDashboard(dashboard.id); message.success('看板已发布'); await reload() }}>发布</Button>}
-                {isAdmin && (
+                {(isAdmin || permissions.can('publish', dashboard.id)) && dashboard.status !== 'published' && <Button type="text" icon={<RocketOutlined />} onClick={async () => { await publishAnalyticsDashboard(dashboard.id); message.success('看板已发布'); await reload() }}>发布</Button>}
+                {(isAdmin || permissions.can('delete', dashboard.id)) && (
                   <Popconfirm title="删除这个看板？" onConfirm={async () => { await deleteAnalyticsDashboard(dashboard.id); message.success('看板已删除'); await reload() }}>
                     <Button type="text" danger icon={<DeleteOutlined />} />
                   </Popconfirm>

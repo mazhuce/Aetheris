@@ -9,6 +9,8 @@
 --              排除待付款(1)、已取消(5)、已退款(6)与非法状态；
 --   GMV      = 有效订单的 pay_amount 之和；
 --   客单价    = GMV / 有效订单数。
+--   品类销售额 = 有效订单明细净额；实付缺失的订单，其明细仍保留，必须在金额桥中单列。
+--   本模拟的运费与订单级优惠均为0，不能将未知差异解释为运费。详见warehouse-layers.md。
 
 SET hive.exec.dynamic.partition = true;
 SET hive.exec.dynamic.partition.mode = nonstrict;
@@ -81,7 +83,7 @@ SELECT
     END                                                               AS avg_price,
     i.dt
 FROM dwd.dwd_order_item i
--- 只统计有效订单的明细，与 dws_order_daily 的 GMV 口径保持一致。
+-- 状态范围与GMV一致；实付缺失订单的明细净额仍参与销售额，跨口径对账需明确扣除。
 JOIN dwd.dwd_order o
     ON i.order_id = o.order_id AND i.dt = o.dt AND o.is_valid_order
 GROUP BY i.dt, i.category_id, COALESCE(i.category_name, '未分类');

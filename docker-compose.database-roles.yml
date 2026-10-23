@@ -1,0 +1,196 @@
+# Optional override. Base Compose deployment does not enable this file automatically.
+{
+  "services": {
+    "auth-service": {
+      "environment": {
+        "DB_USER": "aetheris_auth",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_auth",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_auth_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "system-service": {
+      "environment": {
+        "DB_USER": "aetheris_system",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_system",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_system_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "metadata-service": {
+      "environment": {
+        "DB_USER": "aetheris_metadata",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_metadata",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_metadata_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "serving-service": {
+      "environment": {
+        "DB_USER": "aetheris_serving",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_serving",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_serving_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "workflow-service": {
+      "environment": {
+        "DB_USER": "aetheris_workflow",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_workflow",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_workflow_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "ingestion-service": {
+      "environment": {
+        "DB_USER": "aetheris_ingestion",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_ingestion",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_ingestion_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "quality-service": {
+      "environment": {
+        "DB_USER": "aetheris_quality",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_quality",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_quality_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "governance-service": {
+      "environment": {
+        "DB_USER": "aetheris_governance",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_governance",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_governance_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    },
+    "ai-agent": {
+      "environment": {
+        "DB_USER": "aetheris_ai",
+        "DB_PASSWORD": "",
+        "SPRING_DATASOURCE_USERNAME": "aetheris_ai",
+        "SPRING_FLYWAY_ENABLED": "false",
+        "SPRING_CONFIG_IMPORT": "configtree:/run/secrets/"
+      },
+      "secrets": [
+        {
+          "source": "db_ai_runtime",
+          "target": "spring.datasource.password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ]
+    }
+  },
+  "secrets": {
+    "db_auth_runtime": {
+      "file": "${AETHERIS_AUTH_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_system_runtime": {
+      "file": "${AETHERIS_SYSTEM_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_metadata_runtime": {
+      "file": "${AETHERIS_METADATA_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_serving_runtime": {
+      "file": "${AETHERIS_SERVING_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_workflow_runtime": {
+      "file": "${AETHERIS_WORKFLOW_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_ingestion_runtime": {
+      "file": "${AETHERIS_INGESTION_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_quality_runtime": {
+      "file": "${AETHERIS_QUALITY_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_governance_runtime": {
+      "file": "${AETHERIS_GOVERNANCE_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    },
+    "db_ai_runtime": {
+      "file": "${AETHERIS_AI_DB_PASSWORD_FILE:?Set an ignored private runtime password file}"
+    }
+  }
+}

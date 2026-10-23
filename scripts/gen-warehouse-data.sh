@@ -114,7 +114,7 @@ run_step() {
   local started=$SECONDS
   # --silent=true 抑制逐条 SQL 的回显；hiveconf 保证动态分区可用。
   "$BEELINE" -u "$JDBC_URL" -n "$JDBC_USER" \
-    --silent=true --showWarnings=false \
+    --silent=true --showWarnings=false --force=false \
     --hiveconf hive.exec.dynamic.partition=true \
     --hiveconf hive.exec.dynamic.partition.mode=nonstrict \
     -f "$rendered"

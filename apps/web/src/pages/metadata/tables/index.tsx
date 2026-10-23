@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
+import { Alert, App, Button, Form, Input, InputNumber, Modal, Select, Space, Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CloudSyncOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useLocation } from 'react-router-dom'
@@ -13,7 +13,7 @@ import {
   deleteTable,
   listDataSources,
   listBusinessDomains,
-  listTables,
+  listTablesPage,
   syncMetadataTables,
   updateTable,
   warehouseLayerLabel,
@@ -27,16 +27,16 @@ import {
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 export default function MetadataTablePage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
   const location = useLocation()
-  const [allData, setAllData] = useState<MetadataTable[]>([])
-  const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [layerFilter, setLayerFilter] = useState<WarehouseLayer | undefined>()
   const [domainFilter, setDomainFilter] = useState<number | undefined>()
+  const [sourceFilter, setSourceFilter] = useState<string | undefined>()
   const [domains, setDomains] = useState<BusinessDomain[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<MetadataTable | null>(null)
@@ -47,16 +47,22 @@ export default function MetadataTablePage() {
   const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [syncForm] = Form.useForm<{ datasourceId: number; schemaName?: string }>()
   const pageSize = useResponsivePageSize(8, 6, 5, 3)
+  const listing = useVisibleListPage((cursor, signal) => listTablesPage(
+    { keyword, layer: layerFilter, businessDomainId: domainFilter, source: sourceFilter }, { cursor, size: pageSize, signal }),
+    JSON.stringify([keyword, layerFilter, domainFilter, sourceFilter, pageSize]))
 
   const refresh = useCallback(async () => {
-    setLoading(true)
+    listing.refresh()
     try {
-      const [nextTables, nextDomains] = await Promise.all([listTables(), listBusinessDomains(undefined, 'active')])
-      setAllData(nextTables); setDomains(nextDomains)
-    } catch { message.error('元数据目录加载失败') } finally { setLoading(false) }
-  }, [message])
+      setDomains(await listBusinessDomains(undefined, 'active'))
+    } catch { message.error('业务域加载失败') }
+  }, [listing.refresh, message])
 
-  useEffect(() => { void refresh() }, [refresh])
+  useEffect(() => {
+    let active = true
+    listBusinessDomains(undefined, 'active').then((values) => { if (active) setDomains(values) }).catch(() => { if (active) message.error('业务域加载失败') })
+    return () => { active = false }
+  }, [message])
   useEffect(() => { if (open) { if (editing) form.setFieldsValue(editing); else form.resetFields() } }, [open, editing, form])
 
   // 从全局搜索跳转过来时，把命中的表名预填到筛选框，让结果直接落到具体表上。
@@ -99,18 +105,6 @@ export default function MetadataTablePage() {
 
   const domainOptions = useMemo(() => domains.map((item) => ({ value: item.id, label: item.domainName })), [domains])
 
-  const filtered = useMemo(
-    () =>
-      allData.filter((t) => {
-        if (keyword && !t.tableName.includes(keyword) && !t.datasourceName.includes(keyword)) return false
-        // layer 为空的历史记录按「未分层」处理，与后端数仓地图的归类保持一致。
-        if (layerFilter && (t.layer ?? 'other') !== layerFilter) return false
-        if (domainFilter && t.businessDomainId !== domainFilter) return false
-        return true
-      }),
-    [allData, keyword, layerFilter, domainFilter]
-  )
-
   const handleSubmit = async (values: MetadataTableInput) => {
     setSubmitting(true)
     try {
@@ -152,7 +146,7 @@ export default function MetadataTablePage() {
       key: 'source',
       width: 100,
       filters: [{ text: '自动采集', value: 'auto' }, { text: '手工登记', value: 'manual' }],
-      onFilter: (value, record) => (record.source ?? 'manual') === value,
+      filteredValue: sourceFilter ? [sourceFilter] : null,
       render: (v?: string) => v === 'auto' ? <Tag>自动采集</Tag> : <Tag>手工登记</Tag>
     },
     { title: '负责人', dataIndex: 'owner', key: 'owner', width: 100, render: (v?: string) => v || '—' },
@@ -235,7 +229,15 @@ export default function MetadataTablePage() {
         </div>
       </PageToolbar>
       <DataSurface label="元数据表列表">
-        <Table<MetadataTable> size="small" rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1220 }} pagination={{ pageSize, showTotal: (t) => `共 ${t} 条` }} locale={{ emptyText: '暂无元数据' }} />
+        {listing.error && <Alert type="error" message={listing.error} />}
+        <Table<MetadataTable> size="small" rowKey="id" columns={columns} dataSource={listing.items} loading={listing.loading} scroll={{ x: 1220 }} pagination={false}
+          onChange={(_, filters) => { const value = filters.source?.[0]; setSourceFilter(value === 'auto' || value === 'manual' ? value : undefined) }}
+          locale={{ emptyText: listing.hasMore ? '暂未找到可见记录，可继续查看' : '暂无元数据' }} />
+        <Space style={{ marginTop: 12 }}>
+          <Button disabled={!listing.canPrevious || listing.loading} onClick={listing.previous}>上一页</Button>
+          <span>第 {listing.pageNumber} 页 · 本页 {listing.items.length} 条</span>
+          <Button disabled={!listing.hasMore || listing.loading || !!listing.error} onClick={listing.next}>下一页</Button>
+        </Space>
       </DataSurface>
       <Modal title={editing ? '编辑表信息' : '登记表'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width={560}>
         <Form form={form} layout="vertical" initialValues={{ status: 'active' }} onFinish={(v) => void handleSubmit(v)}>

@@ -1,152 +1,63 @@
 package com.aetheris.aiagent.agent;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import com.aetheris.aiagent.llm.AiRunContext;
+import com.aetheris.aiagent.security.AiProofContext;
+import com.aetheris.security.protocol.*;
+import com.aetheris.security.protocol.configuration.ProtocolInstallation;
+import com.aetheris.security.protocol.transport.SignedHttpClient;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.*;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
+import java.time.Clock;
+import java.util.*;
+import java.util.concurrent.*;
 
-import java.util.List;
-import java.util.Map;
-
-/**
- * 调用 metadata 服务的 agent 工具端点。
- *
- * <p>agent 不直连数据库，与 workflow 的取舍一致：凭据、JDBC 驱动、只读守卫都在 metadata，
- * 复制过来等于复制一份安全边界。走 {@code /internal/**} 路径，网关不路由，外部不可达。
- */
+/** Fixed, user-bound metadata tools. No URL/header-map/username fallback exists. */
 @Component
 public class AgentToolClient {
-
-    private static final Logger log = LoggerFactory.getLogger(AgentToolClient.class);
-    private static final ParameterizedTypeReference<Map<String, Object>> MAP_TYPE =
-            new ParameterizedTypeReference<>() {};
-    private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_TYPE =
-            new ParameterizedTypeReference<>() {};
-
-    private final RestClient restClient;
-
-    @Autowired
-    public AgentToolClient(
-            RestClient.Builder builder,
-            @Value("${aetheris.metadata.base-url}") String baseUrl,
-            @Value("${aetheris.internal-token:}") String internalToken) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(5_000);
-        // 工具调用发生在用户等待回复的过程中，读超时不能太长，
-        // 否则一个慢查询会让整轮对话卡住。查询本身在 metadata 侧还有 30 秒的语句超时。
-        factory.setReadTimeout(45_000);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
-                .defaultHeader("X-Internal-Token", internalToken).build();
+    private static final ObjectMapper JSON=new ObjectMapper(JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build())
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+    private final SignedHttpClient transport;private final ProtocolVerifier verifier;private final Clock clock;
+    @Autowired public AgentToolClient(@Qualifier("aiMetadataTransport") SignedHttpClient transport,ProtocolInstallation installation){this(transport,installation.verifier(),Clock.systemUTC());}
+    public AgentToolClient(SignedHttpClient transport,ProtocolVerifier verifier,Clock clock){this.transport=Objects.requireNonNull(transport);this.verifier=Objects.requireNonNull(verifier);this.clock=Objects.requireNonNull(clock);}
+    public List<Map<String,Object>> searchTables(String keyword,String layer){
+        var body=new LinkedHashMap<String,Object>();body.put("keyword",keyword==null?"":keyword);body.put("layer",layer==null?"":layer);
+        return list("agent/tables/search","metadata.agent.search",body);
     }
-
-    public AgentToolClient(RestClient.Builder builder, String baseUrl) {
-        this(builder, baseUrl, "");
+    public Map<String,Object> describeTable(Long tableId){return tableId==null?invalid():map("agent/tables/describe","metadata.agent.describe",Map.of("tableId",tableId));}
+    public Map<String,Object> query(Long datasourceId,String sql){return datasourceId==null||sql==null?invalid():map("agent/query","metadata.user.sql-query",Map.of("datasourceId",datasourceId,"sql",sql));}
+    public List<Map<String,Object>> searchMetrics(String keyword){return list("semantic/metrics/list","metadata.agent.metric-list",Map.of("keyword",keyword==null?"":keyword));}
+    public Map<String,Object> queryMetric(String code,List<String> dimensions,String grain,String start,String end){
+        if(code==null||(dimensions!=null&&dimensions.stream().anyMatch(Objects::isNull)))return invalid();
+        Map<String,Object> query=new LinkedHashMap<>();query.put("dimensions",dimensions==null?List.of():List.copyOf(dimensions));
+        query.put("timeGrain",grain);query.put("startDate",start);query.put("endDate",end);query.put("limit",100);
+        return map("semantic/metrics/query","metadata.user.metric-query",Map.of("metricCode",code,"query",query));
     }
-
-    /** 按关键词与层级检索表。失败时返回空列表而非抛异常——让 agent 能继续尝试别的工具。 */
-    public List<Map<String, Object>> searchTables(String keyword, String layer) {
+    private byte[] invoke(String path,String operation,Object body) throws Exception {
+        AiRunContext run=AiRunContext.current();var identity=AiProofContext.current();
+        if(run==null||identity==null)throw new IllegalStateException("Missing admitted AI run");
+        run.check();var proof=verifier.verifyUser(identity.compact(),"ai-agent").proof();
+        if(proof.expiresAt()<=clock.instant().getEpochSecond() || !proof.equals(identity.user().proof()))throw new IllegalStateException("Expired AI identity");
+        byte[] raw=JSON.writeValueAsBytes(body);run.check();
+        var future=transport.sendAsync(new SignedHttpClient.Request("metadata","POST","/internal/v2/"+path,operation,raw,identity.compact()));
         try {
-            List<Map<String, Object>> result = restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/internal/agent/tables/search")
-                            .queryParam("keyword", keyword)
-                            .queryParam("layer", layer)
-                            .build())
-                    .header("X-Aetheris-Identity", identityHeader())
-                    .retrieve()
-                    .body(LIST_TYPE);
-            return result == null ? List.of() : result;
-        } catch (RuntimeException error) {
-            log.warn("Tool searchTables failed: keyword={}, layer={}", keyword, layer, error);
-            return List.of();
-        }
+            long proofMillis=Math.max(1,(proof.expiresAt()-clock.instant().getEpochSecond())*1000);
+            var response=future.get(Math.min(45000,Math.min(run.remainingMillis(),proofMillis)),TimeUnit.MILLISECONDS);
+            run.check();if(proof.expiresAt()<=clock.instant().getEpochSecond())throw new IllegalStateException("Expired AI identity");
+            if(response.status()!=200)throw new IllegalStateException("Metadata tool rejected request");
+            return response.body();
+        }catch(InterruptedException cancelled){Thread.currentThread().interrupt();throw cancelled;}
+        finally{if(!future.isDone())future.cancel(true);}
     }
-
-    /** 读取表结构。失败时返回带 error 字段的 Map，让 agent 知道原因并自行调整。 */
-    public Map<String, Object> describeTable(Long tableId) {
-        try {
-            Map<String, Object> result = restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/internal/agent/tables/describe")
-                            .queryParam("tableId", tableId)
-                            .build())
-                    .header("X-Aetheris-Identity", identityHeader())
-                    .retrieve()
-                    .body(MAP_TYPE);
-            return result == null ? Map.of("error", "未获取到表结构") : result;
-        } catch (RuntimeException error) {
-            log.warn("Tool describeTable failed: tableId={}", tableId, error);
-            return Map.of("error", "读取表结构失败");
-        }
+    private List<Map<String,Object>> list(String path,String operation,Object body){
+        try{return JSON.readValue(invoke(path,operation,body),new TypeReference<List<Map<String,Object>>>(){});}
+        catch(Exception rejected){return List.of();}
     }
-
-    /** 执行只读查询。SQL 由 metadata 侧的 validateReadOnlySql 校验，此处不放宽任何限制。 */
-    public Map<String, Object> query(Long datasourceId, String sql) {
-        try {
-            Map<String, Object> result = restClient.post()
-                    .uri("/internal/agent/query")
-                    .header("X-Aetheris-Identity", identityHeader())
-                    .body(Map.of("datasourceId", datasourceId, "sql", sql))
-                    .retrieve()
-                    .body(MAP_TYPE);
-            return result == null ? Map.of("error", "查询无返回") : result;
-        } catch (RuntimeException error) {
-            log.warn("Tool query failed: datasourceId={}", datasourceId, error);
-            return Map.of("error", "查询执行失败，请检查 SQL 或数据源连通性");
-        }
+    private Map<String,Object> map(String path,String operation,Object body){
+        try {var result=JSON.readValue(invoke(path,operation,body),new TypeReference<Map<String,Object>>(){});return result==null?Map.of("error","工具未返回结果"):result;}
+        catch(Exception rejected){return Map.of("error","工具请求被拒绝或暂不可用");}
     }
-
-    /** 检索企业已发布指标；优先复用口径，避免模型临时发明统计逻辑。 */
-    public List<Map<String, Object>> searchMetrics(String keyword) {
-        try {
-            List<Map<String, Object>> result = restClient.get()
-                    .uri(uriBuilder -> uriBuilder.path("/internal/semantic/metrics")
-                            .queryParam("keyword", keyword == null ? "" : keyword)
-                            .build())
-                    .header("X-Aetheris-Identity", identityHeader())
-                    .retrieve()
-                    .body(LIST_TYPE);
-            return result == null ? List.of() : result;
-        } catch (RuntimeException error) {
-            log.warn("Tool searchMetrics failed: keyword={}", keyword, error);
-            return List.of();
-        }
-    }
-
-    /** 通过统一语义服务查询指标；底层 SQL 由 metadata 编译并校验。 */
-    public Map<String, Object> queryMetric(String metricCode, List<String> dimensions, String timeGrain,
-                                           String startDate, String endDate) {
-        try {
-            Map<String, Object> body = new java.util.LinkedHashMap<>();
-            body.put("dimensions", dimensions == null ? List.of() : dimensions);
-            if (timeGrain != null && !timeGrain.isBlank()) body.put("timeGrain", timeGrain);
-            if (startDate != null && !startDate.isBlank()) body.put("startDate", startDate);
-            if (endDate != null && !endDate.isBlank()) body.put("endDate", endDate);
-            body.put("limit", 100);
-            Map<String, Object> result = restClient.post()
-                    .uri("/internal/semantic/metrics/{code}/query", metricCode)
-                    .header("X-Aetheris-Identity", identityHeader())
-                    .body(body)
-                    .retrieve()
-                    .body(MAP_TYPE);
-            return result == null ? Map.of("error", "指标查询无返回") : result;
-        } catch (RuntimeException error) {
-            log.warn("Tool queryMetric failed: metricCode={}", metricCode, error);
-            return Map.of("error", "指标查询失败，请检查指标状态、维度或日期条件");
-        }
-    }
-
-    /** 工具调用发生在当前 HTTP 请求线程，透传网关签名而不是可伪造的用户名头。 */
-    private String identityHeader() {
-        var attributes = RequestContextHolder.getRequestAttributes();
-        if (attributes instanceof ServletRequestAttributes servlet) {
-            String value = servlet.getRequest().getHeader("X-Aetheris-Identity");
-            return value == null ? "" : value;
-        }
-        return "";
-    }
+    private static Map<String,Object> invalid(){return Map.of("error","工具请求参数不完整");}
 }

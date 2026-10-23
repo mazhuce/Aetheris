@@ -16,7 +16,8 @@ import java.util.Base64;
  * serving 已在本地校验 key 和 owner 后，用共享内部令牌重新签名 owner 身份；
  * metadata 仍按同一套权限和审计链路处理该主体。
  */
-@Component
+/** Retired compatibility helper, no application bean. */
+@Deprecated
 public class ServiceIdentitySigner {
 
     private final byte[] tokenBytes;

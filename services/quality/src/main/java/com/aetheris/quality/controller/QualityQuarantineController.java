@@ -21,6 +21,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/quality/quarantine")
 public class QualityQuarantineController {
+    private com.aetheris.quality.security.ResourceAuthorization authorization = new com.aetheris.quality.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.quality.security.ResourceAuthorization authorization) { this.authorization = authorization; }
     private final QualityQuarantineService service;
 
     public QualityQuarantineController(QualityQuarantineService service) {
@@ -31,10 +34,10 @@ public class QualityQuarantineController {
     public List<QualityQuarantineRecord> list(
             @RequestParam(defaultValue = "open") String status,
             @RequestParam(defaultValue = "100") int limit) {
-        return service.list(new LambdaQueryWrapper<QualityQuarantineRecord>()
+        return authorization.filter("quality_rule", service.list(new LambdaQueryWrapper<QualityQuarantineRecord>()
                 .eq(status != null && !status.isBlank(), QualityQuarantineRecord::getStatus, status)
                 .orderByDesc(QualityQuarantineRecord::getCreatedAt)
-                .last("LIMIT " + Math.clamp(limit, 1, 200)));
+                .last("LIMIT " + Math.clamp(limit, 1, 200))), QualityQuarantineRecord::getRuleId);
     }
 
     @PostMapping("/{id}/release")
@@ -44,6 +47,7 @@ public class QualityQuarantineController {
             String username) {
         QualityQuarantineRecord record = service.getById(id);
         if (record == null) return ResponseEntity.notFound().build();
+        authorization.require("quality_rule", record.getRuleId(), "update");
         if (!"open".equals(record.getStatus())) {
             return ResponseEntity.badRequest().body(Map.of("message", "隔离记录已处理"));
         }

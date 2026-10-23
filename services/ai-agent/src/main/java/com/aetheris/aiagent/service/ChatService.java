@@ -11,10 +11,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 /**
  * 会话与对话编排。
@@ -25,11 +23,16 @@ import java.util.Set;
  */
 @Service
 public class ChatService {
+    private ChatRunStore runStore;
+    private com.aetheris.aiagent.llm.AiBudgetLimits limits=com.aetheris.aiagent.llm.AiBudgetLimits.defaults();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRunStore(ChatRunStore store){this.runStore=store;}
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setBudgetLimits(com.aetheris.aiagent.llm.AiBudgetLimits limits){this.limits=limits;}
 
     private static final int MAX_MESSAGES = 50;
     private static final int MAX_TOTAL_CHARS = 20_000;
     private static final String DEFAULT_TITLE = "新对话";
-    private static final Set<String> ALLOWED_ROLES = Set.of("user", "assistant");
 
     private final ChatConversationService conversationService;
     private final ChatMessageService messageService;
@@ -44,24 +47,25 @@ public class ChatService {
         this.llmClient = llmClient;
     }
 
-    public List<ChatConversation> listConversations(String username) {
+    public List<ChatConversation> listConversations(ChatOwner owner) {
         return conversationService.list(
                 new LambdaQueryWrapper<ChatConversation>()
-                        .eq(ChatConversation::getOwnerUsername, username)
+                        .eq(ChatConversation::getOwnerUid, owner.uid())
                         .orderByDesc(ChatConversation::getUpdatedAt));
     }
 
-    public ChatConversation createConversation(String username) {
+    public ChatConversation createConversation(ChatOwner owner) {
         ChatConversation conversation = new ChatConversation();
-        conversation.setOwnerUsername(username);
+        conversation.setOwnerUid(owner.uid());
+        conversation.setOwnerUsername(owner.username());
         conversation.setTitle(DEFAULT_TITLE);
         conversationService.save(conversation);
         return conversation;
     }
 
     /** 返回 null 表示会话不存在或不属于该用户，两种情况对外一律按「不存在」处理。 */
-    public List<ChatMessage> listMessages(Long conversationId, String username) {
-        if (findOwned(conversationId, username) == null) {
+    public List<ChatMessage> listMessages(Long conversationId, ChatOwner owner) {
+        if (findOwned(conversationId, owner) == null) {
             return null;
         }
         return messageService.list(
@@ -71,11 +75,9 @@ public class ChatService {
     }
 
     @Transactional
-    public boolean deleteConversation(Long conversationId, String username) {
-        if (findOwned(conversationId, username) == null) {
-            return false;
-        }
-        if (!conversationService.removeById(conversationId)) {
+    public boolean deleteConversation(Long conversationId, ChatOwner owner) {
+        if (!conversationService.remove(new LambdaQueryWrapper<ChatConversation>()
+                .eq(ChatConversation::getId, conversationId).eq(ChatConversation::getOwnerUid, owner.uid()))) {
             return false;
         }
         messageService.remove(
@@ -89,30 +91,29 @@ public class ChatService {
      * @return 不合法时返回原因，合法时返回 null
      */
     public String validate(List<ChatMessageDto> messages) {
+        if(messages==null || messages.isEmpty() || messages.stream().anyMatch(java.util.Objects::isNull))return "消息不能为空";
         if (messages.size() > MAX_MESSAGES) {
             return "单次消息条数过多";
         }
-        int totalChars = messages.stream()
-                .mapToInt(message -> message.content() == null ? 0 : message.content().length())
+        long totalChars = messages.stream()
+                .mapToLong(message -> message.content() == null ? 0 : message.content().length())
                 .sum();
         if (totalChars > MAX_TOTAL_CHARS) {
             return "单次内容过长";
-        }
-        if (messages.stream().anyMatch(message -> !ALLOWED_ROLES.contains(message.role()))) {
-            return "消息角色不合法";
         }
         ChatMessageDto last = messages.get(messages.size() - 1);
         if (!"user".equals(last.role()) || last.content() == null || last.content().isBlank()) {
             return "最后一条消息必须是用户提问";
         }
+        if(last.content().length()>6000)return "用户提问过长";
         return null;
     }
 
-    public ChatConversation findOwned(Long conversationId, String username) {
+    public ChatConversation findOwned(Long conversationId, ChatOwner owner) {
         return conversationService.getOne(
                 new LambdaQueryWrapper<ChatConversation>()
                         .eq(ChatConversation::getId, conversationId)
-                        .eq(ChatConversation::getOwnerUsername, username));
+                        .eq(ChatConversation::getOwnerUid, owner.uid()));
     }
 
     /**
@@ -124,21 +125,39 @@ public class ChatService {
      * @param dataMode 启用后模型可调用工具检索元数据、执行只读查询；关闭则为普通对话
      */
     public LlmReply chat(
-            ChatConversation conversation, List<ChatMessageDto> messages, boolean dataMode) {
+            ChatOwner owner, ChatConversation conversation, List<ChatMessageDto> messages, boolean dataMode) {
+        String invalid=validate(messages);
+        if(invalid!=null)throw new IllegalArgumentException(invalid);
+        if(runStore==null)throw new IllegalStateException("会话执行存储未配置");
         ChatMessageDto lastUser = messages.get(messages.size() - 1);
-        saveMessage(conversation.getId(), "user", lastUser.content());
-        touchConversation(conversation, lastUser.content());
-
-        List<LlmMessage> history = new ArrayList<>(messages.size());
-        for (ChatMessageDto message : messages) {
-            history.add(new LlmMessage(message.role(), message.content()));
+        var current=com.aetheris.aiagent.llm.AiRunContext.current();
+        var run=current==null?new com.aetheris.aiagent.llm.AiRunContext(limits):current;
+        boolean local=current==null;
+        if(local)com.aetheris.aiagent.llm.AiRunContext.attach(run);
+        ChatRunStore.Claim claim;
+        try {
+            run.check();
+            claim=runStore.claim(conversation.getId(),owner,
+                    lastUser.content(),run.remainingMillis());
+        } catch(RuntimeException failure) {
+            if(local)com.aetheris.aiagent.llm.AiRunContext.clear();
+            throw failure;
         }
-
-        LlmReply reply = dataMode
-                ? llmClient.chatWithTools(history, AgentPrompts.DATA_ANALYST)
-                : llmClient.chat(history);
-        saveMessage(conversation.getId(), "assistant", reply.content());
-        return reply;
+        try {
+            List<LlmMessage> history=new ArrayList<>(claim.history());
+            history.add(new LlmMessage("user",lastUser.content()));
+            LlmReply reply = dataMode ? llmClient.chatWithTools(history,AgentPrompts.DATA_ANALYST) : llmClient.chat(history);
+            return run.commit(()->{
+                if(!runStore.complete(claim,reply.content()))
+                    throw new com.aetheris.aiagent.llm.LlmException(com.aetheris.aiagent.llm.LlmException.Kind.UNAVAILABLE,
+                            "会话执行已过期，回复未写入",null);
+                return reply;
+            });
+        } finally {
+            try { runStore.cancel(claim); }
+            catch(RuntimeException cleanup) { org.slf4j.LoggerFactory.getLogger(ChatService.class).warn("AI run claim cleanup failed; database deadline remains the fence"); }
+            finally { if(local)com.aetheris.aiagent.llm.AiRunContext.clear(); }
+        }
     }
 
     /**
@@ -154,30 +173,4 @@ public class ChatService {
                 AgentPrompts.CHAT_BI);
     }
 
-    /** 首轮提问用作会话标题，让侧边栏列表可辨识。 */
-    private void touchConversation(ChatConversation conversation, String firstQuestion) {
-        if (conversation.getTitle() == null
-                || conversation.getTitle().isBlank()
-                || DEFAULT_TITLE.equals(conversation.getTitle())) {
-            conversation.setTitle(truncate(firstQuestion, 30));
-        }
-        conversation.setUpdatedAt(OffsetDateTime.now());
-        conversationService.updateById(conversation);
-    }
-
-    private void saveMessage(Long conversationId, String role, String content) {
-        ChatMessage message = new ChatMessage();
-        message.setConversationId(conversationId);
-        message.setRole(role);
-        message.setContent(content);
-        messageService.save(message);
-    }
-
-    private String truncate(String text, int max) {
-        if (text == null) {
-            return DEFAULT_TITLE;
-        }
-        String cleaned = text.replaceAll("\\s+", " ").trim();
-        return cleaned.length() > max ? cleaned.substring(0, max) + "…" : cleaned;
-    }
 }

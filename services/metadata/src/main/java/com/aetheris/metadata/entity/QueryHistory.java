@@ -6,13 +6,16 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 import java.time.OffsetDateTime;
 
-/** 即席查询历史：一次执行一条记录，按用户隔离（查询时强制 username 条件）。 */
+/** 即席查询历史；ownerUid 是归属依据，username 仅为显示快照。 */
 @TableName(value = "adhoc_query_history", schema = "metadata")
 public class QueryHistory {
 
     @TableId(type = IdType.AUTO)
     private Long id;
     private String username;
+    private Long ownerUid;
+    private String requestId;
+    private String errorCode;
     private Long datasourceId;
     /** 数据源名称快照：数据源被删除后历史仍可读。 */
     private String datasourceName;
@@ -28,6 +31,12 @@ public class QueryHistory {
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
+    public Long getOwnerUid() { return ownerUid; }
+    public void setOwnerUid(Long ownerUid) { this.ownerUid = ownerUid; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
+    public String getErrorCode() { return errorCode; }
+    public void setErrorCode(String errorCode) { this.errorCode = errorCode; }
     public Long getDatasourceId() { return datasourceId; }
     public void setDatasourceId(Long datasourceId) { this.datasourceId = datasourceId; }
     public String getDatasourceName() { return datasourceName; }

@@ -16,6 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IdentityVerifierTest {
     private static final String TOKEN = "internal-test-token-with-enough-entropy";
+    @Test void legacyHmacCannotEstablishAiSubject() throws Exception {
+        var request=new MockHttpServletRequest("GET","/api/ai/conversations");request.addHeader(IdentityVerifier.HEADER,sign("7","alice",System.currentTimeMillis()));
+        assertFalse(new IdentityInterceptor().preHandle(request,new MockHttpServletResponse(),new Object()));
+    }
 
     @Test
     void verifiesSignedIdentityAndRejectsMalformedOrStaleValues() throws Exception {
@@ -31,15 +35,16 @@ class IdentityVerifierTest {
 
     @Test
     void interceptorCachesOnlyVerifiedIdentityAndFailsClosed() throws Exception {
-        IdentityInterceptor interceptor = new IdentityInterceptor(new IdentityVerifier(TOKEN, 300_000));
+        IdentityInterceptor interceptor = new IdentityInterceptor();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/ai/chat");
         request.addHeader(IdentityVerifier.HEADER, sign("7", "alice", System.currentTimeMillis()));
         request.addHeader("X-User-Name", "attacker");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        assertTrue(interceptor.preHandle(request, response, new Object()));
-        assertEquals(new AetherisIdentity(7L, "alice"),
-                request.getAttribute(IdentityInterceptor.IDENTITY_ATTRIBUTE));
+        assertFalse(interceptor.preHandle(request, response, new Object()));
+        assertEquals(401,response.getStatus());
+        var authenticated=new AiTestKeys().authenticated("alice");
+        assertTrue(interceptor.preHandle(authenticated,new MockHttpServletResponse(),new Object()));
 
         MockHttpServletRequest forged = new MockHttpServletRequest("GET", "/api/ai/chat");
         forged.addHeader(IdentityVerifier.HEADER, "forged");

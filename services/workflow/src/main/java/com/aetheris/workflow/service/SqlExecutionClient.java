@@ -1,149 +1,123 @@
 package com.aetheris.workflow.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import com.aetheris.workflow.fixedexecution.FixedJson;
+import com.aetheris.security.protocol.transport.SignedHttpClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
+import java.time.*;
+import java.util.*;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
 
-import java.time.Duration;
-import java.util.Map;
-
-/**
- * 调用 metadata 服务执行 SQL。
- *
- * <p>为什么不在 workflow 内直连数据库：metadata 已持有数据源凭据、JDBC 驱动、
- * URL 协议校验与危险连接参数黑名单。把这些复制过来等于复制一份安全边界，
- * 两边任一处遗漏就是缺口。workflow 只负责调度与状态管理。
- *
- * <p>走 {@code /internal/**} 路径，网关只路由 {@code /api/**}，因此该调用不经公网。
- */
+/** One submit only. Ambiguous submission is resolved by status, never by another execution POST. */
 @Component
 public class SqlExecutionClient {
-
-    private static final Logger log = LoggerFactory.getLogger(SqlExecutionClient.class);
-
-    private final RestClient restClient;
-
-    @Autowired
-    public SqlExecutionClient(
-            RestClient.Builder builder,
-            @Value("${aetheris.metadata.base-url}") String baseUrl,
-            @Value("${aetheris.metadata.connect-timeout:PT10S}") Duration connectTimeout,
-            @Value("${aetheris.internal-token:}") String internalToken) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout((int) connectTimeout.toMillis());
-        // 读超时不在这里设：加工任务可能跑很久，实际时限由任务的 timeoutSeconds 控制，
-        // 在下面按次请求单独设置，避免用一个全局读超时误杀长任务。
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
-                .defaultHeader("X-Internal-Token", internalToken).build();
+    public static final String OP="metadata.fixed-sql.submit",SUBMIT="/internal/v2/executions/sql/submit",STATUS="/internal/v2/executions/status";
+    private final SignedHttpClient transport;private final Duration waitTimeout,pollInterval;
+    private final Clock clock;private final LongSupplier nanoTime;
+    @Autowired public SqlExecutionClient(@Qualifier("workflowMetadataTransport") SignedHttpClient transport,
+            @Value("${aetheris.fixed-execution.wait-timeout:PT1H}") Duration timeout) {this(transport,timeout,Duration.ofSeconds(1));}
+    public SqlExecutionClient(SignedHttpClient transport,Duration timeout,Duration pollInterval) {
+        this(transport,timeout,pollInterval,Clock.systemUTC(),System::nanoTime);
     }
-
-    public SqlExecutionClient(RestClient.Builder builder, String baseUrl, Duration connectTimeout) {
-        this(builder, baseUrl, connectTimeout, "");
+    SqlExecutionClient(SignedHttpClient transport,Duration timeout,Duration pollInterval,Clock clock,LongSupplier nanoTime) {
+        if(timeout==null||timeout.isNegative()||timeout.isZero()||timeout.compareTo(Duration.ofHours(1))>0||pollInterval==null||pollInterval.isZero()||pollInterval.isNegative()||pollInterval.compareTo(Duration.ofSeconds(5))>0)throw new IllegalArgumentException("固定执行等待期限无效");
+        this.transport=Objects.requireNonNull(transport);this.waitTimeout=timeout;this.pollInterval=pollInterval;
+        this.clock=Objects.requireNonNull(clock);this.nanoTime=Objects.requireNonNull(nanoTime);
     }
-
-    /**
-     * 在指定数据源上执行写入语句。
-     *
-     * @param timeoutSeconds 语句超时；同时用于计算 HTTP 读超时（留出余量）
-     * @return 执行结果，含 affectedRows 与 durationMs
-     * @throws SqlExecutionException 执行失败，message 已是安全文案
-     */
-    public ExecutionResult execute(Long datasourceId, String sql, int timeoutSeconds) {
-        // HTTP 读超时比语句超时多留 30 秒：让数据库侧的超时先触发，
-        // 这样拿到的是「SQL 执行超时」而非模糊的「网络读超时」，便于定位。
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10_000);
-        factory.setReadTimeout((timeoutSeconds + 30) * 1000);
-
+    /** Retired raw SQL constructors and execution bridge cannot create any transport. */
+    @Deprecated public SqlExecutionClient(org.springframework.web.client.RestClient.Builder ignored,String ignoredUrl,Duration ignoredTimeout,String ignoredToken){transport=null;waitTimeout=Duration.ZERO;pollInterval=Duration.ZERO;clock=Clock.systemUTC();nanoTime=System::nanoTime;}
+    @Deprecated public SqlExecutionClient(org.springframework.web.client.RestClient.Builder ignored,String ignoredUrl,Duration ignoredTimeout){this(ignored,ignoredUrl,ignoredTimeout,"");}
+    @Deprecated public ExecutionResult execute(Long datasourceId,String sql,int timeout){throw new IllegalStateException("SQL执行必须引用已批准封存attempt，禁止原始SQL桥");}
+    public record Submission(long runId,long attemptId,long fence,long executionRevision,String manifestSha256) {
+        public Submission {if(runId<=0||attemptId<=0||fence<=0||executionRevision<=0||manifestSha256==null||!manifestSha256.matches("[a-f0-9]{64}"))throw new IllegalArgumentException("封存运行引用无效");}
+    }
+    /** Pure policy validation only; no business JDBC call exists on this route. */
+    private static final String POLICY_REJECTED="SQL不符合固定写任务安全策略";
+    public void requireWritePolicy(String sql){String reason=validateWrite(sql);if(reason!=null)throw new org.springframework.web.server.ResponseStatusException(POLICY_REJECTED.equals(reason)?org.springframework.http.HttpStatus.BAD_REQUEST:org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,"SQL校验尚未通过，不能批准");}
+    public String validateWrite(String sql){
+        if(transport==null)return "SQL安全校验服务不可用，当前不能保存任务定义";
+        try{
+            var response=transport.send(new SignedHttpClient.Request("metadata","POST","/internal/v2/sql/validate-write","metadata.fixed-sql.validate-write",FixedJson.bytes(Map.of("sql",sql))));
+            if(response.status()!=200)throw unknown();var n=FixedJson.parse(response.body(),1024);FixedJson.fields(n,"valid","reason");
+            if(!n.get("valid").isBoolean())throw unknown();
+            if(n.get("valid").booleanValue()){if(!n.get("reason").isNull())throw unknown();return null;}
+            if(!"SQL_POLICY_REJECTED".equals(FixedJson.text(n,"reason")))throw unknown();return POLICY_REJECTED;
+        }catch(InterruptedException interrupted){Thread.currentThread().interrupt();return "SQL安全校验已中断，不能保存任务定义";}catch(RuntimeException invalid){return "SQL安全校验服务不可用，当前不能保存任务定义";}
+    }
+    public ExecutionResult execute(Submission submission,LongConsumer bindReceipt) {
+        return execute(submission,new Budget(nanoTime.getAsLong()+waitTimeout.toNanos(),null),bindReceipt);
+    }
+    /** The sealed source claim, not a global compatibility timeout, bounds production polling. */
+    public ExecutionResult execute(Submission submission,OffsetDateTime sourceLeaseDeadline,LongConsumer bindReceipt) {
         try {
-            Map<String, Object> body = restClient.mutate()
-                    .requestFactory(factory)
-                    .build()
-                    .post()
-                    .uri("/internal/datasources/{id}/execute", datasourceId)
-                    .body(Map.of("sql", sql, "timeoutSeconds", timeoutSeconds))
-                    .retrieve()
-                    .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
-
-            if (body == null) {
-                throw new SqlExecutionException("执行结果为空");
-            }
-            return new ExecutionResult(
-                    toLong(body.get("affectedRows")),
-                    toLong(body.get("durationMs")));
-        } catch (RestClientResponseException error) {
-            // metadata 已把驱动原文换成安全文案，这里透传它的 message。
-            String message = extractMessage(error);
-            log.warn("SQL execution rejected by metadata service: datasource={}, status={}",
-                    datasourceId, error.getStatusCode());
-            throw new SqlExecutionException(message);
-        } catch (SqlExecutionException error) {
-            throw error;
-        } catch (RuntimeException error) {
-            log.warn("SQL execution call failed: datasource={}", datasourceId, error);
-            throw new SqlExecutionException("无法连接元数据服务，请稍后重试");
-        }
+            Instant until=Objects.requireNonNull(sourceLeaseDeadline).toInstant().minusSeconds(5);
+            long remaining=Duration.between(clock.instant(),until).toNanos();
+            if(remaining<=0)throw unknown();
+            return execute(submission,new Budget(nanoTime.getAsLong()+remaining,until),bindReceipt);
+        }catch(SqlExecutionException safe){throw safe;}catch(RuntimeException invalid){throw unknown();}
     }
-
-    private String extractMessage(RestClientResponseException error) {
+    private record Budget(long monotonicDeadline,Instant wallDeadline) { }
+    private ExecutionResult execute(Submission submission,Budget deadline,LongConsumer bindReceipt) {
+        if(transport==null)throw unknown();Long receipt=null;
         try {
-            Map<?, ?> body = error.getResponseBodyAs(Map.class);
-            if (body != null && body.get("message") instanceof String message && !message.isBlank()) {
-                return message;
+            within(deadline);
+            Map<String,Object> body=Map.of("runId",submission.runId(),"attemptId",submission.attemptId(),"fence",submission.fence(),"executionRevision",submission.executionRevision(),"manifestSha256",submission.manifestSha256());
+            Receipt accepted=null;
+            try {var response=transport.send(new SignedHttpClient.Request("metadata","POST",SUBMIT,OP,FixedJson.bytes(body)));
+                if(response.status()!=202)throw unknown();within(deadline);accepted=read(response.body(),submission,null);
+            }catch(SignedHttpClient.TransportException lost) {
+                if(lost.failure()!=SignedHttpClient.Failure.IO && lost.failure()!=SignedHttpClient.Failure.DEADLINE)throw unknown();
             }
-        } catch (RuntimeException ignored) {
-            log.debug("Unable to parse error body from metadata service");
+            if(accepted!=null){within(deadline);receipt=accepted.id();bindReceipt.accept(receipt);within(deadline);ExecutionResult done=terminal(accepted);if(done!=null)return done;}
+            while(remaining(deadline)>0) {
+                within(deadline);
+                Map<String,Object> status=new LinkedHashMap<>();status.put("receiptId",receipt);status.put("runId",submission.runId());status.put("attemptId",submission.attemptId());status.put("fence",submission.fence());status.put("operation",OP);
+                try {
+                    var response=transport.send(new SignedHttpClient.Request("metadata","POST",STATUS,"metadata.fixed-execution.status",FixedJson.bytes(status)));
+                    if(response.status()==200) {
+                        within(deadline);Receipt current=read(response.body(),submission,receipt);
+                        if(receipt==null){receipt=current.id();bindReceipt.accept(receipt);}
+                        within(deadline);ExecutionResult done=terminal(current);if(done!=null)return done;
+                    }else if(response.status()!=404)throw unknown();
+                }catch(SignedHttpClient.TransportException unavailable) {
+                    if(unavailable.failure()!=SignedHttpClient.Failure.IO && unavailable.failure()!=SignedHttpClient.Failure.DEADLINE)throw unknown();
+                }
+                long remaining=remaining(deadline);if(remaining<=0)break;
+                java.util.concurrent.TimeUnit.NANOSECONDS.sleep(Math.min(pollInterval.toNanos(),remaining));
+            }
+            throw unknown();
+        }catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw unknown();}
+        catch(SqlExecutionException safe){throw safe;}
+        catch(RuntimeException invalid){throw unknown();}
+    }
+    private record Receipt(long id,String state,ExecutionResult result) { }
+    private Receipt read(byte[] raw,Submission source,Long expectedReceipt) {
+        JsonNode n=FixedJson.parse(raw,16384);FixedJson.fields(n,"receiptId","origin","operation","runId","attemptId","fence","state","result","errorCode");
+        long id=FixedJson.number(n,"receiptId",1);
+        if(expectedReceipt!=null&&id!=expectedReceipt||!"workflow".equals(FixedJson.text(n,"origin"))||!OP.equals(FixedJson.text(n,"operation"))
+                ||FixedJson.number(n,"runId",1)!=source.runId()||FixedJson.number(n,"attemptId",1)!=source.attemptId()||FixedJson.number(n,"fence",1)!=source.fence())throw unknown();
+        String state=FixedJson.text(n,"state");JsonNode error=n.get("errorCode");
+        if(!error.isNull()&&(!error.isTextual()||!error.textValue().matches("[A-Z][A-Z0-9_]{0,63}")))throw unknown();
+        if(state.equals("succeeded")) {
+            if(!error.isNull())throw unknown();var result=n.get("result");FixedJson.fields(result,"affectedRows","durationMs");
+            return new Receipt(id,state,new ExecutionResult(result.get("affectedRows").isNull()?null:FixedJson.number(result,"affectedRows",0),FixedJson.number(result,"durationMs",0)));
         }
-        return "SQL 执行失败（HTTP " + error.getStatusCode().value() + "）";
+        if(!Set.of("queued","executing","unknown","failed").contains(state)||!n.get("result").isNull()||state.equals("failed")&&error.isNull())throw unknown();
+        return new Receipt(id,state,null);
     }
-
-    private Long toLong(Object value) {
-        return value instanceof Number number ? number.longValue() : null;
+    private ExecutionResult terminal(Receipt receipt) {
+        return switch(receipt.state()) {case "succeeded"->receipt.result();case "failed"->throw new SqlExecutionException("元数据执行已返回失败回执",false,false);case "unknown"->throw unknown();default->null;};
     }
-
-    /**
-     * 校验写入语句是否被允许，不执行、不连接数据源。
-     *
-     * <p>用于任务保存时提前反馈：否则用户填完保存成功、点运行才发现 SQL 不被接受。
-     * 校验规则由 metadata 侧与执行路径共用同一份实现，不在本服务复制，避免规则漂移。
-     *
-     * @return 不合法时返回原因；合法时返回 null
-     */
-    public String validateWrite(String sql) {
-        try {
-            Map<String, Object> body = restClient.post()
-                    .uri("/internal/sql/validate-write")
-                    .body(Map.of("sql", sql))
-                    .retrieve()
-                    .body(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {});
-
-            if (body == null) {
-                return null;
-            }
-            if (Boolean.TRUE.equals(body.get("valid"))) {
-                return null;
-            }
-            Object message = body.get("message");
-            return message instanceof String text ? text : "SQL 不符合任务执行的语句要求";
-        } catch (RuntimeException error) {
-            // Validation is a security boundary. Saving an unvalidated write task
-            // makes an outage a bypass, so definition changes fail closed.
-            log.warn("SQL validation unavailable, rejecting save", error);
-            return "SQL 安全校验服务不可用，当前不能保存任务定义";
-        }
+    private long remaining(Budget deadline){
+        long remaining=deadline.monotonicDeadline()-nanoTime.getAsLong();
+        if(deadline.wallDeadline()!=null)remaining=Math.min(remaining,Duration.between(clock.instant(),deadline.wallDeadline()).toNanos());
+        return remaining;
     }
-
-    /**
-     * 执行结果。
-     *
-     * @param affectedRows 受影响行数；Hive 驱动不返回时为 -1 或 null，表示「未知」而非失败
-     * @param durationMs   数据库侧耗时
-     */
-    public record ExecutionResult(Long affectedRows, Long durationMs) {
+    private void within(Budget deadline){if(Thread.currentThread().isInterrupted()||remaining(deadline)<=0)throw unknown();}
+    private static SqlExecutionException unknown(){return new SqlExecutionException("执行结果尚未可靠确认，禁止自动重放",true,false);}
+    public record ExecutionResult(Long affectedRows,long durationMs) {
+        public ExecutionResult {if(affectedRows!=null&&affectedRows<0||durationMs<0)throw new IllegalArgumentException("执行计数无效");}
     }
 }

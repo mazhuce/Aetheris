@@ -51,17 +51,27 @@ info:
     version: 0.1.0
 
 aetheris:
+  outbound:
+    allowed-cidrs: ${AETHERIS_OUTBOUND_ALLOWED_CIDRS:127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7}
+    allowed-hosts: ${AETHERIS_OUTBOUND_ALLOWED_HOSTS:}
   datasource:
     master-key: ${AETHERIS_DATASOURCE_MASTER_KEY:}
+    allow-embedded: ${AETHERIS_ALLOW_EMBEDDED_DATASOURCES:false}
     health:
       ttl-seconds: ${DATASOURCE_HEALTH_TTL_SECONDS:60}
       timeout-ms: ${DATASOURCE_HEALTH_TIMEOUT_MS:10000}
       max-concurrent: ${DATASOURCE_HEALTH_MAX_CONCURRENT:4}
   managed-datasource:
-    enabled: ${REGISTER_INTERNAL_DATASOURCE:true}
+    enabled: false # Platform credentials are never registered for business queries.
   internal-token: ${AETHERIS_INTERNAL_TOKEN:}
   auth:
     base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  ingestion:
+    base-url: http://${INGESTION_SERVICE_HOST:localhost}:${INGESTION_SERVICE_PORT:8084}
+  quality:
+    base-url: http://${QUALITY_SERVICE_HOST:localhost}:${QUALITY_SERVICE_PORT:8083}
+  serving:
+    base-url: http://${SERVING_SERVICE_HOST:localhost}:${SERVING_SERVICE_PORT:8089}
   identity:
     max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
   workflow:

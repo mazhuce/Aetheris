@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, App, DatePicker, Descriptions, Form, Modal } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { runTask, INSTANCE_STATUS_META, type TaskInstance, type TaskView } from '@/api/workflow'
+import { getBusinessCalendar, runTask, INSTANCE_STATUS_META, type BusinessCalendarView, type TaskInstance, type TaskView } from '@/api/workflow'
 import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
 
 interface Props {
@@ -21,22 +21,36 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
   const [form] = Form.useForm<{ bizDate: Dayjs }>()
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<TaskInstance | null>(null)
+  const [calendar, setCalendar] = useState<BusinessCalendarView | null>(null)
+  const epoch = useRef(0)
 
   useEffect(() => {
+    const current = ++epoch.current
+    setCalendar(null)
+    setRunning(false)
     if (target) {
-      form.setFieldsValue({ bizDate: dayjs().subtract(1, 'day') })
+      form.resetFields()
       setResult(null)
+      void getBusinessCalendar().then((value) => {
+        if (current !== epoch.current) return
+        if (!dayjs(value.previousDate).isValid() || !dayjs(value.today).isValid()) throw new Error('invalid calendar')
+        setCalendar(value)
+        form.setFieldsValue({ bizDate: dayjs(value.previousDate) })
+      }).catch(() => { if (current === epoch.current) message.error('业务日期加载失败，请关闭后重试') })
     }
-  }, [target, form])
+    return () => { epoch.current++ }
+  }, [target, form, message])
 
   const handleRun = async () => {
     const values = await form.validateFields()
     if (!target) return
+    const current = epoch.current
 
     setRunning(true)
     setResult(null)
     try {
       const instance = await runTask(target.task.id, values.bizDate.format('YYYY-MM-DD'))
+      if (current !== epoch.current) return
       setResult(instance)
 
       // 三种结果分别提示：skipped 不是失败，而是依赖未就绪，用 warning 区分开。
@@ -44,17 +58,22 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
         message.success('任务执行成功')
       } else if (instance.status === 'skipped') {
         message.warning('依赖未就绪，任务已跳过')
+      } else if (instance.status === 'unknown') {
+        message.warning('执行结果待核对，请先对账')
+      } else if (['running', 'submitting', 'cancel_requested'].includes(instance.status)) {
+        message.info('任务已受理，请在运行实例中查看进展')
       } else {
         message.error('任务执行失败，请查看日志')
       }
       onFinished()
     } catch (error) {
+      if (current !== epoch.current) return
       const detail = (error as { response?: { data?: { message?: string } } })
         ?.response?.data?.message
       // 409 表示同一业务日期已有实例在跑，属于冲突而非故障。
       message.error(detail || '触发失败')
     } finally {
-      setRunning(false)
+      if (current === epoch.current) setRunning(false)
     }
   }
 
@@ -62,7 +81,8 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
     if (status === 'success') return 'success'
     if (status === 'failed') return 'danger'
     if (status === 'skipped') return 'warning'
-    if (status === 'running') return 'info'
+    if (status === 'running' || status === 'submitting') return 'info'
+    if (status === 'unknown' || status === 'cancel_requested') return 'warning'
     return 'neutral'
   }
 
@@ -70,9 +90,13 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
     <Modal
       title={`运行任务：${target?.task.name ?? ''}`}
       open={target !== null}
-      onCancel={onClose}
+      onCancel={() => { if (!running) onClose() }}
+      closable={!running}
+      maskClosable={!running}
+      keyboard={!running}
       onOk={() => void handleRun()}
       confirmLoading={running}
+      okButtonProps={{ disabled: !calendar || running }}
       okText={running ? '执行中…' : '开始执行'}
       width={560}
       destroyOnHidden
@@ -81,8 +105,8 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
         className="modal-notice"
         type="info"
         showIcon
-        message="重跑会覆盖目标分区"
-        description="同一业务日期重复执行会复用同一实例并覆盖该分区的数据，不会产生重复记录。"
+        message="执行前确认业务日期和目标 SQL"
+        description="同一业务日期复用同一实例，写入方式取决于任务 SQL。结果未知时应先对账，避免重复写入。"
       />
 
       <Form form={form} layout="vertical">
@@ -90,12 +114,13 @@ export default function TaskRunModal({ target, onClose, onFinished }: Props) {
           name="bizDate"
           label="业务日期"
           rules={[{ required: true, message: '请选择业务日期' }]}
-          extra="即目标表的分区日期（dt），不是执行时刻。默认为昨天。"
+          extra={calendar ? `按 ${calendar.zone} 的业务时钟默认选择前一天，日期代表目标分区（dt）。` : '正在读取业务日期…'}
         >
           <DatePicker
             className="full-width-control"
             // 不允许选未来日期：那些分区的源数据还不存在，执行只会得到空结果。
-            disabledDate={(current) => current && current > dayjs().endOf('day')}
+            disabled={!calendar || running}
+            disabledDate={(current) => !!calendar && !!current && current.format('YYYY-MM-DD') > calendar.today}
           />
         </Form.Item>
       </Form>

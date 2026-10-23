@@ -8,5 +8,5 @@ import java.util.Map;
 public class QueryAuditController {
     private final QueryAuditService service; private final MetadataSecurity security;
     public QueryAuditController(QueryAuditService service,MetadataSecurity security){this.service=service;this.security=security;}
-    @GetMapping("/summary") public Map<String,Object> summary(HttpServletRequest request,@RequestParam(defaultValue="30")int days,@RequestParam(required=false)Long slowMs){var identity=security.require(request,"metric",null,"view",Map.of());return service.summary(identity.username(),false,days,slowMs);}
+    @GetMapping("/summary") public Map<String,Object> summary(HttpServletRequest request,@RequestParam(defaultValue="30")int days,@RequestParam(required=false)Long slowMs){var identity=security.require(request,"metric",null,"view",Map.of());return service.summary(identity.uid(),security.canReadGlobalQueryAudit(request),days,slowMs);}
 }

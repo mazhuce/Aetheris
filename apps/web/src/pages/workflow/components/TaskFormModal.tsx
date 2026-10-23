@@ -7,6 +7,8 @@ import { listRules, type QualityRule } from '@/api/quality'
 interface Props {
   open: boolean
   editing: TaskView | null
+  canEditDefinition: boolean
+  canExecute: boolean
   onClose: () => void
   onSaved: () => void
 }
@@ -20,7 +22,7 @@ const CRON_PRESETS = [
   { value: '0 0 5 1 * ?', label: '每月 1 号 05:00' }
 ]
 
-export default function TaskFormModal({ open, editing, onClose, onSaved }: Props) {
+export default function TaskFormModal({ open, editing, canEditDefinition, canExecute, onClose, onSaved }: Props) {
   const { message } = App.useApp()
   const [form] = Form.useForm<TaskInput>()
   const [submitting, setSubmitting] = useState(false)
@@ -40,6 +42,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
       // 给出可用的默认值，减少新建时的必填项。
       form.setFieldsValue({ taskType: 'sql', flinkMode: 'streaming', timeoutSeconds: 1800, maxRetries: 0, status: 'enabled' })
     }
+    if (!canEditDefinition) return
     void (async () => {
       try {
         const [sources, jobs, rules] = await Promise.all([listDataSources(), listSparkJobs(), listRules()])
@@ -50,14 +53,16 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         message.error('数据源列表加载失败')
       }
     })()
-  }, [open, editing, form, message])
+  }, [open, editing, form, message, canEditDefinition])
 
   const handleSubmit = async (values: TaskInput) => {
     setSubmitting(true)
     try {
       // 冗余存一份数据源名称，任务列表就不必再联查 metadata。
       const selected = dataSources.find((d) => d.id === values.datasourceId)
-      const payload: TaskInput = { ...values, datasourceName: selected?.name }
+      const payload: TaskInput = canEditDefinition ? { ...values, datasourceName: selected?.name } : {
+        name: values.name, description: values.description, status: values.status, cronExpression: values.cronExpression
+      }
       if (values.taskType === 'spark') {
         delete payload.datasourceId; delete payload.datasourceName; delete payload.taskSql; delete payload.qualityRuleId; delete payload.flinkEndpoint; delete payload.flinkMode
         delete payload.eventTimeColumn; delete payload.watermarkExpression; delete payload.allowedLatenessSeconds; delete payload.lateDataPolicy; delete payload.deadLetterTable
@@ -125,10 +130,10 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         <Form.Item
           name="taskType"
           label="任务类型"
-          rules={[{ required: true }]}
+          rules={[{ required: canEditDefinition }]}
           extra={editing ? '已有任务的类型保持不变，避免历史执行口径被改写。' : undefined}
         >
-          <Select disabled={!!editing} options={[
+          <Select disabled={!!editing || !canEditDefinition} options={[
             { value: 'sql', label: 'SQL 加工' },
             { value: 'spark', label: '受管 Spark' },
             { value: 'flink', label: 'Flink SQL' },
@@ -136,13 +141,15 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           ]} />
         </Form.Item>
 
+        <fieldset disabled={!canEditDefinition} style={{ border: 0, padding: 0, margin: 0 }}>
         {taskType === 'sql' && <><Form.Item
           name="datasourceId"
           label="执行数据源"
-          rules={[{ required: true, message: '请选择数据源' }]}
+          rules={[{ required: canEditDefinition, message: '请选择数据源' }]}
           extra="需要具备写权限的数据源；只读账号无法执行加工任务。"
         >
           <Select
+            disabled={!canEditDefinition}
             placeholder="选择执行任务的数据源"
             options={dataSources.map((d) => ({ value: d.id, label: `${d.name}（${d.type}）` }))}
           />
@@ -151,7 +158,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         <Form.Item
           name="taskSql"
           label="加工 SQL"
-          rules={[{ required: true, message: '请输入加工 SQL' }]}
+          rules={[{ required: canEditDefinition, message: '请输入加工 SQL' }]}
           extra={
             <span>
               仅支持 <code>INSERT INTO / INSERT OVERWRITE / CREATE ... AS SELECT</code> 单条语句；
@@ -169,9 +176,9 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         </>}
 
         {taskType === 'spark' && <Form.Item name="jobDefinitionId" label="受管 Spark 作业"
-          rules={[{ required: true, message: '请选择已发布作业' }]}
+          rules={[{ required: canEditDefinition, message: '请选择已发布作业' }]}
           extra="只允许执行审批制品与固定参数架构；不能上传或输入任意代码。">
-          <Select options={sparkJobs.map((job) => ({ value: job.id, label: `${job.name} v${job.version}` }))} />
+          <Select disabled={!canEditDefinition} options={sparkJobs.map((job) => ({ value: job.id, label: `${job.name} v${job.version}` }))} />
         </Form.Item>}
 
         {taskType === 'flink' && <>
@@ -185,7 +192,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
           </Form.Item>
           <Form.Item name="flinkMode" label="运行模式" rules={[{ required: true }]}
             extra="持续模式提交后立即返回并保留 session/operation 句柄；有界模式等待 Gateway 终态。">
-            <Select options={[{ value: 'streaming', label: '持续流任务' }, { value: 'bounded', label: '有界任务' }]} />
+            <Select disabled={!canEditDefinition} options={[{ value: 'streaming', label: '持续流任务' }, { value: 'bounded', label: '有界任务' }]} />
           </Form.Item>
           <Form.Item name="eventTimeColumn" label="事件时间列"
             extra="填写后必须同时填写水位线表达式；留空表示由 SQL 自行管理时间属性。">
@@ -200,7 +207,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
             <InputNumber min={0} max={86400} className="full-width-control" />
           </Form.Item>
           <Form.Item name="lateDataPolicy" label="迟到数据策略" initialValue="drop">
-            <Select options={[
+            <Select disabled={!canEditDefinition} options={[
               { value: 'drop', label: '丢弃并记录' },
               { value: 'dead_letter', label: '写入死信表' },
               { value: 'side_output', label: '侧输出（由 SQL 处理）' }
@@ -219,8 +226,8 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         </>}
 
         {taskType === 'quality' && <Form.Item name="qualityRuleId" label="质量规则"
-          rules={[{ required: true, message: '请选择启用中的质量规则' }]}>
-          <Select options={qualityRules.map((rule) => ({ value: rule.id, label: rule.name }))} />
+          rules={[{ required: canEditDefinition, message: '请选择启用中的质量规则' }]}>
+          <Select disabled={!canEditDefinition} options={qualityRules.map((rule) => ({ value: rule.id, label: rule.name }))} />
         </Form.Item>}
 
         <Form.Item
@@ -230,6 +237,8 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         >
           <Input placeholder="dwd.dwd_order" />
         </Form.Item>
+
+        </fieldset>
 
         <Form.Item
           name="cronExpression"
@@ -241,6 +250,7 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
             且值始终是字符串。Select 的 tags 模式会把值变成数组，与后端的字符串字段不匹配。
           */}
           <AutoComplete
+            disabled={!canExecute}
             allowClear
             placeholder="留空则仅手动触发，例如 0 30 2 * * ?"
             options={CRON_PRESETS.map((p) => ({ value: p.value, label: `${p.label}　${p.value}` }))}
@@ -253,24 +263,24 @@ export default function TaskFormModal({ open, editing, onClose, onSaved }: Props
         <Form.Item
           name="timeoutSeconds"
           label="超时时间（秒）"
-          rules={[{ required: true, message: '请输入超时时间' }]}
+          rules={[{ required: canEditDefinition, message: '请输入超时时间' }]}
         >
-          <InputNumber min={1} max={86400} className="full-width-control" />
+          <InputNumber disabled={!canEditDefinition} min={1} max={86400} className="full-width-control" />
         </Form.Item>
 
         <Form.Item
           name="maxRetries"
           label="失败重试次数"
-          rules={[{ required: true, message: '请输入重试次数' }]}
+          rules={[{ required: canEditDefinition, message: '请输入重试次数' }]}
           extra="0 表示不重试。重试仍复用同一实例，只累加尝试次数。"
         >
-          <InputNumber min={0} max={10} className="full-width-control" />
+          <InputNumber disabled={!canEditDefinition} min={0} max={10} className="full-width-control" />
         </Form.Item>
 
         <Form.Item name="status" label="状态">
           <Select
             options={[
-              { value: 'enabled', label: '启用' },
+              { value: 'enabled', label: '启用', disabled: !canExecute },
               { value: 'disabled', label: '停用（同时取消定时调度）' }
             ]}
           />

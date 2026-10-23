@@ -18,9 +18,18 @@ import java.util.Map;
 @RestController
 @RequestMapping("/internal/semantic/metrics")
 public class InternalSemanticMetricController {
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
+    private Map<String,String> domainCtx(Long id) {
+        return permissionContext == null ? (id == null ? Map.of() : Map.of("domainId",id.toString())) : permissionContext.of(id);
+    }
     private final MetricDefinitionService service;
     private final MetadataSecurity security;
     private final QueryAuditService auditService;
+    private com.aetheris.metadata.service.MetadataTableService sourceTables;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setSourceTables(com.aetheris.metadata.service.MetadataTableService tables){this.sourceTables=tables;}
     public InternalSemanticMetricController(MetricDefinitionService service,
                                             MetadataSecurity security,
                                             QueryAuditService auditService) {
@@ -38,19 +47,18 @@ public class InternalSemanticMetricController {
             case IDS -> metrics.stream().filter(metric -> metric.getBusinessDomainId() != null
                     && scope.ids().contains(metric.getBusinessDomainId())).toList();
             case OPAQUE -> metrics.stream().filter(metric -> security.isAllowed(username, "metric", metric.getId(),
-                    "view", metric.getBusinessDomainId() == null ? Map.of()
-                            : Map.of("domainId", String.valueOf(metric.getBusinessDomainId())))).toList();
+                    "view", domainCtx(metric.getBusinessDomainId()))).toList();
         };
     }
     @PostMapping("/{code}/query") public Map<String, Object> query(HttpServletRequest httpRequest,
             @PathVariable String code, @Valid @RequestBody(required = false) MetricQueryRequest request) {
         MetricDefinition metric = service.requirePublished(code);
         String username = security.require(httpRequest, "metric", metric.getId(), "query",
-                metric.getBusinessDomainId() == null ? Map.of() : Map.of("domainId", String.valueOf(metric.getBusinessDomainId())))
+                domainCtx(metric.getBusinessDomainId()))
                 .username();
         long startedAt = System.currentTimeMillis();
         try {
-            Map<String, Object> result = service.query(code, request);
+            Map<String, Object> result = service.queryPublished(metric, request);
             audit(username, metric, result, "success", null, startedAt);
             return result;
         } catch (RuntimeException error) {
@@ -64,7 +72,8 @@ public class InternalSemanticMetricController {
         try {
             Long rows = result != null && result.get("rowCount") instanceof Number n ? n.longValue() : null;
             String sql = result == null ? null : (String) result.get("generatedSql");
-            auditService.record("metric", metric.getMetricCode(), metric.getId(), metric.getSourceTableId(),
+            var table=sourceTables==null||metric.getSourceTableId()==null?null:sourceTables.getById(metric.getSourceTableId());
+            auditService.record("metric", metric.getMetricCode(), metric.getId(), table==null?null:table.getDatasourceId(),
                     username, status, rows, System.currentTimeMillis() - startedAt, false,
                     error == null ? null : error.getClass().getSimpleName(),
                     error == null ? null : error.getMessage(), sql);

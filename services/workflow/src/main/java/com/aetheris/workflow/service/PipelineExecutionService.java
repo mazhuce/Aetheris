@@ -24,6 +24,9 @@ import java.util.Set;
 /** Executes the dependency closure of one target as a mixed SQL/Spark/quality DAG. */
 @Service
 public class PipelineExecutionService {
+    private WorkflowAuthorizationService authorization;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(WorkflowAuthorizationService authorization) { this.authorization = authorization; }
     private static final int MAX_NODE_MESSAGE_LENGTH = 512;
     private static final int MAX_RUN_ERROR_LENGTH = 1000;
 
@@ -93,6 +96,13 @@ public class PipelineExecutionService {
 
     private Map<String, Object> createRun(long targetTaskId, String bizDate, String username,
                                            List<Long> order, Long retryOfRunId, Long resumeFromTaskId) {
+        // Authorize the exact immutable node snapshot persisted and dispatched below.
+        // Dependency changes after this point cannot add unvalidated execution nodes.
+        order = List.copyOf(order);
+        if (authorization == null || !authorization.canExecuteTasks(username, order)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "流水线包含无权执行的任务");
+        }
         Long runId;
         try {
             runId = jdbc.queryForObject("""
@@ -552,8 +562,7 @@ public class PipelineExecutionService {
     }
 
     private static void validateBizDate(String value) {
-        try { java.time.LocalDate.parse(value); }
-        catch (RuntimeException error) { throw new IllegalArgumentException("业务日期必须为 yyyy-MM-dd"); }
+        com.aetheris.workflow.config.BusinessCalendar.parseExact(value);
     }
 
     record ResolvedUnknownNode(long runId, long nodeId, int sequenceNo, String bizDate,

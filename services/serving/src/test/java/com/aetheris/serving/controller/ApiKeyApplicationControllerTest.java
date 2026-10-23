@@ -25,12 +25,15 @@ class ApiKeyApplicationControllerTest {
     private final ApiKeyApplicationController controller = new ApiKeyApplicationController(service, security);
 
     @Test
-    void requestBindsApplicationToAuthenticatedUser() {
-        when(security.requireIdentity(request)).thenReturn(new ServingIdentity(2L, "analyst"));
+    void requestBindsApplicationToAuthenticatedUser() throws Exception {
+        try(var f=new com.aetheris.serving.security.V2ServingFixture()){f.request(actual->{
+        when(security.requireIdentity(actual)).thenReturn(new ServingIdentity(42L, "alice"));
         ApiKeyApplication application = new ApiKeyApplication(3L, "reporting", "analyst", "daily report", 30, null, "requested", null, null, null, OffsetDateTime.now());
-        when(service.request(any(), eq("analyst"))).thenReturn(application);
+        var trusted=com.aetheris.security.servlet.TrustedUser.require(actual);
+        when(service.request(any(), eq(trusted))).thenReturn(application);
 
-        assertEquals("analyst", controller.request(new ApiKeyApplicationRequest("reporting", "daily report", 30, null), request).requester());
+        assertEquals("analyst", controller.request(new ApiKeyApplicationRequest("reporting", "daily report", 30, null), actual).requester());
+        verify(service).request(any(),eq(trusted));});}
     }
 
     @Test
@@ -47,10 +50,10 @@ class ApiKeyApplicationControllerTest {
     @Test
     void mineDoesNotUseAdminList() {
         when(security.requireIdentity(request)).thenReturn(new ServingIdentity(2L, "analyst"));
-        when(service.list(any())).thenReturn(List.of());
+        when(service.mine(2L)).thenReturn(List.of());
 
         assertEquals(0, controller.mine(request).size());
-        verify(service).list(eq(java.util.Optional.of("analyst")));
+        verify(service).mine(2L);
         verify(security, never()).requireManage(request);
     }
 }

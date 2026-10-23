@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import com.aetheris.security.servlet.TrustedUser;
 
 import java.io.IOException;
 
@@ -13,26 +14,18 @@ import java.io.IOException;
  */
 @Component
 public class ServingIdentityInterceptor implements HandlerInterceptor {
-    private final IdentityVerifier verifier;
-
-    public ServingIdentityInterceptor(IdentityVerifier verifier) {
-        this.verifier = verifier;
-    }
+    public ServingIdentityInterceptor() {}
+    @Deprecated public ServingIdentityInterceptor(IdentityVerifier ignored) {}
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
         if (isApiKeyRoute(request) && hasApiKey(request)) return true;
-        if (!verifier.configured()) {
-            response.sendError(503, "serving-service 未配置内部令牌");
+        if (!(request.getAttribute(TrustedUser.ATTRIBUTE) instanceof TrustedUser)) {
+            response.setStatus(401);response.setContentType("application/json");response.setCharacterEncoding("UTF-8");
+            response.getWriter().write("{\"message\":\"缺少有效的用户身份\"}");
             return false;
         }
-        ServingIdentity identity = verifier.verify(request);
-        if (identity == null || identity.username() == null || identity.username().isBlank()) {
-            response.sendError(401, "缺少有效的网关身份签名");
-            return false;
-        }
-        request.setAttribute(ServingSecurity.ATTRIBUTE, identity);
         return true;
     }
 
@@ -41,8 +34,9 @@ public class ServingIdentityInterceptor implements HandlerInterceptor {
         return value != null && !value.isBlank();
     }
 
-    private static boolean isApiKeyRoute(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        return "/api/serving/v1/apis".equals(path) || path.startsWith("/api/serving/v1/apis/");
+    public static boolean apiKeyRoute(String method,String path) {
+        return "POST".equals(method) && path != null
+                && path.matches("^/api/serving/v1/apis/[A-Za-z][A-Za-z0-9_]{1,63}/query$");
     }
+    private static boolean isApiKeyRoute(HttpServletRequest request){return apiKeyRoute(request.getMethod(),request.getRequestURI());}
 }

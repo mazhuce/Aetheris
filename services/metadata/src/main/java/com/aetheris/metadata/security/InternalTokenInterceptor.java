@@ -12,7 +12,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
 /** Protects metadata's service-to-service contract endpoints with the shared token. */
-@Component
 public class InternalTokenInterceptor implements HandlerInterceptor {
     private static final String HEADER = "X-Internal-Token";
     private final byte[] expected;

@@ -1,6 +1,6 @@
-# 默认使用国内镜像与 npm 镜像；可通过 build args 覆盖，适配不同部署网络。
-ARG NODE_IMAGE=docker.1panel.live/library/node:22-alpine
-ARG NGINX_IMAGE=docker.1panel.live/library/nginx:1.27-alpine
+# 默认基础镜像锁定官方 index digest；build args 覆盖不在默认锁保证内，npm 镜像配置保留。
+ARG NODE_IMAGE=docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+ARG NGINX_IMAGE=docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
 
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app

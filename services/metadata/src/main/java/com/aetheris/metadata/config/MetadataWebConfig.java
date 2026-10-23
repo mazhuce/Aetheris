@@ -1,7 +1,6 @@
 package com.aetheris.metadata.config;
 
 import com.aetheris.metadata.security.IdentityInterceptor;
-import com.aetheris.metadata.security.InternalTokenInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -14,17 +13,13 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class MetadataWebConfig implements WebMvcConfigurer {
 
     private final IdentityInterceptor identityInterceptor;
-    private final InternalTokenInterceptor internalTokenInterceptor;
 
-    public MetadataWebConfig(IdentityInterceptor identityInterceptor,
-                             InternalTokenInterceptor internalTokenInterceptor) {
+    public MetadataWebConfig(IdentityInterceptor identityInterceptor) {
         this.identityInterceptor = identityInterceptor;
-        this.internalTokenInterceptor = internalTokenInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(identityInterceptor).addPathPatterns("/api/metadata/**");
-        registry.addInterceptor(internalTokenInterceptor).addPathPatterns("/internal/**");
     }
 }

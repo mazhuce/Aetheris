@@ -20,13 +20,13 @@ public final class RbacConstants {
     public static final String ROLE_SYS_ADMIN = "sys_admin";
     public static final String ROLE_SYS_VIEWER = "sys_viewer";
 
-    /** 读动作：命中这些动作时才应用"显式授权收窄"语义。 */
+    /** Read actions require explicit resource grants, just like write actions. */
     public static final Set<String> READ_ACTIONS = Set.of("view", "query", "export");
 
     /** 写类动作：网关粗粒度入口保护与默认拒绝判断使用。 */
     public static final Set<String> WRITE_ACTIONS = Set.of(
             "create", "update", "delete", "submit_review", "approve",
-            "publish", "deprecate", "grant", "execute");
+            "publish", "deprecate", "grant", "execute", "write");
 
     public static final String PERMISSION_SERVICE_ADMIN = "service.admin.manage";
 
@@ -52,10 +52,10 @@ public final class RbacConstants {
     public static final Map<String, List<String>> SERVICE_RESOURCES = Map.of(
             "metadata", List.of("domain", "table", "field", "model", "dimension", "metric", "datasource"),
             "serving", List.of("dataset", "dashboard", "data_service"),
-            "workflow", List.of("domain", "model", "dimension", "metric"),
-            "quality", List.of(),
-            "ingestion", List.of(),
-            "governance", List.of(),
+            "workflow", List.of("workflow_task"),
+            "quality", List.of("quality_rule"),
+            "ingestion", List.of("ingestion_task"),
+            "governance", List.of("governance_policy", "data_standard"),
             "system", List.of()
     );
 

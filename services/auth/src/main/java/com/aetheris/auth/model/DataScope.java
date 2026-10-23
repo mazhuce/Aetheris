@@ -30,6 +30,7 @@ public class DataScope {
     public List<String> getValues() { return values; }
     public void setValues(List<String> values) { this.values = values; }
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     public boolean isEmpty() {
         return kind == null || values == null || values.isEmpty();
     }

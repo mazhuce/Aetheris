@@ -29,6 +29,8 @@ import {
   type DashboardWidgetType
 } from '@/api/analytics'
 import DashboardCanvas from './components/DashboardCanvas'
+import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 interface PaletteItem {
   type: DashboardWidgetType
@@ -64,6 +66,10 @@ function newWidget(type: DashboardWidgetType): DashboardWidget {
 export default function DashboardEditorPage() {
   const { id } = useParams()
   const dashboardId = Number(id)
+  const resources = useMemo(() => Number.isSafeInteger(dashboardId) && dashboardId > 0 ? [{ id: dashboardId }] : [], [dashboardId])
+  const permissions = useResourceActions('dashboard', resources)
+  const canUpdate = canManagePlatform() || permissions.can('update', dashboardId)
+  const canPublish = canManagePlatform() || permissions.can('publish', dashboardId)
   const navigate = useNavigate()
   const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null)
   const [datasets, setDatasets] = useState<AnalyticsDataset[]>([])
@@ -174,7 +180,7 @@ export default function DashboardEditorPage() {
   }
 
   const save = async () => {
-    if (!dashboard || !spec) return dashboard
+    if (!dashboard || !spec || !canUpdate) return dashboard
     setSaving(true)
     try {
       const saved = await updateAnalyticsDashboard(dashboard.id, {
@@ -194,14 +200,15 @@ export default function DashboardEditorPage() {
   }
 
   const openPreview = async () => {
-    await save()
+    if (dirty && canUpdate) await save()
     window.open(`/analytics/dashboards/${dashboardId}/preview`, '_blank', 'noopener')
   }
 
   const publish = async () => {
+    if (!canPublish) return
     setPublishing(true)
     try {
-      await save()
+      if (dirty && canUpdate) await save()
       const published = await publishAnalyticsDashboard(dashboardId)
       setDashboard(published)
       message.success(`看板已发布为 v${published.publishedVersion}`)
@@ -214,6 +221,9 @@ export default function DashboardEditorPage() {
     return <div className="dashboard-editor-loading"><Spin /><span>正在准备画布…</span></div>
   }
 
+  if (permissions.loading && !canManagePlatform()) return <Spin />
+  if (!canUpdate) return <Empty description="没有此看板的编辑权限，请从看板列表预览。" />
+
   return (
     <div className="dashboard-editor-page">
       <header className="dashboard-editor-toolbar">
@@ -225,7 +235,7 @@ export default function DashboardEditorPage() {
         <Space>
           <Button icon={<EyeOutlined />} onClick={() => void openPreview()}>新窗口预览</Button>
           <Button icon={<SaveOutlined />} loading={saving} onClick={() => void save()}>保存</Button>
-          <Button type="primary" icon={<RocketOutlined />} loading={publishing} onClick={() => void publish()}>发布</Button>
+          {canPublish && <Button type="primary" icon={<RocketOutlined />} loading={publishing} onClick={() => void publish()}>发布</Button>}
         </Space>
       </header>
 

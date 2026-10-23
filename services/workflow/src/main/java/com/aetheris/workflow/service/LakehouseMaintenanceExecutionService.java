@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -132,9 +131,7 @@ public class LakehouseMaintenanceExecutionService {
                 throw new IllegalArgumentException("维护过程与操作类型不匹配");
             }
         }
-        if (!LocalDate.parse(request.bizDate()).toString().equals(request.bizDate())) {
-            throw new IllegalArgumentException("bizDate 格式非法");
-        }
+        com.aetheris.workflow.config.BusinessCalendar.parseExact(request.bizDate());
         if (!ATTEMPT_ID.matcher(value(request.attemptId())).matches()) throw new IllegalArgumentException("attemptId 格式非法");
         if (request.timeoutSeconds() < 30 || request.timeoutSeconds() > 86400) {
             throw new IllegalArgumentException("timeoutSeconds 超出范围");

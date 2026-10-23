@@ -38,6 +38,18 @@ public class DataSource {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String writeUsername;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String writePassword;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @TableField(exist = false)
+    private Boolean disableWriteCredentials;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Boolean managed;
 
@@ -128,6 +140,18 @@ public class DataSource {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getWriteUsername() { return writeUsername; }
+    public void setWriteUsername(String value) { writeUsername = value; }
+    public String getWritePassword() { return writePassword; }
+    public void setWritePassword(String value) { writePassword = value; }
+    public Boolean getDisableWriteCredentials() { return disableWriteCredentials; }
+    public void setDisableWriteCredentials(Boolean value) { disableWriteCredentials = value; }
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    public boolean isWriteConfigured() {
+        return writeUsername != null && !writeUsername.isBlank() && writePassword != null && !writePassword.isBlank()
+                && !writeUsername.trim().equalsIgnoreCase(username == null ? "" : username.trim());
     }
 
     public Boolean getManaged() { return managed; }

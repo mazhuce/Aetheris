@@ -30,16 +30,25 @@ public class FlinkSqlExecutionClient {
     private final RestClient.Builder builder;
     private final Duration connectTimeout;
     private final long pollIntervalMs;
+    private final OutboundTargetPolicy targetPolicy;
     private final ConcurrentMap<String, ActiveOperation> activeOperations = new ConcurrentHashMap<>();
 
     @Autowired
     public FlinkSqlExecutionClient(
             RestClient.Builder builder,
             @Value("${aetheris.flink-sql-gateway.connect-timeout:PT5S}") Duration connectTimeout,
-            @Value("${aetheris.flink-sql-gateway.poll-interval-ms:1000}") long pollIntervalMs) {
+            @Value("${aetheris.flink-sql-gateway.poll-interval-ms:1000}") long pollIntervalMs,
+            OutboundTargetPolicy targetPolicy) {
         this.builder = builder;
         this.connectTimeout = connectTimeout;
         this.pollIntervalMs = Math.max(100, pollIntervalMs);
+        this.targetPolicy = targetPolicy;
+        var http = java.net.http.HttpClient.newBuilder().connectTimeout(connectTimeout)
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(http);
+        // SQL submission is asynchronous; each individual REST request remains bounded.
+        factory.setReadTimeout(Duration.ofSeconds(60));
+        builder.requestFactory(factory);
     }
 
     public ExecutionResult execute(String endpoint, String sql, int timeoutSeconds) {
@@ -278,10 +287,15 @@ public class FlinkSqlExecutionClient {
     }
 
     private RestClient client(String endpoint) {
-        // Keep the shared builder's request factory (and test interceptors) intact;
-        // the Gateway operation deadline is enforced by polling rather than a short
-        // global read timeout, because a statement may legitimately run for hours.
-        return builder.baseUrl(endpoint.replaceAll("/+$", "")).build();
+        return builder.clone().baseUrl(targetPolicy.httpOrigin(endpoint)).requestInterceptor((request, body, execution) -> {
+            targetPolicy.requireHost(request.getURI().getHost());
+            var response = execution.execute(request, body);
+            if (response.getStatusCode().is3xxRedirection()) {
+                response.close();
+                throw new IllegalArgumentException("计算引擎重定向被拒绝");
+            }
+            return response;
+        }).build();
     }
 
     private String submitStatement(RestClient client, String session, String statement) {

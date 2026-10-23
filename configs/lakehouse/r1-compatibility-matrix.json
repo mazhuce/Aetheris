@@ -42,7 +42,7 @@
     },
     {
       "name": "source-postgres",
-      "image": "postgres:16.9",
+      "image": "docker.io/library/postgres:16.9@sha256:ddfe3e8713e3ee5b8f286082cb12512488dfbf3f5a1ecb0b74a42e6055af0a5f",
       "profiles": [
         "r1",
         "sources"
@@ -50,7 +50,7 @@
     },
     {
       "name": "source-mysql",
-      "image": "mysql:8.0.40",
+      "image": "docker.io/library/mysql:8.0.40@sha256:d58ac93387f644e4e040c636b8f50494e78e5afc27ca0a87348b2f577da2b7ff",
       "profiles": [
         "r1",
         "sources"
@@ -58,7 +58,7 @@
     },
     {
       "name": "catalog",
-      "image": "tabulario/iceberg-rest:1.6.0",
+      "image": "docker.io/tabulario/iceberg-rest:1.6.0@sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472",
       "profiles": [
         "r1",
         "catalog"
@@ -66,7 +66,7 @@
     },
     {
       "name": "trino",
-      "image": "trinodb/trino:476",
+      "image": "docker.io/trinodb/trino:476@sha256:00125e40d063bc4816d165482f6044872b18b56026fb959d3b28ce1f96ffbbee",
       "profiles": [
         "r1",
         "trino"
@@ -74,7 +74,7 @@
     },
     {
       "name": "flink-jobmanager",
-      "image": "flink:1.20.1-java17",
+      "image": "docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e",
       "profiles": [
         "r1",
         "flink"
@@ -82,7 +82,7 @@
     },
     {
       "name": "flink-taskmanager",
-      "image": "flink:1.20.1-java17",
+      "image": "docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e",
       "profiles": [
         "r1",
         "flink"
@@ -90,7 +90,7 @@
     },
     {
       "name": "flink-sql-gateway",
-      "image": "flink:1.20.1-java17",
+      "image": "docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e",
       "profiles": [
         "r1",
         "flink"

@@ -69,6 +69,22 @@ public class ExecutionClaimCoordinator {
                 task, bizDate, triggerType, triggeredBy, leaseExpiresAt));
     }
 
+    /** Fixed SQL uses its sealed budget, never the configurable Spark/Flink grace. */
+    public ExecutionClaim claimFixedSql(
+            Task task, String bizDate, String triggerType, String triggeredBy, Integer timeoutSeconds) {
+        int timeout = timeoutSeconds == null ? 1800 : timeoutSeconds;
+        if (task == null || !"sql".equals(task.getTaskType()) || timeout < 1 || timeout > 86400) {
+            throw new IllegalArgumentException("固定SQL执行期限无效");
+        }
+        return transactions.execute(status -> {
+            OffsetDateTime deadline = jdbc.queryForObject(
+                    "SELECT clock_timestamp() + (?::bigint * INTERVAL '1 second')",
+                    OffsetDateTime.class, (long) timeout + 60);
+            if (deadline == null) throw new IllegalStateException("固定SQL租约不可用");
+            return claimInTransaction(task, bizDate, triggerType, triggeredBy, deadline);
+        });
+    }
+
     private ExecutionClaim claimInTransaction(
             Task task, String bizDate, String triggerType, String triggeredBy,
             OffsetDateTime leaseExpiresAt) {
@@ -518,10 +534,26 @@ public class ExecutionClaimCoordinator {
         });
     }
 
+    /** SQL receipt completion may not silently resolve an unknown/expired source slot. */
+    public TaskInstance completeFixedSql(ExecutionClaim claim,SqlExecutionClient.ExecutionResult result){
+        var data=new java.util.LinkedHashMap<String,Object>();data.put("affectedRows",result.affectedRows());data.put("durationMs",result.durationMs());
+        return complete(claim,"succeeded","success",result.affectedRows(),null,null,result.durationMs(),result.durationMs(),json(data),null,true);
+    }
+
+    /** A late failure is not authority to release an unknown/expired SQL slot. */
+    public TaskInstance failFixedSql(ExecutionClaim claim,String errorMessage){
+        if(errorMessage==null||errorMessage.isBlank())throw new IllegalArgumentException("固定SQL失败原因不能为空");
+        return complete(claim,"failed","failed",null,truncate(errorMessage),"EXECUTION_FAILED",0,0,"{}",null,true);
+    }
+
     private TaskInstance complete(
             ExecutionClaim claim, String attemptStatus, String instanceStatus, Long affectedRows,
             String errorMessage, String errorCode, long attemptDurationMs, long totalDurationMs,
             String resultJson, String cancellationConfirmedAt) {
+        return complete(claim,attemptStatus,instanceStatus,affectedRows,errorMessage,errorCode,attemptDurationMs,totalDurationMs,resultJson,cancellationConfirmedAt,false);
+    }
+    private TaskInstance complete(ExecutionClaim claim,String attemptStatus,String instanceStatus,Long affectedRows,
+            String errorMessage,String errorCode,long attemptDurationMs,long totalDurationMs,String resultJson,String cancellationConfirmedAt,boolean fixedSql) {
         TaskInstance result = transactions.execute(status -> {
             int attemptUpdated = jdbc.update("""
                     UPDATE workflow.execution_attempt
@@ -529,18 +561,18 @@ public class ExecutionClaimCoordinator {
                         error_message=?, heartbeat_at=now(), result_metadata_json=?::jsonb,
                         cancellation_confirmed_at=CASE WHEN ?::timestamptz IS NULL THEN cancellation_confirmed_at
                             ELSE ?::timestamptz END
-                    WHERE id=? AND fencing_token=? AND status IN (""" + ACTIVE_STATES + ",'unknown')",
+                    WHERE id=? AND fencing_token=? AND status IN (""" + ACTIVE_STATES + ",'unknown') AND (?=false OR (manifest_sealed_at IS NOT NULL AND metadata_receipt_id IS NOT NULL AND status='running' AND worker_id=? AND lease_expires_at>clock_timestamp()))",
                     attemptStatus, attemptDurationMs, affectedRows, errorCode, truncate(errorMessage),
                     resultJson, cancellationConfirmedAt, cancellationConfirmedAt,
-                    claim.attemptId(), claim.fencingToken());
+                    claim.attemptId(), claim.fencingToken(),fixedSql,workerId);
             if (attemptUpdated != 1) throw new StaleExecutionException("旧执行者不能结束已失效的 attempt");
             int instanceUpdated = jdbc.update("""
                     UPDATE workflow.task_instance
                     SET status=?, finished_at=now(), duration_ms=?, affected_rows=?, error_message=?,
                         heartbeat_at=now(), lease_expires_at=NULL, updated_at=now()
-                    WHERE id=? AND active_attempt_id=? AND fencing_token=?
+                    WHERE id=? AND active_attempt_id=? AND fencing_token=? AND (?=false OR (status='running' AND lease_expires_at>clock_timestamp()))
                     """, instanceStatus, totalDurationMs, affectedRows, truncate(errorMessage),
-                    claim.instance().getId(), claim.attemptId(), claim.fencingToken());
+                    claim.instance().getId(), claim.attemptId(), claim.fencingToken(),fixedSql);
             if (instanceUpdated != 1) throw new StaleExecutionException("旧执行者不能覆盖新实例状态");
             event(claim.attemptId(), "completed", null, attemptStatus,
                     errorMessage == null ? "执行结束" : truncate(errorMessage), Map.of());

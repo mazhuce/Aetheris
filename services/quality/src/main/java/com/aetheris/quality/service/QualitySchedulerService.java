@@ -39,8 +39,33 @@ public class QualitySchedulerService {
 
     private final Scheduler scheduler;
 
+    private final com.aetheris.quality.config.BusinessCalendar calendar;
+    private final SchedulerSyncOutbox outbox;
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
     public QualitySchedulerService(Scheduler scheduler) {
-        this.scheduler = scheduler;
+        this.scheduler=scheduler; this.calendar=new com.aetheris.quality.config.BusinessCalendar(); this.outbox=null;
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public QualitySchedulerService(Scheduler scheduler, org.springframework.jdbc.core.JdbcTemplate jdbc,
+                     org.springframework.transaction.PlatformTransactionManager transactions,
+                     com.aetheris.quality.config.BusinessCalendar calendar) {
+        this.scheduler=scheduler; this.calendar=calendar;
+        this.outbox=new SchedulerSyncOutbox(jdbc,new org.springframework.transaction.support.TransactionTemplate(transactions),this::applyDesired);
+        this.jdbc=jdbc;
+    }
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void restoreDesiredSchedules() {
+        if(jdbc!=null) jdbc.update("UPDATE quality.scheduler_sync_outbox SET status='pending',next_attempt_at=now() WHERE NOT deleted OR status='pending'");
+    }
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelayString="${aetheris.scheduler-recovery.interval-ms:5000}",initialDelayString="${aetheris.scheduler-recovery.initial-delay-ms:1000}")
+    public void retryPending() { if(outbox!=null) outbox.retryPending(); }
+    private void applyDesired(SchedulerSyncOutbox.DesiredSchedule desired) {
+        if(desired.deleted() || !desired.enabled() || desired.cron()==null || desired.cron().isBlank()) {
+            removeJob(desired.id()); return;
+        }
+        QualityRule item=new QualityRule(); item.setId(desired.id()); item.setName(desired.name());
+        item.setStatus("enabled"); item.setCronExpression(desired.cron()); item.setScheduleVersion(desired.generation());
+        try { register(item); } catch(SchedulerException failure) { throw new IllegalStateException("Quartz同步失败",failure); }
     }
 
     /**
@@ -48,6 +73,7 @@ public class QualitySchedulerService {
      * 因此本方法同时承担「取消调度」的职责。
      */
     public void sync(QualityRule rule) {
+        if(outbox!=null) { outbox.reconcile(rule.getId()); return; }
         try {
             boolean schedulable = "enabled".equals(rule.getStatus())
                     && StringUtils.hasText(rule.getCronExpression());
@@ -63,12 +89,21 @@ public class QualitySchedulerService {
     }
 
     private void register(QualityRule rule) throws SchedulerException {
+        JobKey existingKey=jobKey(rule.getId());
+        JobDetail existing=scheduler.getJobDetail(existingKey);
+        Trigger existingTrigger=scheduler.getTrigger(triggerKey(rule.getId()));
+        if(existing!=null && existing.getJobDataMap().containsKey("scheduleVersion")
+                && existing.getJobDataMap().getLong("scheduleVersion")==rule.getScheduleVersion()
+                && existingTrigger instanceof org.quartz.CronTrigger cron
+                && rule.getCronExpression().equals(cron.getCronExpression())
+                && calendar.zone().equals(cron.getTimeZone().toZoneId())) return;
         JobKey jobKey = jobKey(rule.getId());
         TriggerKey triggerKey = triggerKey(rule.getId());
 
         JobDetail jobDetail = JobBuilder.newJob(QualityCheckJob.class)
                 .withIdentity(jobKey)
                 .usingJobData(QualityCheckJob.RULE_ID, rule.getId())
+                .usingJobData("scheduleVersion", rule.getScheduleVersion())
                 .withDescription(rule.getName())
                 // 持久化：没有触发器关联时也保留 JobDetail，便于停用后重新启用。
                 .storeDurably()
@@ -80,7 +115,7 @@ public class QualitySchedulerService {
                 .withSchedule(CronScheduleBuilder
                         .cronSchedule(rule.getCronExpression())
                         // 时区固定为 Asia/Shanghai，与 workflow 的调度口径一致。
-                        .inTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+                        .inTimeZone(TimeZone.getTimeZone(calendar.zone()))
                         .withMisfireHandlingInstructionDoNothing())
                 .build();
 
@@ -93,6 +128,10 @@ public class QualitySchedulerService {
 
     /** 移除调度；规则不在调度中时静默返回，便于重复调用。 */
     public void unschedule(Long ruleId) {
+        if(outbox!=null) { outbox.reconcile(ruleId); return; }
+        removeJob(ruleId);
+    }
+    private void removeJob(Long ruleId) {
         try {
             JobKey jobKey = jobKey(ruleId);
             if (scheduler.checkExists(jobKey)) {

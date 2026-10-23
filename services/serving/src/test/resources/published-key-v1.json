@@ -1,0 +1,6 @@
+{
+  "canonicalParameters": "{\"dimensions\":[\"region\"],\"timeGrain\":\"month\",\"startDate\":\"2024-02-01\",\"endDate\":\"2024-02-29\",\"columns\":[\"id\",\"amount\"],\"limit\":10}",
+  "parametersSha256": "bf1c41b730683546ca92a6e099cf06703f82d5b2cab4d32cc05238d75f80cd0e",
+  "canonicalAdmission": "{\"schemaVersion\":1,\"admissionId\":\"7feb99a1-1801-46b1-9bba-d8254406de99\",\"keyId\":3,\"owner\":{\"uid\":7,\"username\":\"用户甲\",\"accessVersion\":2},\"asset\":{\"id\":11,\"assetCode\":\"orders_api\",\"version\":\"v1\",\"targetType\":\"table\",\"targetRef\":\"13\"},\"parameters\":{\"dimensions\":[\"region\"],\"timeGrain\":\"month\",\"startDate\":\"2024-02-01\",\"endDate\":\"2024-02-29\",\"columns\":[\"id\",\"amount\"],\"limit\":10},\"parametersSha256\":\"bf1c41b730683546ca92a6e099cf06703f82d5b2cab4d32cc05238d75f80cd0e\",\"requestId\":\"key-request-123\",\"createdAtEpochMillis\":1792281600000,\"expiresAtEpochMillis\":1792281630000}",
+  "admissionSha256": "521de32b1d6e08f49d9493f31914945e8ed88bf11ba0831c3648d19e1e5459c6"
+}

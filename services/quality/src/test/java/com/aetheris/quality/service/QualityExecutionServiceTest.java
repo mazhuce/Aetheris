@@ -1,99 +1,24 @@
 package com.aetheris.quality.service;
-
-import com.aetheris.quality.entity.QualityCheckResult;
-import com.aetheris.quality.entity.QualityRule;
-import com.aetheris.quality.entity.QualityQuarantineRecord;
+import com.aetheris.quality.entity.*;
+import com.aetheris.quality.fixedexecution.*;
+import com.aetheris.quality.security.V2QualityFixture;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.any;
-
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 class QualityExecutionServiceTest {
-
-    private final QualityRuleService ruleService = mock(QualityRuleService.class);
-    private final QualityCheckResultService resultService = mock(QualityCheckResultService.class);
-    private final QualityQueryClient queryClient = mock(QualityQueryClient.class);
-    private final NotificationClient notificationClient = mock(NotificationClient.class);
-    private final QualityExecutionService service = new QualityExecutionService(
-            ruleService, resultService, queryClient, notificationClient);
-
-    @Test
-    void buildsAndExecutesPredicateRule() {
-        QualityRule rule = rule("not_null", "order_id IS NOT NULL");
-        when(ruleService.getById(1L)).thenReturn(rule);
-        when(queryClient.violationCount(7L,
-                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (order_id IS NOT NULL)"))
-                .thenReturn(0L);
-
-        QualityCheckResult result = service.execute(1L, "admin");
-
-        assertEquals("passed", result.getStatus());
-        assertEquals(0L, result.getViolationCount());
-        assertEquals("passed", rule.getLastCheckStatus());
-    }
-
-    @Test
-    void failsWhenViolationsExceedThreshold() {
-        QualityRule rule = rule("range", "amount >= 0");
-        rule.setThreshold(2);
-        when(ruleService.getById(1L)).thenReturn(rule);
-        when(queryClient.violationCount(7L,
-                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"))
-                .thenReturn(3L);
-
-        assertEquals("failed", service.execute(1L, "admin").getStatus());
-    }
-
-    @Test
-    void recordsFailedCheckInQuarantine() {
-        QualityQuarantineService quarantineService = mock(QualityQuarantineService.class);
-        QualityExecutionService quarantiningService = new QualityExecutionService(
-                ruleService, resultService, queryClient, notificationClient, quarantineService);
-        QualityRule rule = rule("range", "amount >= 0");
-        rule.setThreshold(2);
-        when(ruleService.getById(1L)).thenReturn(rule);
-        when(queryClient.violationCount(7L,
-                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"))
-                .thenReturn(3L);
-
-        quarantiningService.execute(1L, "admin");
-
-        org.mockito.ArgumentCaptor<QualityQuarantineRecord> captor =
-                org.mockito.ArgumentCaptor.forClass(QualityQuarantineRecord.class);
-        verify(quarantineService).save(captor.capture());
-        assertEquals("open", captor.getValue().getStatus());
-        assertEquals(3L, captor.getValue().getViolationCount());
-    }
-
-    @Test
-    void failsClosedWhenQuarantineCannotBePersisted() {
-        QualityQuarantineService quarantineService = mock(QualityQuarantineService.class);
-        when(quarantineService.save(any(QualityQuarantineRecord.class)))
-                .thenThrow(new RuntimeException("database unavailable"));
-        QualityExecutionService quarantiningService = new QualityExecutionService(
-                ruleService, resultService, queryClient, notificationClient, quarantineService);
-        QualityRule rule = rule("range", "amount >= 0");
-        rule.setThreshold(2);
-        when(ruleService.getById(1L)).thenReturn(rule);
-        when(queryClient.violationCount(7L,
-                "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"))
-                .thenReturn(3L);
-
-        assertThrows(QualityQueryClient.QualityExecutionException.class,
-                () -> quarantiningService.execute(1L, "admin"));
-
-        ArgumentCaptor<QualityCheckResult> result = ArgumentCaptor.forClass(QualityCheckResult.class);
-        verify(resultService, org.mockito.Mockito.times(2)).updateById(result.capture());
-        QualityCheckResult finalResult = result.getAllValues().getLast();
-        assertEquals("error", finalResult.getStatus());
-        assertEquals("QUARANTINE_WRITE_FAILED", finalResult.getFailureCode());
-    }
-
+ final QualityExecutionStore store=mock(QualityExecutionStore.class);
+ final QualityQueryClient client=mock(QualityQueryClient.class);
+ final ExecutionRecoveryService recovery=mock(ExecutionRecoveryService.class);
+ final NotificationClient notifications=mock(NotificationClient.class);
+ final QualityExecutionService service=new QualityExecutionService(new QualityFixedExecutionFacade(store,client,recovery,notifications));
+ QualityExecutionStore.Claim claim(boolean reused){var result=new QualityCheckResult();result.setId(11L);result.setRuleId(8L);result.setStatus("running");return new QualityExecutionStore.Claim(result,2,"a".repeat(64),2,"sealed.orders",reused);}
+ @Test void successfulFixedResultUsesSealedThresholdAndFencedCompletion(){var c=claim(false);when(store.claimScheduled(8,9,"fire:1")).thenReturn(c);when(client.execute(eq(c.submission()),any())).thenReturn(new QualityQueryClient.QueryResult(2,45));when(recovery.finish(any(),isNull())).thenReturn(true);var result=service.executeScheduled(8L,9,"fire:1");assertEquals("passed",result.getStatus());assertEquals(2L,result.getViolationCount());assertEquals(45L,result.getDurationMs());verify(recovery).finish(result,null);}
+ @Test void failedThresholdCreatesQuarantineInSameFencedCompletion(){var c=claim(false);when(store.claimScheduled(8,9,"fire:2")).thenReturn(c);when(client.execute(eq(c.submission()),any())).thenReturn(new QualityQueryClient.QueryResult(3,45));when(recovery.finish(any(),any())).thenReturn(true);assertEquals("failed",service.executeScheduled(8L,9,"fire:2").getStatus());var q=org.mockito.ArgumentCaptor.forClass(QualityQuarantineRecord.class);verify(recovery).finish(eq(c.result()),q.capture());assertEquals("sealed.orders",q.getValue().getTargetTable());assertEquals(11L,q.getValue().getResultId());assertEquals(3L,q.getValue().getViolationCount());}
+ @Test void completedRequestKeyReusesResultWithoutQuery(){var c=claim(true);when(store.claimScheduled(8,9,"done")).thenReturn(c);assertSame(c.result(),service.executeScheduled(8L,9,"done"));verifyNoInteractions(client,recovery);}
+ @Test void obsoleteGenerationCannotReachHttp(){when(store.claimScheduled(8,8,"old")).thenThrow(QualityExecutionStore.conflict());assertThrows(IllegalStateException.class,()->service.executeScheduled(8L,8,"old"));verifyNoInteractions(client,recovery);}
+ @Test void localCompletionFailureRetainsUnknownInsteadOfReleasingSlot(){var c=claim(false);when(store.claimScheduled(8,9,"fail")).thenReturn(c);when(client.execute(eq(c.submission()),any())).thenReturn(new QualityQueryClient.QueryResult(3,45));when(recovery.finish(any(),any())).thenThrow(new IllegalStateException("database"));var e=assertThrows(QualityQueryClient.QualityExecutionException.class,()->service.executeScheduled(8L,9,"fail"));assertTrue(e.outcomeUnknown());assertEquals("unknown",c.result().getStatus());assertNull(c.result().getViolationCount());verify(recovery,times(2)).finish(any(),any());}
+ @Test void signedFailureAndUnknownRemainDistinct(){for(boolean unknown:new boolean[]{false,true}){var c=claim(false);when(store.claimScheduled(8,9,"error")).thenReturn(c);when(client.execute(eq(c.submission()),any())).thenThrow(new QualityQueryClient.QualityExecutionException("safe",unknown));when(recovery.finish(any(),isNull())).thenReturn(true);assertEquals(unknown,assertThrows(QualityQueryClient.QualityExecutionException.class,()->service.executeScheduled(8L,9,"error")).outcomeUnknown());assertEquals(unknown?"unknown":"error",c.result().getStatus());}}
+ @Test void notificationFailureCannotRepeatOrReclassifyExecution(){var c=claim(false);when(store.claimScheduled(8,9,"notice")).thenReturn(c);when(client.execute(eq(c.submission()),any())).thenReturn(new QualityQueryClient.QueryResult(3,45));when(recovery.finish(any(),any())).thenReturn(true);doThrow(new IllegalStateException()).when(notifications).notifyAdmin(any(),any(),any(),any());assertEquals("failed",service.executeScheduled(8L,9,"notice").getStatus());verify(client).execute(eq(c.submission()),any());}
     @Test
     void buildsDuplicateRuleUsingExcessRows() {
         QualityRule rule = rule("duplicate", "order_id, line_no");
@@ -103,23 +28,6 @@ class QualityExecutionServiceTest {
                         + "(SELECT order_id, line_no, COUNT(*) AS duplicate_count FROM ods.orders "
                         + "GROUP BY order_id, line_no HAVING COUNT(*) > 1) quality_duplicates",
                 service.buildSql(rule));
-    }
-
-    @Test
-    void recordsExecutionErrors() {
-        QualityRule rule = rule("not_null", "order_id IS NOT NULL");
-        when(ruleService.getById(1L)).thenReturn(rule);
-        when(queryClient.violationCount(7L, service.buildSql(rule)))
-                .thenThrow(new QualityQueryClient.QualityExecutionException("数据源不可用"));
-
-        assertThrows(QualityQueryClient.QualityExecutionException.class,
-                () -> service.execute(1L, "admin"));
-
-        ArgumentCaptor<QualityCheckResult> result = ArgumentCaptor.forClass(QualityCheckResult.class);
-        verify(resultService).updateById(result.capture());
-        assertEquals("error", result.getValue().getStatus());
-        assertEquals("QUERY_FAILED", result.getValue().getFailureCode());
-        assertEquals("error", rule.getLastCheckStatus());
     }
 
     @Test
@@ -143,6 +51,16 @@ class QualityExecutionServiceTest {
     void customSqlRejectsFunctionsOutsideWhitelist() {
         assertThrows(IllegalArgumentException.class,
                 () -> service.buildSql(rule("sql", "SELECT dangerous_fn(order_id) FROM ods.orders")));
+    }
+
+    @Test
+    void multilineRulesCannotHideWriteOrFileOperations() {
+        for (String sql : java.util.List.of(
+                "WITH x AS (\nDELETE FROM ods.orders RETURNING *) SELECT COUNT(*) FROM x",
+                "SELECT COUNT(*)\nINTO OUTFILE '/tmp/no-file' FROM ods.orders",
+                "SELECT COUNT(*) FROM ods.orders\nFOR UPDATE")) {
+            assertThrows(IllegalArgumentException.class, () -> service.buildSql(rule("sql", sql)));
+        }
     }
 
     private QualityRule rule(String type, String expression) {

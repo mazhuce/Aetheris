@@ -28,9 +28,8 @@ spring:
           model: ${DEEPSEEK_MODEL:deepseek-chat}
           temperature: 0.7
     retry:
-      # provider 偶发 5xx 时重试；限流(429)由下面的 exclude-on-http-codes 交给调用方处理，
-      # 避免在服务端反复重试放大配额消耗。
-      max-attempts: 2
+      # 每次模型网络尝试均属于预算；生产 AgentConfig 也强制 NeverRetryPolicy。
+      max-attempts: 1
       backoff:
         initial-interval: 1s
         multiplier: 2
@@ -45,6 +44,19 @@ aetheris:
     # validateReadOnlySql 守卫都在那边，复制过来等于复制一份安全边界。
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
   ai:
+    budget:
+      model-calls: 6
+      tool-calls: 10
+      input-tokens: 128000
+      output-tokens: 4096
+      tool-result-chars: 12000
+      timeout-ms: 60000
+      workers: 4
+      queue-capacity: 8
+    estimated-price:
+      # 由运维配置的每百万本地预算单位估价；零表示不提供费用估计，不是供应商账单。
+      input-per-million: 0
+      output-per-million: 0
     rate-limit:
       # 按用户计量的固定窗口；与 Spring AI 的重试无关，这是平台侧配额。
       max-requests: 20

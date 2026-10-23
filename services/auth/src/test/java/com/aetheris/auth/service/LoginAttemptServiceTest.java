@@ -14,6 +14,43 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class LoginAttemptServiceTest {
 
+    @Test
+    void saturatedStoreFailsClosedForNewNamesAndExpires() {
+        java.util.concurrent.atomic.AtomicLong now = new java.util.concurrent.atomic.AtomicLong(1_000_000);
+        java.time.Clock clock = new java.time.Clock() {
+            public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+            public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+            public java.time.Instant instant() { return java.time.Instant.ofEpochMilli(now.get()); }
+        };
+        LoginAttemptService bounded = new LoginAttemptService(clock, 2);
+        bounded.recordFailure("first"); bounded.recordFailure("second");
+        assertFalse(bounded.allow("new-name"));
+        now.addAndGet(15 * 60_000L);
+        assertTrue(bounded.allow("new-name"));
+    }
+
+    @Test
+    void sprayingDifferentNamesFromOneSourceIsThrottled() {
+        for (int i = 0; i < 30; i++) service.recordFailure("user" + i, "192.0.2.1");
+        assertFalse(service.allow("new-user", "192.0.2.1"));
+        assertTrue(service.allow("new-user", "192.0.2.2"));
+    }
+
+    @Test
+    void lockedFailuresCannotExtendWindow() {
+        java.util.concurrent.atomic.AtomicLong now = new java.util.concurrent.atomic.AtomicLong(1_000_000);
+        java.time.Clock clock = new java.time.Clock() {
+            public java.time.ZoneId getZone() { return java.time.ZoneOffset.UTC; }
+            public java.time.Clock withZone(java.time.ZoneId zone) { return this; }
+            public java.time.Instant instant() { return java.time.Instant.ofEpochMilli(now.get()); }
+        };
+        LoginAttemptService bounded = new LoginAttemptService(clock, 10);
+        for (int i = 0; i < 5; i++) bounded.recordFailure("alice");
+        now.addAndGet(14 * 60_000L); bounded.recordFailure("alice");
+        now.addAndGet(60_000L);
+        assertTrue(bounded.allow("alice"));
+    }
+
     private final LoginAttemptService service = new LoginAttemptService();
 
     @Test

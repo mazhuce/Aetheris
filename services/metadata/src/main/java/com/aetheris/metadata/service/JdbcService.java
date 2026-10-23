@@ -18,6 +18,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -31,13 +34,24 @@ public class JdbcService {
 
     private static final Logger log = LoggerFactory.getLogger(JdbcService.class);
     private DataSourceSecretService secretService;
+    private OutboundTargetPolicy targetPolicy = new OutboundTargetPolicy();
+    private boolean allowEmbedded = true; // Explicit no-arg construction is used by isolated JDBC tests.
+    private Clock clock = Clock.systemUTC();
 
     public JdbcService() {
     }
 
+    public JdbcService(Clock clock) {
+        this.clock = java.util.Objects.requireNonNull(clock);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
-    public JdbcService(DataSourceSecretService secretService) {
+    public JdbcService(DataSourceSecretService secretService,
+                       @org.springframework.beans.factory.annotation.Value("${aetheris.datasource.allow-embedded:false}") boolean allowEmbedded,
+                       OutboundTargetPolicy targetPolicy) {
         this.secretService = secretService;
+        this.allowEmbedded = allowEmbedded;
+        this.targetPolicy = targetPolicy;
     }
     private static final int MAX_QUERY_ROWS = 100;
     private static final int MAX_PREVIEW_ROWS = 50;
@@ -103,10 +117,20 @@ public class JdbcService {
     public Map<String, Object> query(DataSource dataSource, String sql) {
         String cleaned = validateReadOnlySql(sql);
         try (Connection connection = connect(dataSource)) {
+            prepareReadOnly(connection, dataSource);
             return executeQuery(connection, cleaned, MAX_QUERY_ROWS);
         } catch (SQLException error) {
-            log.warn("SQL query failed: type={}, host={}", dataSource.getType(), dataSource.getHost(), error);
+            logSqlFailure("query", dataSource.getId(), error);
             throw new IllegalStateException(friendlyMessage(error));
+        }
+    }
+
+    private void prepareReadOnly(Connection connection, DataSource dataSource) throws SQLException {
+        if (isPostgresLike(dataSource) || isMysqlLike(dataSource)) {
+            // PostgreSQL enforces read-only transactions only with auto-commit disabled.
+            // Closing the scoped connection rolls back the read transaction.
+            connection.setReadOnly(true);
+            connection.setAutoCommit(false);
         }
     }
 
@@ -122,6 +146,88 @@ public class JdbcService {
      * @param timeoutSeconds 语句超时；传 null 用默认的写入超时
      * @return 受影响行数（driver 不支持时为 -1）与耗时
      */
+    /** Fixed SQL only: a connection or driver timeout never renews the admitted absolute budget. */
+    public Map<String, Object> execute(DataSource dataSource, String sql, Integer timeoutSeconds, Instant absoluteDeadline) {
+        String sqlStatement = SqlWriteGuard.validate(sql);
+        int timeout = timeoutSeconds == null ? WRITE_TIMEOUT_SECONDS : timeoutSeconds;
+        if (timeout < 1 || timeout > 86400 || absoluteDeadline == null) {
+            throw new IllegalArgumentException("固定 SQL 执行期限无效");
+        }
+        Instant now = clock.instant();
+        var budget = new WriteBudget(absoluteDeadline.isBefore(now.plusSeconds(timeout))
+                ? absoluteDeadline : now.plusSeconds(timeout));
+        budget.seconds();
+        requireWriteCredentials(dataSource);
+        long startedAt = System.nanoTime();
+        try (Connection connection = connectWrite(dataSource)) {
+            budget.seconds();
+            if (isHiveLike(dataSource)) {
+                for (String setting : HIVE_WRITE_SESSION_SETTINGS) {
+                    budget.seconds();
+                    try (Statement session = connection.createStatement()) {
+                        budget.configure(session);
+                        try { session.execute(setting); }
+                        catch (SQLException unsupportedSetting) {
+                            log.debug("Fixed Hive session setting was not accepted");
+                        }
+                        budget.seconds();
+                    }
+                }
+            }
+            budget.seconds();
+            try (Statement jdbcStatement = connection.createStatement()) {
+                budget.configure(jdbcStatement);
+                jdbcStatement.execute(sqlStatement);
+                budget.seconds();
+                int affected = jdbcStatement.getUpdateCount();
+                budget.seconds();
+                var result = new LinkedHashMap<String, Object>();
+                result.put("success", true);
+                result.put("affectedRows", affected);
+                result.put("durationMs", (System.nanoTime() - startedAt) / 1_000_000);
+                return result;
+            }
+        } catch (SQLException error) {
+            // No driver message, SQL, URL or credential enters this diagnostic.
+            String state = error.getSQLState();
+            log.warn("Fixed SQL write failed: errorType={}, sqlState={}", error.getClass().getSimpleName(),
+                    state != null && state.matches("[A-Z0-9]{5}") ? state : "unknown");
+            throw new IllegalStateException("固定 SQL 执行失败，结果需要对账");
+        }
+    }
+
+    private final class WriteBudget {
+        private final Instant deadline;
+        private final long startedNanos = System.nanoTime();
+        private final long durationNanos;
+        private WriteBudget(Instant deadline) {
+            this.deadline = deadline;
+            Duration remaining = Duration.between(clock.instant(), deadline);
+            if (remaining.getSeconds() < 1) throw new IllegalStateException("固定 SQL 执行预算不足");
+            this.durationNanos = remaining.compareTo(Duration.ofSeconds(86400)) > 0
+                    ? 86400_000_000_000L : remaining.toNanos();
+        }
+        private int seconds() {
+            long wallSeconds = Duration.between(clock.instant(), deadline).getSeconds();
+            long monotonicSeconds = (durationNanos - (System.nanoTime() - startedNanos)) / 1_000_000_000L;
+            long remaining = Math.min(wallSeconds, monotonicSeconds);
+            if (remaining < 1 || Thread.currentThread().isInterrupted()) {
+                throw new IllegalStateException("固定 SQL 执行预算不足");
+            }
+            return (int) remaining;
+        }
+        private void configure(Statement statement) throws SQLException {
+            int timeout = seconds();
+            // Unsupported queryTimeout is a refusal on this path, never an unbounded write.
+            statement.setQueryTimeout(timeout);
+            int remaining = seconds();
+            if (remaining < timeout) {
+                statement.setQueryTimeout(remaining);
+                if (seconds() < remaining) throw new IllegalStateException("固定 SQL 期限配置耗时超限");
+            }
+        }
+    }
+
     public Map<String, Object> execute(DataSource dataSource, String sql, Integer timeoutSeconds) {
         String statement = SqlWriteGuard.validate(sql);
         int timeout = timeoutSeconds == null || timeoutSeconds <= 0
@@ -129,7 +235,8 @@ public class JdbcService {
                 : timeoutSeconds;
         long startedAt = System.currentTimeMillis();
 
-        try (Connection connection = connect(dataSource)) {
+        requireWriteCredentials(dataSource);
+        try (Connection connection = connectWrite(dataSource)) {
             if (isHiveLike(dataSource)) {
                 applyHiveWriteSettings(connection);
             }
@@ -151,7 +258,7 @@ public class JdbcService {
                 return result;
             }
         } catch (SQLException error) {
-            log.warn("SQL execution failed: type={}, host={}", dataSource.getType(), dataSource.getHost(), error);
+            logSqlFailure("execute", dataSource.getId(), error);
             // 与其他路径一致：不回显驱动原文，避免泄露连接串或库内结构细节。
             throw new IllegalStateException(friendlyMessage(error));
         }
@@ -179,13 +286,12 @@ public class JdbcService {
         int batchSize = Math.clamp(requestedBatchSize == null ? 500 : requestedBatchSize, 1, 5000);
         String quotedTable = quoteQualifiedIdentifier(targetTable, target);
         long startedAt = System.currentTimeMillis();
+        requireWriteCredentials(target);
 
         try (Connection sourceConnection = connect(source);
-             Connection targetConnection = connect(target);
+             Connection targetConnection = connectWrite(target);
              Statement sourceStatement = sourceConnection.createStatement()) {
-            if (!isHiveLike(source)) {
-                sourceConnection.setReadOnly(true);
-            }
+            prepareReadOnly(sourceConnection, source);
             sourceStatement.setFetchSize(batchSize);
             try {
                 sourceStatement.setQueryTimeout(WRITE_TIMEOUT_SECONDS);
@@ -249,7 +355,7 @@ public class JdbcService {
         } catch (IllegalArgumentException error) {
             throw error;
         } catch (SQLException error) {
-            log.warn("JDBC ingestion failed: sourceType={}, targetType={}", source.getType(), target.getType(), error);
+            logSqlFailure("transfer", target.getId(), error);
             throw new IllegalStateException(friendlyMessage(error));
         }
     }
@@ -387,37 +493,66 @@ public class JdbcService {
     }
 
     Connection connect(DataSource dataSource) throws SQLException {
+        requireBusinessDataSource(dataSource);
+        return connectWithCredentials(dataSource, dataSource.getUsername(), dataSource.getPassword());
+    }
+
+    Connection connectWrite(DataSource dataSource) throws SQLException {
+        requireWriteCredentials(dataSource);
+        return connectWithCredentials(dataSource, dataSource.getWriteUsername(), dataSource.getWritePassword());
+    }
+
+    private static void requireWriteCredentials(DataSource source) {
+        if (source == null || !source.isWriteConfigured())
+            throw new IllegalArgumentException("写操作需要完整且独立于读取账户的写入凭据；不能沿用读取账户");
+    }
+
+    private Connection connectWithCredentials(DataSource dataSource, String account, String storedPassword) throws SQLException {
+        requireBusinessDataSource(dataSource);
         String type = normalizedType(dataSource);
         int port = dataSource.getPort() == null ? defaultPort(type) : dataSource.getPort();
-        DriverManager.setLoginTimeout(8);
-        String username = dataSource.getUsername() == null ? "" : dataSource.getUsername();
-        String storedPassword = dataSource.getPassword();
+        String username = account == null ? "" : account;
         String password = storedPassword == null ? ""
                 : (secretService == null ? storedPassword : secretService.decrypt(storedPassword));
-        return DriverManager.getConnection(buildUrl(dataSource, type, port), username, password);
+        String url = buildUrl(dataSource, type, port);
+        targetPolicy.jdbc(url);
+        return DriverManager.getConnection(url, username, password);
     }
 
     String buildUrl(DataSource dataSource, String type, int port) {
+        requireBusinessDataSource(dataSource);
+        if (!allowEmbedded && Set.of("h2", "derby", "sqlite").contains(type)) {
+            throw new IllegalArgumentException("当前部署未启用嵌入式数据源");
+        }
         if (StringUtils.hasText(dataSource.getJdbcUrl())) {
             String jdbcUrl = dataSource.getJdbcUrl().trim();
             validateJdbcUrl(type, jdbcUrl);
-            return appendConnectionParams(jdbcUrl, type, dataSource.getConnectionParams());
+            String completeUrl = appendConnectionParams(jdbcUrl, type, dataSource.getConnectionParams());
+            validateJdbcUrl(type, completeUrl);
+            return completeUrl;
         }
 
         String database = StringUtils.hasText(dataSource.getDatabaseName())
                 ? dataSource.getDatabaseName().trim()
                 : defaultDatabase(type);
+        if (!Set.of("h2", "derby", "sqlite").contains(type)) {
+            if (port < 1 || port > 65535 || !StringUtils.hasText(dataSource.getHost())
+                    || !dataSource.getHost().matches("[A-Za-z0-9_.:-]+")
+                    || !database.matches("[A-Za-z0-9_$.-]+(?:/[A-Za-z0-9_$.-]+)?")) {
+                throw new IllegalArgumentException("主机、端口或数据库名称格式不正确");
+            }
+        }
         String baseUrl = switch (type) {
             case "postgresql", "greenplum", "opengauss", "cockroachdb", "yugabytedb", "timescaledb" ->
                     "jdbc:postgresql://" + dataSource.getHost() + ":" + port + "/" + database;
             case "mysql", "mariadb", "tidb", "oceanbase", "doris", "starrocks" ->
                     "jdbc:mysql://" + dataSource.getHost() + ":" + port + "/" + database
-                            + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai";
+                            + "?sslMode=VERIFY_IDENTITY&serverTimezone=Asia/Shanghai";
             case "hive2", "spark" ->
                     "jdbc:hive2://" + dataSource.getHost() + ":" + port + "/" + database;
             case "sqlserver" ->
                     "jdbc:sqlserver://" + dataSource.getHost() + ":" + port
-                            + ";databaseName=" + database + ";encrypt=false";
+                            + ";databaseName=" + database + ";encrypt=true;trustServerCertificate=false";
             case "clickhouse" ->
                     // The lean runtime image intentionally does not bundle optional LZ4/Apache HTTP
                     // client modules. Disable wire compression so the official JDBC driver remains
@@ -432,7 +567,13 @@ public class JdbcService {
             case "derby" -> "jdbc:derby:" + database + ";create=true";
             default -> throw new IllegalArgumentException("暂不支持的数据源类型：" + dataSource.getType());
         };
-        return appendConnectionParams(baseUrl, type, dataSource.getConnectionParams());
+        String completeUrl = appendConnectionParams(baseUrl, type, dataSource.getConnectionParams());
+        validateJdbcUrl(type, completeUrl);
+        return completeUrl;
+    }
+
+    private void requireBusinessDataSource(DataSource dataSource) {
+        DataSourceAccessPolicy.requireActiveBusinessSource(dataSource);
     }
 
     private Map<String, Object> executeQuery(Connection connection, String sql, int maxRows) throws SQLException {
@@ -547,30 +688,7 @@ public class JdbcService {
         if (cleaned.isEmpty()) {
             throw new IllegalArgumentException("SQL 不能为空");
         }
-        String upper = cleaned.toUpperCase(Locale.ROOT);
-        if (cleaned.contains(";")) {
-            throw new IllegalArgumentException("仅支持单条查询语句");
-        }
-        if (!(upper.startsWith("SELECT") || upper.startsWith("SHOW")
-                || upper.startsWith("DESCRIBE") || upper.startsWith("DESC")
-                || upper.startsWith("EXPLAIN") || upper.startsWith("WITH"))) {
-            throw new IllegalArgumentException("仅支持 SELECT / SHOW / DESCRIBE / EXPLAIN 查询");
-        }
-        String[] forbidden = {
-                "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE",
-                "GRANT", "REVOKE", "CALL", "MERGE", "COPY", "VACUUM", "ATTACH", "DETACH",
-                // 只读但危险：可读服务器文件、探测本地端口或阻塞连接。
-                "PG_READ_FILE", "PG_READ_BINARY_FILE", "PG_LS_DIR", "PG_STAT_FILE",
-                "PG_SLEEP", "PG_TERMINATE_BACKEND", "PG_CANCEL_BACKEND",
-                "LO_IMPORT", "LO_EXPORT", "DBLINK", "LOAD_FILE", "BENCHMARK", "SLEEP",
-                "REFLECT", "JAVA_METHOD"
-        };
-        for (String word : forbidden) {
-            if (upper.matches(".*\\b" + word + "\\b.*")) {
-                throw new IllegalArgumentException("查询中包含不允许的关键字：" + word);
-            }
-        }
-        return cleaned;
+        return SqlSafetyPolicy.readOnly(cleaned);
     }
 
     private String appendConnectionParams(String url, String type, String parameters) {
@@ -581,7 +699,7 @@ public class JdbcService {
         if (cleaned.length() > 1000 || cleaned.contains("\n") || cleaned.contains("\r")) {
             throw new IllegalArgumentException("连接参数格式不正确");
         }
-        rejectDangerousParams(cleaned);
+        JdbcConnectionParameters.validate(cleaned);
         if (isHiveLike(type) || "sqlserver".equals(type) || "oracle".equals(type)) {
             return url + ";" + cleaned;
         }
@@ -620,6 +738,7 @@ public class JdbcService {
         }
         // 自定义 URL 自带的参数同样需要校验，否则可绕过 connectionParams 的限制。
         rejectDangerousParams(url);
+        JdbcConnectionParameters.validateUrl(type, url);
     }
 
     private String requireIdentifier(String value, String field) {
@@ -635,6 +754,12 @@ public class JdbcService {
                 && !name.startsWith("pg_")) {
             names.add(name);
         }
+    }
+
+    private static void logSqlFailure(String operation, Long datasourceId, SQLException error) {
+        String state = error.getSQLState();
+        log.warn("JDBC operation failed: operation={}, datasourceId={}, sqlState={}, vendorCode={}",
+                operation, datasourceId, state != null && state.matches("[A-Z0-9]{5}") ? state : "unknown", error.getErrorCode());
     }
 
     private String friendlyMessage(Exception error) {

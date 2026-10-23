@@ -17,14 +17,15 @@ export interface DataSource {
   id: number
   name: string
   type: string
-  host: string
+  host: string | null
   port?: number
-  databaseName?: string
+  databaseName?: string | null
   username?: string
-  password?: string
+  writeConfigured?: boolean
   managed?: boolean
-  jdbcUrl?: string
-  connectionParams?: string
+  jdbcUrl?: string | null
+  connectionParams?: string | null
+  connectionConfigurationRedacted?: boolean
   description?: string
   status?: string
   connectionHealth?: ConnectionHealth
@@ -40,6 +41,9 @@ export interface DataSourceInput {
   databaseName?: string
   username?: string
   password?: string
+  writeUsername?: string
+  writePassword?: string
+  disableWriteCredentials?: boolean
   jdbcUrl?: string
   connectionParams?: string
   description?: string
@@ -647,8 +651,82 @@ export interface LineageRelationInput {
   description?: string
 }
 
-export function listTables(): Promise<MetadataTable[]> {
-  return http.get<MetadataTable[]>('/api/metadata/tables').then((res) => res.data)
+export interface VisibleListPage<T> { items: T[]; nextCursor: string | null; hasMore: boolean }
+export interface VisibleListOptions { size?: number; cursor?: string; signal?: AbortSignal }
+export interface TableListFilters {
+  keyword?: string; layer?: string; businessDomainId?: number; domain?: string; unassigned?: boolean; source?: string
+}
+export interface TableCatalogGroup { domain: string | null; layer: string | null; count: number }
+export interface TableCatalogPage { groups: TableCatalogGroup[]; nextCursor: string | null; hasMore: boolean }
+/** Legacy full-array selectors are bounded and fail explicitly, never return a truncated success. */
+export interface ListCollectionOptions { maxRows?: number; maxPages?: number; signal?: AbortSignal }
+export const VISIBLE_LIST_DEFAULT_LIMITS = Object.freeze({ maxRows: 20000, maxPages: 200 })
+
+export class VisibleListCollectionError extends Error {
+  readonly code = 'COMPAT_LIST_LIMIT'
+  constructor() { super('列表超过兼容全量加载上限，请缩小范围或使用分页查询') }
+}
+
+export async function collectVisiblePages<T>(
+  load: (cursor: string | undefined, signal?: AbortSignal) => Promise<VisibleListPage<T>>,
+  options: ListCollectionOptions = {},
+): Promise<T[]> {
+  const maxRows = options.maxRows ?? VISIBLE_LIST_DEFAULT_LIMITS.maxRows
+  const maxPages = options.maxPages ?? VISIBLE_LIST_DEFAULT_LIMITS.maxPages
+  if (!Number.isSafeInteger(maxRows) || maxRows < 1 || !Number.isSafeInteger(maxPages) || maxPages < 1) throw new VisibleListCollectionError()
+  const result: T[] = []
+  const seenCursors = new Set<string>()
+  const seenIds = new Set<number>()
+  let cursor: string | undefined
+  for (let page = 0; page < maxPages; page++) {
+    if (options.signal?.aborted) throw new DOMException('请求已取消', 'AbortError')
+    const next = await load(cursor, options.signal)
+    if (!Array.isArray(next.items) || typeof next.hasMore !== 'boolean'
+      || (next.hasMore ? typeof next.nextCursor !== 'string' || !next.nextCursor : next.nextCursor !== null)) throw new Error('分页响应无效')
+    if (result.length + next.items.length > maxRows) throw new VisibleListCollectionError()
+    for (const item of next.items) {
+      if (typeof item === 'object' && item !== null && 'id' in item && typeof item.id === 'number') {
+        if (seenIds.has(item.id)) throw new Error('分页响应重复记录')
+        seenIds.add(item.id)
+      }
+      result.push(item)
+    }
+    if (!next.hasMore) return result
+    if (seenCursors.has(next.nextCursor!)) throw new Error('分页游标未推进')
+    seenCursors.add(next.nextCursor!)
+    cursor = next.nextCursor!
+  }
+  throw new VisibleListCollectionError()
+}
+
+export function listTablesPage(filters: TableListFilters = {}, options: VisibleListOptions = {}): Promise<VisibleListPage<MetadataTable>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<MetadataTable>>('/api/metadata/tables/page', { params: { ...filters, ...paging }, signal }).then((res) => res.data)
+}
+
+export function listTableCatalogPage(keyword?: string, options: VisibleListOptions = {}): Promise<TableCatalogPage> {
+  const { signal, ...paging } = options
+  return http.get<TableCatalogPage>('/api/metadata/tables/catalog-page', { params: { keyword, ...paging }, signal }).then((res) => res.data)
+}
+
+export async function listTableCatalog(keyword?: string, options: ListCollectionOptions = {}): Promise<TableCatalogGroup[]> {
+  const groups = await collectVisiblePages(async (cursor, signal) => {
+    const page = await listTableCatalogPage(keyword, { cursor, size: 200, signal })
+    return { items: page.groups, nextCursor: page.nextCursor, hasMore: page.hasMore }
+  }, options)
+  const merged = new Map<string, TableCatalogGroup>()
+  for (const group of groups) {
+    const key = JSON.stringify([group.domain, group.layer])
+    if (!Number.isSafeInteger(group.count) || group.count < 0) throw new Error('目录计数无效')
+    const count = (merged.get(key)?.count ?? 0) + group.count
+    if (!Number.isSafeInteger(count)) throw new Error('目录计数无效')
+    merged.set(key, { ...group, count })
+  }
+  return [...merged.values()]
+}
+
+export function listTables(options: ListCollectionOptions = {}): Promise<MetadataTable[]> {
+  return collectVisiblePages((cursor, signal) => listTablesPage({}, { cursor, size: 200, signal }), options)
 }
 
 /** 全局搜索：匹配表名/表注释/业务域，供控制台顶部搜索框使用。 */
@@ -698,12 +776,14 @@ export interface QueryHistoryRecord {
   rowCount?: number
   durationMs?: number
   errorMessage?: string
+  requestId?: string
+  errorCode?: string
   createdAt?: string
 }
 
-export function listQueryHistory(status?: string): Promise<QueryHistoryRecord[]> {
+export function listQueryHistory(status?: string, signal?: AbortSignal): Promise<QueryHistoryRecord[]> {
   return http
-    .get<QueryHistoryRecord[]>('/api/metadata/query-history', { params: status ? { status } : {} })
+    .get<QueryHistoryRecord[]>('/api/metadata/query-history', { params: status ? { status } : {}, signal })
     .then((res) => res.data)
 }
 
@@ -711,8 +791,19 @@ export function deleteQueryHistory(id: number): Promise<void> {
   return http.delete(`/api/metadata/query-history/${id}`).then(() => undefined)
 }
 
-export function clearQueryHistory(): Promise<number> {
-  return http.delete<{ deleted: number }>('/api/metadata/query-history').then((res) => res.data.deleted)
+export interface QueryHistoryClearResult {
+  deleted: number
+  hasMore: boolean
+}
+
+export function clearQueryHistory(): Promise<QueryHistoryClearResult> {
+  return http.delete<unknown>('/api/metadata/query-history').then((res) => {
+    const value = res.data as Partial<QueryHistoryClearResult> | null
+    if (typeof value !== 'object' || value === null || Array.isArray(value)
+      || typeof value.deleted !== 'number' || !Number.isSafeInteger(value.deleted) || value.deleted < 0 || value.deleted > 500
+      || typeof value.hasMore !== 'boolean') throw new Error('查询历史清理响应无效，无法确认清理完成')
+    return { deleted: value.deleted, hasMore: value.hasMore }
+  })
 }
 
 export interface SemanticAssetReview {
@@ -840,14 +931,22 @@ export interface MetricDefinitionInput {
   description?: string
 }
 
-export function listMetricDefinitions(keyword?: string): Promise<MetricDefinition[]> {
-  return http
-    .get<MetricDefinition[]>('/api/metadata/metric-definitions', { params: keyword ? { keyword } : {} })
-    .then((res) => res.data)
+export function listMetricDefinitionsPage(keyword?: string, status?: string, options: VisibleListOptions = {}): Promise<VisibleListPage<MetricDefinition>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<MetricDefinition>>('/api/metadata/metric-definitions/page', { params: { keyword, status, ...paging }, signal }).then((res) => res.data)
 }
 
-export function listPublishedMetrics(keyword?: string): Promise<MetricDefinition[]> {
-  return http.get<MetricDefinition[]>('/api/metadata/semantic/metrics', { params: { keyword } }).then((res) => res.data)
+export function listMetricDefinitions(keyword?: string, options: ListCollectionOptions = {}): Promise<MetricDefinition[]> {
+  return collectVisiblePages((cursor, signal) => listMetricDefinitionsPage(keyword, undefined, { cursor, size: 200, signal }), options)
+}
+
+export function listPublishedMetricsPage(keyword?: string, options: VisibleListOptions = {}): Promise<VisibleListPage<MetricDefinition>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<MetricDefinition>>('/api/metadata/semantic/metrics/page', { params: { keyword, ...paging }, signal }).then((res) => res.data)
+}
+
+export function listPublishedMetrics(keyword?: string, options: ListCollectionOptions = {}): Promise<MetricDefinition[]> {
+  return collectVisiblePages((cursor, signal) => listPublishedMetricsPage(keyword, { cursor, size: 200, signal }), options)
 }
 
 export interface MetricQueryInput {

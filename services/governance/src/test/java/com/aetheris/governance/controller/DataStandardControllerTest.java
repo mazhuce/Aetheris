@@ -18,6 +18,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DataStandardControllerTest {
+    @org.junit.jupiter.api.BeforeEach
+    void authorizeBusinessFixture() {
+        var authorization = org.mockito.Mockito.mock(com.aetheris.governance.security.ResourceAuthorization.class);
+        org.mockito.Mockito.doAnswer(call -> call.getArgument(1)).when(authorization)
+                .filter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
+        controller.setAuthorization(authorization);
+    }
 
     private final DataStandardService service = mock(DataStandardService.class);
     private final DataStandardController controller = new DataStandardController(service);

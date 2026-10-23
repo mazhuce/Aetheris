@@ -34,6 +34,29 @@ import static org.mockito.Mockito.when;
 class AuthUserAdminControllerTest {
 
     @Test
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void securityChangesRevokeBothTokenTypesAndEntityUpdatesCannotOverwriteVersionCounters() {
+        var table = com.baomidou.mybatisplus.core.metadata.TableInfoHelper.initTableInfo(
+                new org.apache.ibatis.builder.MapperBuilderAssistant(
+                        new com.baomidou.mybatisplus.core.MybatisConfiguration(), "version-test"), AuthUser.class);
+        String entityAssignments = table.getAllSqlSet(false, "et.");
+        org.junit.jupiter.api.Assertions.assertFalse(entityAssignments.contains("session_version"));
+        org.junit.jupiter.api.Assertions.assertFalse(entityAssignments.contains("access_version"));
+        for (boolean changeRole : List.of(false, true)) {
+            AuthUserService users = mock(AuthUserService.class);
+            when(users.getById(2L)).thenReturn(user(2L, "alice", "viewer", "active"));
+            var controller = new AuthUserAdminController(users, mock(PasswordEncoder.class), mock(AdminGuard.class));
+            controller.update(2L, "admin", null, new UpdateAuthUserRequest(null, "new name", null,
+                    null, changeRole ? "admin" : null, null));
+            ArgumentCaptor<LambdaUpdateWrapper> wrapper = ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+            verify(users).update(any(AuthUser.class), wrapper.capture());
+            String sqlSet = wrapper.getValue().getSqlSet();
+            assertEquals(changeRole, sqlSet.contains("session_version = session_version + 1"));
+            assertEquals(changeRole, sqlSet.contains("access_version = access_version + 1"));
+        }
+    }
+
+    @Test
     void createsLoginAccountWithHashedPassword() {
         AuthUserService userService = mock(AuthUserService.class);
         PasswordEncoder encoder = mock(PasswordEncoder.class);

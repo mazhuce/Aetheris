@@ -8,10 +8,17 @@ import java.time.OffsetDateTime;
 
 @TableName(value = "quality_check_result", schema = "quality")
 public class QualityCheckResult {
+    private String requestKey;
+    public String getRequestKey() { return requestKey; }
+    public void setRequestKey(String requestKey) { this.requestKey=requestKey; }
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long ruleId;
     private String status;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private String executionSnapshot;
+    public String getExecutionSnapshot() { return executionSnapshot; }
+    public void setExecutionSnapshot(String value) { executionSnapshot=value; }
     private Long violationCount;
     private Long thresholdValue;
     private Long durationMs;

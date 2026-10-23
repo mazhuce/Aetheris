@@ -22,6 +22,158 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JwtAuthFilterTest {
+    @Test void nonAuthDownstreamNeverReceivesBearerOrCookies() {
+        for (String mode : java.util.List.of("user", "pure-key", "preflight")) {
+            var builder = mode.equals("preflight") ? MockServerHttpRequest.options("/api/system/configs")
+                    : mode.equals("pure-key") ? MockServerHttpRequest.post("/api/serving/v1/apis/ORDER_TOTAL/query")
+                    : MockServerHttpRequest.get("/api/metadata/tables");
+            var exchange = MockServerWebExchange.from(builder.header("Authorization", "Bearer " + token("alice", "viewer", 42L))
+                    .header("Cookie", "aetheris_access=global-secret; aetheris_refresh=refresh-secret")
+                    .cookie(new org.springframework.http.HttpCookie("aetheris_access", "global-secret"))
+                    .cookie(new org.springframework.http.HttpCookie("aetheris_refresh", "refresh-secret"))
+                    .header("X-API-Key", "fixture-key").build());
+            AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+            filter(neverCalledGate()).filter(exchange, next -> { forwarded.set(next); return next.getResponse().setComplete(); }).block();
+            assertNotNull(forwarded.get(), mode);
+            assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("Authorization"), mode);
+            assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("Cookie"), mode);
+            assertEquals(0, forwarded.get().getRequest().getCookies().size(), mode);
+            assertEquals(null, exchange.getResponse().getStatusCode(), mode);
+        }
+    }
+    @Test
+    void publicAndPureKeyEntriesDiscardEveryClientSuppliedProof() {
+        for (String path : java.util.List.of("/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
+                "/api/serving/v1/apis/ORDER_TOTAL/query")) {
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.post(path)
+                    .header("X-API-Key", "presented-key")
+                    .header("X-Aetheris-User-Proof", "client-user")
+                    .header("X-Aetheris-Workload-Proof", "client-workload")
+                    .header("X-Aetheris-Response-Proof", "client-response")
+                    .header("X-Aetheris-Identity", "client-legacy")
+                    .header("X-User-Name", "admin").build());
+            filter(neverCalledGate()).filter(exchange, next -> {
+                for (String header : java.util.List.of("X-Aetheris-User-Proof", "X-Aetheris-Workload-Proof",
+                        "X-Aetheris-Response-Proof", "X-Aetheris-Identity", "X-User-Name")) {
+                    assertEquals(null, next.getRequest().getHeaders().getFirst(header), path + " " + header);
+                }
+                return next.getResponse().setComplete();
+            }).block();
+        }
+    }
+    @Test
+    void rejectsAmbiguousPathsBeforeAuthenticationOrPublicRouteSelection() {
+        for (String path : java.util.List.of("/api/auth/users;ignored", "/api//auth/users",
+                "/api/metadata/../auth/users", "/api/./auth/users", "/api/auth%2fusers",
+                "/api/auth/users%3bignored", "/api/auth/%252e%252e/users")) {
+            var request = MockServerHttpRequest.method(org.springframework.http.HttpMethod.GET, java.net.URI.create(path)).build();
+            var exchange = MockServerWebExchange.from(request);
+            filter(neverCalledGate()).filter(exchange, ignored -> {
+                throw new AssertionError("ambiguous paths must not reach routing");
+            }).block();
+            assertEquals(HttpStatus.BAD_REQUEST, exchange.getResponse().getStatusCode(), path);
+        }
+    }
+
+    @Test
+    void rejectsInactiveOrRevokedAccountAndFailsClosedWhenAccountCheckIsDown() {
+        for (boolean unavailable : java.util.List.of(false, true)) {
+            PermissionGate gate = new PermissionGate() {
+                public Mono<Boolean> mayManage(String name) { throw new AssertionError(); }
+                public Mono<Boolean> mayMutate(String name, String service) { throw new AssertionError(); }
+                public Mono<Boolean> sessionActive(Long uid, String name, long version) {
+                    assertEquals(42L, uid); assertEquals("alice", name); assertEquals(0L, version);
+                    return unavailable ? Mono.error(new IllegalStateException("auth down")) : Mono.just(false);
+                }
+            };
+            var exchange = exchange("GET", "/api/metadata/tables", token("alice", "viewer", 42L));
+            filter(gate).filter(exchange, ignored -> {
+                throw new AssertionError("inactive account cannot reach downstream");
+            }).block();
+            assertEquals(unavailable ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.UNAUTHORIZED,
+                    exchange.getResponse().getStatusCode());
+        }
+    }
+
+    @Test
+    void forwardsAccessVersionToLiveAccountCheck() {
+        String access = Jwts.builder().subject("alice").claim("uid", 42L).claim("typ", "access")
+                .claim("av", 7L).expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(KEY).compact();
+        AtomicReference<Long> observed = new AtomicReference<>();
+        PermissionGate gate = new PermissionGate() {
+            public Mono<Boolean> mayManage(String name) { return Mono.just(false); }
+            public Mono<Boolean> mayMutate(String name, String service) { return Mono.just(false); }
+            public Mono<Boolean> sessionActive(Long uid, String name, long version) {
+                observed.set(version); return Mono.just(true);
+            }
+        };
+        var exchange = exchange("GET", "/api/metadata/tables", access);
+        AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+        filter(gate).filter(exchange, next -> {forwarded.set(next);return next.getResponse().setComplete();}).block();
+        assertEquals(7L, observed.get());
+        assertNotNull(forwarded.get());
+        var proof = GatewayTestKeys.user(forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER), "metadata");
+        assertEquals(7L, proof.accessVersion());assertEquals(42L, proof.uid());assertEquals("alice", proof.username());
+    }
+    @Test void signsOnlyTheServiceSelectedByTheActualRouteAndKeepsOneRequestId() {
+        for (var pair : java.util.Map.of("auth", "/api/auth/profile", "system", "/api/system/activity",
+                "metadata", "/api/metadata/tables", "quality", "/api/quality/rules", "ingestion", "/api/ingestion/tasks",
+                "governance", "/api/governance/policies", "workflow", "/api/workflow/tasks", "serving", "/api/analytics/datasets",
+                "ai-agent", "/api/ai/chat/conversations").entrySet()) {
+            var exchange = exchange("GET", pair.getValue(), token("alice", "viewer", 42L));
+            AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+            filter(neverCalledGate()).filter(exchange, next -> {forwarded.set(next);return next.getResponse().setComplete();}).block();
+            assertNotNull(forwarded.get(), pair.getKey());
+            String proof = forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER);
+            var user = GatewayTestKeys.user(proof, pair.getKey());
+            assertEquals(forwarded.get().getRequest().getHeaders().getFirst("X-Request-Id"), user.requestId());
+            assertEquals(exchange.getResponse().getHeaders().getFirst("X-Request-Id"), user.requestId());
+            assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-Aetheris-Identity"));
+            assertThrows(com.aetheris.security.protocol.ProtocolException.class, () -> GatewayTestKeys.user(proof, "gateway"));
+        }
+    }
+
+    @Test
+    void publishedApiKeyPostStripsAllClientIdentityHeadersWithoutJwt() {
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest
+                .post("/api/serving/v1/apis/ORDER_TOTAL/query")
+                .header("X-API-Key", "presented-key")
+                .header("X-Aetheris-Identity", "forged")
+                .header("X-User-Name", "admin").header("X-User-Id", "1")
+                .header("X-User-Role", "admin").header("X-Internal-Token", "forged")
+                .build());
+        AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
+        filter(neverCalledGate()).filter(exchange, next -> {
+            forwarded.set(next); return next.getResponse().setComplete();
+        }).block();
+        assertNotNull(forwarded.get());
+        for (String header : java.util.List.of("X-Aetheris-Identity", "X-User-Name",
+                "X-User-Id", "X-User-Role", "X-Internal-Token")) {
+            assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst(header));
+        }
+        assertEquals("presented-key", forwarded.get().getRequest().getHeaders().getFirst("X-API-Key"));
+    }
+
+    @Test
+    void apiKeyDoesNotMakeNeighborPathsOrMethodsPublic() {
+        for (String path : java.util.List.of("/api/serving/v1/apis/ORDER_TOTAL/query/",
+                "/api/serving/v1/apis/ORDER_TOTAL/query/extra", "/api/serving/v1/apis",
+                "/api/serving/v1/apis/ORDER_TOTAL/publish", "/api/serving/v1/apis/A/query")) {
+            var exchange = MockServerWebExchange.from(MockServerHttpRequest.post(path)
+                    .header("X-API-Key", "key").build());
+            filter(neverCalledGate()).filter(exchange, ignored -> {
+                throw new AssertionError("neighbor route must not bypass JWT");
+            }).block();
+            assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode(), path);
+        }
+        var exchange = MockServerWebExchange.from(MockServerHttpRequest
+                .get("/api/serving/v1/apis/ORDER_TOTAL/query").header("X-API-Key", "key").build());
+        filter(neverCalledGate()).filter(exchange, ignored -> {
+            throw new AssertionError("GET must not bypass JWT");
+        }).block();
+        assertEquals(HttpStatus.UNAUTHORIZED, exchange.getResponse().getStatusCode());
+    }
 
     private static final String SECRET = "aetheris-test-secret-with-32-bytes";
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
@@ -29,21 +181,21 @@ class JwtAuthFilterTest {
 
     /** 决策门桩：admin 放行、其余拒绝；被探测调用时可选择抛错。 */
     private PermissionGate adminOnlyGate() {
-        return new PermissionGate() {
+        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
-                return Mono.just("admin".equals(username));
+                return Mono.just("admin".equals(GatewayTestKeys.user(username, "gateway").username()));
             }
 
             @Override
             public Mono<Boolean> mayManage(String username) {
-                return Mono.just("admin".equals(username));
+                return Mono.just("admin".equals(GatewayTestKeys.user(username, "gateway").username()));
             }
         };
     }
 
     private PermissionGate failingGate() {
-        return new PermissionGate() {
+        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 return Mono.error(new IllegalStateException("auth down"));
@@ -57,7 +209,7 @@ class JwtAuthFilterTest {
     }
 
     private PermissionGate neverCalledGate() {
-        return new PermissionGate() {
+        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 throw new AssertionError("mayMutate must not be consulted");
@@ -72,7 +224,7 @@ class JwtAuthFilterTest {
 
     private static JwtAuthFilter filter(PermissionGate gate) {
         return new JwtAuthFilter(KEY, new TokenRevocationStore(), gate,
-                new IdentitySigner(INTERNAL_TOKEN));
+                GatewayTestKeys.identitySigner());
     }
 
     @Test
@@ -123,15 +275,15 @@ class JwtAuthFilterTest {
             return filteredExchange.getResponse().setComplete();
         }).block();
 
-        assertEquals("alice", forwarded.get().getRequest().getHeaders().getFirst("X-User-Name"));
-        assertEquals(1, forwarded.get().getRequest().getHeaders().get("X-User-Name").size());
-        assertEquals("viewer", forwarded.get().getRequest().getHeaders().getFirst("X-User-Role"));
-        assertEquals("42", forwarded.get().getRequest().getHeaders().getFirst("X-User-Id"));
+        assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-User-Name"));
+        assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-User-Role"));
+        assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-User-Id"));
         String identity = forwarded.get().getRequest().getHeaders()
                 .getFirst(IdentitySigner.IDENTITY_HEADER);
         assertNotNull(identity, "转发请求必须携带身份签名");
-        assertArrayEquals(new String[]{"42", "alice"},
-                new IdentitySigner(INTERNAL_TOKEN).verify(identity));
+        var proof = GatewayTestKeys.user(identity, "system");
+        assertEquals(42L, proof.uid()); assertEquals("alice", proof.username());
+        assertEquals(0L, proof.accessVersion());
     }
 
     @Test
@@ -182,7 +334,7 @@ class JwtAuthFilterTest {
 
     @Test
     void sensitiveSystemWritesRequireManagePermissionBeforeServiceMutationGate() {
-        PermissionGate mutateOnly = new PermissionGate() {
+        PermissionGate mutateOnly = new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 return Mono.just(true);
@@ -280,7 +432,8 @@ class JwtAuthFilterTest {
             return filteredExchange.getResponse().setComplete();
         }).block();
 
-        assertEquals("admin", forwarded.get().getRequest().getHeaders().getFirst("X-User-Role"));
+        assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-User-Role"));
+        assertEquals("admin", GatewayTestKeys.user(forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER), "quality").username());
     }
 
     @Test
@@ -323,8 +476,8 @@ class JwtAuthFilterTest {
                 return request.getResponse().setComplete();
             }).block();
             assertNotNull(forwarded.get(), path);
-            assertArrayEquals(new String[]{"42", "alice"}, new IdentitySigner(INTERNAL_TOKEN).verify(
-                    forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER)));
+            var proof = GatewayTestKeys.user(forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER), "metadata");
+            assertEquals(42L, proof.uid()); assertEquals("alice", proof.username());
             assertEquals(HttpStatus.FORBIDDEN, exchange.getResponse().getStatusCode(), path);
         }
     }
@@ -357,6 +510,28 @@ class JwtAuthFilterTest {
         assertEquals(HttpStatus.FORBIDDEN, update.getResponse().getStatusCode());
     }
 
+    @Test
+    void apiAssetLifecycleUsesDataServiceGateAndRetainsMetadataAudience() {
+        for(String[] entry:new String[][]{{"POST","/api/metadata/api-assets"},{"PUT","/api/metadata/api-assets/11"},
+                {"DELETE","/api/metadata/api-assets/11"},{"POST","/api/metadata/api-assets/11/publish"},{"POST","/api/metadata/api-assets/11/deprecate"}}){
+            AtomicReference<String> asked=new AtomicReference<>();AtomicReference<ServerWebExchange> forwarded=new AtomicReference<>();
+            PermissionGate gate=new PermissionGate(){
+                public Mono<Boolean> sessionActive(Long uid,String name,long av){return Mono.just(uid==42&&name.equals("alice"));}
+                public Mono<Boolean> mayMutate(String proof,String service){asked.set(service);return Mono.just("serving".equals(service));}
+                public Mono<Boolean> mayManage(String proof){return Mono.just(false);}
+            };
+            filter(gate).filter(exchange(entry[0],entry[1],token("alice","viewer",42L)),request->{forwarded.set(request);return request.getResponse().setComplete();}).block();
+            assertEquals("serving",asked.get());assertNotNull(forwarded.get());
+            var user=GatewayTestKeys.user(forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER),"metadata");assertEquals(42,user.uid());
+        }
+        AtomicReference<String> asked=new AtomicReference<>();PermissionGate gate=new PermissionGate(){
+            public Mono<Boolean> sessionActive(Long uid,String name,long av){return Mono.just(uid==42&&name.equals("alice"));}
+            public Mono<Boolean> mayMutate(String proof,String service){asked.set(service);return Mono.just(false);}
+            public Mono<Boolean> mayManage(String proof){return Mono.just(false);}
+        };
+        var neighbor=exchange("POST","/api/metadata/api-assets-extra",token("alice","viewer",42L));
+        filter(gate).filter(neighbor,request->{throw new AssertionError("Neighbor cannot pass");}).block();assertEquals("metadata",asked.get());assertEquals(HttpStatus.FORBIDDEN,neighbor.getResponse().getStatusCode());
+    }
     @Test
     void permissionServiceUnavailableFailsClosed() {
         MockServerWebExchange exchange = exchange("POST", "/api/quality/rules", token("admin", "admin", 1L));

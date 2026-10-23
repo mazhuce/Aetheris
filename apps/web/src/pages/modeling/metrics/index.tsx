@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, DatePicker, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd'
+import { useCallback, useEffect, useState } from 'react'
+import { Alert, App, Button, Col, DatePicker, Divider, Form, Input, Modal, Row, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { MinusCircleOutlined, DotChartOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -10,7 +10,7 @@ import StatusBadge from '@/components/StatusBadge'
 import RowActions from '@/components/RowActions'
 import {
   createMetricDefinition, deleteMetricDefinition, deprecateMetricDefinition, discardMetricDefinitionDraft, listBusinessDomains,
-  listDataSourceColumns, listLogicalModels, listMetricDefinitions, listMetricDefinitionVersions,
+  listDataSourceColumns, listLogicalModels, listMetricDefinitionsPage, listMetricDefinitionVersions,
   listSemanticDimensions, listTables, newMetricDefinitionVersion, previewMetricDefinition,
   updateMetricDefinition, validateMetricDefinition,
   submitSemanticReview,
@@ -19,6 +19,8 @@ import {
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 interface FilterForm { column: string; operator: string; value?: string }
 interface MetricForm {
@@ -43,7 +45,6 @@ function resultRows(result: SemanticMetricQueryResult) {
 export default function MetricManagePage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
-  const [metrics, setMetrics] = useState<MetricDefinition[]>([])
   const [domains, setDomains] = useState<BusinessDomain[]>([])
   const [models, setModels] = useState<LogicalModel[]>([])
   const [tables, setTables] = useState<MetadataTable[]>([])
@@ -63,17 +64,23 @@ export default function MetricManagePage() {
   const [previewForm] = Form.useForm<{ dates?: [any, any]; timeGrain?: 'none' | 'day' | 'month' | 'year'; dimensions?: string[] }>()
   const selectedTableId = Form.useWatch('sourceTableId', form)
   const aggregation = Form.useWatch('aggregation', form)
+  const pageSize = useResponsivePageSize(8, 6, 5, 3)
+  const listing = useVisibleListPage(
+    (cursor, signal) => listMetricDefinitionsPage(keyword || undefined, status, { cursor, size: pageSize, signal }),
+    JSON.stringify([keyword, status, pageSize])
+  )
 
   const refresh = useCallback(async () => {
+    listing.refresh()
     setLoading(true)
     try {
-      const [nextMetrics, nextDomains, nextModels, nextTables, nextDimensions] = await Promise.all([
-        listMetricDefinitions(), listBusinessDomains(undefined, 'active'), listLogicalModels(undefined, 'published'), listTables(), listSemanticDimensions(undefined, 'published')
+      const [nextDomains, nextModels, nextTables, nextDimensions] = await Promise.all([
+        listBusinessDomains(undefined, 'active'), listLogicalModels(undefined, 'published'), listTables(), listSemanticDimensions(undefined, 'published')
       ])
-      setMetrics(nextMetrics); setDomains(nextDomains); setModels(nextModels)
+      setDomains(nextDomains); setModels(nextModels)
       setTables(nextTables.filter((item) => item.status !== 'stale')); setDimensions(nextDimensions)
     } catch { message.error('指标目录加载失败') } finally { setLoading(false) }
-  }, [message])
+  }, [listing.refresh, message])
   useEffect(() => { void refresh() }, [refresh])
   useEffect(() => {
     if (!open) return
@@ -90,9 +97,6 @@ export default function MetricManagePage() {
       .catch(() => { setSourceColumns([]); message.warning('无法读取来源表字段，请检查数据源连通性') })
   }, [message, open, selectedTableId, tables])
 
-  const filtered = useMemo(() => metrics.filter((item) =>
-    (!keyword || item.metricName.includes(keyword) || item.metricCode.toLowerCase().includes(keyword.toLowerCase()) || (item.businessDomain || '').includes(keyword))
-    && (!status || item.status === status)), [keyword, metrics, status])
   const tableName = (id?: number) => tables.find((item) => item.id === id)?.tableName || (id ? `表 #${id}` : '未绑定')
   const run = async (action: () => Promise<unknown>, success: string) => {
     try { await action(); message.success(success); await refresh() }
@@ -133,7 +137,7 @@ export default function MetricManagePage() {
     { title: '业务域', dataIndex: 'businessDomain', width: 110, render: (value) => value || '—' },
     { title: '来源表', dataIndex: 'sourceTableId', width: 150, render: tableName },
     { title: '计算', width: 170, render: (_, row) => row.aggregation ? `${aggregationLabels[row.aggregation] || row.aggregation}${row.measureColumn ? ` · ${row.measureColumn}` : ''}` : '待补全' },
-    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value || 'draft'].tone}>{statusMeta[value || 'draft'].label}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
+    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value || 'draft']?.tone ?? 'neutral'}>{statusMeta[value || 'draft']?.label ?? value ?? '未知'}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
     { title: '版本', dataIndex: 'version', width: 80, render: (value, row) => row.publishedVersion && row.publishedVersion !== value ? `v${value || 1} / v${row.publishedVersion}` : `v${value || 1}` },
     { title: '负责人', dataIndex: 'owner', width: 100, render: (value) => value || '—' },
     { title: '更新时间', dataIndex: 'updatedAt', width: 170, render: formatDateTime }
@@ -160,12 +164,24 @@ export default function MetricManagePage() {
   ) })
 
   const compatibleDimensions = dimensions.filter((item) => item.metadataTableId === selectedTableId)
-  const stats = { total: metrics.length, published: metrics.filter((item) => item.publishedVersion).length, executable: metrics.filter((item) => item.sourceTableId && item.aggregation).length }
+  const stats = {
+    total: listing.items.length,
+    published: listing.items.filter((item) => item.publishedVersion).length,
+    executable: listing.items.filter((item) => item.sourceTableId && item.aggregation).length
+  }
   return <>
     <PageHeader description="以受控聚合、结构化过滤、时间粒度和正式维度定义企业指标；同一发布版本供数据集、看板与智能问数共同消费。" extra={canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>新建指标</Button> : <Tag>只读访问</Tag>} />
-    <Row gutter={12} className="stat-row"><Col span={8}><StatCard title="指标总数" value={String(stats.total)} icon={<DotChartOutlined />} /></Col><Col span={8}><StatCard title="已发布" value={String(stats.published)} icon={<DotChartOutlined />} tone="green" /></Col><Col span={8}><StatCard title="可执行口径" value={String(stats.executable)} icon={<DotChartOutlined />} tone="orange" /></Col></Row>
+    <Row gutter={12} className="stat-row"><Col span={8}><StatCard title="本页指标" value={String(stats.total)} icon={<DotChartOutlined />} /></Col><Col span={8}><StatCard title="本页已发布" value={String(stats.published)} icon={<DotChartOutlined />} tone="green" /></Col><Col span={8}><StatCard title="本页可执行口径" value={String(stats.executable)} icon={<DotChartOutlined />} tone="orange" /></Col></Row>
     <PageToolbar><div className="filter-bar"><div className="filter-item"><span>名称/编码/域</span><Input allowClear value={keyword} onChange={(event) => setKeyword(event.target.value)} className="filter-control-3xl" placeholder="搜索指标" /></div><div className="filter-item"><span>状态</span><Select allowClear value={status} onChange={setStatus} className="filter-control-xl" placeholder="全部状态" options={Object.entries(statusMeta).map(([value, meta]) => ({ value, label: meta.label }))} /></div><Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button></div></PageToolbar>
-    <DataSurface title="企业指标目录" description="发布后口径不可变；调整必须创建新版本" label="企业指标目录"><Table rowKey="id" size="small" loading={loading} columns={tableColumns} dataSource={filtered} scroll={{ x: 1250 }} pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 个指标` }} /></DataSurface>
+    <DataSurface title="企业指标目录" description={listing.hasMore ? '发布后口径不可变；调整必须创建新版本 · 还有更多结果' : '发布后口径不可变；调整必须创建新版本'} label="企业指标目录">
+      {listing.error && <Alert type="error" showIcon message={listing.error} style={{ marginBottom: 12 }} />}
+      <Table rowKey="id" size="small" loading={loading || listing.loading} columns={tableColumns} dataSource={listing.items} scroll={{ x: 1250 }} pagination={false} />
+      <Space style={{ marginTop: 12 }}>
+        <Button disabled={!listing.canPrevious || listing.loading} onClick={listing.previous}>上一页</Button>
+        <span>第 {listing.pageNumber} 页 · 本页 {listing.items.length} 条</span>
+        <Button disabled={!listing.hasMore || listing.loading || !!listing.error} onClick={listing.next}>下一页</Button>
+      </Space>
+    </DataSurface>
 
     <Modal title={editing ? `编辑指标 · v${editing.version}` : '新建企业指标'} open={open} onCancel={() => { setOpen(false); setEditing(null) }} onOk={() => form.submit()} confirmLoading={submitting} width="min(1020px, 94vw)" destroyOnClose>
       <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>

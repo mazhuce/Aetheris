@@ -29,8 +29,7 @@ class SystemIdentityInterceptorTest {
         SystemIdentityInterceptor interceptor = new SystemIdentityInterceptor(
                 new IdentityVerifier(TOKEN, 300_000L));
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/system/activity");
-        request.addHeader(IdentityVerifier.IDENTITY_HEADER,
-                IdentityVerifierTestHelper.sign(42L, "alice", TOKEN));
+        V2TestFixture.trusted(42,"alice").postProcessRequest(request);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertTrue(interceptor.preHandle(request, response, mock(Object.class)));

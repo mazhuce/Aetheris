@@ -14,7 +14,7 @@ import java.util.Base64;
  * 验证 Gateway 的 X-Aetheris-Identity 签名。
  * 协议：base64url(uid|username|timestampMillis) + "." + hex(HMAC-SHA256(payload, token))。
  */
-@Component
+@Deprecated // Legacy verifier is not installed as an authentication bean.
 public class IdentityVerifier {
     public static final String HEADER = "X-Aetheris-Identity";
 

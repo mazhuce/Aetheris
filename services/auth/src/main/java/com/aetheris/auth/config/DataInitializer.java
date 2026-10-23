@@ -2,6 +2,7 @@ package com.aetheris.auth.config;
 
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AuthUserService;
+import com.aetheris.auth.validation.UsernameRules;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,8 +35,8 @@ public class DataInitializer implements CommandLineRunner {
         if (authUserService.count() > 0) {
             return;
         }
-        if (username == null || username.isBlank()) {
-            throw new IllegalStateException("INITIAL_ADMIN_USERNAME must not be blank");
+        if (!UsernameRules.isValid(username)) {
+            throw new IllegalStateException("INITIAL_ADMIN_USERNAME must satisfy the 64-character username policy (no whitespace, controls, format characters, | or invalid Unicode)");
         }
         if (password == null || password.length() < 12) {
             throw new IllegalStateException("INITIAL_ADMIN_PASSWORD must contain at least 12 characters on first start");

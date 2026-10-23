@@ -23,16 +23,19 @@ class ApiKeyControllerTest {
     private final ApiKeyController controller = new ApiKeyController(service, security);
 
     @Test
-    void createReturnsSecretOnceAndBindsOwnerToAuthenticatedOperator() {
-        when(security.requireIdentity(request)).thenReturn(new ServingIdentity(1L, "admin"));
+    void createReturnsSecretOnceAndBindsOwnerToAuthenticatedOperator() throws Exception {
+        try(var f=new com.aetheris.serving.security.V2ServingFixture()) { f.request(actual->{
+        when(security.requireIdentity(actual)).thenReturn(new ServingIdentity(42L, "alice"));
         ApiKeySummary summary = new ApiKeySummary(5L, "abcd1234abcd", "reporting", "admin", "active", 60, null, null, OffsetDateTime.now(), null);
-        when(service.create(any(), eq("admin"), eq("admin"))).thenReturn(new IssuedApiKey(summary, "ak_abcd1234abcd_secret"));
+        var trusted=com.aetheris.security.servlet.TrustedUser.require(actual);
+        when(service.create(any(), eq(trusted), eq("alice"))).thenReturn(new IssuedApiKey(summary, "ak_abcd1234abcd_secret"));
 
-        IssuedApiKey result = controller.create(new ApiKeyCreateRequest("reporting", 60, null), request);
+        IssuedApiKey result = controller.create(new ApiKeyCreateRequest("reporting", 60, null), actual);
 
         assertEquals("ak_abcd1234abcd_secret", result.secret());
-        verify(security).requireManage(request);
-        verify(service).create(any(), eq("admin"), eq("admin"));
+        verify(security).requireManage(actual);
+        verify(service).create(any(), eq(trusted), eq("alice"));
+        });}
     }
 
     @Test

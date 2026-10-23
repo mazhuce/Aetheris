@@ -36,7 +36,7 @@ class CompatibilityMatrixError(ValueError):
 
 def service_block(compose: str, service: str) -> str:
     match = re.search(
-        rf"(?ms)^  {re.escape(service)}:\s*\n(?P<body>(?:(?!^  \S).*(?:\n|$))*)",
+        rf"(?m)^  {re.escape(service)}:[ \t]*\n(?P<body>(?:(?!^  \S)[^\n]*(?:\n|$))*)",
         compose,
     )
     if not match:
@@ -46,15 +46,15 @@ def service_block(compose: str, service: str) -> str:
 
 def _service_entry(compose: str, service: str) -> dict[str, Any]:
     block = service_block(compose, service)
-    image = re.search(r"(?m)^\s+image:\s*(\S+)", block)
+    images = re.findall(r"(?m)^\s+image:\s*(\S+)", block)
     profiles = re.search(r"(?m)^\s+profiles:\s*\[([^\]]+)\]", block)
-    if image is None or profiles is None:
+    if len(images) != 1 or profiles is None:
         raise CompatibilityMatrixError(f"R1 service {service} must declare image and profiles")
     declared = [item.strip().strip('\\"\\\'') for item in profiles.group(1).split(",")]
     expected = list(SERVICE_PROFILES[service])
     if not set(expected).issubset(declared):
         raise CompatibilityMatrixError(f"R1 service {service} is missing profiles: {expected}")
-    return {"name": service, "image": image.group(1), "profiles": declared}
+    return {"name": service, "image": images[0], "profiles": declared}
 
 
 def build_matrix(root: pathlib.Path = ROOT) -> dict[str, Any]:

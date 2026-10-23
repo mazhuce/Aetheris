@@ -17,7 +17,10 @@ public class AuthUser {
     private String phone;
     private String role;
     private String status;
+    @com.baomidou.mybatisplus.annotation.TableField(updateStrategy = com.baomidou.mybatisplus.annotation.FieldStrategy.NEVER)
     private Long sessionVersion;
+    @com.baomidou.mybatisplus.annotation.TableField(updateStrategy = com.baomidou.mybatisplus.annotation.FieldStrategy.NEVER)
+    private Long accessVersion;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
@@ -39,6 +42,8 @@ public class AuthUser {
     public void setStatus(String status) { this.status = status; }
     public Long getSessionVersion() { return sessionVersion == null ? 0L : sessionVersion; }
     public void setSessionVersion(Long sessionVersion) { this.sessionVersion = sessionVersion; }
+    public Long getAccessVersion() { return accessVersion == null ? 0L : accessVersion; }
+    public void setAccessVersion(Long accessVersion) { this.accessVersion = accessVersion; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }

@@ -43,7 +43,7 @@ DROP TABLE IF EXISTS dim.dim_date;
 CREATE TABLE dim.dim_date (
     date_key    STRING COMMENT '日期，格式 yyyy-MM-dd',
     year_num    INT    COMMENT '年份',
-    month_num   INT    COMMENT '月份，1-12',_
+    month_num   INT    COMMENT '月份，1-12',
     day_num     INT    COMMENT '日，1-31',
     week_of_year INT   COMMENT '一年中的第几周',
     day_of_week INT    COMMENT '星期几，1=周一，7=周日',

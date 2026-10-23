@@ -29,6 +29,28 @@ class JdbcServiceTest {
     private final JdbcService jdbcService = new JdbcService();
 
     @Test
+    void refusesCloudMetadataBeforeCallingTheDriver() throws Exception {
+        DataSource target = source("postgresql", "169.254.169.254", "credentials");
+        // Replace DriverManager itself: this negative test must never open a real socket.
+        try (var driver = org.mockito.Mockito.mockStatic(java.sql.DriverManager.class)) {
+            driver.when(() -> java.sql.DriverManager.getConnection(anyString(), anyString(), anyString()))
+                    .thenReturn(mock(Connection.class));
+            assertThrows(IllegalArgumentException.class, () -> jdbcService.connect(target));
+            driver.verifyNoInteractions();
+        }
+    }
+
+    @Test
+    void jdbcPropertiesCannotReplaceTheValidatedNetworkHost() {
+        DataSource target = source("sqlserver", "127.0.0.1", "warehouse");
+        target.setConnectionParams("serverName=169.254.169.254");
+        assertThrows(IllegalArgumentException.class, () -> jdbcService.buildUrl(target, "sqlserver", 1433));
+        target.setConnectionParams(null);
+        target.setJdbcUrl("jdbc:sqlserver://127.0.0.1:1433;serverName=169.254.169.254;databaseName=warehouse");
+        assertThrows(IllegalArgumentException.class, () -> jdbcService.buildUrl(target, "sqlserver", 1433));
+    }
+
+    @Test
     void healthProbeExecutesOnlySelectOneWithTimeoutAndClosesResources() throws Exception {
         Connection connection = mock(Connection.class);
         Statement statement = mock(Statement.class);
@@ -67,13 +89,13 @@ class JdbcServiceTest {
                 "jdbc:postgresql://192.168.30.201:26257/defaultdb",
                 jdbcService.buildUrl(source("cockroachdb", "192.168.30.201", "defaultdb"), "cockroachdb", 26257));
         assertEquals(
-                "jdbc:mysql://192.168.30.202:4000/analytics?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai",
+                "jdbc:mysql://192.168.30.202:4000/analytics?sslMode=VERIFY_IDENTITY&serverTimezone=Asia/Shanghai",
                 jdbcService.buildUrl(source("tidb", "192.168.30.202", "analytics"), "tidb", 4000));
     }
 
     @Test
     void buildsExpandedEnterpriseAndAnalyticsUrls() {
-        assertEquals("jdbc:sqlserver://sqlserver:1433;databaseName=master;encrypt=false",
+        assertEquals("jdbc:sqlserver://sqlserver:1433;databaseName=master;encrypt=true;trustServerCertificate=false",
                 jdbcService.buildUrl(source("sqlserver", "sqlserver", "master"), "sqlserver", 1433));
         assertEquals("jdbc:ch://clickhouse:8123/analytics?compress=0",
                 jdbcService.buildUrl(source("clickhouse", "clickhouse", "analytics"), "clickhouse", 8123));
@@ -147,6 +169,7 @@ class JdbcServiceTest {
         dataSource.setType(type);
         dataSource.setHost(host);
         dataSource.setDatabaseName(database);
+        dataSource.setStatus("active");
         return dataSource;
     }
 
@@ -199,6 +222,7 @@ class JdbcServiceTest {
     void transfersQueryRowsWithTransactionalBatchInsert() throws Exception {
         DataSource source = source("postgresql", "source", "app");
         DataSource target = source("postgresql", "target", "warehouse");
+        target.setUsername("reader"); target.setWriteUsername("writer"); target.setWritePassword("test-write");
         Connection sourceConnection = mock(Connection.class);
         Connection targetConnection = mock(Connection.class);
         Statement query = mock(Statement.class);
@@ -224,6 +248,7 @@ class JdbcServiceTest {
             Connection connect(DataSource dataSource) {
                 return dataSource == source ? sourceConnection : targetConnection;
             }
+            @Override Connection connectWrite(DataSource dataSource) { return targetConnection; }
         };
 
         var result = service.transfer(
@@ -241,6 +266,7 @@ class JdbcServiceTest {
     void transfersFromSparkWithoutUnsupportedReadOnlyHint() throws Exception {
         DataSource source = source("spark", "source", "default");
         DataSource target = source("postgresql", "target", "warehouse");
+        target.setUsername("reader"); target.setWriteUsername("writer"); target.setWritePassword("test-write");
         Connection sourceConnection = mock(Connection.class);
         Connection targetConnection = mock(Connection.class);
         Statement query = mock(Statement.class);
@@ -263,6 +289,7 @@ class JdbcServiceTest {
             Connection connect(DataSource dataSource) {
                 return dataSource == source ? sourceConnection : targetConnection;
             }
+            @Override Connection connectWrite(DataSource dataSource) { return targetConnection; }
         };
 
         var result = service.transfer(

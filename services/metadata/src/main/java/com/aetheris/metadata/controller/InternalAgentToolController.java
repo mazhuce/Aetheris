@@ -43,6 +43,12 @@ import java.util.Map;
 @RestController
 @RequestMapping("/internal/agent")
 public class InternalAgentToolController {
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
+    private Map<String,String> domainCtx(Long id) {
+        return permissionContext == null ? (id == null ? Map.of() : Map.of("domainId",id.toString())) : permissionContext.of(id);
+    }
 
     private static final Logger log = LoggerFactory.getLogger(InternalAgentToolController.class);
     private static final int MAX_SEARCH_RESULTS = 15;
@@ -101,8 +107,7 @@ public class InternalAgentToolController {
             case IDS -> tables.stream().filter(table -> table.getBusinessDomainId() != null
                     && scope.ids().contains(table.getBusinessDomainId())).toList();
             case OPAQUE -> tables.stream().filter(table -> security.isAllowed(username, "table", table.getId(),
-                    "view", table.getBusinessDomainId() == null ? Map.of()
-                            : Map.of("domainId", String.valueOf(table.getBusinessDomainId())))).toList();
+                    "view", domainCtx(table.getBusinessDomainId()))).toList();
         };
         List<Map<String, Object>> results = new ArrayList<>();
         for (MetadataTable table : tables.stream().limit(MAX_SEARCH_RESULTS).toList()) {
@@ -129,8 +134,7 @@ public class InternalAgentToolController {
         if (table == null) {
             return ResponseEntity.ok(Map.of("error", "表不存在，请先用 search_tables 检索"));
         }
-        security.require(httpRequest, "table", tableId, "view", table.getBusinessDomainId() == null ? Map.of()
-                : Map.of("domainId", String.valueOf(table.getBusinessDomainId())));
+        security.require(httpRequest, "table", tableId, "view", domainCtx(table.getBusinessDomainId()));
         DataSource dataSource = table.getDatasourceId() == null
                 ? null
                 : dataSourceService.getById(table.getDatasourceId());
@@ -157,8 +161,8 @@ public class InternalAgentToolController {
             }
             result.put("columns", columnInfo);
         } catch (RuntimeException error) {
-            log.warn("Describe table failed for {}", qualifiedName(table), error);
-            result.put("error", "无法读取字段信息：" + error.getMessage());
+            log.warn("Describe table failed: tableId={}, category={}", tableId, error.getClass().getSimpleName());
+            result.put("error", "无法读取字段信息，请检查数据源配置与权限");
         }
         return ResponseEntity.ok(result);
     }
@@ -192,16 +196,14 @@ public class InternalAgentToolController {
                     System.currentTimeMillis() - startedAt, null);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException error) {
-            // 语句被守卫拒绝：把原因返回给 agent，让它自己改写重试，而不是直接失败。
             audit(username, dataSource, statement, "failed", null,
-                    System.currentTimeMillis() - startedAt, error.getMessage());
-            return ResponseEntity.ok(Map.of("error", "SQL 不被允许：" + error.getMessage()));
+                    System.currentTimeMillis() - startedAt, "SQL_POLICY_REJECTED");
+            return ResponseEntity.ok(Map.of("error", "SQL 不符合只读查询策略，请检查语句与数据源配置", "code", "SQL_POLICY_REJECTED"));
         } catch (IllegalStateException error) {
-            log.warn("Agent query failed on datasource {}", id, error);
-            // 执行错误（语法、表不存在）同样返回给 agent 用于自我修正。
+            log.warn("Agent query failed: datasourceId={}, category={}", id, error.getClass().getSimpleName());
             audit(username, dataSource, statement, "failed", null,
-                    System.currentTimeMillis() - startedAt, error.getMessage());
-            return ResponseEntity.ok(Map.of("error", "查询失败：" + error.getMessage()));
+                    System.currentTimeMillis() - startedAt, "QUERY_UNAVAILABLE");
+            return ResponseEntity.ok(Map.of("error", "查询失败，请检查数据源配置与 SQL", "code", "QUERY_UNAVAILABLE"));
         }
     }
 
@@ -209,11 +211,10 @@ public class InternalAgentToolController {
                        Long rows, Long duration, String error) {
         try {
             auditService.record("agent", null, null, dataSource.getId(), username, status,
-                    rows, duration, false, error == null ? null : "QUERY_FAILED",
-                    error, sql);
+                    rows, duration, false, error, null, sql);
         } catch (RuntimeException auditError) {
             // 审计是旁路记录，不能把一个已经完成的只读查询变成失败。
-            log.warn("Failed to persist agent query audit for {}", username, auditError);
+            log.warn("Failed to persist agent query audit: category={}", auditError.getClass().getSimpleName());
         }
     }
 

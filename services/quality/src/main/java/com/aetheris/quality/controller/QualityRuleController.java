@@ -28,6 +28,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/quality/rules")
 public class QualityRuleController {
+    private com.aetheris.quality.security.ResourceAuthorization authorization = new com.aetheris.quality.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.quality.security.ResourceAuthorization authorization) { this.authorization = authorization; }
 
     private final QualityRuleService qualityRuleService;
     private final QualityCheckResultService resultService;
@@ -47,17 +50,20 @@ public class QualityRuleController {
 
     @GetMapping
     public List<QualityRule> list() {
-        return qualityRuleService.list();
+        return authorization.filter("quality_rule", qualityRuleService.list(), QualityRule::getId);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<QualityRule> getById(@PathVariable Long id) {
+        authorization.require("quality_rule", id, "view");
         QualityRule rule = qualityRuleService.getById(id);
         return rule != null ? ResponseEntity.ok(rule) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public QualityRule create(@Valid @RequestBody QualityRule rule) {
+        authorization.require("quality_rule", null, "create");
+        authorization.requireManage();
         rule.setId(null);
         applyDefaults(rule);
         QualitySchedulerService.validateCron(rule.getCronExpression());
@@ -70,9 +76,20 @@ public class QualityRuleController {
     public ResponseEntity<QualityRule> update(
             @PathVariable Long id,
             @Valid @RequestBody QualityRule rule) {
+        authorization.require("quality_rule", id, "update");
+        QualityRule existing=qualityRuleService.getById(id);
+        authorization.protectDefinition(rule,existing,java.util.Set.of("name","description","status","cronExpression"));
+        if(existing!=null) {
+            if(!StringUtils.hasText(rule.getStatus()))rule.setStatus(existing.getStatus());
+            if ((rule.getCronExpression()!=null && !java.util.Objects.equals(rule.getCronExpression(),existing.getCronExpression()))
+                    || ("disabled".equals(existing.getStatus()) && "enabled".equals(rule.getStatus()))) {
+                authorization.require("quality_rule",id,"execute");
+            }
+        }
         rule.setId(id);
         applyDefaults(rule);
         QualitySchedulerService.validateCron(rule.getCronExpression());
+        authorization.retainEditable(rule,java.util.Set.of("name","description","status","cronExpression"));
         boolean updated = qualityRuleService.updateById(rule);
         if (!updated) {
             return ResponseEntity.notFound().build();
@@ -83,8 +100,24 @@ public class QualityRuleController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        boolean removed = qualityRuleService.removeById(id);
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        authorization.require("quality_rule", id, "delete");
+        String unresolved = "仍有执行中或待对账检查，禁止删除质量规则";
+        if (resultService.count(new LambdaQueryWrapper<QualityCheckResult>().eq(QualityCheckResult::getRuleId,id)
+                .in(QualityCheckResult::getStatus,java.util.List.of("running","unknown"))) > 0) {
+            return ResponseEntity.status(409).body(Map.of("message",unresolved));
+        }
+        boolean removed;
+        try { removed = qualityRuleService.removeById(id); }
+        catch (org.springframework.dao.DataAccessException failure) {
+            // The database trigger is the final guard against a run starting
+            // between the friendly precheck and deletion.
+            for (Throwable cause=failure; cause!=null; cause=cause.getCause()) {
+                if(cause instanceof java.sql.SQLException sql && "55000".equals(sql.getSQLState()))
+                    return ResponseEntity.status(409).body(Map.of("message",unresolved));
+            }
+            throw failure;
+        }
         if (!removed) {
             return ResponseEntity.notFound().build();
         }
@@ -96,9 +129,10 @@ public class QualityRuleController {
     @PostMapping("/{id}/run")
     public ResponseEntity<?> run(
             @PathVariable Long id,
-            @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+            @RequestAttribute("com.aetheris.security.servlet.TrustedUser.authenticated") com.aetheris.security.servlet.TrustedUser user) {
+        authorization.require("quality_rule", id, "execute");
         try {
-            return ResponseEntity.ok(executionService.execute(id, username));
+            return ResponseEntity.ok(executionService.executeManual(id, user));
         } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
         } catch (IllegalStateException error) {
@@ -112,6 +146,7 @@ public class QualityRuleController {
     public List<QualityCheckResult> results(
             @PathVariable Long id,
             @RequestParam(defaultValue = "30") int limit) {
+        authorization.require("quality_rule", id, "view");
         return resultService.list(new LambdaQueryWrapper<QualityCheckResult>()
                 .eq(QualityCheckResult::getRuleId, id)
                 .orderByDesc(QualityCheckResult::getStartedAt)
@@ -124,17 +159,17 @@ public class QualityRuleController {
             @RequestParam(required = false) Long ruleId,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "50") int limit) {
-        return resultService.list(new LambdaQueryWrapper<QualityCheckResult>()
+        return authorization.filter("quality_rule", resultService.list(new LambdaQueryWrapper<QualityCheckResult>()
                 .eq(ruleId != null, QualityCheckResult::getRuleId, ruleId)
                 .eq(StringUtils.hasText(status), QualityCheckResult::getStatus, status)
                 .orderByDesc(QualityCheckResult::getStartedAt)
-                .last("LIMIT " + Math.clamp(limit, 1, 200)));
+                .last("LIMIT " + Math.clamp(limit, 1, 200))), QualityCheckResult::getRuleId);
     }
 
     /** 最近一次检查的质量概览：通过率、失败/异常规则数。统计基于规则的 last_check 快照。 */
     @GetMapping("/results/summary")
     public Map<String, Object> summary() {
-        List<QualityRule> rules = qualityRuleService.list();
+        List<QualityRule> rules = authorization.filter("quality_rule", qualityRuleService.list(), QualityRule::getId);
         long enabled = rules.stream().filter(rule -> "enabled".equals(rule.getStatus())).count();
         long passed = rules.stream().filter(rule -> "passed".equals(rule.getLastCheckStatus())).count();
         long failed = rules.stream().filter(rule -> "failed".equals(rule.getLastCheckStatus())).count();

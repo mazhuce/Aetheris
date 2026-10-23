@@ -31,8 +31,11 @@ public class QualityCheckJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) {
         Long ruleId = context.getMergedJobDataMap().getLong(RULE_ID);
+        if (!context.getMergedJobDataMap().containsKey("scheduleVersion") || context.getScheduledFireTime()==null) return;
+        long generation=context.getMergedJobDataMap().getLong("scheduleVersion");
         try {
-            executionService.execute(ruleId, "scheduler");
+            executionService.executeScheduled(ruleId, generation,
+                    "schedule:"+generation+":"+context.getScheduledFireTime().getTime());
         } catch (RuntimeException error) {
             // 不向 Quartz 抛异常：失败已记录在结果表与规则表的 last_error 里，
             // 抛出去会触发 Quartz 的重试机制，造成不可控的重复执行。

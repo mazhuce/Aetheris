@@ -1,0 +1,31 @@
+# Machine-readable R1 Bronze / Silver / Gold contract.
+# The markdown companion explains the operating rules; this file is used by
+# the offline release validator so a documentation-only change cannot silently
+# weaken the hard gate.
+
+[contract]
+name = "aetheris-r1-layered-table-contract"
+format_version = 2
+
+[layers.bronze]
+name_pattern = "<domain>.bronze_<entity>"
+writer = "flink-cdc"
+partition = "event_date"
+consumer_boundary = "silver-only"
+primary_key = ["id"]
+write_mode = "upsert"
+required_metadata = ["_change_kind", "_source_lsn", "_event_time", "_ingest_time"]
+
+[layers.silver]
+name_pattern = "<domain>.silver_<entity>"
+writer = "flink-or-spark"
+partition = "business_or_event_date"
+consumer_boundary = "gold-and-quality"
+required_metadata = ["_first_seen_at", "_last_seen_at", "_is_deleted"]
+
+[layers.gold]
+name_pattern = "<domain>.gold_<subject>"
+writer = "flink-or-spark"
+partition = "consumption_date"
+consumer_boundary = "semantic-and-serving"
+required_metadata = ["metric_version", "_as_of"]

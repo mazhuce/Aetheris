@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "vectors": [
+    {
+      "targetTable": "ods.orders",
+      "ruleType": "not_null",
+      "expression": "order_id IS NOT NULL",
+      "sql": "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (order_id IS NOT NULL)"
+    },
+    {
+      "targetTable": "ods.orders",
+      "ruleType": "range",
+      "expression": "amount >= 0",
+      "sql": "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (amount >= 0)"
+    },
+    {
+      "targetTable": "ods.orders",
+      "ruleType": "enum",
+      "expression": "status IN ('paid', 'done')",
+      "sql": "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE NOT (status IN ('paid', 'done'))"
+    },
+    {
+      "targetTable": "ods.orders",
+      "ruleType": "duplicate",
+      "expression": "order_id, line_no",
+      "sql": "SELECT COALESCE(SUM(duplicate_count - 1), 0) AS violation_count FROM (SELECT order_id, line_no, COUNT(*) AS duplicate_count FROM ods.orders GROUP BY order_id, line_no HAVING COUNT(*) > 1) quality_duplicates"
+    },
+    {
+      "targetTable": "ods.orders",
+      "ruleType": "sql",
+      "expression": "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE amount < 0",
+      "sql": "SELECT COUNT(*) AS violation_count FROM ods.orders WHERE amount < 0"
+    }
+  ]
+}

@@ -25,6 +25,9 @@ import java.util.Set;
 @Service
 public class LakehouseMaintenanceJobServiceImpl extends ServiceImpl<LakehouseMaintenanceJobMapper, LakehouseMaintenanceJob>
         implements LakehouseMaintenanceJobService {
+    private com.aetheris.metadata.config.BusinessCalendar businessCalendar = new com.aetheris.metadata.config.BusinessCalendar();
+    @Autowired
+    public void setBusinessCalendar(com.aetheris.metadata.config.BusinessCalendar calendar) { this.businessCalendar = calendar; }
     private static final Set<String> OPERATIONS = Set.of(
             "expire_snapshots", "rewrite_data_files", "remove_orphan_files",
             "storage_estimate", "time_travel", "rollback");
@@ -96,7 +99,7 @@ public class LakehouseMaintenanceJobServiceImpl extends ServiceImpl<LakehouseMai
         try {
             Map<String, Object> response = executionClient.submit(Map.of(
                     "requestKey", requestKey,
-                    "bizDate", java.time.LocalDate.now().toString(),
+                    "bizDate", businessCalendar.today().toString(),
                     "attemptId", String.valueOf(running.getId()),
                     "operation", plan.operation(),
                     "statement", plan.statement(),

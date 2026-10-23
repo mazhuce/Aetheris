@@ -17,6 +17,65 @@ class LakehouseR1ValidatorTest(unittest.TestCase):
         warnings = validator.validate("draft")
         self.assertEqual([], warnings)
 
+    def test_current_release_remains_blocked_by_unresolved_minio_images(self):
+        with self.assertRaisesRegex(ValueError, "Unresolved base-image locks: 2"):
+            validator.validate("release")
+
+    def test_pinned_image_cannot_change_tag_digest_repository_or_revert_to_tag(self):
+        compose = validator.COMPOSE.read_text(encoding="utf-8")
+        pinned = next(line.strip().split("image: ", 1)[1] for line in validator.service_block(compose, "source-postgres").splitlines() if line.strip().startswith("image:"))
+        replacements = (pinned.replace(":16.9@", ":17.0@"),
+                        pinned.rsplit(":", 1)[0] + ":" + "0" * 64,
+                        pinned.replace("library/postgres", "adjacent/postgres"),
+                        "postgres:16.9", pinned.split("@", 1)[0])
+        for replacement in replacements:
+            with self.subTest(reference=replacement), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "compose.yml"
+                path.write_text(compose.replace(pinned, replacement), encoding="utf-8")
+                with patch.object(validator, "COMPOSE", path):
+                    with self.assertRaisesRegex(ValueError, "image drift for source-postgres"):
+                        validator.validate("draft")
+
+    def test_matching_source_and_lock_digest_cannot_forge_official_manifest(self):
+        compose = validator.COMPOSE.read_text(encoding="utf-8")
+        lock = json.loads((ROOT / ".github/workflows/base-image-inventory.json").read_text(encoding="utf-8"))
+        item = next(x for x in lock["images"] if x["reference"].startswith("docker.io/library/postgres:16.9@"))
+        old = item["reference"]
+        item["officialResolution"]["digest"] = "sha256:" + "0" * 64
+        item["reference"] = old.split("@", 1)[0] + "@" + item["officialResolution"]["digest"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "compose.yml"
+            path.write_text(compose.replace(old, item["reference"]), encoding="utf-8")
+            locked = Path(directory) / "lock.json"
+            locked.write_text(json.dumps(lock), encoding="utf-8")
+            with patch.object(validator, "COMPOSE", path), patch.object(validator, "IMAGE_LOCK", locked, create=True):
+                with self.assertRaisesRegex(ValueError, "image drift for source-postgres"):
+                    validator.validate("draft")
+
+    def test_duplicate_image_cannot_hide_an_unpinned_override(self):
+        compose = validator.COMPOSE.read_text(encoding="utf-8")
+        marker = "    # Logical WAL is required"
+        modified = compose.replace(marker, "    image: postgres:16.9\n" + marker)
+        self.assertNotEqual(compose, modified)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "compose.yml"
+            path.write_text(modified, encoding="utf-8")
+            with patch.object(validator, "COMPOSE", path):
+                with self.assertRaisesRegex(ValueError, "image drift for source-postgres"):
+                    validator.validate("draft")
+
+    def test_unverified_minio_digest_is_not_a_release_fix(self):
+        compose = validator.COMPOSE.read_text(encoding="utf-8")
+        modified = compose.replace("quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+                                   "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:" + "0" * 64)
+        self.assertNotEqual(compose, modified)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "compose.yml"
+            path.write_text(modified, encoding="utf-8")
+            with patch.object(validator, "COMPOSE", path):
+                with self.assertRaisesRegex(ValueError, "image drift for object-store"):
+                    validator.validate("draft")
+
     def test_jdbc_driver_versions_are_required_and_pinned(self):
         bom = validator.BOM.read_text(encoding="utf-8")
         head, tail = bom.rsplit('trino = "476"', 1)
@@ -109,14 +168,14 @@ class LakehouseR1ValidatorTest(unittest.TestCase):
     def test_source_postgres_fixture_is_pinned_and_mounted(self):
         compose = validator.COMPOSE.read_text(encoding="utf-8")
         self.assertIn("source-postgres:", compose)
-        self.assertIn("image: postgres:16.9", compose)
+        self.assertRegex(compose, r"image: docker\.io/library/postgres:16\.9@sha256:[0-9a-f]{64}")
         self.assertIn("../../fixtures/r1/postgres:/docker-entrypoint-initdb.d:ro", compose)
         self.assertIn("wal_level=logical", compose)
 
     def test_source_mysql_fixture_is_pinned_and_binlog_enabled(self):
         compose = validator.COMPOSE.read_text(encoding="utf-8")
         self.assertIn("source-mysql:", compose)
-        self.assertIn("image: mysql:8.0.40", compose)
+        self.assertRegex(compose, r"image: docker\.io/library/mysql:8\.0\.40@sha256:[0-9a-f]{64}")
         self.assertIn("../../fixtures/r1/mysql:/docker-entrypoint-initdb.d:ro", compose)
         self.assertIn("--binlog-format=ROW", compose)
 
@@ -131,7 +190,8 @@ class LakehouseR1ValidatorTest(unittest.TestCase):
         self.assertIn('id = "mysql-jdbc"', allowlist)
         self.assertIn('id = "oracle-jdbc"', allowlist)
         self.assertIn('license_source = "https://www.oracle.com/downloads/licenses/oracle-free-license.html"', allowlist)
-        self.assertEqual([], validator.validate("release"))
+        # Connector approval does not resolve the separate MinIO image blockers.
+        self.assertEqual([], validator.validate("draft"))
 
     def test_jdbc_driver_license_source_is_required(self):
         allowlist = validator.ALLOWLIST.read_text(encoding="utf-8")

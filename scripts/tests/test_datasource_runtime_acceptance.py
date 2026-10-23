@@ -16,7 +16,8 @@ class DataSourceRuntimeAcceptanceTests(unittest.TestCase):
             self.assertIn(f'Type = "{data_source_type}"', self.script)
         self.assertIn("DELETE FROM metadata.data_source", self.script)
         self.assertIn("runtime-acceptance-report.json", self.script)
-        self.assertIn('status = "passed"', self.script)
+        # Actual success/failure behavior is covered by test_datasource_script_behavior.
+        self.assertIn("cleanup", self.script)
 
     def test_smoke_compose_is_pinned_and_loopback_only(self):
         for image in ("mariadb:11.4.3", "clickhouse/clickhouse-server:24.8.14.39-alpine", "cockroachdb/cockroach:v24.3.6"):

@@ -9,7 +9,7 @@ import com.aetheris.workflow.service.ExecutionAdapter.Submission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -33,6 +33,8 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
     private final Duration connectTimeout;
     private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
     private final boolean enabled;
+    private final OutboundTargetPolicy targetPolicy;
+    private final java.util.Set<String> allowedOrigins;
 
     @Autowired
     public SparkBatchExecutionAdapter(
@@ -40,12 +42,21 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
             @Value("${aetheris.spark-runner.base-url:http://127.0.0.1:18081}") String baseUrl,
             @Value("${aetheris.spark-runner.token:}") String token,
             @Value("${aetheris.spark-runner.enabled:false}") boolean enabled,
-            @Value("${aetheris.spark-runner.connect-timeout:PT3S}") Duration connectTimeout) {
+            @Value("${aetheris.spark-runner.connect-timeout:PT3S}") Duration connectTimeout,
+            OutboundTargetPolicy targetPolicy,
+            @Value("${aetheris.spark-runner.allowed-origins:}") String additionalOrigins) {
         if (enabled && (token == null || token.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32)) {
             throw new IllegalStateException("AETHERIS_SPARK_RUNNER_TOKEN must contain at least 32 UTF-8 bytes");
         }
         this.builder = builder;
+        this.targetPolicy = targetPolicy;
         this.defaultBaseUrl = normalizeBaseUrl(baseUrl);
+        var origins = new java.util.HashSet<String>();
+        origins.add(this.defaultBaseUrl);
+        for (String origin : additionalOrigins.split(",")) {
+            if (!origin.isBlank()) origins.add(normalizeBaseUrl(origin.trim()));
+        }
+        this.allowedOrigins = java.util.Set.copyOf(origins);
         this.token = token == null ? "" : token;
         this.connectTimeout = connectTimeout;
         this.defaultClient = buildClient(this.defaultBaseUrl);
@@ -59,6 +70,8 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
         this.token = "";
         this.connectTimeout = Duration.ofSeconds(3);
         this.enabled = enabled;
+        this.targetPolicy = new OutboundTargetPolicy();
+        this.allowedOrigins = java.util.Set.of(this.defaultBaseUrl);
     }
 
     @Override
@@ -231,17 +244,33 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
     private RestClient clientFor(String runnerBaseUrl) {
         if (DEFAULT_RUNNER.equals(runnerBaseUrl)) return defaultClient;
         String normalized = normalizeBaseUrl(runnerBaseUrl);
+        if (!allowedOrigins.contains(normalized)) throw new IllegalArgumentException("Runner 未列入受信任基础地址配置");
         if (normalized.equals(defaultBaseUrl)) return defaultClient;
         if (builder == null) throw new IllegalStateException("测试适配器未配置多 Runner 客户端");
-        return clients.computeIfAbsent(normalized, this::buildClient);
+        targetPolicy.httpOrigin(normalized);
+        synchronized (clients) {
+            if (!clients.containsKey(normalized) && clients.size() >= 64)
+                throw new IllegalArgumentException("Runner 客户端数量超过服务上限");
+            return clients.computeIfAbsent(normalized, this::buildClient);
+        }
     }
 
     private RestClient buildClient(String baseUrl) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout((int) connectTimeout.toMillis());
+        var http = java.net.http.HttpClient.newBuilder().connectTimeout(connectTimeout)
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(http);
         factory.setReadTimeout(15_000);
         return builder.clone().requestFactory(factory).baseUrl(baseUrl)
-                .defaultHeader("X-Aetheris-Runner-Token", token).build();
+                .defaultHeader("X-Aetheris-Runner-Token", token)
+                .requestInterceptor((request, body, execution) -> {
+                    targetPolicy.requireHost(request.getURI().getHost());
+                    var response = execution.execute(request, body);
+                    if (response.getStatusCode().is3xxRedirection()) {
+                        response.close();
+                        throw new IllegalArgumentException("计算引擎重定向被拒绝");
+                    }
+                    return response;
+                }).build();
     }
 
     private <T> T call(java.util.function.Supplier<T> operation, boolean submit) {

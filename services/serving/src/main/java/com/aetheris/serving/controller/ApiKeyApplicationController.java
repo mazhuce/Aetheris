@@ -28,12 +28,13 @@ public class ApiKeyApplicationController {
 
     @PostMapping
     public ApiKeyApplication request(@Valid @RequestBody ApiKeyApplicationRequest input, HttpServletRequest request) {
-        return service.request(input, security.requireIdentity(request).username());
+        security.requireIdentity(request);
+        return service.request(input, com.aetheris.security.servlet.TrustedUser.require(request));
     }
 
     @GetMapping("/mine")
     public List<ApiKeyApplication> mine(HttpServletRequest request) {
-        return service.list(Optional.of(security.requireIdentity(request).username()));
+        return service.mine(security.requireIdentity(request).uid());
     }
 
     @GetMapping

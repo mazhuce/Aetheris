@@ -3,30 +3,31 @@ package com.aetheris.system.controller;
 import com.aetheris.system.dto.PermissionEventRequest;
 import com.aetheris.system.entity.PermissionEvent;
 import com.aetheris.system.service.PermissionEventService;
-import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import com.aetheris.system.security.SystemInternalRequests;
+import java.util.Set;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 权限审计事件内部写入端点：auth-service 的授权、撤销、拒绝与越权尝试
- * 在这里统一落库。端点由 system-service 的共享内部令牌拦截器保护；网关不路由
- * /internal/**，system-service 也不映射宿主端口。
- */
+/** Auth-only v2 permission journal. Body fields are observations, never caller credentials. */
 @RestController
-@RequestMapping("/internal/audit/permission-events")
+@RequestMapping("/internal/v2/audit/permission-events")
 public class InternalPermissionEventController {
 
     private final PermissionEventService permissionEventService;
+    private final SystemInternalRequests bodies;
 
-    public InternalPermissionEventController(PermissionEventService permissionEventService) {
+    public InternalPermissionEventController(PermissionEventService permissionEventService,SystemInternalRequests bodies) {
         this.permissionEventService = permissionEventService;
+        this.bodies = bodies;
     }
 
     @PostMapping
-    public ResponseEntity<Void> create(@Valid @RequestBody PermissionEventRequest request) {
+    public ResponseEntity<Void> create(HttpServletRequest http) {
+        bodies.caller(http,"system.permission-event.record",Set.of("auth"));
+        PermissionEventRequest request=bodies.read(http,PermissionEventRequest.class);
         PermissionEvent event = new PermissionEvent();
         event.setUsername(request.username());
         event.setUserId(request.userId());

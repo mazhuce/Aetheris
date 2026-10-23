@@ -28,7 +28,8 @@ public class PipelineController {
     @GetMapping
     public Object list(@RequestParam(defaultValue = "30") int limit,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        return pipelines.list(limit, username, authorization.mayManage(username));
+        return pipelines.list(limit, username, true).stream()
+                .filter(run -> run.get("id") instanceof Number id && authorization.canReadPipeline(username, id.longValue())).toList();
     }
 
     @GetMapping("/{id}")
@@ -47,7 +48,7 @@ public class PipelineController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancel(@PathVariable long id,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorization.canReadPipeline(username, id)) {
+        if (!authorization.canExecutePipeline(username, id)) {
             return ResponseEntity.status(403).body(Map.of("message", "无权操作该流水线"));
         }
         try {
@@ -66,7 +67,7 @@ public class PipelineController {
     @PostMapping("/{id}/retry")
     public ResponseEntity<?> retry(@PathVariable long id, @RequestBody RetryRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorization.canReadPipeline(username, id)) {
+        if (!authorization.canExecutePipeline(username, id)) {
             return ResponseEntity.status(403).body(Map.of("message", "无权操作该流水线"));
         }
         try {
@@ -82,6 +83,9 @@ public class PipelineController {
     @PostMapping
     public ResponseEntity<?> start(@RequestBody StartRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.canStartPipeline(username, request.targetTaskId())) {
+            return ResponseEntity.status(403).body(Map.of("message", "流水线包含无权执行的任务"));
+        }
         try { return ResponseEntity.ok(pipelines.start(request.targetTaskId(), request.bizDate(), username)); }
         catch (IllegalArgumentException error) { return ResponseEntity.badRequest().body(Map.of("message", error.getMessage())); }
         catch (IllegalStateException error) { return ResponseEntity.status(409).body(Map.of("message", error.getMessage())); }
@@ -90,6 +94,9 @@ public class PipelineController {
     @PostMapping("/waivers")
     public ResponseEntity<?> waive(@RequestBody WaiverRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        if (!authorization.mayManage(username)) {
+            return ResponseEntity.status(403).body(Map.of("message", "质量门禁豁免需要管理权限"));
+        }
         try {
             return ResponseEntity.ok(pipelines.createWaiver(request.qualityTaskId(), request.bizDate(),
                     request.reason(), request.expiresAt(), username));

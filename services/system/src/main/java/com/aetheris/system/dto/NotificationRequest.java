@@ -8,9 +8,9 @@ import jakarta.validation.constraints.Size;
  */
 public record NotificationRequest(
         @NotBlank @Size(max = 64) String recipient,
-        @NotBlank @Size(max = 32) String source,
-        Long sourceId,
-        @Size(max = 16) String level,
+        @Size(max = 32) String source,
+        @jakarta.validation.constraints.Positive Long sourceId,
+        @jakarta.validation.constraints.Pattern(regexp="info|warning|critical") String level,
         @NotBlank @Size(max = 256) String title,
         @Size(max = 1024) String message,
         @Size(max = 256) String linkPath) {

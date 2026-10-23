@@ -58,7 +58,7 @@ services:
   # inside the R1 project so a rebuild never touches the platform database.
   source-postgres:
     profiles: ["r1", "sources"]
-    image: postgres:16.9
+    image: docker.io/library/postgres:16.9@sha256:ddfe3e8713e3ee5b8f286082cb12512488dfbf3f5a1ecb0b74a42e6055af0a5f
     # Logical WAL is required by the postgres-cdc source in the fixture.
     command: ["postgres", "-c", "wal_level=logical", "-c", "max_replication_slots=4", "-c", "max_wal_senders=4"]
     environment:
@@ -81,7 +81,7 @@ services:
   # existing isolated source password so older .env.r1 files remain usable.
   source-mysql:
     profiles: ["r1", "sources"]
-    image: mysql:8.0.40
+    image: docker.io/library/mysql:8.0.40@sha256:d58ac93387f644e4e040c636b8f50494e78e5afc27ca0a87348b2f577da2b7ff
     command:
       - mysqld
       - --server-id=184054
@@ -108,7 +108,7 @@ services:
 
   catalog:
     profiles: ["r1", "catalog"]
-    image: tabulario/iceberg-rest:1.6.0
+    image: docker.io/tabulario/iceberg-rest:1.6.0@sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472
     environment:
       CATALOG_WAREHOUSE: s3://warehouse/
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
@@ -127,7 +127,7 @@ services:
 
   trino:
     profiles: ["r1", "trino"]
-    image: trinodb/trino:476
+    image: docker.io/trinodb/trino:476@sha256:00125e40d063bc4816d165482f6044872b18b56026fb959d3b28ce1f96ffbbee
     environment:
       R1_MINIO_ACCESS_KEY: ${R1_MINIO_ACCESS_KEY:?R1_MINIO_ACCESS_KEY is required}
       R1_MINIO_SECRET_KEY: ${R1_MINIO_SECRET_KEY:?R1_MINIO_SECRET_KEY is required}
@@ -143,7 +143,7 @@ services:
 
   flink-jobmanager:
     profiles: ["r1", "flink"]
-    image: flink:1.20.1-java17
+    image: docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e
     command:
       - bash
       - -lc
@@ -179,7 +179,7 @@ services:
 
   flink-taskmanager:
     profiles: ["r1", "flink"]
-    image: flink:1.20.1-java17
+    image: docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e
     command:
       - bash
       - -lc
@@ -208,7 +208,7 @@ services:
   # 网关与 JobManager/TaskManager 共用同一 session cluster，宿主机只暴露回环地址。
   flink-sql-gateway:
     profiles: ["r1", "flink"]
-    image: flink:1.20.1-java17
+    image: docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e
     command:
       - bash
       - -lc

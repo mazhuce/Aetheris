@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Form,
   Input,
@@ -17,7 +18,7 @@ import {
 } from 'antd'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
-import { listDataSources, listPublishedMetrics, listSemanticDimensions, type DataSource, type MetricDefinition, type SemanticDimension } from '@/api/metadata'
+import { listDataSources, listPublishedMetricsPage, listSemanticDimensions, type DataSource, type SemanticDimension } from '@/api/metadata'
 import {
   createAnalyticsDataset,
   deleteAnalyticsDataset,
@@ -30,6 +31,8 @@ import {
   type DatasetInput
 } from '@/api/analytics'
 import { getCurrentRole } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 function resultRows(result: AnalyticsQueryResult) {
   return result.rows.map((row, rowIndex) => {
@@ -41,9 +44,10 @@ function resultRows(result: AnalyticsQueryResult) {
 
 export default function AnalyticsDatasetPage() {
   const [datasets, setDatasets] = useState<AnalyticsDataset[]>([])
+  const permissions = useResourceActions('dataset', datasets)
   const [sources, setSources] = useState<DataSource[]>([])
-  const [metrics, setMetrics] = useState<MetricDefinition[]>([])
   const [dimensions, setDimensions] = useState<SemanticDimension[]>([])
+  const [metricKeyword, setMetricKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<AnalyticsDataset | null>(null)
@@ -53,16 +57,21 @@ export default function AnalyticsDatasetPage() {
   const sourceType = Form.useWatch('sourceType', form) || 'sql'
   const metricCode = Form.useWatch('metricCode', form)
   const isAdmin = getCurrentRole() === 'admin'
+  const metricListing = useVisibleListPage(
+    (cursor, signal) => listPublishedMetricsPage(metricKeyword || undefined, { cursor, size: 200, signal }),
+    JSON.stringify([metricKeyword])
+  )
+  const metrics = metricListing.items
 
   const reload = async () => {
     setLoading(true)
     try {
-      const [nextDatasets, nextSources, nextMetrics, nextDimensions] = await Promise.all([
-        listAnalyticsDatasets(), listDataSources(), listPublishedMetrics(), listSemanticDimensions(undefined, 'published')
+      metricListing.refresh()
+      const [nextDatasets, nextSources, nextDimensions] = await Promise.all([
+        listAnalyticsDatasets(), listDataSources(), listSemanticDimensions(undefined, 'published')
       ])
       setDatasets(nextDatasets)
       setSources(nextSources)
-      setMetrics(nextMetrics)
       setDimensions(nextDimensions)
     } catch {
       message.error('数据集加载失败')
@@ -169,16 +178,16 @@ export default function AnalyticsDatasetPage() {
       fixed: 'right',
       render: (_, record) => (
         <Space size={4}>
-          <Button type="text" disabled={record.status !== 'published'} loading={querying === record.id} onClick={() => void runPreview(record)}>预览</Button>
-          {isAdmin && record.status === 'draft' && <Button type="text" onClick={() => void publish(record)}>发布</Button>}
+          {(isAdmin || permissions.can('query', record.id)) && <Button aria-label={`预览数据集 ${record.name}`} type="text" disabled={record.status !== 'published'} loading={querying === record.id} onClick={() => void runPreview(record)}>预览</Button>}
+          {(isAdmin || permissions.can('publish', record.id)) && record.status === 'draft' && <Button aria-label={`发布数据集 ${record.name}`} type="text" onClick={() => void publish(record)}>发布</Button>}
           {isAdmin && <Button type="text" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>}
-          {isAdmin && (
+          {(isAdmin || permissions.can('delete', record.id)) && (
             <Popconfirm title="删除这个数据集？" description="已绑定的看板组件会失去数据。" onConfirm={async () => {
               await deleteAnalyticsDataset(record.id)
               message.success('数据集已删除')
               await reload()
             }}>
-              <Button type="text" danger icon={<DeleteOutlined />} />
+              <Button aria-label={`删除数据集 ${record.name}`} type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}
         </Space>
@@ -252,8 +261,18 @@ export default function AnalyticsDatasetPage() {
           >
             <Input.TextArea className="dataset-sql-input" rows={9} placeholder="SELECT business_date, sales_amount FROM ads_sales_daily ORDER BY business_date" />
           </Form.Item> : <>
-            <Form.Item name="metricCode" label="已发布指标" rules={[{ required: true, message: '请选择已发布指标' }]}>
-              <Select showSearch optionFilterProp="label" placeholder="选择企业统一指标" options={metrics.map((item) => ({ value: item.metricCode, label: `${item.metricCode} · ${item.metricName} · v${item.version}` }))} />
+            {metricListing.error && <Alert type="error" showIcon message={metricListing.error} style={{ marginBottom: 8 }} />}
+            <Form.Item name="metricCode" label="已发布指标" extra="输入指标编码或名称后从服务端检索；结果按权限和分页边界返回。" rules={[{ required: true, message: '请选择已发布指标' }]}>
+              <Select
+                showSearch
+                filterOption={false}
+                optionFilterProp="label"
+                onSearch={setMetricKeyword}
+                loading={metricListing.loading}
+                notFoundContent={metricListing.loading ? '指标加载中…' : '暂无匹配指标'}
+                placeholder="输入编码或名称搜索企业指标"
+                options={metrics.map((item) => ({ value: item.metricCode, label: `${item.metricCode} · ${item.metricName} · v${item.version}` }))}
+              />
             </Form.Item>
             <div className="dataset-form-grid">
               <Form.Item name={['metricQuery', 'timeGrain']} label="时间粒度"><Select options={[{ value: 'none', label: '不分组' }, { value: 'day', label: '日' }, { value: 'month', label: '月' }, { value: 'year', label: '年' }]} /></Form.Item>

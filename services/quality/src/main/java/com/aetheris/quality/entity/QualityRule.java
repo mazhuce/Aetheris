@@ -14,6 +14,11 @@ public class QualityRule {
 
     @TableId(type = IdType.AUTO)
     private Long id;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+    @com.baomidou.mybatisplus.annotation.TableField(insertStrategy = com.baomidou.mybatisplus.annotation.FieldStrategy.NEVER, updateStrategy = com.baomidou.mybatisplus.annotation.FieldStrategy.NEVER)
+    private Long scheduleVersion;
+    public Long getScheduleVersion() { return scheduleVersion == null ? 0L : scheduleVersion; }
+    public void setScheduleVersion(Long version) { this.scheduleVersion = version; }
 
     @NotBlank
     private String name;

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "services": {
+    "auth": "auth",
+    "system": "system",
+    "metadata": "metadata",
+    "serving": "serving",
+    "workflow": "workflow",
+    "ingestion": "ingestion",
+    "quality": "quality",
+    "governance": "governance",
+    "ai-agent": "ai"
+  },
+  "flywayVersion": "10.20.1",
+  "postgresqlJdbcVersion": "42.7.13"
+}

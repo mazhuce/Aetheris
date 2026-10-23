@@ -1,0 +1,10 @@
+-- Installation template only; not an automatic Flyway migration.
+-- Substitute SCHEMA with the receiver-owned reviewed schema, never request input.
+CREATE TABLE SCHEMA.internal_request_nonce (
+    caller VARCHAR(64) NOT NULL,
+    nonce VARCHAR(86) NOT NULL,
+    expires_at BIGINT NOT NULL CHECK (expires_at > 0),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (caller, nonce)
+);
+CREATE INDEX internal_request_nonce_expiry_idx ON SCHEMA.internal_request_nonce(expires_at);

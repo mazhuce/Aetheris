@@ -23,6 +23,18 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class DataSourceControllerTest {
+    @Test
+    void listFiltersExactResourceGrantsBeforeAttachingHealth() {
+        var allowed = dataSource(5L,"allowed");
+        var forbidden = dataSource(6L,"secret");
+        when(security.requireIdentity(request)).thenReturn(new AetherisIdentity(7L,"alice"));
+        when(dataSourceService.list()).thenReturn(List.of(allowed,forbidden));
+        when(security.allowedIds("alice","datasource","view",Map.of(5L,Map.of(),6L,Map.of())))
+                .thenReturn(java.util.Set.of(5L));
+        when(healthService.attach(List.of(allowed))).thenReturn(List.of(allowed));
+        assertEquals(List.of(5L),controller.list(request).stream().map(com.aetheris.metadata.dto.DataSourceResponse::id).toList());
+        verify(healthService).attach(List.of(allowed));
+    }
 
     private final DataSourceService dataSourceService = mock(DataSourceService.class);
     private final JdbcService jdbcService = mock(JdbcService.class);
@@ -70,10 +82,10 @@ class DataSourceControllerTest {
                 Map.of("sql", "DROP TABLE ads.ads_order_stats"));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("查询中包含不允许的关键字：DROP", response.getBody().get("message"));
+        assertEquals("查询被拒绝，请检查 SQL 与数据源配置", response.getBody().get("message"));
         verify(queryHistoryService).record(argThat(history ->
                 "failed".equals(history.getStatus())
-                        && "查询中包含不允许的关键字：DROP".equals(history.getErrorMessage())));
+                        && "查询被拒绝，请检查 SQL 与数据源配置".equals(history.getErrorMessage())));
     }
 
     @Test
@@ -87,7 +99,7 @@ class DataSourceControllerTest {
         var response = controller.query(request, 5L, Map.of("sql", "SELECT 1"));
 
         assertEquals(HttpStatus.BAD_GATEWAY, response.getStatusCode());
-        assertEquals("目标端口拒绝连接，请确认数据库服务已启动并监听外部地址",
+        assertEquals("查询失败，请检查 SQL 与数据源配置",
                 response.getBody().get("message"));
                 verify(queryHistoryService).record(argThat(history ->
                 "failed".equals(history.getStatus())

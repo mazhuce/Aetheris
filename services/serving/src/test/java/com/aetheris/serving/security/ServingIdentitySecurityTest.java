@@ -27,14 +27,19 @@ class ServingIdentitySecurityTest {
     }
 
     @Test
-    void webConfigCachesSignedIdentityAndOnlyApiAssetRouteAllowsApiKey() throws Exception {
+    void webConfigAcceptsOnlyTypedUserAndOnlyApiAssetRouteDelegatesApiKey() throws Exception {
         var interceptor = new ServingIdentityInterceptor(new IdentityVerifier(TOKEN, 300_000));
 
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/serving/subscriptions");
         request.addHeader(IdentityVerifier.HEADER, sign("7", "alice", System.currentTimeMillis()));
         MockHttpServletResponse response = new MockHttpServletResponse();
-        assertTrue(interceptor.preHandle(request, response, new Object()));
-        assertEquals(new ServingIdentity(7L, "alice"), request.getAttribute(ServingSecurity.ATTRIBUTE));
+        assertFalse(interceptor.preHandle(request, response, new Object()));
+        assertEquals(401,response.getStatus());
+        assertNull(request.getAttribute(ServingSecurity.ATTRIBUTE));
+        try(var fixture=new V2ServingFixture()){
+            fixture.request(verified->{try{assertTrue(interceptor.preHandle(verified,new MockHttpServletResponse(),new Object()));}
+                catch(Exception failure){throw new AssertionError(failure);}});
+        }
 
         MockHttpServletRequest unsigned = new MockHttpServletRequest("GET", "/api/serving/subscriptions");
         unsigned.addHeader("X-API-Key", "presented");

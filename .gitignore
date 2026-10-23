@@ -48,6 +48,7 @@ venv/
 configs/datasource-smoke.env
 .env.*
 !.env.example
+!.env.*.example
 *.local
 configs/*.local.*
 
@@ -89,3 +90,19 @@ ${system:java.io.tmpdir}/
 .aetheris-last-good-image-tag
 # Generated R1 fixture SQL/results (recreate with scripts/r1-fixture.py)
 /artifacts/r1-fixture/
+
+# Private runtime state is not public acceptance evidence.
+artifacts/**/state/
+**/aws-credentials
+**/runner-token
+backups/
+*.dump
+*.dump.*.partial
+scripts/tests/.release-test-*/
+scripts/tests/.postgres-test-*/
+# Local deployment rollback metadata; never include it in source or release bundles.
+.aetheris-last-good-release*
+# Disposable local audit reports and database fixtures; published evidence is explicit.
+/output/audit-*/
+/configs/database/private/
+/configs/security/private/

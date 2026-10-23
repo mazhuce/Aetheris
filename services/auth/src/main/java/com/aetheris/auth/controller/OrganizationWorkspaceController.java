@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,7 +29,7 @@ import java.util.List;
 @RequestMapping("/api/auth/rbac")
 public class OrganizationWorkspaceController {
 
-    private static final String USER_HEADER = "X-User-Name";
+    private static final String USERNAME_ATTRIBUTE = "aetheris.username";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final RbacAdminService service;
@@ -41,7 +42,7 @@ public class OrganizationWorkspaceController {
 
     @GetMapping("/organizations")
     public List<Organization> listOrganizations(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         return service.listOrganizations();
@@ -49,7 +50,7 @@ public class OrganizationWorkspaceController {
 
     @PostMapping("/organizations")
     public ResponseEntity<Organization> createOrganization(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody OrganizationRequest request) {
         guard(requester, requestId);
@@ -59,7 +60,7 @@ public class OrganizationWorkspaceController {
 
     @PutMapping("/organizations/{id}")
     public Organization updateOrganization(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody OrganizationRequest request) {
@@ -69,7 +70,7 @@ public class OrganizationWorkspaceController {
 
     @DeleteMapping("/organizations/{id}")
     public ResponseEntity<Void> deleteOrganization(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);
@@ -79,7 +80,7 @@ public class OrganizationWorkspaceController {
 
     @GetMapping("/workspaces")
     public List<Workspace> listWorkspaces(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @RequestParam(required = false) Long organizationId) {
         guard(requester, requestId);
@@ -88,7 +89,7 @@ public class OrganizationWorkspaceController {
 
     @PostMapping("/workspaces")
     public ResponseEntity<Workspace> createWorkspace(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody WorkspaceRequest request) {
         guard(requester, requestId);
@@ -98,7 +99,7 @@ public class OrganizationWorkspaceController {
 
     @PutMapping("/workspaces/{id}")
     public Workspace updateWorkspace(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody WorkspaceRequest request) {
@@ -108,7 +109,7 @@ public class OrganizationWorkspaceController {
 
     @DeleteMapping("/workspaces/{id}")
     public ResponseEntity<Void> deleteWorkspace(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);

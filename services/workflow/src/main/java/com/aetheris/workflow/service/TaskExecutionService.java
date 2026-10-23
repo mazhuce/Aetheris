@@ -90,6 +90,21 @@ public class TaskExecutionService {
                 notificationClient, sparkExecutionService, null, null, qualityExecutionClient, lineageEvidenceClient, jdbc);
     }
 
+    private com.aetheris.workflow.fixedexecution.WorkflowSqlFacade fixedSql;
+    @Autowired public void installFixedSql(com.aetheris.workflow.fixedexecution.WorkflowSqlFacade facade){this.fixedSql=java.util.Objects.requireNonNull(facade);}
+    public TaskInstance executeManual(long id,String date,com.aetheris.security.servlet.TrustedUser user){
+        com.aetheris.workflow.config.BusinessCalendar.parseExact(date);
+        var actor=com.aetheris.workflow.fixedexecution.WorkflowActor.manual(user);
+        Task task=taskService.getById(id);if(task==null)throw new IllegalArgumentException("任务不存在");
+        if(task.getTaskType()==null||"sql".equals(task.getTaskType())){
+            if(fixedSql==null)throw new IllegalStateException("固定SQL执行器未配置");return fixedSql.manual(id,date,actor);
+        }
+        return execute(id,date,"manual",actor.username());
+    }
+    public TaskInstance executeScheduled(long id,String date,long generation){
+        if(fixedSql==null)throw new IllegalStateException("固定SQL执行器未配置");return fixedSql.scheduled(id,date,generation);
+    }
+
     /**
      * 执行一个任务。
      *
@@ -100,6 +115,7 @@ public class TaskExecutionService {
      * @return 执行后的实例
      */
     public TaskInstance execute(Long taskId, String bizDate, String triggerType, String triggeredBy) {
+        com.aetheris.workflow.config.BusinessCalendar.parseExact(bizDate);
         Task task = taskService.getById(taskId);
         if (task == null) {
             throw new IllegalArgumentException("任务不存在");
@@ -108,6 +124,7 @@ public class TaskExecutionService {
             throw new IllegalStateException("任务已停用，无法执行");
         }
 
+        if(task.getTaskType()==null||"sql".equals(task.getTaskType()))throw new IllegalStateException("SQL必须使用已批准的可信manual或cron来源");
         int timeout = task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds();
         ExecutionClaim claim = claimCoordinator.claim(
                 task, bizDate, triggerType, triggeredBy, timeout);
@@ -127,7 +144,7 @@ public class TaskExecutionService {
             case "spark" -> sparkExecutionService.submit(task, claim);
             case "flink" -> runFlink(task, claim, timeout);
             case "quality" -> runQuality(task, claim);
-            case "sql" -> runWithRetry(task, claim, timeout);
+            case "sql" -> throw new IllegalStateException("禁止SQL字符串执行桥");
             default -> claimCoordinator.fail(claim, "不支持的任务类型", 0, 0);
         };
     }
@@ -612,59 +629,6 @@ public class TaskExecutionService {
         }
     }
 
-    /** Each retry receives its own immutable attempt row and fencing token. */
-    private TaskInstance runWithRetry(Task task, ExecutionClaim initialClaim, int timeout) {
-        int maxRetries = task.getMaxRetries() == null ? 0 : task.getMaxRetries();
-        long executionStartedAt = System.currentTimeMillis();
-        ExecutionClaim claim = initialClaim;
-        SqlExecutionException lastError = null;
-
-        for (int retryIndex = 0; retryIndex <= maxRetries; retryIndex++) {
-            long attemptStartedAt = System.currentTimeMillis();
-            try {
-                writeLog(claim.instance().getId(), claim.attemptId(), "info",
-                        "开始第 " + claim.attemptNo() + " 次执行，业务日期 "
-                                + claim.instance().getBizDate());
-
-                // 业务日期以参数形式注入 SQL：任务 SQL 里写 ${bizDate} 占位符，
-                // 由这里替换成实际日期，避免每天手改 SQL。
-                String sql = resolvePlaceholders(task.getTaskSql(), claim.instance().getBizDate());
-                SqlExecutionClient.ExecutionResult result =
-                        executionClient.execute(task.getDatasourceId(), sql, timeout);
-
-                long attemptDuration = System.currentTimeMillis() - attemptStartedAt;
-                TaskInstance succeeded = claimCoordinator.succeed(
-                        claim, result.affectedRows(), attemptDuration,
-                        System.currentTimeMillis() - executionStartedAt);
-                writeLog(succeeded.getId(), claim.attemptId(), "info",
-                        "执行成功，耗时 " + attemptDuration + "ms");
-                lineageEvidenceClient.sql(task, claim, sql);
-                return succeeded;
-            } catch (SqlExecutionException error) {
-                lastError = error;
-                long attemptDuration = System.currentTimeMillis() - attemptStartedAt;
-                TaskInstance failed = claimCoordinator.fail(
-                        claim, error.getMessage(), attemptDuration,
-                        System.currentTimeMillis() - executionStartedAt);
-                writeLog(failed.getId(), claim.attemptId(), "error",
-                        "第 " + claim.attemptNo() + " 次执行失败：" + error.getMessage());
-                log.warn("Task {} attempt {} failed: {}",
-                        task.getId(), claim.attemptNo(), error.getMessage());
-
-                if (retryIndex == maxRetries) {
-                    notificationClient.notifyAdmin(task.getId(), failed.getBizDate(), "critical",
-                            "任务执行失败：" + task.getName(),
-                            "业务日期 " + failed.getBizDate() + "，重试耗尽后仍失败："
-                                    + truncate(lastError.getMessage()));
-                    return failed;
-                }
-                claim = claimCoordinator.claim(
-                        task, failed.getBizDate(), "retry", failed.getTriggeredBy(), timeout);
-            }
-        }
-        throw new IllegalStateException("任务执行循环异常结束", lastError);
-    }
-
     /**
      * 替换 SQL 中的业务日期占位符。
      *
@@ -672,6 +636,7 @@ public class TaskExecutionService {
      * biz_date，不接受用户自由文本，因此不构成注入面。
      */
     String resolvePlaceholders(String sql, String bizDate) {
+        com.aetheris.workflow.config.BusinessCalendar.parseExact(bizDate);
         return sql == null ? null : sql.replace("${bizDate}", bizDate);
     }
 

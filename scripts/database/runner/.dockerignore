@@ -1,0 +1,6 @@
+target/
+*.local
+*.env
+*.env.*
+private/
+**/private/

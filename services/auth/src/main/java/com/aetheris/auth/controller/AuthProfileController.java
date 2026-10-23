@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,7 +29,7 @@ import java.util.Map;
  * 角色与状态，自助端只能改自己的资料与密码。若合并在一处，很容易在后续迭代中让某个分支
  * 漏掉「不能改自己角色」的判断，从而出现自我提权。
  *
- * <p>身份一律取自网关注入的 {@code X-User-Name}（网关校验 JWT 后写入），
+ * <p>身份取自验签拦截器注入的请求属性，
  * 不接受请求体或路径参数指定用户，否则任何登录用户都能改别人的密码。
  */
 @RestController
@@ -37,7 +37,7 @@ import java.util.Map;
 public class AuthProfileController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthProfileController.class);
-    private static final String USER_HEADER = "X-User-Name";
+    private static final String USERNAME_ATTRIBUTE = "aetheris.username";
 
     private final AuthUserService authUserService;
     private final PasswordEncoder passwordEncoder;
@@ -49,7 +49,7 @@ public class AuthProfileController {
 
     /** 返回当前登录用户的资料；响应体不含密码哈希（AuthUserResponse 本就不映射该字段）。 */
     @GetMapping
-    public ResponseEntity<?> profile(@RequestHeader(USER_HEADER) String username) {
+    public ResponseEntity<?> profile(@RequestAttribute(USERNAME_ATTRIBUTE) String username) {
         AuthUser user = findByUsername(username);
         if (user == null || !"active".equals(user.getStatus())) {
             // 令牌有效但账号已被删除：让前端把这种情况当作需要重新登录，而非服务故障。
@@ -60,7 +60,7 @@ public class AuthProfileController {
 
     @PutMapping
     public ResponseEntity<?> updateProfile(
-            @RequestHeader(USER_HEADER) String username,
+            @RequestAttribute(USERNAME_ATTRIBUTE) String username,
             @Valid @RequestBody UpdateProfileRequest request) {
         AuthUser user = findByUsername(username);
         if (user == null || !"active".equals(user.getStatus())) {
@@ -71,8 +71,13 @@ public class AuthProfileController {
         user.setEmail(request.email());
         user.setPhone(request.phone());
         user.setUpdatedAt(OffsetDateTime.now());
+        AuthUser patch = new AuthUser();
+        patch.setNickname(user.getNickname());
+        patch.setEmail(user.getEmail());
+        patch.setPhone(user.getPhone());
+        patch.setUpdatedAt(user.getUpdatedAt());
         // updateById 会跳过 null 字段，导致昵称/邮箱/手机号无法清空，故与管理端一样显式置空。
-        authUserService.update(user, new LambdaUpdateWrapper<AuthUser>()
+        authUserService.update(patch, new LambdaUpdateWrapper<AuthUser>()
                 .eq(AuthUser::getId, user.getId())
                 .set(request.nickname() == null, AuthUser::getNickname, null)
                 .set(request.email() == null, AuthUser::getEmail, null)
@@ -82,7 +87,7 @@ public class AuthProfileController {
 
     @PutMapping("/password")
     public ResponseEntity<?> changePassword(
-            @RequestHeader(USER_HEADER) String username,
+            @RequestAttribute(USERNAME_ATTRIBUTE) String username,
             @Valid @RequestBody ChangePasswordRequest request) {
         AuthUser user = findByUsername(username);
         if (user == null || !"active".equals(user.getStatus())) {
@@ -98,14 +103,16 @@ public class AuthProfileController {
             return ResponseEntity.badRequest().body(Map.of("message", "新密码不能与当前密码相同"));
         }
 
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        // Password changes terminate all refresh sessions. Access JWTs remain
-        // short-lived and are additionally revoked by the browser logout path.
-        user.setSessionVersion(user.getSessionVersion() + 1);
-        user.setUpdatedAt(OffsetDateTime.now());
-        authUserService.updateById(user);
+        AuthUser patch = new AuthUser();
+        patch.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        patch.setUpdatedAt(OffsetDateTime.now());
+        // SQL increments cannot overwrite a concurrent refresh rotation.
+        boolean changed = authUserService.update(patch, new LambdaUpdateWrapper<AuthUser>()
+                .eq(AuthUser::getId, user.getId())
+                .eq(AuthUser::getPasswordHash, user.getPasswordHash())
+                .setSql("session_version = session_version + 1, access_version = access_version + 1"));
+        if (!changed) return ResponseEntity.status(409).body(Map.of("message", "账号状态已变化，请重新登录后重试"));
         log.info("Password changed for {}", username);
-        // 提示前端重新登录：JWT 无状态，旧令牌在过期前仍然有效，这是本实现的已知限制。
         return ResponseEntity.ok(Map.of(
                 "message", "密码已修改，请使用新密码重新登录",
                 "reloginRequired", true));

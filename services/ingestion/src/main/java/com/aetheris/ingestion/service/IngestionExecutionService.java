@@ -1,146 +1,51 @@
 package com.aetheris.ingestion.service;
 
 import com.aetheris.ingestion.entity.IngestionRun;
-import com.aetheris.ingestion.entity.IngestionTask;
-import org.springframework.dao.DataIntegrityViolationException;
+import com.aetheris.ingestion.fixedexecution.*;
+import com.aetheris.security.servlet.TrustedUser;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
+/** Fixed source execution: only a typed user or a stored cron binding can create a sealed invocation. */
 @Service
 public class IngestionExecutionService {
-
-    private final IngestionTaskService taskService;
-    private final IngestionRunService runService;
-    private final MetadataIngestionClient client;
-    private final NotificationClient notificationClient;
-
-    public IngestionExecutionService(
-            IngestionTaskService taskService,
-            IngestionRunService runService,
-            MetadataIngestionClient client,
-            NotificationClient notificationClient) {
-        this.taskService = taskService;
-        this.runService = runService;
-        this.client = client;
-        this.notificationClient = notificationClient;
+    private final IngestionExecutionStore source;private final MetadataIngestionClient client;
+    private final NotificationClient notifications;private final ExecutionRecoveryService recovery;
+    @Autowired public IngestionExecutionService(IngestionExecutionStore source,MetadataIngestionClient client,NotificationClient notifications,ExecutionRecoveryService recovery) {
+        this.source=Objects.requireNonNull(source);this.client=Objects.requireNonNull(client);this.notifications=Objects.requireNonNull(notifications);this.recovery=Objects.requireNonNull(recovery);
     }
-
-    public IngestionRun execute(Long taskId, String username) {
-        return execute(taskId, username, null, null);
+    /** Retired constructor for source compatibility. Missing production recovery/store always denies execution. */
+    @Deprecated public IngestionExecutionService(IngestionTaskService ignored,IngestionRunService ignoredRuns,MetadataIngestionClient client,NotificationClient notifications){source=null;this.client=client;this.notifications=notifications;recovery=null;}
+    @Deprecated public IngestionRun execute(Long id,String username){throw legacy();}
+    @Deprecated public IngestionRun execute(Long id,String username,String key){throw legacy();}
+    @Deprecated public IngestionRun execute(Long id,String username,String key,Long replayOf){throw legacy();}
+    private static IllegalStateException legacy(){return new IllegalStateException("禁止裸用户名执行；必须由可信主体和当前批准版本创建运行");}
+    public IngestionRun executeManual(Long taskId,TrustedUser user,String requestKey,Long replayOf) {
+        if(source==null||recovery==null)throw legacy();
+        return executeClaim(source.claimManual(taskId,IngestionActor.manual(user),requestKey,replayOf));
     }
-
-    /**
-     * 执行一轮接入。requestKey 由调用方在重试边界生成，保证网络重试不会创建第二轮执行。
-     */
-    public IngestionRun execute(Long taskId, String username, String requestKey) {
-        return execute(taskId, username, requestKey, null);
+    public IngestionRun executeScheduled(Long taskId,long generation,String requestKey) {
+        if(source==null||recovery==null)throw legacy();return executeClaim(source.claimScheduled(taskId,generation,requestKey));
     }
-
-    public IngestionRun execute(Long taskId, String username, String requestKey, Long replayOfRunId) {
-        IngestionTask task = taskService.getById(taskId);
-        if (task == null) throw new IllegalArgumentException("接入任务不存在");
-        validate(task);
-
-        String normalizedKey = normalizeKey(requestKey);
-        if (normalizedKey != null) {
-            IngestionRun existing = findByRequestKey(taskId, normalizedKey);
-            if (existing != null) {
-                if ("running".equals(existing.getStatus())) {
-                    throw new IllegalStateException("该幂等请求仍在执行中");
-                }
-                return existing;
-            }
-        }
-
-        IngestionRun run = new IngestionRun();
-        run.setTaskId(taskId);
-        run.setStatus("running");
-        run.setRequestKey(normalizedKey);
-        run.setReplayOfRunId(replayOfRunId);
-        run.setTriggeredBy(StringUtils.hasText(username) ? username : "unknown");
-        run.setStartedAt(OffsetDateTime.now());
+    private IngestionRun executeClaim(IngestionExecutionStore.Claim claim) {
+        if(claim.reused())return claim.run();
+        IngestionRun run=claim.run();
         try {
-            runService.save(run);
-        } catch (DataIntegrityViolationException error) {
-            // 两个请求可能同时通过上面的查询；唯一索引获胜后重新读取已存在的结果。
-            if (normalizedKey != null) {
-                IngestionRun existing = findByRequestKey(taskId, normalizedKey);
-                if (existing != null && !"running".equals(existing.getStatus())) return existing;
-                if (existing != null) throw new IllegalStateException("该幂等请求仍在执行中");
-            }
-            throw new IllegalStateException("该任务已有运行中的实例");
-        }
-
-        try {
-            MetadataIngestionClient.TransferResult result = client.execute(task);
-            run.setStatus("success");
-            run.setRowsRead(result.rowsRead());
-            run.setRowsWritten(result.rowsWritten());
-            run.setDurationMs(result.durationMs());
+            var result=client.execute(claim.submission(),receipt->source.bindReceipt(run.getId(),receipt));
+            run.setStatus("success");run.setRowsRead(result.rowsRead());run.setRowsWritten(result.rowsWritten());run.setDurationMs(result.durationMs());
             run.setFinishedAt(OffsetDateTime.now());
-            runService.updateById(run);
-            updateTask(task, "success", result.rowsWritten(), null);
+            if(!recovery.finish(run))throw new MetadataIngestionClient.IngestionExecutionException("执行租约已失效，结果需人工核实");
             return run;
-        } catch (RuntimeException error) {
-            String message = safeMessage(error);
-            run.setStatus("failed");
-            run.setErrorMessage(message);
-            run.setFailureCode(failureCode(error));
-            run.setFinishedAt(OffsetDateTime.now());
-            runService.updateById(run);
-            updateTask(task, "failed", null, message);
-            notificationClient.notifyAdmin(taskId, "critical",
-                    "数据接入失败：" + task.getName(), message);
-            throw new MetadataIngestionClient.IngestionExecutionException(message);
+        }catch(RuntimeException failure) {
+            boolean unknown=!(failure instanceof MetadataIngestionClient.IngestionExecutionException known)||known.outcomeUnknown();
+            run.setStatus(unknown?"unknown":"failed");run.setErrorMessage(unknown?"固定执行结果待核实，禁止自动重放":"元数据返回已确认失败回执");
+            run.setFailureCode(unknown?"TRANSFER_OUTCOME_UNKNOWN":"UPSTREAM_TRANSFER_FAILED");run.setFinishedAt(OffsetDateTime.now());
+            // A false CAS retains the active/unknown slot; expiry reconciliation will fence this worker.
+            recovery.finish(run);
+            notifications.notifyAdmin(run.getTaskId(),"critical","数据接入执行需处理",run.getErrorMessage());
+            throw new MetadataIngestionClient.IngestionExecutionException(run.getErrorMessage(),unknown);
         }
-    }
-
-    private String normalizeKey(String requestKey) {
-        if (!StringUtils.hasText(requestKey)) return null;
-        String value = requestKey.trim();
-        if (value.length() > 128) throw new IllegalArgumentException("幂等键长度不能超过 128 个字符");
-        return value;
-    }
-
-    private IngestionRun findByRequestKey(Long taskId, String requestKey) {
-        return runService.getOne(new LambdaQueryWrapper<IngestionRun>()
-                .eq(IngestionRun::getTaskId, taskId)
-                .eq(IngestionRun::getRequestKey, requestKey)
-                .last("LIMIT 1"), false);
-    }
-
-    private String failureCode(RuntimeException error) {
-        if (error instanceof MetadataIngestionClient.IngestionExecutionException) {
-            return "UPSTREAM_TRANSFER_FAILED";
-        }
-        if (error instanceof IllegalArgumentException) return "INVALID_TASK";
-        return "INGESTION_EXECUTION_FAILED";
-    }
-
-    private void validate(IngestionTask task) {
-        if (!"enabled".equals(task.getStatus())) {
-            throw new IllegalStateException("接入任务已停用");
-        }
-        if (task.getSourceDatasourceId() == null || task.getTargetDatasourceId() == null
-                || !StringUtils.hasText(task.getSourceSql()) || !StringUtils.hasText(task.getTargetTable())) {
-            throw new IllegalArgumentException("请完整配置来源数据源、目标数据源、来源 SQL 和目标表");
-        }
-    }
-
-    private void updateTask(IngestionTask task, String status, Long rows, String error) {
-        task.setLastRunStatus(status);
-        task.setLastRunAt(OffsetDateTime.now());
-        task.setLastRunRows(rows);
-        task.setLastError(error);
-        task.setUpdatedAt(OffsetDateTime.now());
-        taskService.updateById(task);
-    }
-
-    private String safeMessage(RuntimeException error) {
-        String message = error.getMessage();
-        return StringUtils.hasText(message) ? message.substring(0, Math.min(message.length(), 512)) : "数据接入执行失败";
     }
 }

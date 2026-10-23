@@ -8,7 +8,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Base64;
 
-@Component
+/** Retired helper: no longer installed in the application security chain. */
+@Deprecated
 public class IdentityVerifier {
     public static final String HEADER = "X-Aetheris-Identity";
     private final byte[] token; private final long skew;

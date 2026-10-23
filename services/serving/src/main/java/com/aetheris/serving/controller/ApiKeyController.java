@@ -29,7 +29,7 @@ public class ApiKeyController {
     public IssuedApiKey create(@Valid @RequestBody ApiKeyCreateRequest input, HttpServletRequest request) {
         security.requireManage(request);
         String actor = security.requireIdentity(request).username();
-        return service.create(input, actor, actor);
+        return service.create(input, com.aetheris.security.servlet.TrustedUser.require(request), actor);
     }
 
     @PostMapping("/{id}/rotate")

@@ -1,60 +1,190 @@
-param(
+﻿param(
     [string]$BaseUrl = 'http://localhost:8080',
-    [string]$Username = 'liuyaning',
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [ValidateScript({ -not [string]::IsNullOrWhiteSpace($_) })]
+    [string]$Username,
+    [ValidateRange(1, [long]::MaxValue)]
     [long]$ReadDataSourceId = 5,
+    [ValidateRange(1, [long]::MaxValue)]
     [long]$WriteDataSourceId = 6,
-    [long]$PostgresDataSourceId = 1
+    [Parameter(Mandatory)]
+    [ValidateRange(1, [long]::MaxValue)]
+    [long]$PostgresDataSourceId,
+    [switch]$ApproveDefinitions,
+    [switch]$RunTasks,
+    [switch]$BindSchedules
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-function Invoke-AetherisApi {
-    param(
-        [Parameter(Mandatory)][string]$Method,
-        [Parameter(Mandatory)][string]$Path,
-        [object]$Body,
-        [int]$TimeoutSec = 120
-    )
+# Default: save definitions/dependencies only. Approval, execution and schedule binding
+# require explicit switches. Legacy database SQL is returned for review, never executed.
+if (($RunTasks -or $BindSchedules) -and -not $ApproveDefinitions) {
+    throw '-RunTasks / -BindSchedules 必须显式同时指定 -ApproveDefinitions'
+}
+$baseUri = $null
+if (-not [Uri]::TryCreate($BaseUrl, [UriKind]::Absolute, [ref]$baseUri) -or
+    $baseUri.Scheme -notin @('http', 'https') -or $baseUri.UserInfo -or $baseUri.Query -or $baseUri.Fragment -or $baseUri.AbsolutePath -ne '/') {
+    throw 'BaseUrl 必须是无路径、查询、片段或凭据的 HTTP(S) origin'
+}
+$BaseUrl = $BaseUrl.TrimEnd('/')
+$script:Session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+$script:SessionClock = [Diagnostics.Stopwatch]::StartNew()
+$script:ExpiresAtMs = 0.0
+$script:Resources = New-Object Collections.Generic.List[object]
+$script:Approved = New-Object Collections.Generic.List[object]
+$script:Executed = New-Object Collections.Generic.List[object]
+$script:BoundSchedules = New-Object Collections.Generic.List[object]
 
-    $parameters = @{
-        Method = $Method
-        Uri = "$BaseUrl$Path"
-        TimeoutSec = $TimeoutSec
-        Headers = @{ Authorization = "Bearer $script:AccessToken" }
-    }
+function Test-Integer {
+    param([object]$Value, [long]$Minimum = 1)
+    ($Value -is [int] -or $Value -is [long] -or $Value -is [short] -or $Value -is [byte]) -and $Value -ge $Minimum
+}
+
+function Invoke-WireRequest {
+    param([string]$Method, [string]$Path, [object]$Body, [int]$TimeoutSec = 120)
+    $parameters = @{ Method = $Method; Uri = "$BaseUrl$Path"; TimeoutSec = $TimeoutSec;
+        WebSession = $script:Session; MaximumRedirection = 0 }
+    $script:LastAttempt = @{ method = $Method; path = $Path }
     if ($null -ne $Body) {
         $parameters.ContentType = 'application/json; charset=utf-8'
-        $parameters.Body = $Body | ConvertTo-Json -Depth 20 -Compress
+        $parameters.Body = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 20 -Compress))
     }
-    try {
-        Invoke-RestMethod @parameters
-    } catch {
-        $responseBody = $null
-        if ($_.Exception.Response) {
-            try {
-                $responseBody = $_.Exception.Response.GetResponseStream()
-                if ($responseBody) {
-                    $reader = New-Object System.IO.StreamReader($responseBody)
-                    $responseText = $reader.ReadToEnd()
-                    $reader.Dispose()
-                }
-            } catch {
-                $responseText = $null
-            } finally {
-                if ($responseBody) { $responseBody.Dispose() }
-            }
+    try { Invoke-RestMethod @parameters } catch {
+        $status = 'unknown'
+        if ($_.Exception.Response) { $status = [string]$_.Exception.Response.StatusCode }
+        # Do not echo response bodies, cookies, passwords or proofs. Never retry a mutation:
+        # a lost response may follow a committed operation, including refresh rotation.
+        throw "Aetheris API $Method $Path 失败（$status）；未重试，请核查服务状态后人工处理"
+    }
+}
+
+function Set-SessionExpiry {
+    param([object]$Login)
+    if ($null -eq $Login -or -not [string]::Equals($Login.username, $Username, [StringComparison]::Ordinal) -or $Login.role -cne 'admin' -or
+        -not (Test-Integer $Login.expiresIn) -or $Login.expiresIn -gt 86400000) {
+        throw '登录/刷新响应主体或有效期不合法'
+    }
+    if ($null -eq $script:Session.Cookies.GetCookies($baseUri)['aetheris_access']) {
+        throw '登录/刷新未建立 access Cookie'
+    }
+    $script:ExpiresAtMs = $script:SessionClock.Elapsed.TotalMilliseconds + $Login.expiresIn
+}
+
+function Invoke-AetherisApi {
+    param([Parameter(Mandatory)][string]$Method, [Parameter(Mandatory)][string]$Path,
+        [object]$Body, [int]$TimeoutSec = 120)
+    if ($script:SessionClock.Elapsed.TotalMilliseconds + 30000 -ge $script:ExpiresAtMs) {
+        $refreshed = Invoke-WireRequest -Method POST -Path '/api/auth/refresh' -TimeoutSec 30
+        Set-SessionExpiry $refreshed
+    }
+    Invoke-WireRequest -Method $Method -Path $Path -Body $Body -TimeoutSec $TimeoutSec
+}
+
+function Get-CheckedEntity {
+    param([object]$Response, [bool]$Workflow, [string]$Name)
+    $entity = if ($Workflow) { $Response.task } else { $Response }
+    if ($null -eq $entity -or -not (Test-Integer $entity.id) -or [string]::IsNullOrWhiteSpace($Name) -or
+        -not [string]::Equals($entity.name, $Name, [StringComparison]::Ordinal)) {
+        throw '保存/详情响应必须包含正确名称与正整数 ID；workflow 必须是 TaskView.task'
+    }
+    $entity
+}
+
+function Test-DefinitionEqual {
+    param([object]$Entity, [hashtable]$Expected)
+    foreach ($key in $Expected.Keys) {
+        $actualJson = ConvertTo-Json -InputObject $Entity.$key -Compress -Depth 10
+        $expectedJson = ConvertTo-Json -InputObject $Expected[$key] -Compress -Depth 10
+        if (-not [string]::Equals($actualJson, $expectedJson, [StringComparison]::Ordinal)) { return $false }
+    }
+    return $true
+}
+
+function Save-Definition {
+    param([string]$Collection, [object]$Existing, [hashtable]$Body, [string]$CronField,
+        [string]$Cron, [bool]$Workflow = $false)
+    # Do not silently clear an existing schedule or enable a disabled resource.
+    $Body[$CronField] = if ($BindSchedules) { $Cron } elseif ($null -ne $Existing) { $Existing.$CronField } else { $null }
+    $Body.status = if ($RunTasks -or $BindSchedules -or $null -eq $Existing) { 'enabled' } else { $Existing.status }
+    if ($null -eq $Existing) {
+        $response = Invoke-AetherisApi -Method POST -Path $Collection -Body $Body
+        $entity = Get-CheckedEntity $response $Workflow $Body.name
+        Write-Host "CREATED 定义：$($Body.name)"
+    } else {
+        if (-not (Test-Integer $Existing.id)) { throw '既有资源 ID 不合法' }
+        if (Test-DefinitionEqual $Existing $Body) {
+            $entity = $Existing
+            Write-Host "UNCHANGED 定义：$($Body.name)"
+        } else {
+            $response = Invoke-AetherisApi -Method PUT -Path "$Collection/$($Existing.id)" -Body $Body
+            $entity = Get-CheckedEntity $response $Workflow $Body.name
+            if ($entity.id -ne $Existing.id) { throw '保存响应 ID 与既有资源不符' }
+            Write-Host "UPDATED 定义：$($Body.name)"
         }
-        $suffix = if ([string]::IsNullOrWhiteSpace($responseText)) { '' } else { "：$responseText" }
-        throw "Aetheris API $Method $Path 失败$($_.Exception.Response.StatusCode)$suffix"
     }
+    $script:Resources.Add(@{ Path = "$Collection/$($entity.id)"; Id = $entity.id; Name = $Body.name;
+        Expected = $Body; Workflow = $Workflow; State = $null })
+    $entity
+}
+
+function Get-ApprovalState {
+    param([string]$Path)
+    $s = Invoke-AetherisApi -Method GET -Path "$Path/approval"
+    if ($null -eq $s -or -not (Test-Integer $s.executionRevision) -or
+        -not (Test-Integer $s.scheduleGeneration) -or -not (Test-Integer $s.bindingGeneration 0) -or
+        $s.definitionSha256 -isnot [string] -or $s.definitionSha256 -cnotmatch '^[0-9a-f]{64}$' -or
+        $s.approved -isnot [bool] -or $s.cronBound -isnot [bool]) { throw '批准状态响应不合法' }
+    $s
+}
+
+function Assert-SameVersion {
+    param([object]$Before, [object]$After)
+    if ($Before.executionRevision -ne $After.executionRevision -or
+        $Before.definitionSha256 -cne $After.definitionSha256 -or
+        $Before.bindingGeneration -ne $After.bindingGeneration -or
+        $Before.scheduleGeneration -ne $After.scheduleGeneration) { throw '定义或调度版本发生变化，停止自动操作，请重新审阅' }
+}
+
+function Approve-SavedDefinition {
+    param([object]$Resource)
+    $before = Get-ApprovalState $Resource.Path
+    $detail = Get-CheckedEntity (Invoke-AetherisApi -Method GET -Path $Resource.Path) $Resource.Workflow $Resource.Name
+    if ($detail.id -ne $Resource.Id -or -not (Test-DefinitionEqual $detail $Resource.Expected)) {
+        throw "当前定义与本次审阅内容不一致：$($Resource.Name)"
+    }
+    if ($Resource.Workflow) {
+        $expectedIds = @($dependencies | Where-Object { [string]::Equals($_[0], $Resource.Name, [StringComparison]::Ordinal) } | ForEach-Object { $savedTasks[$_[1]].id } | Sort-Object)
+        $actualIds = @(
+            foreach ($edge in @(Invoke-AetherisApi -Method GET -Path "$($Resource.Path)/dependencies")) {
+                if (-not (Test-Integer $edge.taskId) -or $edge.taskId -ne $Resource.Id -or -not (Test-Integer $edge.upstreamTaskId)) {
+                    throw '依赖响应不合法，停止批准'
+                }
+                $edge.upstreamTaskId
+            }
+        )
+        if (($expectedIds -join ',') -cne (($actualIds | Sort-Object) -join ',')) {
+            throw '当前依赖与本次五条审阅依赖不一致，停止批准；不会删除未知依赖'
+        }
+    }
+    $checked = Get-ApprovalState $Resource.Path
+    Assert-SameVersion $before $checked
+    $approved = Invoke-AetherisApi -Method POST -Path "$($Resource.Path)/approve" -Body @{ expectedRevision = $checked.executionRevision }
+    Assert-SameVersion $checked $approved
+    if ($approved.approved -isnot [bool] -or -not $approved.approved) { throw '服务未确认批准' }
+    $Resource.State = $approved
+    $script:Approved.Add($Resource.Path)
+    Write-Host "APPROVED 定义：$($Resource.Name)"
 }
 
 function Get-RequiredDataSource {
     param(
         [Parameter(Mandatory)][long]$Id,
         [Parameter(Mandatory)][string]$ExpectedType,
-        [Parameter(Mandatory)][string]$Purpose
+        [Parameter(Mandatory)][string]$Purpose,
+        [switch]$RequireWrite
     )
     $source = Invoke-AetherisApi -Method GET -Path "/api/metadata/datasources/$Id"
     if ($null -eq $source) {
@@ -62,6 +192,13 @@ function Get-RequiredDataSource {
     }
     if ($source.type -ne $ExpectedType) {
         throw "$Purpose 数据源 ID $Id 类型应为 $ExpectedType，实际为 $($source.type)"
+    }
+    if (-not (Test-Integer $source.id) -or $source.id -ne $Id -or $source.managed -isnot [bool] -or $source.managed -or
+        -not [string]::Equals($source.status, 'active', [StringComparison]::Ordinal)) {
+        throw "$Purpose 必须是配置状态 active、非平台 managed 的独立业务数据源；空值、未知或停用状态不可用"
+    }
+    if ($RequireWrite -and ($source.writeConfigured -isnot [bool] -or -not $source.writeConfigured)) {
+        throw "$Purpose 缺少独立 WRITE 账号配置"
     }
     $source
 }
@@ -80,14 +217,11 @@ function Save-WorkflowTask {
 
     $existing = $null
     foreach ($candidate in @($script:WorkflowTasks)) {
-        if ($candidate -is [System.Array]) {
-            foreach ($nested in $candidate) {
-                if ($nested.task -and $nested.task.name -eq $Definition.name) { $existing = $nested; break }
-            }
-        } elseif ($candidate.task -and $candidate.task.name -eq $Definition.name) {
+        $checkedTask = Get-CheckedEntity $candidate $true $candidate.task.name
+        if ([string]::Equals($checkedTask.name, $Definition.name, [StringComparison]::Ordinal)) {
+            if ($null -ne $existing) { throw '同名工作流不唯一，停止保存' }
             $existing = $candidate
         }
-        if ($null -ne $existing) { break }
     }
     $body = @{
         name = $Definition.name
@@ -101,34 +235,7 @@ function Save-WorkflowTask {
         cronExpression = $null
         description = $Definition.description
     }
-    if ($null -eq $existing) {
-        $saved = Invoke-AetherisApi -Method POST -Path '/api/workflow/tasks' -Body $body
-        $script:WorkflowTasks += $saved
-        Write-Host "CREATED 工作流：$($Definition.name)"
-        return $saved.task
-    }
-
-    $saved = Invoke-AetherisApi -Method PUT -Path "/api/workflow/tasks/$([long]$existing.task.id)" -Body $body
-    Write-Host "UPDATED 工作流：$($Definition.name)"
-    $saved.task
-}
-
-function Enable-WorkflowSchedule {
-    param([Parameter(Mandatory)][object]$Task, [Parameter(Mandatory)][hashtable]$Definition)
-    $body = @{
-        name = $Definition.name
-        datasourceId = $script:WriteSource.id
-        datasourceName = $script:WriteSource.name
-        taskSql = $Definition.sql
-        targetTable = $Definition.target
-        timeoutSeconds = $Definition.timeout
-        maxRetries = 1
-        status = 'enabled'
-        cronExpression = $Definition.cron
-        description = $Definition.description
-    }
-    Invoke-AetherisApi -Method PUT -Path "/api/workflow/tasks/$($Task.id)" -Body $body | Out-Null
-    Write-Host "SCHEDULED 工作流：$($Definition.name) [$($Definition.cron)]"
+    Save-Definition -Collection '/api/workflow/tasks' -Existing $existing.task -Body $body -CronField 'cronExpression' -Cron $Definition.cron -Workflow $true
 }
 
 function Save-QualityRule {
@@ -137,7 +244,8 @@ function Save-QualityRule {
     $existing = $null
     foreach ($candidate in @($script:QualityRules)) {
         foreach ($rule in @($candidate)) {
-            if ($rule.name -eq $Definition.name -or ($Definition.replaces -and $rule.name -eq $Definition.replaces)) {
+            if ([string]::Equals($rule.name, $Definition.name, [StringComparison]::Ordinal) -or
+                ($Definition.replaces -and [string]::Equals($rule.name, $Definition.replaces, [StringComparison]::Ordinal))) {
                 $existing = $rule
                 break
             }
@@ -156,15 +264,7 @@ function Save-QualityRule {
         cronExpression = $Definition.cron
         description = $Definition.description
     }
-    if ($null -eq $existing) {
-        $saved = Invoke-AetherisApi -Method POST -Path '/api/quality/rules' -Body $body
-        $script:QualityRules += $saved
-        Write-Host "CREATED 质量规则：$($Definition.name)"
-        return $saved
-    }
-    $saved = Invoke-AetherisApi -Method PUT -Path "/api/quality/rules/$($existing.id)" -Body $body
-    Write-Host "UPDATED 质量规则：$($Definition.name)"
-    $saved
+    Save-Definition -Collection '/api/quality/rules' -Existing $existing -Body $body -CronField 'cronExpression' -Cron $Definition.cron
 }
 
 function Save-IngestionTask {
@@ -173,7 +273,8 @@ function Save-IngestionTask {
     $existing = $null
     foreach ($candidate in @($script:IngestionTasks)) {
         foreach ($task in @($candidate)) {
-            if ($task.name -eq $Definition.name -or ($Definition.replaces -and $task.name -eq $Definition.replaces)) {
+            if ([string]::Equals($task.name, $Definition.name, [StringComparison]::Ordinal) -or
+                ($Definition.replaces -and [string]::Equals($task.name, $Definition.replaces, [StringComparison]::Ordinal))) {
                 $existing = $task
                 break
             }
@@ -194,35 +295,31 @@ function Save-IngestionTask {
         status = 'enabled'
         description = $Definition.description
     }
-    if ($null -eq $existing) {
-        $saved = Invoke-AetherisApi -Method POST -Path '/api/ingestion/tasks' -Body $body
-        $script:IngestionTasks += $saved
-        Write-Host "CREATED 接入任务：$($Definition.name)"
-        return $saved
-    }
-    $saved = Invoke-AetherisApi -Method PUT -Path "/api/ingestion/tasks/$($existing.id)" -Body $body
-    Write-Host "UPDATED 接入任务：$($Definition.name)"
-    $saved
+    Save-Definition -Collection '/api/ingestion/tasks' -Existing $existing -Body $body -CronField 'scheduleCron' -Cron $Definition.cron
 }
 
+try {
 $securePassword = Read-Host '请输入本机 Aetheris 管理员密码' -AsSecureString
 $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
 try {
     $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
-    $loginBody = @{ username = $Username; password = $plainPassword } | ConvertTo-Json -Compress
-    $login = Invoke-RestMethod -Method POST -Uri "$BaseUrl/api/auth/login" -ContentType 'application/json; charset=utf-8' -Body $loginBody -TimeoutSec 30
+    $loginBody = @{ username = $Username; password = $plainPassword }
+    $login = Invoke-WireRequest -Method POST -Path '/api/auth/login' -Body $loginBody -TimeoutSec 30
 } finally {
     $plainPassword = $null
+    $loginBody = $null
+    if ($securePassword) { $securePassword.Dispose() }
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
 }
-if ($login.role -ne 'admin' -or [string]::IsNullOrWhiteSpace($login.token)) {
-    throw '需要管理员身份才能填充任务数据'
+Set-SessionExpiry $login
+$me = Invoke-AetherisApi -Method GET -Path '/api/auth/me'
+if (-not (Test-Integer $me.id) -or -not [string]::Equals($me.username, $Username, [StringComparison]::Ordinal) -or $me.role -cne 'admin' -or $me.status -cne 'active') {
+    throw '当前会话必须与显式 Username 一致，且账号为 active 管理员'
 }
-$script:AccessToken = $login.token
 
 $script:ReadSource = Get-RequiredDataSource -Id $ReadDataSourceId -ExpectedType 'spark' -Purpose '只读 Spark'
-$script:WriteSource = Get-RequiredDataSource -Id $WriteDataSourceId -ExpectedType 'spark' -Purpose '写入 Spark'
-$script:PostgresSource = Get-RequiredDataSource -Id $PostgresDataSourceId -ExpectedType 'postgresql' -Purpose '平台 PostgreSQL'
+$script:WriteSource = Get-RequiredDataSource -Id $WriteDataSourceId -ExpectedType 'spark' -Purpose '写入 Spark' -RequireWrite
+$script:PostgresSource = Get-RequiredDataSource -Id $PostgresDataSourceId -ExpectedType 'postgresql' -Purpose '独立业务 PostgreSQL' -RequireWrite
 
 Test-DataSource -Id $script:ReadSource.id -Name $script:ReadSource.name
 Test-DataSource -Id $script:WriteSource.id -Name $script:WriteSource.name
@@ -231,10 +328,16 @@ Test-DataSource -Id $script:PostgresSource.id -Name $script:PostgresSource.name
 $preflight = Invoke-AetherisApi -Method POST -Path "/api/metadata/datasources/$($script:ReadSource.id)/query" -Body @{
     sql = 'SELECT dt, COUNT(*) AS row_count FROM ods.ods_order GROUP BY dt ORDER BY dt DESC LIMIT 1'
 }
-if ($preflight.rowCount -ne 1 -or [long]$preflight.rows[0][1] -le 0) {
-    throw 'ODS 没有可用的订单分区，停止创建调度'
+$parsedDate = [datetime]::MinValue
+if ($preflight.rowCount -ne 1 -or @($preflight.columns).Count -ne 2 -or
+    $preflight.columns[0] -cne 'dt' -or $preflight.columns[1] -cne 'row_count' -or
+    @($preflight.rows).Count -ne 1 -or @($preflight.rows[0]).Count -ne 2 -or
+    -not (Test-Integer $preflight.rows[0][1]) -or $preflight.rows[0][0] -isnot [string] -or
+    $preflight.rows[0][0] -cnotmatch '^\d{4}-\d{2}-\d{2}$' -or
+    -not [datetime]::TryParseExact($preflight.rows[0][0], 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$parsedDate)) {
+    throw 'ODS 没有形状及日期有效的订单分区，停止保存定义'
 }
-$businessDate = [string]$preflight.rows[0][0]
+$businessDate = $parsedDate.ToString('yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
 Write-Host "PASS 真实分区：ods.ods_order dt=$businessDate，共 $($preflight.rows[0][1]) 行"
 
 $definitions = @(
@@ -366,33 +469,6 @@ foreach ($edge in $dependencies) {
     Write-Host "LINKED $($edge[1]) -> $($edge[0])"
 }
 
-foreach ($definition in $definitions) {
-    $task = $savedTasks[$definition.name]
-    $instance = Invoke-AetherisApi -Method POST -Path "/api/workflow/tasks/$($task.id)/run" -Body @{ bizDate = $businessDate } -TimeoutSec 3900
-    if ($instance.status -ne 'success') {
-        throw "工作流验证失败：$($definition.name)，状态 $($instance.status)"
-    }
-    Write-Host "PASS 工作流：$($definition.name)（$($instance.durationMs) ms）"
-}
-foreach ($definition in $definitions) {
-    Enable-WorkflowSchedule -Task $savedTasks[$definition.name] -Definition $definition
-}
-
-$temporaryTasks = @()
-$workflowResponse = Invoke-AetherisApi -Method GET -Path '/api/workflow/tasks'
-foreach ($candidate in @($workflowResponse)) {
-    foreach ($taskView in @($candidate)) {
-        if ($taskView.task -and $taskView.task.name -eq '123' -and $taskView.task.targetTable -eq '123123') {
-            $temporaryTasks += $taskView
-        }
-    }
-}
-foreach ($temporary in $temporaryTasks) {
-    $temporaryId = [long]$temporary.task.id
-    Invoke-AetherisApi -Method DELETE -Path "/api/workflow/tasks/$temporaryId" | Out-Null
-    Write-Host "REMOVED 临时工作流：123（ID $temporaryId）"
-}
-
 $qualityDefinitions = @(
     @{ name='交易-DWD-订单主键非空'; replaces='订单表空值检查'; type='not_null'; target='dwd.dwd_order'; expression='order_id IS NOT NULL'; severity='high'; cron='0 10 3 * * ?'; description='DWD 订单主键必须非空，违规阈值为 0。' },
     @{ name='交易-DWD-订单主键唯一'; replaces='用户表重复检查'; type='duplicate'; target='dwd.dwd_order'; expression='order_id'; severity='high'; cron='0 15 3 * * ?'; description='DWD 订单按 order_id 全局去重，重复阈值为 0。' },
@@ -400,14 +476,7 @@ $qualityDefinitions = @(
     @{ name='交易-ADS-指标日期非空'; type='not_null'; target='ads.ads_order_stats'; expression='stat_date IS NOT NULL'; severity='medium'; cron='0 25 3 * * ?'; description='订单指标日报的统计日期必须完整。' }
 )
 $script:QualityRules = @(Invoke-AetherisApi -Method GET -Path '/api/quality/rules')
-foreach ($definition in $qualityDefinitions) {
-    $rule = Save-QualityRule -Definition $definition
-    $result = Invoke-AetherisApi -Method POST -Path "/api/quality/rules/$($rule.id)/run" -TimeoutSec 600
-    if ($result.status -ne 'passed') {
-        throw "质量规则验证未通过：$($definition.name)，状态 $($result.status)"
-    }
-    Write-Host "PASS 质量规则：$($definition.name)，违规 $($result.violationCount)"
-}
+foreach ($definition in $qualityDefinitions) { Save-QualityRule -Definition $definition | Out-Null }
 
 $landingSql = @'
 CREATE SCHEMA IF NOT EXISTS landing;
@@ -422,23 +491,14 @@ CREATE TABLE IF NOT EXISTS landing.ads_category_stats_snapshot (
     amount_rank integer, amount_share numeric(6,4)
 );
 '@
-& docker exec aetheris-postgres-1 psql -U aetheris -d aetheris -v ON_ERROR_STOP=1 -c $landingSql | Out-Null
-if ($LASTEXITCODE -ne 0) { throw '创建 PostgreSQL landing 表失败' }
-Write-Host 'PASS PostgreSQL landing 目标表'
+Write-Host 'REVIEW ONLY：landing DDL 不会执行；运行接入前请由管理员在独立业务 PostgreSQL 准备目标表。'
 
 $ingestionDefinitions = @(
     @{ name='交易-ADS-订单指标同步至PostgreSQL'; replaces='订单数据每日同步'; target='landing.ads_order_stats_snapshot'; cron='0 20 4 * * ?'; sql='SELECT stat_date, month_key, is_weekend, order_cnt, valid_order_cnt, paid_user_cnt, gmv, avg_order_amount, refund_rate, cancel_rate, gmv_mom, gmv_7d_avg FROM ads.ads_order_stats'; description='每日将 Spark ADS 订单核心指标全量同步到 PostgreSQL landing 区，供服务侧低延迟读取。' },
     @{ name='销售-ADS-品类指标同步至PostgreSQL'; replaces='用户日志实时接入'; target='landing.ads_category_stats_snapshot'; cron='0 30 4 * * ?'; sql='SELECT month_key, category_id, category_name, order_cnt, sale_qty, sale_amount, discount_amount, avg_price, amount_rank, amount_share FROM ads.ads_category_stats'; description='每日将 Spark ADS 品类月度指标全量同步到 PostgreSQL landing 区，供报表与接口消费。' }
 )
 $script:IngestionTasks = @(Invoke-AetherisApi -Method GET -Path '/api/ingestion/tasks')
-foreach ($definition in $ingestionDefinitions) {
-    $task = Save-IngestionTask -Definition $definition
-    $run = Invoke-AetherisApi -Method POST -Path "/api/ingestion/tasks/$($task.id)/run" -TimeoutSec 1800
-    if ($run.status -ne 'success') {
-        throw "接入任务验证失败：$($definition.name)，状态 $($run.status)"
-    }
-    Write-Host "PASS 接入任务：$($definition.name)，写入 $($run.rowsWritten) 行"
-}
+foreach ($definition in $ingestionDefinitions) { Save-IngestionTask -Definition $definition | Out-Null }
 
 $domainSql = @'
 UPDATE metadata.metadata_table SET business_domain_id=4, domain='用户域', updated_at=now()
@@ -448,16 +508,66 @@ WHERE schema_name IN ('ods','dwd','dws','ads') AND table_name IN ('ods_order','o
 UPDATE metadata.metadata_table SET business_domain_id=6, domain='销售域', updated_at=now()
 WHERE schema_name IN ('ods','dwd','dws','ads','dim') AND table_name IN ('ods_product','dwd_product','dws_category_daily','ads_category_stats','dim_category');
 '@
-& docker exec aetheris-postgres-1 psql -U aetheris -d aetheris -v ON_ERROR_STOP=1 -c $domainSql | Out-Null
-if ($LASTEXITCODE -ne 0) { throw '更新元数据业务域失败' }
-Write-Host 'PASS 元数据业务域：用户域 / 交易域 / 销售域'
+Write-Host 'REVIEW ONLY：原业务域 SQL 含历史 ID，必须人工核实，不会自动修改元数据。'
 
+# Complete every definition, dependency and schedule edit before approving any resource.
+foreach ($resource in $script:Resources) {
+    if ($ApproveDefinitions) { Approve-SavedDefinition $resource }
+    else { $resource.State = Get-ApprovalState $resource.Path }
+}
+if ($RunTasks) {
+    foreach ($resource in $script:Resources) {
+        $body = if ($resource.Workflow) { @{ bizDate = $businessDate } } else { $null }
+        $timeout = if ($resource.Workflow) { 3900 } elseif ($resource.Path.StartsWith('/api/quality/')) { 600 } else { 1800 }
+        $result = Invoke-AetherisApi -Method POST -Path "$($resource.Path)/run" -Body $body -TimeoutSec $timeout
+        $expected = if ($resource.Path.StartsWith('/api/quality/')) { 'passed' } else { 'success' }
+        if ($result.status -cne $expected) { throw "执行未确认成功：$($resource.Name)，已停止且不重试；请检查运行记录" }
+        $script:Executed.Add($resource.Path)
+        Write-Host "PASS 执行：$($resource.Name)"
+    }
+}
+if ($BindSchedules) {
+    foreach ($resource in $script:Resources) {
+        $current = Get-ApprovalState $resource.Path
+        Assert-SameVersion $resource.State $current
+        if (-not $current.approved) { throw '批准已经失效，停止绑定' }
+        $bound = Invoke-AetherisApi -Method POST -Path "$($resource.Path)/cron-binding" -Body @{
+            expectedRevision = $current.executionRevision; expectedGeneration = $current.scheduleGeneration
+        }
+        if ($bound.executionRevision -ne $current.executionRevision -or $bound.definitionSha256 -cne $current.definitionSha256 -or
+            $bound.approved -isnot [bool] -or -not $bound.approved -or $bound.cronBound -isnot [bool] -or -not $bound.cronBound -or
+            -not (Test-Integer $bound.bindingGeneration) -or $bound.bindingGeneration -le $current.bindingGeneration -or
+            -not (Test-Integer $bound.scheduleGeneration) -or $bound.scheduleGeneration -le $current.scheduleGeneration) {
+            throw '服务未确认当前版本的定时绑定，停止后续操作'
+        }
+        $script:BoundSchedules.Add($resource.Path)
+        Write-Host "BOUND 定时：$($resource.Name)"
+    }
+}
 $summary = [ordered]@{
+    status = 'definitions-saved'
     businessDate = $businessDate
     workflowTasks = $definitions.name
     workflowDependencies = $dependencies.Count
     qualityRules = $qualityDefinitions.name
     ingestionTasks = $ingestionDefinitions.name
-    removedTemporaryTask = ($temporaryTasks.Count -gt 0)
+    approved = @($script:Approved.ToArray())
+    executed = @($script:Executed.ToArray())
+    boundSchedules = @($script:BoundSchedules.ToArray())
+    pendingApproval = @($script:Resources | Where-Object { -not $_.State.approved } | ForEach-Object { $_.Path })
+    executionRequested = [bool]$RunTasks
+    scheduleBindingRequested = [bool]$BindSchedules
+    reviewOnlySql = @{ landingSql = $landingSql; domainSql = $domainSql }
+    removedTemporaryTask = $false
 }
-$summary | ConvertTo-Json -Depth 5
+$summary | ConvertTo-Json -Depth 8
+} catch {
+    [ordered]@{ status = 'stopped-partial'; saved = @($script:Resources | ForEach-Object { $_.Path });
+        approved = @($script:Approved.ToArray()); executed = @($script:Executed.ToArray());
+        boundSchedules = @($script:BoundSchedules.ToArray()); lastAttempt = $script:LastAttempt;
+        automaticallyRetried = $false } | ConvertTo-Json -Depth 8
+    throw
+} finally {
+    $script:Session.Cookies = New-Object Net.CookieContainer
+    $script:SessionClock.Stop()
+}

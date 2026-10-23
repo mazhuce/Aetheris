@@ -9,11 +9,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Verifies the gateway identity for system read endpoints whose response scope
- * depends on the caller.  The role header is deliberately not used here: role
- * claims are intentionally short-lived state and can outlive a role change.
- */
+/** Copies the filter-authenticated v2 identity into the existing scoped-controller attribute. */
 @Component
 public class SystemIdentityInterceptor implements HandlerInterceptor {
 
@@ -28,10 +24,6 @@ public class SystemIdentityInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws IOException {
-        if (!verifier.isConfigured()) {
-            return reject(response, 503,
-                    "system-service 未配置内部令牌（AETHERIS_INTERNAL_TOKEN）");
-        }
         AetherisIdentity identity = verifier.verify(request);
         if (identity == null || identity.username() == null || identity.username().isBlank()) {
             return reject(response, 401, "缺少有效的网关身份签名");

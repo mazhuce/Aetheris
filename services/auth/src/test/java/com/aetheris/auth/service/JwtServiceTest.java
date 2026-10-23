@@ -13,6 +13,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JwtServiceTest {
 
+    @Test
+    void accessRevocationVersionIsIndependentFromRefreshRotation() {
+        JwtService service = new JwtService(SECRET, 60_000);
+        var parser = Jwts.parser().verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).build();
+        var access = parser.parseSignedClaims(service.generateToken(42L, "alice", "viewer", 7L)).getPayload();
+        var refresh = parser.parseSignedClaims(service.generateRefreshToken(42L, "alice", 12L)).getPayload();
+        assertEquals(7L, access.get("av", Long.class));
+        assertEquals(12L, refresh.get("sv", Long.class));
+        assertEquals(null, refresh.get("av"));
+    }
+
     private static final String SECRET = "aetheris-test-secret-with-32-bytes";
 
     @Test

@@ -19,11 +19,62 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class QualityRuleControllerTest {
+    @Test void enableRequiresExecuteWhileDisplayEditKeepsDisabledState() {
+        var existing=rule(8L,"existing"); existing.setStatus("disabled");
+        when(service.getById(8L)).thenReturn(existing);
+        var permission=mock(com.aetheris.quality.security.ResourceAuthorization.class);
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN,"execute denied"))
+                .when(permission).require("quality_rule",8L,"execute");
+        controller.setAuthorization(permission);
+        var enable=rule(8L,"enable");enable.setStatus("enabled");
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.web.server.ResponseStatusException.class,()->controller.update(8L,enable));
+        var rename=rule(8L,"renamed");rename.setStatus(null);
+        controller.update(8L,rename);
+        assertEquals("disabled",rename.getStatus());
+        org.mockito.Mockito.verify(service).updateById(rename);
+    }
+    @Test void cronChangeRequiresTheResourceExecuteGrant() {
+        var existing=rule(8L,"existing");
+        existing.setCronExpression("0 0 2 * * ?");
+        var input=rule(8L,"renamed");
+        input.setCronExpression("0 0 3 * * ?");
+        when(service.getById(8L)).thenReturn(existing);
+        var permission=mock(com.aetheris.quality.security.ResourceAuthorization.class);
+        org.mockito.Mockito.doThrow(new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN,"execute denied"))
+                .when(permission).require("quality_rule",8L,"execute");
+        controller.setAuthorization(permission);
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.web.server.ResponseStatusException.class,()->controller.update(8L,input));
+        org.mockito.Mockito.verify(service,org.mockito.Mockito.never()).updateById(input);
+    }
+    @org.junit.jupiter.api.BeforeEach
+    void authorizeBusinessFixture() {
+        var authorization = org.mockito.Mockito.mock(com.aetheris.quality.security.ResourceAuthorization.class);
+        org.mockito.Mockito.doAnswer(call -> call.getArgument(1)).when(authorization)
+                .filter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
+        controller.setAuthorization(authorization);
+    }
+
+    @Test
+    void unsignedDirectReadCannotExposeRuleSql() {
+        QualityRuleService isolated = mock(QualityRuleService.class);
+        when(isolated.list()).thenReturn(List.of(rule(1L, "secret")));
+        QualityRuleController guarded = new QualityRuleController(isolated,
+                mock(QualityCheckResultService.class), mock(QualityExecutionService.class), mock(QualitySchedulerService.class));
+        assertEquals(List.of(), guarded.list());
+    }
 
     private final QualityRuleService service = mock(QualityRuleService.class);
+    private final QualityCheckResultService results = mock(QualityCheckResultService.class);
     private final QualityRuleController controller = new QualityRuleController(
-            service, mock(QualityCheckResultService.class), mock(QualityExecutionService.class),
+            service, results, mock(QualityExecutionService.class),
             mock(QualitySchedulerService.class));
+
+    @Test
+    void unresolvedExecutionReturnsConflictWithoutDeletingRule() {
+        when(results.count(org.mockito.ArgumentMatchers.any())).thenReturn(1L);
+        assertEquals(HttpStatus.CONFLICT,controller.delete(1L).getStatusCode());
+        org.mockito.Mockito.verify(service,org.mockito.Mockito.never()).removeById(1L);
+    }
 
     private QualityRule rule(Long id, String name) {
         QualityRule rule = new QualityRule();
@@ -92,7 +143,7 @@ class QualityRuleControllerTest {
     @Test
     void deleteReturns204WhenRemoved() {
         when(service.removeById(1L)).thenReturn(true);
-        ResponseEntity<Void> response = controller.delete(1L);
+        ResponseEntity<?> response = controller.delete(1L);
         assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
         assertNull(response.getBody());
     }

@@ -36,6 +36,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/governance/standards")
 public class DataStandardController {
+    private com.aetheris.governance.security.ResourceAuthorization authorization = new com.aetheris.governance.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.governance.security.ResourceAuthorization authorization) { this.authorization = authorization; }
 
     private final DataStandardService service;
 
@@ -58,19 +61,23 @@ public class DataStandardController {
                 .eq(status != null && !status.isBlank(), DataStandard::getStatus, status)
                 .eq(standardType != null && !standardType.isBlank(), DataStandard::getStandardType, standardType)
                 .orderByDesc(DataStandard::getId);
-        return service.list(query);
+        return authorization.filter("data_standard", service.list(query), DataStandard::getId);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<DataStandard> getById(@PathVariable Long id) {
+        authorization.require("data_standard", id, "view");
         DataStandard standard = service.getById(id);
         return standard != null ? ResponseEntity.ok(standard) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public ResponseEntity<?> create(
-            @Valid @RequestBody DataStandard standard,
+            @org.springframework.validation.annotation.Validated({jakarta.validation.groups.Default.class,
+                    com.aetheris.governance.validation.CreateDefinition.class}) @RequestBody DataStandard standard,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        authorization.require("data_standard", null, "create");
+        authorization.requireManage();
         standard.setId(null);
         standard.setCreatedBy(username);
         try {
@@ -85,12 +92,15 @@ public class DataStandardController {
     public ResponseEntity<?> update(
             @PathVariable Long id,
             @Valid @RequestBody DataStandard standard) {
+        authorization.require("data_standard", id, "update");
+        authorization.protectDefinition(standard,service.getById(id),java.util.Set.of("standardName","status"));
         standard.setId(id);
         // 创建人与创建时间只在新建时确定，更新接口不接受改写
         standard.setCreatedBy(null);
         standard.setCreatedAt(null);
         standard.setUpdatedAt(OffsetDateTime.now());
         try {
+            authorization.retainEditable(standard,java.util.Set.of("standardName","status"));
             boolean updated = service.updateById(standard);
             return updated ? ResponseEntity.ok(service.getById(id)) : ResponseEntity.notFound().build();
         } catch (DuplicateKeyException error) {
@@ -101,6 +111,7 @@ public class DataStandardController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id) {
+        authorization.require("data_standard", id, "delete");
         boolean removed = service.removeById(id);
         return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }

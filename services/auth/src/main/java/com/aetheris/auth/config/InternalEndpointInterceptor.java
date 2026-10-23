@@ -3,7 +3,6 @@ package com.aetheris.auth.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
@@ -17,7 +16,7 @@ import java.security.MessageDigest;
  * <p>未配置令牌时返回 503 —— 内部端点默认关闭（fail-closed），避免误把
  * 权限判定接口暴露成匿名可调。
  */
-@Component
+@Deprecated // Deliberately unregistered; the v2 workload filter rejects these legacy routes.
 public class InternalEndpointInterceptor implements HandlerInterceptor {
 
     public static final String TOKEN_HEADER = "X-Internal-Token";

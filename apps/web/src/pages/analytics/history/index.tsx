@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { App, Button, Popconfirm, Select, Table, Tag, Tooltip, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { ClearOutlined, CopyOutlined, DeleteOutlined, HistoryOutlined, ReloadOutlined } from '@ant-design/icons'
@@ -16,21 +16,33 @@ export default function QueryHistoryPage() {
   const [records, setRecords] = useState<QueryHistoryRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
+  const [clearing, setClearing] = useState(false)
+  const epoch = useRef(0)
+  const pending = useRef<AbortController>()
   const pageSize = useResponsivePageSize(8, 6, 5, 3)
 
   const refresh = useCallback(async () => {
+    const current = ++epoch.current
+    pending.current?.abort()
+    const controller = new AbortController()
+    pending.current = controller
     setLoading(true)
     try {
-      setRecords(await listQueryHistory(status))
+      const next = await listQueryHistory(status, controller.signal)
+      if (current === epoch.current && !controller.signal.aborted) setRecords(next)
     } catch {
-      message.error('查询历史加载失败')
+      if (current === epoch.current && !controller.signal.aborted) message.error('查询历史加载失败')
     } finally {
-      setLoading(false)
+      if (current === epoch.current && !controller.signal.aborted) setLoading(false)
     }
   }, [message, status])
 
   useEffect(() => {
     void refresh()
+    return () => {
+      epoch.current += 1
+      pending.current?.abort()
+    }
   }, [refresh])
 
   const copySql = async (sql: string) => {
@@ -53,12 +65,16 @@ export default function QueryHistoryPage() {
   }
 
   const handleClear = async () => {
+    setClearing(true)
     try {
-      const deleted = await clearQueryHistory()
-      message.success(`已清空 ${deleted} 条记录`)
+      const result = await clearQueryHistory()
+      if (result.hasMore) message.info(`已删除 ${result.deleted} 条记录，仍有历史记录，可继续清理`)
+      else message.success(`已清空 ${result.deleted} 条记录`)
       await refresh()
     } catch {
       message.error('清空失败')
+    } finally {
+      setClearing(false)
     }
   }
 
@@ -92,6 +108,7 @@ export default function QueryHistoryPage() {
               {record.errorMessage}
             </Typography.Text>
           )}
+          {record.requestId && <Typography.Text type="secondary" style={{ fontSize: 12 }}>请求编号：{record.requestId}</Typography.Text>}
         </div>
       )
     },
@@ -123,7 +140,7 @@ export default function QueryHistoryPage() {
       render: (_, record) => (
         <>
           <Tooltip title="复制这条 SQL">
-            <Button size="small" type="text" icon={<CopyOutlined />} onClick={() => void copySql(record.sqlText)} />
+            <Button size="small" type="text" aria-label={`复制查询 ${record.id} 的 SQL`} icon={<CopyOutlined />} onClick={() => void copySql(record.sqlText)} />
           </Tooltip>
           <Tooltip title="去即席查询重新执行">
             <Button size="small" type="link" onClick={() => navigate('/analytics/query')}>去执行</Button>
@@ -132,7 +149,7 @@ export default function QueryHistoryPage() {
             title="删除这条历史记录？"
             onConfirm={() => void handleDelete(record.id)}
           >
-            <Button size="small" type="text" danger icon={<DeleteOutlined />} />
+            <Button size="small" type="text" danger aria-label={`删除查询 ${record.id}`} icon={<DeleteOutlined />} />
           </Popconfirm>
         </>
       )
@@ -144,7 +161,7 @@ export default function QueryHistoryPage() {
   return (
     <div className="query-history-page">
       <PageHeader
-        description="即席查询的执行历史：只展示你自己的查询记录，可一键复制 SQL 复用或跳转重新执行。"
+        description="只展示能确认归属的本人查询记录，可复制 SQL 复用；旧版中无法确认归属的记录不在此展示。"
         extra={
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         }
@@ -168,18 +185,19 @@ export default function QueryHistoryPage() {
           </div>
           <Button type="primary" onClick={() => void refresh()}>查询</Button>
           <Popconfirm
-            title="清空全部查询历史？"
-            description="仅清空你自己的记录，删除后无法恢复。"
+            title="分批清理查询历史？"
+            description="每次最多删除 500 条本人记录，删除后无法恢复。"
+            okText="清理本批"
             onConfirm={() => void handleClear()}
           >
-            <Button danger icon={<ClearOutlined />}>清空历史</Button>
+            <Button danger loading={clearing} icon={<ClearOutlined />}>清理历史</Button>
           </Popconfirm>
         </div>
       </PageToolbar>
 
       <DataSurface
         title="查询历史"
-        description={`共 ${records.length} 条，成功 ${successCount} 条`}
+        description={`最近 ${records.length} 条，成功 ${successCount} 条；最多展示 200 条`}
         label="查询历史明细"
       >
         <Table<QueryHistoryRecord>

@@ -11,6 +11,8 @@ public class ChatConversation {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String ownerUsername;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long ownerUid;
     private String title;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -19,6 +21,8 @@ public class ChatConversation {
     public void setId(Long id) { this.id = id; }
     public String getOwnerUsername() { return ownerUsername; }
     public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
+    public Long getOwnerUid() { return ownerUid; }
+    public void setOwnerUid(Long ownerUid) { this.ownerUid = ownerUid; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

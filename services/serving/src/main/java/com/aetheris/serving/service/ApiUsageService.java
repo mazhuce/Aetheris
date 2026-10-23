@@ -27,6 +27,12 @@ public class ApiUsageService {
 
     /** Usage telemetry is fail-open: a metrics database issue must not break an authorized API call. */
     public void record(String assetCode, String principal, String authType, int statusCode, long durationMs, String errorCode) {
+        record(assetCode,principal,authType,statusCode,durationMs,errorCode,null);
+    }
+    public record Context(long keyId,java.util.UUID admissionId,String requestId,long ownerUid){
+        public Context {if(keyId<=0||ownerUid<=0||admissionId==null||requestId==null||!requestId.matches("[A-Za-z0-9._:-]{1,128}"))throw new IllegalArgumentException("Invalid API usage binding");}
+    }
+    public void record(String assetCode,String principal,String authType,int statusCode,long durationMs,String errorCode,Context context){
         String safeAsset = assetCode == null ? "unknown" : assetCode;
         String safeAuth = "api_key".equals(authType) ? "api_key" : "identity";
         long safeDuration = Math.max(0, Math.min(durationMs, Integer.MAX_VALUE));
@@ -35,9 +41,10 @@ public class ApiUsageService {
         try {
             jdbc.update("""
                 INSERT INTO serving.service_api_usage
-                    (asset_code, principal_hash, auth_type, status_code, duration_ms, error_code)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """, safeAsset, digest(principal), safeAuth, statusCode, safeDuration, normalizeError(errorCode));
+                    (asset_code,principal_hash,auth_type,status_code,duration_ms,error_code,api_key_id,admission_id,request_id,owner_uid)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                """, safeAsset,digest(principal),safeAuth,statusCode,safeDuration,normalizeError(errorCode),
+                    context==null?null:context.keyId(),context==null?null:context.admissionId(),context==null?null:context.requestId(),context==null?null:context.ownerUid());
         } catch (RuntimeException failure) {
             log.warn("API usage telemetry write failed for asset {}", safeAsset, failure);
         }

@@ -12,6 +12,17 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<Map<String,Object>> status(org.springframework.web.server.ResponseStatusException error,HttpServletRequest request){
+        int status=error.getStatusCode().value();String code=switch(status){case 401->"UNAUTHORIZED";case 403->"FORBIDDEN";case 503->"UNAVAILABLE";default->"REQUEST_REJECTED";};
+        return ResponseEntity.status(status).body(body(code,status==503?"权限服务暂时不可用":"身份或权限检查未通过",request));
+    }
+    @ExceptionHandler({org.springframework.web.bind.MethodArgumentNotValidException.class,
+            org.springframework.http.converter.HttpMessageNotReadableException.class})
+    public ResponseEntity<Map<String,Object>> invalidBody(Exception error,HttpServletRequest request){
+        return ResponseEntity.badRequest().body(body("VALIDATION_FAILED","请求参数格式或必填字段无效",request));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> badRequest(IllegalArgumentException error, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(body("VALIDATION_FAILED", safe(error), request));

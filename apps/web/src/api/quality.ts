@@ -1,4 +1,5 @@
 import http from './http'
+import { approvalMutationConfig, readExecutionApproval, type ExecutionApproval } from './executionApproval'
 
 export interface QualityRule {
   id: number
@@ -12,7 +13,7 @@ export interface QualityRule {
   status?: string
   cronExpression?: string
   description?: string
-  lastCheckStatus?: 'passed' | 'failed' | 'error'
+  lastCheckStatus?: 'passed' | 'failed' | 'error' | 'unknown'
   lastViolationCount?: number
   lastCheckedAt?: string
   lastError?: string
@@ -36,7 +37,7 @@ export interface QualityRuleInput {
 export interface QualityCheckResult {
   id: number
   ruleId: number
-  status: 'running' | 'passed' | 'failed' | 'error'
+  status: 'running' | 'passed' | 'failed' | 'error' | 'unknown'
   violationCount?: number
   thresholdValue?: number
   durationMs?: number
@@ -69,7 +70,7 @@ export function createRule(payload: QualityRuleInput): Promise<QualityRule> {
   return http.post<QualityRule>('/api/quality/rules', payload).then((res) => res.data)
 }
 
-export function updateRule(id: number, payload: QualityRuleInput): Promise<QualityRule> {
+export function updateRule(id: number, payload: Partial<QualityRuleInput>): Promise<QualityRule> {
   return http.put<QualityRule>(`/api/quality/rules/${id}`, payload).then((res) => res.data)
 }
 
@@ -114,4 +115,21 @@ export function listQualityQuarantine(status = 'open', limit = 100): Promise<Qua
 
 export function releaseQualityQuarantine(id: number): Promise<QualityQuarantineRecord> {
   return http.post<QualityQuarantineRecord>(`/api/quality/quarantine/${id}/release`).then((res) => res.data)
+}
+
+/** A fresh view-authorized definition, never a caller supplied approval snapshot. */
+export function getRule(id: number): Promise<QualityRule> {
+  return http.get<QualityRule>(`/api/quality/rules/${id}`).then((res) => res.data)
+}
+
+export function getRuleApproval(id: number): Promise<ExecutionApproval> {
+  return http.get<unknown>(`/api/quality/rules/${id}/approval`).then((res) => readExecutionApproval(res.data))
+}
+
+export function approveRule(id: number, expectedRevision: number): Promise<ExecutionApproval> {
+  return http.post<unknown>(`/api/quality/rules/${id}/approve`, { expectedRevision }, approvalMutationConfig).then((res) => readExecutionApproval(res.data))
+}
+
+export function bindRuleCron(id: number, expectedRevision: number, expectedGeneration: number): Promise<ExecutionApproval> {
+  return http.post<unknown>(`/api/quality/rules/${id}/cron-binding`, { expectedRevision, expectedGeneration }, approvalMutationConfig).then((res) => readExecutionApproval(res.data))
 }

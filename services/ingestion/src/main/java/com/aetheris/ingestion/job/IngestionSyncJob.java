@@ -32,8 +32,11 @@ public class IngestionSyncJob extends QuartzJobBean {
     @Override
     protected void executeInternal(JobExecutionContext context) {
         Long taskId = context.getMergedJobDataMap().getLong(TASK_ID);
+        if (!context.getMergedJobDataMap().containsKey("scheduleVersion") || context.getScheduledFireTime()==null) return;
+        long generation=context.getMergedJobDataMap().getLong("scheduleVersion");
+        String triggerKey="schedule:"+generation+":"+context.getScheduledFireTime().getTime();
         try {
-            executionService.execute(taskId, "scheduler");
+            executionService.executeScheduled(taskId, generation, triggerKey);
         } catch (RuntimeException error) {
             // 不向 Quartz 抛异常：失败已记录在 run 表与任务 last_error 里；
             // 抛出去会触发 Quartz 的重试机制，与写入操作叠加造成重复搬运。

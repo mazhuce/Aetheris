@@ -22,7 +22,7 @@ public class UserRateLimiter {
     /** 超过该容量时强制清理一次；防御异常流量下的无界增长。 */
     private static final int CLEANUP_THRESHOLD = 10_000;
 
-    private final Map<String, Window> windows = new ConcurrentHashMap<>();
+    private final Map<Long, Window> windows = new ConcurrentHashMap<>();
     private final int maxRequestsPerWindow;
     private final long windowMillis;
 
@@ -38,14 +38,15 @@ public class UserRateLimiter {
      *
      * @return true 表示放行，false 表示已超出配额
      */
-    public boolean tryAcquire(String username) {
+    public boolean tryAcquire(ChatOwner owner) {
+        java.util.Objects.requireNonNull(owner, "Verified AI owner required");
         long now = System.currentTimeMillis();
         if (windows.size() > CLEANUP_THRESHOLD) {
             evictExpired(now);
         }
 
         // compute 对同一 key 的操作是原子的，避免并发下多个请求各自新建窗口而放大配额。
-        Window window = windows.compute(username, (ignored, current) -> {
+        Window window = windows.compute(owner.uid(), (ignored, current) -> {
             if (current == null || now - current.startedAt >= windowMillis) {
                 return new Window(now);
             }
@@ -56,7 +57,7 @@ public class UserRateLimiter {
 
     /** 淘汰已过期的窗口；过期条目不再影响配额，留着只是占内存。 */
     private void evictExpired(long now) {
-        Iterator<Map.Entry<String, Window>> iterator = windows.entrySet().iterator();
+        Iterator<Map.Entry<Long, Window>> iterator = windows.entrySet().iterator();
         while (iterator.hasNext()) {
             if (now - iterator.next().getValue().startedAt >= windowMillis) {
                 iterator.remove();

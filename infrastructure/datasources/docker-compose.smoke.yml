@@ -5,7 +5,7 @@ name: aetheris-datasource-smoke
 # projects. It exposes only loopback ports and never shares their volumes.
 services:
   mariadb:
-    image: mariadb:11.4.3
+    image: docker.io/library/mariadb:11.4.3@sha256:e3432369d4d432ec2a3d777ff84ffca11ec8c2188cf1b6a0551a393ae5d833bb
     environment:
       MARIADB_DATABASE: datasource_smoke
       MARIADB_USER: smoke
@@ -20,7 +20,7 @@ services:
       retries: 24
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8.14.39-alpine
+    image: docker.io/clickhouse/clickhouse-server:24.8.14.39-alpine@sha256:b002e56ed5c16e224c312527f6fcba7e77216fec5d7a88a7828f59efc614feb5
     environment:
       CLICKHOUSE_DB: datasource_smoke
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
@@ -34,7 +34,7 @@ services:
       retries: 24
 
   cockroachdb:
-    image: cockroachdb/cockroach:v24.3.6
+    image: docker.io/cockroachdb/cockroach:v24.3.6@sha256:21f483d0d7baf1a708fa079e8d0dd72ce4dca10db7216ea6a972fe1a93c91bc8
     command: ["start-single-node", "--insecure", "--http-addr=0.0.0.0:8080"]
     ports:
       - "127.0.0.1:26258:26257"

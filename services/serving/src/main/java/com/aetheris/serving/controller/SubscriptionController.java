@@ -45,12 +45,12 @@ public class SubscriptionController {
 
     @GetMapping
     public List<DataSubscription> list(HttpServletRequest request, @RequestParam(required = false) Optional<String> status) {
-        security.require(request,"dataset",null,"view");
+        security.requireManage(request);
         return service.subscriptions(status);
     }
 
     @GetMapping("/{id}")
-    public DataSubscription subscription(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dataset",id,"view"); return service.subscription(id); }
+    public DataSubscription subscription(HttpServletRequest request,@PathVariable Long id) { security.requireManage(request); return service.subscription(id); }
 
     @PostMapping
     public DataSubscription create(

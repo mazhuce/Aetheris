@@ -11,7 +11,7 @@ import java.time.OffsetDateTime;
 public class DataStandard {
     @TableId(type = IdType.AUTO)
     private Long id;
-    @NotBlank private String standardCode;
+    @NotBlank(groups = com.aetheris.governance.validation.CreateDefinition.class) private String standardCode;
     @NotBlank private String standardName;
     private String standardType;
     private String applyScope;

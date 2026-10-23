@@ -1,6 +1,7 @@
 package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.SystemConfig;
+import com.aetheris.system.dto.SystemConfigResponse;
 import com.aetheris.system.service.SystemConfigService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,30 +27,31 @@ public class SystemConfigController {
     }
 
     @GetMapping
-    public List<SystemConfig> list() {
-        return systemConfigService.list();
+    public List<SystemConfigResponse> list() {
+        return systemConfigService.list().stream().map(SystemConfigResponse::from).toList();
     }
 
     @GetMapping("/{key}")
-    public ResponseEntity<SystemConfig> getByKey(@PathVariable String key) {
+    public ResponseEntity<SystemConfigResponse> getByKey(@PathVariable String key) {
         return systemConfigService.findByKey(key)
+                .map(SystemConfigResponse::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public SystemConfig create(@Valid @RequestBody SystemConfig config) {
+    public SystemConfigResponse create(@Valid @RequestBody SystemConfig config) {
         systemConfigService.save(config);
-        return config;
+        return SystemConfigResponse.from(config);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SystemConfig> update(
+    public ResponseEntity<SystemConfigResponse> update(
             @PathVariable Long id,
             @Valid @RequestBody SystemConfig config) {
         config.setId(id);
         boolean updated = systemConfigService.updateById(config);
-        return updated ? ResponseEntity.ok(systemConfigService.getById(id)) : ResponseEntity.notFound().build();
+        return updated ? ResponseEntity.ok(SystemConfigResponse.from(systemConfigService.getById(id))) : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")

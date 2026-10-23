@@ -21,12 +21,13 @@ class InternalTokenInterceptorTest {
     }
 
     @Test
-    void acceptsSharedToken() throws Exception {
+    void rejectsPreviouslyAcceptedSharedToken() throws Exception {
         InternalTokenInterceptor interceptor = new InternalTokenInterceptor("shared-token");
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/notifications");
         request.addHeader("X-Internal-Token", "shared-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        assertTrue(interceptor.preHandle(request, response, mock(Object.class)));
+        assertTrue(!interceptor.preHandle(request, response, mock(Object.class)));
+        assertEquals(401,response.getStatus());
     }
 }

@@ -1,0 +1,47 @@
+package com.aetheris.workflow.service;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.web.client.*;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
+import java.time.Duration;
+import java.util.Map;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+
+class SqlExecutionClientOutcomeTest {
+    private final RestClient rest=mock(RestClient.class);
+    private final RestClient.Builder builder=mock(RestClient.Builder.class,RETURNS_SELF);
+    private final RestClient.RequestBodyUriSpec request=mock(RestClient.RequestBodyUriSpec.class,RETURNS_SELF);
+    private final RestClient.ResponseSpec response=mock(RestClient.ResponseSpec.class);
+    @SuppressWarnings("unchecked")
+    private SqlExecutionClient client() {
+        when(builder.build()).thenReturn(rest); when(rest.mutate()).thenReturn(builder);
+        when(rest.post()).thenReturn(request); when(request.uri(anyString(),any(Object[].class))).thenReturn(request);
+        when(request.retrieve()).thenReturn(response);
+        return new SqlExecutionClient(builder,"http://unused",Duration.ofSeconds(1),"test-token");
+    }
+    @Test void explicitSuccessEnvelopeIsRequired() {
+        SqlExecutionClient client=client();
+        when(response.body(any(ParameterizedTypeReference.class))).thenReturn(Map.of("success",false));
+        assertTrue(assertThrows(SqlExecutionException.class,()->client.execute(1L,"INSERT INTO t SELECT 1",1)).outcomeUnknown());
+    }
+    @Test void lostResponseAndServerFailureAreUnknownAndCannotRetry() {
+        SqlExecutionClient client=client();
+        for(RuntimeException failure:java.util.List.of(new ResourceAccessException("response timeout"),
+                new HttpServerErrorException(HttpStatus.BAD_GATEWAY))) {
+            when(response.body(any(ParameterizedTypeReference.class))).thenThrow(failure);
+            SqlExecutionException error=assertThrows(SqlExecutionException.class,()->client.execute(1L,"INSERT INTO t SELECT 1",1));
+            assertTrue(error.outcomeUnknown()); assertFalse(error.retryable());
+            reset(response);
+        }
+    }
+    @Test void guardRejectionIsKnownFailureAndIsNotAutomaticallyRetried() {
+        SqlExecutionClient client=client();
+        when(response.body(any(ParameterizedTypeReference.class))).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
+        var error=assertThrows(SqlExecutionException.class,()->client.execute(1L,"DROP TABLE t",1));
+        assertFalse(error.outcomeUnknown()); assertFalse(error.retryable());
+    }
+}

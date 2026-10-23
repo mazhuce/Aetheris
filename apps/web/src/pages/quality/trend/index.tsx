@@ -20,12 +20,14 @@ import {
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import { canManagePlatform } from '@/utils/access'
+import ExecutionReconciliationModal from '@/components/ExecutionReconciliationModal'
 
 const statusMeta: Record<string, { label: string; color: string }> = {
   passed: { label: '通过', color: 'success' },
   failed: { label: '未通过', color: 'error' },
   error: { label: '异常', color: 'warning' },
-  running: { label: '执行中', color: 'processing' }
+  running: { label: '执行中', color: 'processing' },
+  unknown: { label: '待对账', color: 'warning' }
 }
 
 export default function QualityTrendPage() {
@@ -39,6 +41,7 @@ export default function QualityTrendPage() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
   const [ruleId, setRuleId] = useState<number>()
+  const [reconcileId, setReconcileId] = useState<number>()
   const pageSize = useResponsivePageSize(6, 5, 4, 3)
   const canManage = canManagePlatform()
 
@@ -129,6 +132,10 @@ export default function QualityTrendPage() {
       render: (value?: string) => value || '—'
     }
   ]
+  if (canManage) columns.push({ title: '处理', key: 'reconcile', width: 90,
+    render: (_, result) => result.status === 'unknown'
+      ? <Button type="link" size="small" onClick={() => setReconcileId(result.id)}>核实结果</Button> : '—'
+  })
   if (results.some((result) => result.failureCode)) columns.push({
     title: '失败诊断',
     dataIndex: 'failureCode',
@@ -161,6 +168,7 @@ export default function QualityTrendPage() {
 
   return (
     <div className="quality-trend-page">
+      <ExecutionReconciliationModal kind="quality" id={reconcileId} onClose={() => setReconcileId(undefined)} onResolved={refresh} />
       <PageHeader
         description="数据质量运行趋势：基于最近一次检查的规则通过情况与历史检查记录，识别持续未通过的目标表。"
         extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新数据</Button>}

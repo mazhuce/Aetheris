@@ -1,19 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Drawer, Input, Select, Table, Tabs, Tag, Typography } from 'antd'
+import { Alert, App, Button, Drawer, Input, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { DatabaseOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import {
-  listTables,
+  listTablesPage,
+  listTableCatalog,
   previewDataSourceTable,
   listDataSourceColumns,
   type MetadataTable,
-  type DataSourceColumn
+  type DataSourceColumn,
+  type TableCatalogGroup
 } from '@/api/metadata'
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 /** 数仓层级元数据：与 WarehouseLayerResolver 的约定一致。 */
 const layerMeta: Record<string, { label: string; color: string }> = {
@@ -31,52 +34,40 @@ interface PreviewRow {
 
 export default function TableBrowserPage() {
   const { message } = App.useApp()
-  const [tables, setTables] = useState<MetadataTable[]>([])
-  const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [layer, setLayer] = useState<string>()
-  const [domain, setDomain] = useState<string>()
+  const [domain, setDomain] = useState<string | null>()
+  const [catalog, setCatalog] = useState<TableCatalogGroup[]>([])
+  const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogError, setCatalogError] = useState(false)
+  const [catalogRevision, setCatalogRevision] = useState(0)
   // 抽屉：表详情（字段结构 + 数据预览）
   const [active, setActive] = useState<MetadataTable>()
   const [columns, setColumns] = useState<DataSourceColumn[]>([])
   const [preview, setPreview] = useState<PreviewRow>()
   const [detailLoading, setDetailLoading] = useState(false)
   const pageSize = useResponsivePageSize()
+  const domainValue = domain === undefined ? undefined : JSON.stringify(domain)
+  const listing = useVisibleListPage((cursor, signal) => listTablesPage(
+    { keyword, layer, domain: domain ?? undefined, unassigned: domain === null || undefined }, { cursor, size: pageSize, signal }),
+    JSON.stringify([keyword, layer, domainValue, pageSize]))
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    try {
-      setTables(await listTables())
-    } catch {
-      message.error('表元数据加载失败')
-    } finally {
-      setLoading(false)
-    }
-  }, [message])
+  const refresh = useCallback(() => { listing.refresh(); setCatalogRevision((value) => value + 1) }, [listing.refresh])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    const controller = new AbortController()
+    setCatalogLoading(true); setCatalogError(false)
+    listTableCatalog(undefined, { signal: controller.signal }).then((groups) => {
+      if (!controller.signal.aborted) setCatalog(groups)
+    }).catch(() => { if (!controller.signal.aborted) setCatalogError(true) })
+      .finally(() => { if (!controller.signal.aborted) setCatalogLoading(false) })
+    return () => controller.abort()
+  }, [catalogRevision])
 
   const domains = useMemo(
-    () => Array.from(new Set(tables.map((table) => table.domain).filter(Boolean))) as string[],
-    [tables]
+    () => Array.from(new Set(catalog.map((group) => group.domain))),
+    [catalog]
   )
-
-  const filtered = useMemo(() => {
-    const kw = keyword.trim().toLowerCase()
-    return tables.filter((table) => {
-      if (layer && table.layer !== layer) return false
-      if (domain && table.domain !== domain) return false
-      if (!kw) return true
-      // 与后端 search 一致：表名、注释、业务域都参与匹配
-      return (
-        table.tableName.toLowerCase().includes(kw)
-        || (table.tableComment ?? '').toLowerCase().includes(kw)
-        || (table.domain ?? '').toLowerCase().includes(kw)
-      )
-    })
-  }, [tables, keyword, layer, domain])
 
   const openDetail = async (table: MetadataTable) => {
     setActive(table)
@@ -208,10 +199,12 @@ export default function TableBrowserPage() {
             <Select
               placeholder="全部域"
               allowClear
-              value={domain}
-              onChange={setDomain}
+              value={domainValue}
+              onChange={(value: string | undefined) => setDomain(value === undefined ? undefined : JSON.parse(value) as string | null)}
               className="filter-control-sm"
-              options={domains.map((value) => ({ value, label: value }))}
+              loading={catalogLoading}
+              disabled={catalogError}
+              options={domains.map((value) => ({ value: JSON.stringify(value), label: value || '未归属域' }))}
             />
           </div>
         </div>
@@ -219,18 +212,24 @@ export default function TableBrowserPage() {
 
       <DataSurface
         title="数据表"
-        description={`共 ${filtered.length} 张（纳管总数 ${tables.length}）`}
+        description={`本页 ${listing.items.length} 张${!catalogLoading && !catalogError ? `（可见总数 ${catalog.reduce((sum, group) => sum + group.count, 0)}）` : ''}`}
         label="数据表明细"
       >
+        {(listing.error || catalogError) && <Alert type="error" message={listing.error || '业务域筛选暂时无法完整加载，请重试'} />}
         <Table<MetadataTable>
           rowKey="id"
           columns={columnsDef}
-          dataSource={filtered}
-          loading={loading}
+          dataSource={listing.items}
+          loading={listing.loading}
           scroll={{ x: 1200 }}
-          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
-          locale={{ emptyText: <Typography.Text type="secondary"><DatabaseOutlined /> 暂无表元数据。去元数据中心对数据源执行同步，或手工登记表。</Typography.Text> }}
+          pagination={false}
+          locale={{ emptyText: <Typography.Text type="secondary"><DatabaseOutlined /> {listing.hasMore ? '暂未找到可见记录，可继续查看' : '暂无表元数据。去元数据中心对数据源执行同步，或手工登记表。'}</Typography.Text> }}
         />
+        <Space style={{ marginTop: 12 }}>
+          <Button disabled={!listing.canPrevious || listing.loading} onClick={listing.previous}>上一页</Button>
+          <span>第 {listing.pageNumber} 页 · 本页 {listing.items.length} 条</span>
+          <Button disabled={!listing.hasMore || listing.loading || !!listing.error} onClick={listing.next}>下一页</Button>
+        </Space>
       </DataSurface>
 
       <Drawer

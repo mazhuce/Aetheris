@@ -29,7 +29,7 @@ export function createPolicy(payload: GovernancePolicyInput): Promise<Governance
   return http.post<GovernancePolicy>('/api/governance/policies', payload).then((res) => res.data)
 }
 
-export function updatePolicy(id: number, payload: GovernancePolicyInput): Promise<GovernancePolicy> {
+export function updatePolicy(id: number, payload: Partial<GovernancePolicyInput>): Promise<GovernancePolicy> {
   return http.put<GovernancePolicy>(`/api/governance/policies/${id}`, payload).then((res) => res.data)
 }
 
@@ -81,7 +81,7 @@ export function createDataStandard(payload: DataStandardInput): Promise<DataStan
   return http.post<DataStandard>('/api/governance/standards', payload).then((res) => res.data)
 }
 
-export function updateDataStandard(id: number, payload: DataStandardInput): Promise<DataStandard> {
+export function updateDataStandard(id: number, payload: Partial<DataStandardInput>): Promise<DataStandard> {
   return http.put<DataStandard>(`/api/governance/standards/${id}`, payload).then((res) => res.data)
 }
 

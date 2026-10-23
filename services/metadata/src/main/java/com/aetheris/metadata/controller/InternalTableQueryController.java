@@ -8,6 +8,7 @@ import com.aetheris.metadata.service.DataSourceService;
 import com.aetheris.metadata.service.JdbcService;
 import com.aetheris.metadata.service.MetadataTableService;
 import com.aetheris.metadata.service.QueryAuditService;
+import com.aetheris.metadata.service.TableDataQueryService;
 import com.aetheris.metadata.security.MetadataSecurity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -20,11 +21,18 @@ import java.util.*;
 @RestController
 @RequestMapping("/internal/tables")
 public class InternalTableQueryController {
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
+    private Map<String,String> domainCtx(Long id) {
+        return permissionContext == null ? (id == null ? Map.of() : Map.of("domainId",id.toString())) : permissionContext.of(id);
+    }
     private final MetadataTableService tables;
     private final DataSourceService dataSources;
     private final JdbcService jdbc;
     private final MetadataSecurity security;
     private final QueryAuditService auditService;
+    private final TableDataQueryService queries;
 
     public InternalTableQueryController(MetadataTableService tables, DataSourceService dataSources, JdbcService jdbc,
                                         MetadataSecurity security, QueryAuditService auditService) {
@@ -33,6 +41,7 @@ public class InternalTableQueryController {
         this.jdbc = jdbc;
         this.security = security;
         this.auditService = auditService;
+        this.queries = new TableDataQueryService(dataSources,jdbc);
     }
 
     @PostMapping("/{id}/query")
@@ -43,26 +52,13 @@ public class InternalTableQueryController {
             return ResponseEntity.notFound().build();
         }
         String username = security.require(httpRequest, "table", id, "query",
-                table.getBusinessDomainId() == null ? Map.of()
-                        : Map.of("domainId", String.valueOf(table.getBusinessDomainId())))
+                domainCtx(table.getBusinessDomainId()))
                 .username();
-        DataSource source = table.getDatasourceId() == null ? null : dataSources.getById(table.getDatasourceId());
-        if (source == null) return ResponseEntity.badRequest().body(Map.of("message", "表所属数据源不可用"));
-
-        TableQueryRequest actual = request == null ? new TableQueryRequest(List.of(), 100) : request;
-        List<DataSourceColumnDto> known = jdbc.listColumns(source, table.getSchemaName(), table.getTableName());
-        Map<String, String> columns = new HashMap<>();
-        for (DataSourceColumnDto column : known) columns.put(column.name().toLowerCase(Locale.ROOT), column.name());
-        List<String> selected = actual.columns().isEmpty() ? known.stream().limit(50).map(DataSourceColumnDto::name).toList()
-                : validateColumns(actual.columns(), columns);
-        if (selected.isEmpty()) throw new IllegalArgumentException("表没有可查询字段");
-        String projection = selected.stream().map(value -> quote(value, source)).reduce((left, right) -> left + ", " + right).orElseThrow();
-        String tableName = (table.getSchemaName() == null || table.getSchemaName().isBlank() ? "" : quote(table.getSchemaName(), source) + ".") + quote(table.getTableName(), source);
-        int limit = Math.clamp(actual.limit() == null ? 100 : actual.limit(), 1, 100);
-        String sql = "SELECT " + projection + " FROM " + tableName + " LIMIT " + limit;
+        var plan=queries.prepare(table,request);
+        DataSource source=plan.source();String sql=plan.sql();
         long startedAt = System.currentTimeMillis();
         try {
-            Map<String, Object> result = jdbc.query(source, sql);
+            Map<String, Object> result = queries.execute(plan);
             audit(username, table, source, sql, "success", result, null, startedAt);
             return ResponseEntity.ok(result);
         } catch (RuntimeException error) {
@@ -82,26 +78,6 @@ public class InternalTableQueryController {
         } catch (RuntimeException ignored) {
             // 审计旁路失败不能改变查询结果。
         }
-    }
-
-    private List<String> validateColumns(List<String> requested, Map<String, String> known) {
-        if (requested.size() > 50) throw new IllegalArgumentException("单次最多选择 50 个字段");
-        Set<String> seen = new HashSet<>();
-        List<String> result = new ArrayList<>();
-        for (String value : requested) {
-            if (value == null || !value.matches("[A-Za-z_][A-Za-z0-9_$]*")) throw new IllegalArgumentException("字段名包含不支持的字符");
-            String actual = known.get(value.toLowerCase(Locale.ROOT));
-            if (actual == null || !seen.add(actual.toLowerCase(Locale.ROOT))) throw new IllegalArgumentException("字段不存在或重复：" + value);
-            result.add(actual);
-        }
-        return result;
-    }
-
-    private String quote(String value, DataSource source) {
-        if (value == null || !value.matches("[A-Za-z_][A-Za-z0-9_$]*")) throw new IllegalArgumentException("表或字段名包含不支持的字符");
-        String type = source.getType() == null ? "" : source.getType().toLowerCase(Locale.ROOT);
-        String marker = type.contains("postgres") || type.contains("greenplum") || type.contains("opengauss") ? "\"" : "`";
-        return marker + value + marker;
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

@@ -20,6 +20,17 @@ beforeEach(() => {
 })
 
 describe('DataSourcePage connection health', () => {
+  it('searches rows whose historical host was redacted without crashing', async () => {
+    vi.mocked(metadata.listDataSources).mockResolvedValue([{ ...source, host: null, connectionConfigurationRedacted: true }])
+    renderPage()
+    await screen.findByText(source.name)
+    fireEvent.change(screen.getByPlaceholderText('搜索名称或主机'), { target: { value: 'missing-host' } })
+    await waitFor(() => expect(screen.queryByText(source.name)).not.toBeInTheDocument())
+    fireEvent.change(screen.getByPlaceholderText('搜索名称或主机'), { target: { value: 'Spark' } })
+    expect(await screen.findByText(source.name)).toBeInTheDocument()
+    expect(metadata.testDataSource).not.toHaveBeenCalled()
+  })
+
   it('shows enabled configuration as neutral and unknown health without probing on open or refresh', async () => {
     renderPage()
     await screen.findByText(source.name)

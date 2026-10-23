@@ -18,6 +18,7 @@ import {
 } from '@/api/governance'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 const typeMeta: Record<string, { label: string; color: string }> = {
   naming: { label: '命名标准', color: 'blue' },
@@ -36,6 +37,7 @@ export default function DataStandardPage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
   const [allData, setAllData] = useState<DataStandard[]>([])
+  const permissions = useResourceActions('data_standard', allData)
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>()
@@ -95,7 +97,7 @@ export default function DataStandardPage() {
     setSubmitting(true)
     try {
       if (editing) {
-        await updateDataStandard(editing.id, values)
+        await updateDataStandard(editing.id, canManage ? values : { standardName: values.standardName, status: values.status })
         message.success('标准已更新')
       } else {
         await createDataStandard(values)
@@ -171,7 +173,7 @@ export default function DataStandardPage() {
     { title: '更新时间', dataIndex: 'updatedAt', key: 'updatedAt', width: 170, render: (v?: string) => formatDateTime(v) }
   ]
 
-  if (canManage) {
+  if (canManage || allData.some((standard) => permissions.can('update', standard.id) || permissions.can('delete', standard.id))) {
     columns.push({
       title: '操作',
       key: 'action',
@@ -180,8 +182,8 @@ export default function DataStandardPage() {
       render: (_, record) => (
         <RowActions
           items={[
-            { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
-            {
+            ...((canManage || permissions.can('update', record.id)) ? [{ key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } }] : []),
+            ...((canManage || permissions.can('delete', record.id)) ? [{
               key: 'delete',
               label: '删除',
               danger: true,
@@ -193,7 +195,7 @@ export default function DataStandardPage() {
                   okButtonProps: { danger: true },
                   onOk: () => handleDelete(record)
                 })
-            }
+            }] : [])
           ]}
         />
       )
@@ -210,7 +212,7 @@ export default function DataStandardPage() {
               新增标准
             </Button>
           ) : (
-            <Tag>只读访问</Tag>
+            <Tag>按资源授权</Tag>
           )
         }
       />
@@ -279,7 +281,7 @@ export default function DataStandardPage() {
         <Form form={form} layout="vertical" initialValues={{ standardType: 'naming', status: 'draft', version: 1 }} onFinish={(v) => void handleSubmit(v)}>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="standardCode" label="标准编码" rules={[{ required: true, message: '请输入标准编码' }]}>
+              <Form.Item name="standardCode" label="标准编码" rules={[{ required: canManage, message: '请输入标准编码' }]}>
                 <Input placeholder="如 STD_FIELD_NAMING" disabled={!!editing} />
               </Form.Item>
             </Col>
@@ -292,25 +294,25 @@ export default function DataStandardPage() {
           <Row gutter={12}>
             <Col span={8}>
               <Form.Item name="standardType" label="标准类型">
-                <Select options={Object.entries(typeMeta).map(([value, meta]) => ({ value, label: meta.label }))} />
+                <Select disabled={!canManage} options={Object.entries(typeMeta).map(([value, meta]) => ({ value, label: meta.label }))} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="applyScope" label="适用范围">
-                <Input placeholder="如 全平台" />
+                <Input disabled={!canManage} placeholder="如 全平台" />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="owner" label="负责人">
-                <Input placeholder="负责人姓名或账号" />
+                <Input disabled={!canManage} placeholder="负责人姓名或账号" />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item name="definition" label="标准定义">
-            <Input.TextArea rows={2} placeholder="标准的业务定义与适用说明" />
+            <Input.TextArea disabled={!canManage} rows={2} placeholder="标准的业务定义与适用说明" />
           </Form.Item>
           <Form.Item name="ruleExpression" label="规则表达式">
-            <Input.TextArea rows={2} placeholder="如 ^[a-z][a-z0-9_(_)]*$" />
+            <Input.TextArea disabled={!canManage} rows={2} placeholder="如 ^[a-z][a-z0-9_(_)]*$" />
           </Form.Item>
           <Row gutter={12}>
             <Col span={8}>
@@ -320,12 +322,12 @@ export default function DataStandardPage() {
             </Col>
             <Col span={8}>
               <Form.Item name="version" label="版本号">
-                <InputNumber min={1} style={{ width: '100%' }} />
+                <InputNumber disabled={!canManage} min={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="referenceDoc" label="参考文档">
-                <Input placeholder="文档链接" />
+                <Input disabled={!canManage} placeholder="文档链接" />
               </Form.Item>
             </Col>
           </Row>

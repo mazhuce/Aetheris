@@ -39,10 +39,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -53,9 +50,14 @@ import java.util.regex.Pattern;
 @RestController
 @RequestMapping("/api/workflow/tasks")
 public class TaskController {
+    private com.aetheris.workflow.security.ResourceAuthorization authorization = new com.aetheris.workflow.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.workflow.security.ResourceAuthorization authorization) { this.authorization = authorization; }
+    private com.aetheris.workflow.config.BusinessCalendar businessCalendar = new com.aetheris.workflow.config.BusinessCalendar();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setBusinessCalendar(com.aetheris.workflow.config.BusinessCalendar calendar) { this.businessCalendar = calendar; }
 
     private static final Logger log = LoggerFactory.getLogger(TaskController.class);
-    private static final DateTimeFormatter BIZ_DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final Pattern STREAM_IDENTIFIER = Pattern.compile("[A-Za-z_][A-Za-z0-9_.:-]{0,511}");
 
     private final TaskService taskService;
@@ -104,8 +106,8 @@ public class TaskController {
     /** 任务列表，附带调度状态与最近一次运行结果，避免界面为每行再发请求。 */
     @GetMapping
     public List<TaskView> list() {
-        List<Task> tasks = taskService.list(
-                new LambdaQueryWrapper<Task>().orderByDesc(Task::getUpdatedAt));
+        List<Task> tasks = authorization.filter("workflow_task", taskService.list(
+                new LambdaQueryWrapper<Task>().orderByDesc(Task::getUpdatedAt)), Task::getId);
         List<TaskView> views = new ArrayList<>(tasks.size());
         for (Task task : tasks) {
             views.add(toView(task));
@@ -115,6 +117,7 @@ public class TaskController {
 
     @GetMapping("/{id}")
     public ResponseEntity<TaskView> getById(@PathVariable Long id) {
+        authorization.require("workflow_task", id, "view");
         Task task = taskService.getById(id);
         return task == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(toView(task));
     }
@@ -123,6 +126,8 @@ public class TaskController {
     public ResponseEntity<?> create(
             @Valid @RequestBody Task task,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        authorization.require("workflow_task", null, "create");
+        authorization.requireManage();
         String rejection = validateDefinition(task);
         if (rejection != null) {
             return ResponseEntity.badRequest().body(Map.of("message", rejection));
@@ -262,9 +267,15 @@ public class TaskController {
     public ResponseEntity<?> update(
             @PathVariable Long id,
             @Valid @RequestBody Task task) {
+        authorization.require("workflow_task", id, "update");
         Task existing = taskService.getById(id);
         if (existing == null) {
             return ResponseEntity.notFound().build();
+        }
+        authorization.protectDefinition(task,existing,java.util.Set.of("name","description","status","cronExpression"));
+        if ((task.getCronExpression()!=null && !java.util.Objects.equals(task.getCronExpression(),existing.getCronExpression()))
+                || ("disabled".equals(existing.getStatus()) && "enabled".equals(task.getStatus()))) {
+            authorization.require("workflow_task",id,"execute");
         }
         if (!StringUtils.hasText(task.getTaskType())) task.setTaskType(existing.getTaskType());
         if ("flink".equals(task.getTaskType()) && !StringUtils.hasText(task.getFlinkMode())) {
@@ -278,7 +289,11 @@ public class TaskController {
         task.setId(id);
         task.setDefinitionVersion((existing.getDefinitionVersion() == null ? 1 : existing.getDefinitionVersion()) + 1);
         task.setUpdatedAt(OffsetDateTime.now());
-        taskService.updateById(task);
+        authorization.retainEditable(task,java.util.Set.of("name","description","status","cronExpression"));
+        boolean saved = taskService.update(task, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Task>()
+                .eq(Task::getId,id)
+                .eq(existing.getDefinitionVersion()!=null,Task::getDefinitionVersion,existing.getDefinitionVersion()));
+        if(!saved)return ResponseEntity.status(409).body(Map.of("message","任务定义已变化，请重新加载后保存"));
 
         Task updated = taskService.getById(id);
         // 改完 cron 或启停状态后必须重新同步，否则会出现「界面显示已停用但仍在跑」。
@@ -294,6 +309,7 @@ public class TaskController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable Long id) {
+        authorization.require("workflow_task", id, "delete");
         if (taskService.getById(id) == null) {
             return ResponseEntity.notFound().build();
         }
@@ -319,14 +335,14 @@ public class TaskController {
             @PathVariable Long id,
             @RequestBody(required = false) TaskRunRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
+        authorization.require("workflow_task", id, "execute");
         String bizDate = request == null || request.bizDate() == null || request.bizDate().isBlank()
                 // 默认取昨天，与定时触发口径一致：数仓通常加工前一天的完整数据。
-                ? LocalDate.now().minusDays(1).format(BIZ_DATE)
+                ? businessCalendar.resolve(null)
                 : request.bizDate();
 
         try {
-            TaskInstance instance = executionService.execute(
-                    id, bizDate, "manual", username == null ? "unknown" : username);
+            TaskInstance instance = executionService.executeManual(id, bizDate, authorization.currentUser());
             return ResponseEntity.ok(instance);
         } catch (IllegalArgumentException error) {
             return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
@@ -344,6 +360,7 @@ public class TaskController {
     public List<TaskInstance> instances(
             @PathVariable Long id,
             @RequestParam(defaultValue = "30") int limit) {
+        authorization.require("workflow_task", id, "view");
         return instanceService.list(
                 new LambdaQueryWrapper<TaskInstance>()
                         .eq(TaskInstance::getTaskId, id)
@@ -356,11 +373,11 @@ public class TaskController {
     public List<TaskInstance> allInstances(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "50") int limit) {
-        return instanceService.list(
+        return authorization.filter("workflow_task", instanceService.list(
                 new LambdaQueryWrapper<TaskInstance>()
                         .eq(StringUtils.hasText(status), TaskInstance::getStatus, status)
                         .orderByDesc(TaskInstance::getStartedAt)
-                        .last("LIMIT " + Math.clamp(limit, 1, 200)));
+                        .last("LIMIT " + Math.clamp(limit, 1, 200))), TaskInstance::getTaskId);
     }
 
     /** 某次运行的日志。 */
@@ -438,8 +455,8 @@ public class TaskController {
             @PathVariable long attemptId,
             @RequestBody FlinkSavepointRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorizationService.mayManage(username)) {
-            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以触发 Flink savepoint"));
+        if (!authorizationService.canExecuteInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权操作该任务的 Flink savepoint"));
         }
         try {
             return ResponseEntity.ok(executionService.triggerFlinkSavepoint(instanceId, attemptId,
@@ -478,8 +495,8 @@ public class TaskController {
             @PathVariable long attemptId,
             @RequestBody FlinkStopSavepointRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorizationService.mayManage(username)) {
-            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以停止 Flink Job"));
+        if (!authorizationService.canExecuteInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权停止该任务的 Flink Job"));
         }
         try {
             return ResponseEntity.ok(executionService.stopFlinkWithSavepoint(instanceId, attemptId,
@@ -499,8 +516,8 @@ public class TaskController {
             @PathVariable long attemptId,
             @RequestBody FlinkPauseRequest request,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorizationService.mayManage(username)) {
-            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以暂停 Flink Job"));
+        if (!authorizationService.canExecuteInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权暂停该任务的 Flink Job"));
         }
         try {
             return ResponseEntity.ok(executionService.pauseFlink(instanceId, attemptId,
@@ -539,8 +556,8 @@ public class TaskController {
             @PathVariable long instanceId,
             @PathVariable long attemptId,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorizationService.mayManage(username)) {
-            return ResponseEntity.status(403).body(Map.of("message", "只有管理员可以恢复 Flink Job"));
+        if (!authorizationService.canExecuteInstance(username, instanceId)) {
+            return ResponseEntity.status(403).body(Map.of("message", "无权恢复该任务的 Flink Job"));
         }
         try {
             return ResponseEntity.ok(executionService.resumeFlink(instanceId, attemptId));
@@ -631,7 +648,7 @@ public class TaskController {
     @PostMapping("/instances/{instanceId}/cancel")
     public ResponseEntity<?> cancel(@PathVariable long instanceId,
             @RequestAttribute(GatewayIdentityInterceptor.USERNAME_ATTRIBUTE) String username) {
-        if (!authorizationService.canReadInstance(username, instanceId)) {
+        if (!authorizationService.canExecuteInstance(username, instanceId)) {
             return ResponseEntity.status(403).body(Map.of("message", "无权操作该实例"));
         }
         try {
@@ -656,6 +673,7 @@ public class TaskController {
 
     @GetMapping("/{id}/dependencies")
     public List<TaskDependency> dependencies(@PathVariable Long id) {
+        authorization.require("workflow_task", id, "view");
         return dependencyService.list(
                 new LambdaQueryWrapper<TaskDependency>().eq(TaskDependency::getTaskId, id));
     }
@@ -664,6 +682,8 @@ public class TaskController {
     public ResponseEntity<?> addDependency(
             @PathVariable Long id,
             @RequestParam Long upstreamTaskId) {
+        authorization.require("workflow_task", id, "update");
+        authorization.require("workflow_task", upstreamTaskId, "view");
         if (taskService.getById(id) == null || taskService.getById(upstreamTaskId) == null) {
             return ResponseEntity.notFound().build();
         }
@@ -691,6 +711,8 @@ public class TaskController {
     public ResponseEntity<Void> removeDependency(
             @PathVariable Long id,
             @PathVariable Long upstreamTaskId) {
+        authorization.require("workflow_task", id, "update");
+        authorization.require("workflow_task", upstreamTaskId, "view");
         dependencyService.remove(
                 new LambdaQueryWrapper<TaskDependency>()
                         .eq(TaskDependency::getTaskId, id)
@@ -751,7 +773,7 @@ public class TaskController {
 
         return new TaskView(
                 task,
-                nextFire == null ? null : nextFire.toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime(),
+                nextFire == null ? null : nextFire.toInstant().atZone(businessCalendar.zone()).toOffsetDateTime(),
                 last == null ? null : last.getStatus(),
                 last == null ? null : last.getBizDate(),
                 last == null ? null : last.getFinishedAt(),

@@ -10,8 +10,8 @@ import StatCard from '@/components/StatCard'
 import {
   getAlertStats,
   listAlerts,
-  markAllNotificationsRead,
-  markNotificationRead,
+  acknowledgeAlertsBatch,
+  acknowledgeAlert,
   type AlertStats,
   type PlatformNotification
 } from '@/api/system'
@@ -28,7 +28,7 @@ const sourceMeta: Record<string, string> = {
   quality: '数据质量',
   ingestion: '数据接入',
   workflow: '任务调度',
-  system: '平台系统'
+  metadata: '元数据服务'
 }
 
 export default function AlertCenterPage() {
@@ -37,6 +37,7 @@ export default function AlertCenterPage() {
   const [alerts, setAlerts] = useState<PlatformNotification[]>([])
   const [stats, setStats] = useState<AlertStats>()
   const [loading, setLoading] = useState(false)
+  const [acknowledging, setAcknowledging] = useState(false)
   const [level, setLevel] = useState<string>()
   const [source, setSource] = useState<string>()
   const [unreadOnly, setUnreadOnly] = useState(false)
@@ -52,6 +53,8 @@ export default function AlertCenterPage() {
       setAlerts(list)
       setStats(stat)
     } catch {
+      setAlerts([])
+      setStats(undefined)
       message.error('告警数据加载失败')
     } finally {
       setLoading(false)
@@ -63,22 +66,31 @@ export default function AlertCenterPage() {
   }, [refresh])
 
   const handleMarkRead = async (alert: PlatformNotification) => {
+    if (acknowledging) return
+    setAcknowledging(true)
     try {
-      await markNotificationRead(alert.id)
-      message.success('已标记为已处理')
+      await acknowledgeAlert(alert.id)
+      message.success('已共享确认，其他管理员也会看到此状态')
       await refresh()
     } catch {
       message.error('标记失败')
+    } finally {
+      setAcknowledging(false)
     }
   }
 
   const handleMarkAll = async () => {
+    if (acknowledging) return
+    setAcknowledging(true)
     try {
-      await markAllNotificationsRead()
-      message.success('当前用户告警已全部标记为已处理')
+      const result = await acknowledgeAlertsBatch()
+      if (result.hasMore) message.info(`本次共享确认 ${result.acknowledged} 条，仍有待确认告警，可再次操作`)
+      else message.success(`本次共享确认 ${result.acknowledged} 条，当前无待确认告警`)
       await refresh()
     } catch {
       message.error('批量标记失败')
+    } finally {
+      setAcknowledging(false)
     }
   }
 
@@ -115,18 +127,18 @@ export default function AlertCenterPage() {
       )
     },
     {
-      title: '接收人',
+      title: '收件箱',
       dataIndex: 'recipient',
       key: 'recipient',
       width: 100,
-      render: (value: string) => <Typography.Text code>{value}</Typography.Text>
+      render: () => <Typography.Text>运维共享</Typography.Text>
     },
     {
       title: '状态',
       dataIndex: 'isRead',
       key: 'isRead',
       width: 90,
-      render: (value?: boolean) => (value ? <Tag>已处理</Tag> : <Tag color="processing">待处理</Tag>)
+      render: (value?: boolean) => (value ? <Tag>已确认</Tag> : <Tag color="processing">待确认</Tag>)
     },
     {
       title: '时间',
@@ -145,7 +157,7 @@ export default function AlertCenterPage() {
             <Button size="small" type="link" onClick={() => navigate(record.linkPath!)}>前往处理</Button>
           )}
           {!record.isRead && (
-            <Button size="small" type="link" onClick={() => void handleMarkRead(record)}>标记已处理</Button>
+            <Button size="small" type="link" disabled={acknowledging} onClick={() => void handleMarkRead(record)}>共享确认</Button>
           )}
         </>
       )
@@ -155,7 +167,7 @@ export default function AlertCenterPage() {
   return (
     <div className="alert-center-page">
       <PageHeader
-        description="统一告警中心：集中查看质量检查失败、任务执行异常等平台告警事件，admin 可见全部用户的告警，普通用户仅见本人相关。"
+        description="运维共享告警：需当前系统管理权限。确认状态对所有管理员生效，仅表示团队已知悉，不代表故障已修复或执行已恢复。"
         extra={
           <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
         }
@@ -200,12 +212,12 @@ export default function AlertCenterPage() {
               onChange={(value) => setUnreadOnly(value === 'unread')}
               allowClear
               className="filter-control-sm"
-              options={[{ value: 'unread', label: '仅待处理' }]}
+              options={[{ value: 'unread', label: '仅待确认' }]}
             />
           </div>
           <Button type="primary" onClick={() => void refresh()}>查询</Button>
-          <Tooltip title="仅标记当前登录用户名下的告警">
-            <Button onClick={() => void handleMarkAll()}>全部标记已处理</Button>
+          <Tooltip title="每次最多确认 500 条全部来源的待确认告警；共享状态对所有管理员生效，不受当前列表过滤条件限制">
+            <Button loading={acknowledging} onClick={() => void handleMarkAll()}>批量共享确认（最多500条）</Button>
           </Tooltip>
         </div>
       </PageToolbar>

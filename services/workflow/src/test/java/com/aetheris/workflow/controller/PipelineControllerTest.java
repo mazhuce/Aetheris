@@ -18,17 +18,17 @@ import static org.mockito.Mockito.when;
 class PipelineControllerTest {
 
     @Test
-    void listScopesOrdinaryUsersToOwnedOrTriggeredPipelines() {
+    void listIncludesDelegatedPipelinesThenFiltersConcreteResources() {
         PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
         WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
         when(authorization.mayManage("alice")).thenReturn(false);
-        when(pipelines.list(30, "alice", false)).thenReturn(List.of());
+        when(pipelines.list(30, "alice", true)).thenReturn(List.of());
 
         Object result = new PipelineController(pipelines, mock(PipelineCancellationService.class), authorization)
                 .list(30, "alice");
 
         assertEquals(List.of(), result);
-        verify(pipelines).list(30, "alice", false);
+        verify(pipelines).list(30, "alice", true);
     }
 
     @Test
@@ -89,7 +89,7 @@ class PipelineControllerTest {
     void retryReturnsConflictForUnsafeSourceState() {
         PipelineExecutionService pipelines = mock(PipelineExecutionService.class);
         WorkflowAuthorizationService authorization = mock(WorkflowAuthorizationService.class);
-        when(authorization.canReadPipeline("alice", 7L)).thenReturn(true);
+        when(authorization.canExecutePipeline("alice", 7L)).thenReturn(true);
         when(pipelines.retry(7L, 11L, "alice"))
                 .thenThrow(new IllegalStateException("结果待核对的流水线禁止重跑"));
 

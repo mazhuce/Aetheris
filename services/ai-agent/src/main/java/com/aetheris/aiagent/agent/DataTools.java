@@ -116,7 +116,7 @@ public class DataTools {
             // 发送到内部服务，也让模型收到稳定、可改写的错误结构。
             return toJson(Map.of("error", validationError));
         }
-        log.info("Agent query: datasourceId={}, sql={}", datasourceId, abbreviate(sql));
+        log.info("Agent query: datasourceId={}", datasourceId);
         return toJson(client.query(datasourceId, sql));
     }
 

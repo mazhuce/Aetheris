@@ -1,4 +1,5 @@
 import http from './http'
+import { approvalMutationConfig, readExecutionApproval, type ExecutionApproval } from './executionApproval'
 
 export interface IngestionTask {
   id: number
@@ -45,7 +46,7 @@ export function createTask(payload: IngestionTaskInput): Promise<IngestionTask> 
   return http.post<IngestionTask>('/api/ingestion/tasks', payload).then((res) => res.data)
 }
 
-export function updateTask(id: number, payload: IngestionTaskInput): Promise<IngestionTask> {
+export function updateTask(id: number, payload: Partial<IngestionTaskInput>): Promise<IngestionTask> {
   return http.put<IngestionTask>(`/api/ingestion/tasks/${id}`, payload).then((res) => res.data)
 }
 
@@ -56,7 +57,7 @@ export function deleteTask(id: number): Promise<void> {
 export interface IngestionRun {
   id: number
   taskId: number
-  status: 'running' | 'success' | 'failed'
+  status: 'running' | 'success' | 'failed' | 'unknown'
   rowsRead?: number
   rowsWritten?: number
   durationMs?: number
@@ -97,7 +98,7 @@ export interface SyncRunRecord {
   id: number
   taskId: number
   taskName: string
-  status: 'running' | 'success' | 'failed'
+  status: 'running' | 'success' | 'failed' | 'unknown'
   rowsRead?: number
   rowsWritten?: number
   durationMs?: number
@@ -116,4 +117,21 @@ export function listAllSyncRuns(taskId?: number, status?: string): Promise<SyncR
       params: { taskId: taskId || undefined, status: status || undefined }
     })
     .then((res) => res.data)
+}
+
+/** A fresh view-authorized definition, never a caller supplied approval snapshot. */
+export function getTask(id: number): Promise<IngestionTask> {
+  return http.get<IngestionTask>(`/api/ingestion/tasks/${id}`).then((res) => res.data)
+}
+
+export function getTaskApproval(id: number): Promise<ExecutionApproval> {
+  return http.get<unknown>(`/api/ingestion/tasks/${id}/approval`).then((res) => readExecutionApproval(res.data))
+}
+
+export function approveTask(id: number, expectedRevision: number): Promise<ExecutionApproval> {
+  return http.post<unknown>(`/api/ingestion/tasks/${id}/approve`, { expectedRevision }, approvalMutationConfig).then((res) => readExecutionApproval(res.data))
+}
+
+export function bindTaskCron(id: number, expectedRevision: number, expectedGeneration: number): Promise<ExecutionApproval> {
+  return http.post<unknown>(`/api/ingestion/tasks/${id}/cron-binding`, { expectedRevision, expectedGeneration }, approvalMutationConfig).then((res) => readExecutionApproval(res.data))
 }

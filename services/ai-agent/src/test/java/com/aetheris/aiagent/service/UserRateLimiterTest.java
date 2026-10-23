@@ -9,16 +9,25 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UserRateLimiterTest {
+    private final ChatOwner alice=ChatOwnerFixture.owner("alice"), bob=ChatOwnerFixture.owner("bob");
+
+    @Test void sameUidKeepsItsWindowAcrossAvOrNameChangesButRecreatedNameHasANewWindow() {
+        UserRateLimiter limiter = new UserRateLimiter(1, Duration.ofMinutes(1));
+        assertTrue(limiter.tryAcquire(alice));
+        assertFalse(limiter.tryAcquire(ChatOwnerFixture.owner(7, "alice", 4)));
+        assertFalse(limiter.tryAcquire(ChatOwnerFixture.owner(7, "renamed-alice", 4)));
+        assertTrue(limiter.tryAcquire(ChatOwnerFixture.owner(8, "alice", 3)));
+    }
 
     @Test
     @DisplayName("窗口内放行到配额上限，超出则拒绝")
     void allowsUpToLimitWithinWindow() {
         UserRateLimiter limiter = new UserRateLimiter(3, Duration.ofMinutes(1));
 
-        assertTrue(limiter.tryAcquire("alice"));
-        assertTrue(limiter.tryAcquire("alice"));
-        assertTrue(limiter.tryAcquire("alice"));
-        assertFalse(limiter.tryAcquire("alice"));
+        assertTrue(limiter.tryAcquire(alice));
+        assertTrue(limiter.tryAcquire(alice));
+        assertTrue(limiter.tryAcquire(alice));
+        assertFalse(limiter.tryAcquire(alice));
     }
 
     @Test
@@ -26,14 +35,14 @@ class UserRateLimiterTest {
     void countsPerUser() {
         UserRateLimiter limiter = new UserRateLimiter(2, Duration.ofMinutes(1));
 
-        assertTrue(limiter.tryAcquire("alice"));
-        assertTrue(limiter.tryAcquire("alice"));
-        assertFalse(limiter.tryAcquire("alice"));
+        assertTrue(limiter.tryAcquire(alice));
+        assertTrue(limiter.tryAcquire(alice));
+        assertFalse(limiter.tryAcquire(alice));
 
         // bob 不应受 alice 的用量影响 —— 这是「按用户计量」的核心保证。
-        assertTrue(limiter.tryAcquire("bob"));
-        assertTrue(limiter.tryAcquire("bob"));
-        assertFalse(limiter.tryAcquire("bob"));
+        assertTrue(limiter.tryAcquire(bob));
+        assertTrue(limiter.tryAcquire(bob));
+        assertFalse(limiter.tryAcquire(bob));
     }
 
     @Test
@@ -41,12 +50,12 @@ class UserRateLimiterTest {
     void resetsAfterWindowExpires() throws Exception {
         UserRateLimiter limiter = new UserRateLimiter(1, Duration.ofMillis(60));
 
-        assertTrue(limiter.tryAcquire("alice"));
-        assertFalse(limiter.tryAcquire("alice"));
+        assertTrue(limiter.tryAcquire(alice));
+        assertFalse(limiter.tryAcquire(alice));
 
         Thread.sleep(90);
 
-        assertTrue(limiter.tryAcquire("alice"));
+        assertTrue(limiter.tryAcquire(alice));
     }
 
     @Test
@@ -63,7 +72,7 @@ class UserRateLimiterTest {
             new Thread(() -> {
                 try {
                     start.await();
-                    if (limiter.tryAcquire("alice")) {
+                    if (limiter.tryAcquire(alice)) {
                         allowed.incrementAndGet();
                     }
                 } catch (InterruptedException e) {

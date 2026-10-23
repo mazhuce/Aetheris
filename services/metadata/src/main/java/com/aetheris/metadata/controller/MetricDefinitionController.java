@@ -18,6 +18,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/metadata/metric-definitions")
 public class MetricDefinitionController {
+    private com.aetheris.metadata.service.VisibleListPager pager;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setVisiblePager(com.aetheris.metadata.service.VisibleListPager pager) { this.pager=pager; }
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-candidates:100000}") private int compatMaxCandidates=100000;
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-rows:20000}") private int compatMaxRows=20000;
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
     private final MetricDefinitionService service;
     private final MetadataSecurity security;
     private final SemanticAssetReviewService reviewService;
@@ -33,12 +41,18 @@ public class MetricDefinitionController {
                                                    @RequestParam(required = false) String status,
                                                    @RequestParam(defaultValue = "1") int page,
                                                    @RequestParam(defaultValue = "500") int size) {
-        MetadataSecurity.Scope scope = security.visibility(request, "metric", "view");
+        MetadataSecurity.Scope scope = security.visibilityStrict(request, "metric", "view");
         return switch (scope.mode()) {
             case ALL -> service.list(keyword, status, null, page, size);
             case IDS -> service.list(keyword, status, scope.ids(), page, size);
-            case OPAQUE -> filteredList(request, service.list(keyword, status), page, size);
+            case OPAQUE -> filteredList(request, keyword, status, page, size);
         };
+    }
+
+    @GetMapping("/page") public com.aetheris.metadata.dto.VisibleListPage<MetricDefinition> page(HttpServletRequest request,
+            @RequestParam(required=false) String keyword,@RequestParam(required=false) String status,
+            @RequestParam(defaultValue="50") int size,@RequestParam(required=false) String cursor) {
+        return pager.metrics(request,keyword,status,size,cursor,"published".equals(status));
     }
 
     @GetMapping("/{id}") public MetricDefinition get(HttpServletRequest request, @PathVariable Long id) {
@@ -112,27 +126,34 @@ public class MetricDefinitionController {
                 domainCtx(metric.getBusinessDomainId())).username();
     }
 
-    private List<MetricDefinition> filteredList(HttpServletRequest request, List<MetricDefinition> metrics,
+    private List<MetricDefinition> filteredList(HttpServletRequest request, String keyword,String status,
                                                 int page, int size) {
         if (page < 1) throw new IllegalArgumentException("page 必须大于等于 1");
         if (size < 1 || size > MetricDefinitionService.MAX_PAGE_SIZE) {
             throw new IllegalArgumentException("size 必须在 1 到 " + MetricDefinitionService.MAX_PAGE_SIZE + " 之间");
         }
         String username = security.requireIdentity(request).username();
-        java.util.Set<Long> allowed = security.allowedIds(username, "metric", "view",
-                metrics.stream().collect(java.util.stream.Collectors.toMap(MetricDefinition::getId,
-                        metric -> domainCtx(metric.getBusinessDomainId()), (left, right) -> left)));
-        List<MetricDefinition> allowedMetrics = metrics.stream()
-                .filter(metric -> allowed.contains(metric.getId()))
-                .toList();
-        long fromOffset = (long) (page - 1) * size;
-        int from = (int) Math.min(fromOffset, allowedMetrics.size());
-        int to = (int) Math.min(fromOffset + size, allowedMetrics.size());
-        return allowedMetrics.subList(from, to);
+        long end=(long)page*size,from=end-size;
+        if(end>compatMaxRows) throw new com.aetheris.metadata.service.VisibleListPager.ListLimitException();
+        List<MetricDefinition> result=new java.util.ArrayList<>();long visible=0;int scanned=0;
+        for(int candidatePage=1;;candidatePage++) {
+            var metrics=service.list(keyword,status,null,candidatePage,MetricDefinitionService.MAX_PAGE_SIZE);
+            scanned+=metrics.size();if(scanned>compatMaxCandidates) throw new com.aetheris.metadata.service.VisibleListPager.ListLimitException();
+            var allowed=security.allowedIdsStrict(username,"metric","view",metrics.stream().collect(java.util.stream.Collectors.toMap(
+                    MetricDefinition::getId,metric->domainCtx(metric.getBusinessDomainId()),(left,right)->left)));
+            for(var metric:metrics) if(allowed.contains(metric.getId())) {
+                if(visible++>=from) result.add(metric);
+                if(result.size()==size) return result;
+            }
+            if(metrics.size()<MetricDefinitionService.MAX_PAGE_SIZE) return result;
+            if(scanned>=compatMaxCandidates) throw new com.aetheris.metadata.service.VisibleListPager.ListLimitException();
+        }
     }
 
-    private static Map<String, String> domainCtx(Long domainId) {
-        return domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId));
+    private Map<String, String> domainCtx(Long domainId) {
+        return permissionContext == null
+                ? (domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId)))
+                : permissionContext.of(domainId);
     }
 
     @ExceptionHandler(MetricDefinitionService.NotFoundException.class)
@@ -140,8 +161,12 @@ public class MetricDefinitionController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", error.getMessage()));
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class,org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> badRequest(RuntimeException error) {
         return ResponseEntity.badRequest().body(Map.of("message", error.getMessage()));
+    }
+    @ExceptionHandler(com.aetheris.metadata.service.VisibleListPager.ListLimitException.class)
+    public ResponseEntity<Map<String,String>> listLimit(RuntimeException failure) {
+        return ResponseEntity.status(503).body(Map.of("code","LIST_SCAN_LIMIT","message",failure.getMessage()));
     }
 }

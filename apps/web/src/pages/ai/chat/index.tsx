@@ -6,27 +6,19 @@ import remarkGfm from 'remark-gfm'
 import PageHeader from '@/components/PageHeader'
 import { ErrorState, LoadingState } from '@/components/FeedbackState'
 import {
-  createConversation,
   deleteConversation,
   listConversations,
-  listMessages,
-  sendChat,
-  type ChatConversation,
-  type ChatMessage
+  type ChatConversation
 } from '@/api/ai'
 import { formatDateTime } from '@/utils/format'
+import { useConversationMessages } from './useConversationMessages'
 
 export default function ChatPage() {
   const [conversations, setConversations] = useState<ChatConversation[]>([])
-  const [currentId, setCurrentId] = useState<number | null>(null)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
   // 数据模式：启用后 AI 可检索元数据并执行只读查询。默认关闭，
   // 因为工具调用会多花几轮模型请求，普通咨询不需要付这个代价。
   const [dataMode, setDataMode] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -38,19 +30,27 @@ export default function ChatPage() {
     }
   }, [])
 
+  const conversation = useConversationMessages({
+    created: (item) => setConversations((previous) => [item, ...previous]),
+    sent: refreshConversations
+  })
+  const { currentId, messages, sending, loading, loadError, setLoadError } = conversation
+
   useEffect(() => {
+    let cancelled = false
     void (async () => {
       try {
         const list = await listConversations()
+        if (cancelled) return
         setConversations(list)
         if (list.length > 0) {
-          setCurrentId(list[0].id)
-          setMessages(await listMessages(list[0].id))
+          await conversation.openInitial(list[0].id)
         }
       } catch {
-        setLoadError('对话列表暂时无法加载，请稍后重试。')
+        if (!cancelled) setLoadError('对话列表暂时无法加载，请稍后重试。')
       }
     })()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -60,40 +60,19 @@ export default function ChatPage() {
   }, [messages, sending])
 
   const openConversation = async (id: number) => {
-    setCurrentId(id)
     setHistoryOpen(false)
-    setLoading(true)
-    setLoadError(null)
-    try {
-      setMessages(await listMessages(id))
-    } catch {
-      setMessages([])
-      setLoadError('对话内容暂时无法加载，请稍后重试。')
-    } finally {
-      setLoading(false)
-    }
+    await conversation.open(id)
   }
 
   const handleNew = async () => {
-    try {
-      const conversation = await createConversation()
-      setConversations((prev) => [conversation, ...prev])
-      setCurrentId(conversation.id)
-      setMessages([])
-      setLoadError(null)
-    } catch {
-      /* ignore */
-    }
+    await conversation.create()
   }
 
   const handleDelete = async (id: number) => {
     try {
       await deleteConversation(id)
       setConversations((prev) => prev.filter((item) => item.id !== id))
-      if (currentId === id) {
-        setCurrentId(null)
-        setMessages([])
-      }
+      conversation.deleted(id)
     } catch {
       /* ignore */
     }
@@ -102,25 +81,8 @@ export default function ChatPage() {
   const handleSend = async () => {
     const text = input.trim()
     if (!text || sending) return
-    const next: ChatMessage[] = [...messages, { role: 'user', content: text }]
-    setMessages(next)
     setInput('')
-    setSending(true)
-    try {
-      let conversationId = currentId
-      if (conversationId == null) {
-        const conversation = await createConversation()
-        conversationId = conversation.id
-        setCurrentId(conversationId)
-      }
-      const result = await sendChat(conversationId, next, dataMode)
-      setMessages([...next, { role: 'assistant', content: result.content }])
-      await refreshConversations()
-    } catch {
-      setMessages([...next, { role: 'assistant', content: '抱歉，请求失败，请稍后重试。' }])
-    } finally {
-      setSending(false)
-    }
+    await conversation.send(text, dataMode)
   }
 
   const conversationList = (

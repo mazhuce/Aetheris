@@ -28,6 +28,52 @@ MATRIX_SCRIPT = ROOT / "scripts" / "r1_compatibility_matrix.py"
 MATRIX = ROOT / "configs" / "lakehouse" / "r1-compatibility-matrix.json"
 CONNECTOR_DIR = ROOT / "infrastructure" / "lakehouse" / "connectors"
 CONNECTOR_MANIFEST = CONNECTOR_DIR / "CONNECTOR-MANIFEST.json"
+IMAGE_LOCK = ROOT / ".github" / "workflows" / "base-image-inventory.json"
+BASE_IMAGE_SCRIPT = ROOT / "scripts" / "base-image-inventory.py"
+
+
+def image_policy():
+    """Reuse the reviewed OCI proof validator without querying any registry."""
+    spec = importlib.util.spec_from_file_location("r1_base_image_policy", BASE_IMAGE_SCRIPT)
+    if spec is None or spec.loader is None:
+        fail("R1 base-image policy cannot be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    lock = module.strict_json(IMAGE_LOCK.read_bytes())
+    if lock.get("schemaVersion") != 2 or not isinstance(lock.get("images"), list):
+        fail("R1 base-image lock must use schemaVersion2")
+    references = [row["reference"] for row in lock["images"]]
+    if len(references) != len(set(references)):
+        fail("R1 base-image lock has duplicate references")
+    return module, lock
+
+
+def validate_image(service: str, actual: str, expected_tag: str, policy, lock: dict) -> None:
+    try:
+        canonical = policy.registry_reference(expected_tag)[3]
+        # Registry normalization is only for the BOM's original version notation.
+        # The source must equal the exact official, reviewed lock reference.
+        row = next(item for item in lock["images"] if item["reference"] == actual)
+        if not any(source.get("path") == "infrastructure/lakehouse/docker-compose.r1.yml"
+                   for source in row.get("sources", [])):
+            raise ValueError("missing R1 source binding")
+        if policy.registry_reference(row["originalReference"])[3] != canonical:
+            raise ValueError("BOM tag or repository differs")
+        proof = row.get("officialResolution")
+        if row.get("state") == "pinned":
+            policy.verify_resolution(proof)
+            if proof["reference"] != canonical or actual != canonical + "@" + proof["digest"]:
+                raise ValueError("pin differs from official manifest evidence")
+        elif (service in {"object-store", "object-store-init"}
+              and row.get("state") == "blocked" and proof is None
+              and actual == expected_tag == row["originalReference"]):
+            # Static draft inspection only. Release mode still runs the complete
+            # fail-closed base-image gate, which rejects these unresolved images.
+            return
+        else:
+            raise ValueError("unreviewed or unpinned image")
+    except (ValueError, KeyError, TypeError, StopIteration) as error:
+        fail(f"R1 compose image drift for {service}: expected reviewed {expected_tag} ({type(error).__name__})")
 
 
 def fail(message: str) -> None:
@@ -36,7 +82,7 @@ def fail(message: str) -> None:
 
 def service_block(compose: str, service: str) -> str:
     match = re.search(
-        rf"(?ms)^  {re.escape(service)}:\s*\n(?P<body>(?:(?!^  \S).*(?:\n|$))*)",
+        rf"(?m)^  {re.escape(service)}:[ \t]*\n(?P<body>(?:(?!^  \S)[^\n]*(?:\n|$))*)",
         compose,
     )
     if not match:
@@ -85,11 +131,13 @@ def validate_compose(bom: dict) -> None:
         "flink-taskmanager": f"flink:{bom['runtime']['flink']}-java{bom['runtime']['jdk'].split('.')[0]}",
         "flink-sql-gateway": f"flink:{bom['runtime']['flink']}-java{bom['runtime']['jdk'].split('.')[0]}",
     }
+    policy, lock = image_policy()
     for service, expected in expected_images.items():
         block = service_block(compose, service)
-        image = re.search(r"(?m)^\s+image:\s*(\S+)", block)
-        if image is None or image.group(1) != expected:
-            fail(f"R1 compose image drift for {service}: expected {expected}")
+        images = re.findall(r"(?m)^\s+image:\s*(\S+)", block)
+        if len(images) != 1:
+            fail(f"R1 compose image drift for {service}: expected one image")
+        validate_image(service, images[0], expected, policy, lock)
 
     s3_plugin = bom.get("builtin_plugins", {}).get("flink_s3_filesystem")
     if s3_plugin != f"flink-s3-fs-hadoop-{bom['runtime']['flink']}.jar":
@@ -353,6 +401,8 @@ def validate(mode: str) -> list[str]:
         unapproved = [item["id"] for item in allowlist["connector"] if item["status"] != "approved"]
         if unapproved:
             fail("release mode requires approved connectors: " + ", ".join(unapproved))
+        policy, lock = image_policy()
+        policy.validate_lock(ROOT, lock, require_all=True, online=False)
     return warnings
 
 
@@ -365,7 +415,7 @@ def main() -> int:
     except (OSError, ValueError, KeyError, tomllib.TOMLDecodeError) as error:
         print(f"R1 validation failed: {error}", file=sys.stderr)
         return 1
-    print(f"R1 {args.mode} validation passed")
+    print(f"R1 {args.mode} validation passed" + (" (static inspection; not runtime or release acceptance)" if args.mode == "draft" else ""))
     for warning in warnings:
         print(f"WARNING: {warning}")
     return 0

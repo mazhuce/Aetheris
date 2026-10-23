@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import com.aetheris.security.servlet.TrustedUser;
+import com.aetheris.serving.security.ServingSecurity;
 
 @Service
 public class ApiKeyApplicationService {
@@ -23,30 +25,35 @@ public class ApiKeyApplicationService {
         this.apiKeys = apiKeys;
     }
 
-    @Transactional
+    @Deprecated
     public ApiKeyApplication request(ApiKeyApplicationRequest input, String requester) {
+        throw new ServingSecurity.UnauthorizedException("禁止仅凭用户名创建 API key 申请");
+    }
+    public ApiKeyApplication request(ApiKeyApplicationRequest input,TrustedUser user) {
+        var owner=apiKeys.current(user);
         if (input.expiresAt() != null && !input.expiresAt().isAfter(OffsetDateTime.now())) {
             throw new IllegalArgumentException("申请的过期时间必须晚于当前时间");
         }
-        Long id = jdbc.queryForObject("""
+        return apiKeys.transaction().execute(status->{Long id = jdbc.queryForObject("""
                 INSERT INTO serving.service_api_key_application
-                    (application_name, requester, justification, quota_per_minute, expires_at)
-                VALUES (?, ?, ?, ?, ?)
+                    (application_name, requester,requester_uid,requester_access_version, justification, quota_per_minute, expires_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 RETURNING id
-                """, Long.class, input.name().trim(), requester, input.justification().trim(),
+                """, Long.class, input.name().trim(), owner.username(),owner.uid(),owner.accessVersion(),input.justification().trim(),
                 input.effectiveQuota(), input.expiresAt());
-        return find(id);
+        return find(id);});
     }
 
     public List<ApiKeyApplication> list(Optional<String> requester) {
-        String suffix = requester.isPresent() ? "WHERE requester=? ORDER BY created_at DESC" : "ORDER BY created_at DESC";
-        return requester.isPresent()
-                ? jdbc.query(SELECT + suffix, (rs, row) -> map(rs), requester.get())
-                : jdbc.query(SELECT + suffix, (rs, row) -> map(rs));
+        if(requester.isPresent())throw new ServingSecurity.UnauthorizedException("禁止按用户名替代稳定身份");
+        return jdbc.query(SELECT+"ORDER BY created_at DESC",(rs,row)->map(rs));
     }
+    public List<ApiKeyApplication> mine(long uid){if(uid<=0)throw new ServingSecurity.UnauthorizedException("身份无效");return jdbc.query(SELECT+"WHERE requester_uid=? ORDER BY created_at DESC",(rs,row)->map(rs),uid);}
 
-    @Transactional
     public IssuedApiKey approve(long id, String reviewer) {
+        ApiKeyOwner original=owner(id,false);apiKeys.requireActive(original);
+        return apiKeys.transaction().execute(status->{
+        if(!original.equals(owner(id,true)))throw new ConflictException("申请身份已发生变化");
         ApiKeyApplication application = find(id);
         if (!"requested".equals(application.status())) throw new ConflictException("只能审批待处理的 API key 申请");
         int updated = jdbc.update("""
@@ -55,8 +62,10 @@ public class ApiKeyApplicationService {
                  WHERE id=? AND status='requested'
                 """, reviewer, id);
         if (updated != 1) throw new ConflictException("API key 申请状态已发生变化");
-        return apiKeys.create(new ApiKeyCreateRequest(application.name(), application.quotaPerMinute(), application.expiresAt()), application.requester(), reviewer);
+        return apiKeys.createBound(new ApiKeyCreateRequest(application.name(), application.quotaPerMinute(), application.expiresAt()), original, reviewer);
+        });
     }
+    private ApiKeyOwner owner(long id,boolean lock){return jdbc.query("SELECT requester_uid,requester,requester_access_version FROM serving.service_api_key_application WHERE id=?"+(lock?" FOR UPDATE":""),(rs,row)->ApiKeyService.bound(rs,"requester_uid","requester","requester_access_version"),id).stream().findFirst().orElseThrow(()->new NotFoundException("API key 申请不存在"));}
 
     @Transactional
     public ApiKeyApplication reject(long id, String reviewer, String comment) {

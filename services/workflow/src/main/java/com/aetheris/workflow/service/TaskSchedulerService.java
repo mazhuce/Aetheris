@@ -37,9 +37,17 @@ public class TaskSchedulerService {
     private static final String JOB_GROUP = "aetheris-sql-tasks";
 
     private final Scheduler scheduler;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.aetheris.workflow.config.BusinessCalendar businessCalendar;
 
     public TaskSchedulerService(Scheduler scheduler) {
-        this.scheduler = scheduler;
+        this(scheduler, new com.aetheris.workflow.config.BusinessCalendar(), null);
+    }
+
+    public TaskSchedulerService(Scheduler scheduler, com.aetheris.workflow.config.BusinessCalendar calendar){this(scheduler,calendar,null);}
+    @org.springframework.beans.factory.annotation.Autowired
+    public TaskSchedulerService(Scheduler scheduler, com.aetheris.workflow.config.BusinessCalendar calendar,org.springframework.jdbc.core.JdbcTemplate jdbc) {
+        this.scheduler=scheduler;this.businessCalendar=calendar;this.jdbc=jdbc;
     }
 
     /**
@@ -50,8 +58,17 @@ public class TaskSchedulerService {
      */
     public void sync(Task task) {
         try {
-            boolean schedulable = "enabled".equals(task.getStatus())
-                    && StringUtils.hasText(task.getCronExpression());
+            if(task==null)throw new IllegalArgumentException("任务不存在");
+            boolean schedulable=false;
+            if(jdbc!=null){
+                var rows=jdbc.queryForList("SELECT schedule_version,cron_expression,status,task_type,execution_approval,cron_actor,execution_revision,cron_approved_execution_revision FROM workflow.task WHERE id=?",task.getId());
+                if(!rows.isEmpty()){
+                    var current=rows.getFirst();task.setScheduleVersion(((Number)current.get("schedule_version")).longValue());
+                    task.setCronExpression((String)current.get("cron_expression"));
+                    schedulable="sql".equals(current.get("task_type"))&&"enabled".equals(current.get("status"))&&StringUtils.hasText(task.getCronExpression())
+                        &&current.get("execution_approval")!=null&&current.get("cron_actor")!=null&&current.get("execution_revision").equals(current.get("cron_approved_execution_revision"));
+                }
+            }
             if (!schedulable) {
                 unschedule(task.getId());
                 return;
@@ -70,6 +87,7 @@ public class TaskSchedulerService {
         JobDetail jobDetail = JobBuilder.newJob(SqlTaskJob.class)
                 .withIdentity(jobKey)
                 .usingJobData(SqlTaskJob.TASK_ID, task.getId())
+                .usingJobData("scheduleVersion", task.getScheduleVersion())
                 .withDescription(task.getName())
                 // 持久化：没有触发器关联时也保留 JobDetail，便于停用后重新启用。
                 .storeDurably()
@@ -82,7 +100,7 @@ public class TaskSchedulerService {
                         .cronSchedule(task.getCronExpression())
                         // 时区固定为 Asia/Shanghai，与业务日期口径一致；
                         // 跟随容器默认时区会导致部署环境不同而触发时刻漂移。
-                        .inTimeZone(TimeZone.getTimeZone("Asia/Shanghai"))
+                        .inTimeZone(TimeZone.getTimeZone(businessCalendar.zone()))
                         .withMisfireHandlingInstructionDoNothing())
                 .build();
 

@@ -22,6 +22,7 @@ import {
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
 import TaskFormModal from './components/TaskFormModal'
 import TaskRunModal from './components/TaskRunModal'
 import TaskDetailDrawer from './components/TaskDetailDrawer'
@@ -30,6 +31,8 @@ export default function WorkflowPage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
   const [data, setData] = useState<TaskView[]>([])
+  const resources = useMemo(() => data.map((view) => view.task), [data])
+  const permissions = useResourceActions('workflow_task', resources)
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState<string | undefined>()
@@ -172,15 +175,15 @@ export default function WorkflowPage() {
       fixed: 'right',
       render: (_, view) => (
         <RowActions
-          primary={canManage ? (
+          primary={(canManage || permissions.can('execute', view.task.id)) ? (
             <Tooltip title="运行任务">
               <Button type="text" size="small" icon={<PlayCircleOutlined />} aria-label={`运行任务 ${view.task.name}`} onClick={() => setRunTarget(view)} />
             </Tooltip>
           ) : undefined}
-          items={canManage ? [
-            { key: 'edit', label: '编辑', onClick: () => { setEditing(view); setFormOpen(true) } },
-            { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(view) }
-          ] : []}
+          items={[
+            ...((canManage || permissions.can('update', view.task.id)) ? [{ key: 'edit', label: '编辑', onClick: () => { setEditing(view); setFormOpen(true) } }] : []),
+            ...((canManage || permissions.can('delete', view.task.id)) ? [{ key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(view) }] : [])
+          ]}
         />
       )
     }
@@ -189,7 +192,7 @@ export default function WorkflowPage() {
   return (
     <div className="workflow-list-page">
       <PageHeader
-        description="定义数据加工任务并按计划周期调度执行；同一任务在同一业务日期仅保留一个实例，重跑将覆盖目标分区数据。"
+        description="定义并调度数据加工任务；同一任务在同一业务日期复用运行实例，实际写入方式由任务 SQL 决定。"
         extra={
           <Space>
             <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
@@ -201,7 +204,7 @@ export default function WorkflowPage() {
               >
                 新建任务
               </Button>
-            ) : <Tag>只读访问</Tag>}
+            ) : <Tag>按资源授权</Tag>}
           </Space>
         }
       />
@@ -260,13 +263,15 @@ export default function WorkflowPage() {
       <TaskFormModal
         open={formOpen}
         editing={editing}
+        canEditDefinition={canManage}
+        canExecute={canManage || (!!editing && permissions.can('execute', editing.task.id))}
         onClose={() => { setFormOpen(false); setEditing(null) }}
         onSaved={() => { setFormOpen(false); setEditing(null); void refresh() }}
       />
       <TaskRunModal
         target={runTarget}
         onClose={() => setRunTarget(null)}
-        onFinished={() => { setRunTarget(null); void refresh() }}
+        onFinished={() => { void refresh() }}
       />
       <TaskDetailDrawer
         taskId={detailId}

@@ -25,6 +25,9 @@ import java.util.Set;
 @Service
 public class LakehouseSchemaChangeServiceImpl extends ServiceImpl<LakehouseSchemaChangeMapper, LakehouseSchemaChange>
         implements LakehouseSchemaChangeService {
+    private com.aetheris.metadata.config.BusinessCalendar businessCalendar = new com.aetheris.metadata.config.BusinessCalendar();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setBusinessCalendar(com.aetheris.metadata.config.BusinessCalendar calendar) { this.businessCalendar = calendar; }
     private final LakehouseTableService tableService;
     private final LakehouseMaintenanceExecutionClient executionClient;
     private final ObjectMapper objectMapper;
@@ -109,7 +112,7 @@ public class LakehouseSchemaChangeServiceImpl extends ServiceImpl<LakehouseSchem
         try {
             Map<String, Object> response = executionClient.submit(Map.of(
                     "requestKey", requestKey,
-                    "bizDate", java.time.LocalDate.now().toString(),
+                    "bizDate", businessCalendar.today().toString(),
                     "attemptId", String.valueOf(change.getId()),
                     "operation", plan.operation(),
                     "statement", plan.statement(),

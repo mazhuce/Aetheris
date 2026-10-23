@@ -87,7 +87,7 @@ export default function DimensionPage() {
     { title: '业务域', dataIndex: 'businessDomainId', width: 110, render: domainName },
     { title: '物理绑定', width: 230, render: (_, row) => <span>{tableName(row.metadataTableId)} · <Typography.Text code>{row.columnName}</Typography.Text></span> },
     { title: '类型', dataIndex: 'dimensionType', width: 100, render: (value) => <Tag>{typeLabels[value] || value}</Tag> },
-    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value].tone}>{statusMeta[value].label}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
+    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value || 'draft']?.tone ?? 'neutral'}>{statusMeta[value || 'draft']?.label ?? value ?? '未知'}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
     { title: '版本', dataIndex: 'version', width: 80, render: (value, row) => row.publishedVersion && row.publishedVersion !== value ? `v${value} / v${row.publishedVersion}` : `v${value}` },
     { title: '负责人', dataIndex: 'owner', width: 100, render: (value) => value || '—' },
     { title: '更新时间', dataIndex: 'updatedAt', width: 170, render: formatDateTime }

@@ -16,6 +16,7 @@ import {
   type TaskView
 } from '@/api/workflow'
 import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 /** DAG 节点：任务 + 拓扑层级 + 画布坐标。 */
 interface DagNode {
@@ -63,9 +64,12 @@ export default function WorkflowGraphPage() {
   const { message } = App.useApp()
   const canManage = canManagePlatform()
   const [tasks, setTasks] = useState<TaskView[]>([])
+  const resources = useMemo(() => tasks.map((view) => view.task), [tasks])
+  const permissions = useResourceActions('workflow_task', resources)
   const [deps, setDeps] = useState<Map<number, number[]>>(new Map())
   const [loading, setLoading] = useState(false)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const canUpdate = selectedId != null && (canManage || permissions.can('update', selectedId))
   const [selectedDeps, setSelectedDeps] = useState<TaskDependency[]>([])
   const [depsLoading, setDepsLoading] = useState(false)
   const [addUpstream, setAddUpstream] = useState<number | undefined>(undefined)
@@ -239,14 +243,14 @@ export default function WorkflowGraphPage() {
       align: 'right',
       render: (_, record) => (
         <RowActions
-          items={[
+          items={canUpdate ? [
             {
               key: 'remove',
               label: '移除',
               danger: true,
               onClick: () => void handleRemoveDep(record.upstreamTaskId)
             }
-          ]}
+          ] : []}
         />
       )
     }
@@ -343,7 +347,7 @@ export default function WorkflowGraphPage() {
               pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条依赖` }}
               locale={{ emptyText: '暂无上游依赖，该任务为流水线起点' }}
             />
-            {canManage && (
+            {canUpdate && (
               <div className="dep-add-bar">
                 <Select
                   showSearch

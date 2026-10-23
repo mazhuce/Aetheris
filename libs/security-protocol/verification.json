@@ -1,0 +1,145 @@
+{
+  "status": "passed",
+  "scope": "libs/security-protocol only",
+  "jdk": "21",
+  "tests": {
+    "total": 115,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "testExitCode": 0,
+  "packageExitCode": 0,
+  "artifact": {
+    "path": "target/security-protocol-0.1.0-SNAPSHOT.jar",
+    "sha256": "CA0AD0273C4E984663694E60CCB087B1CB92507D6855950487072ADE9343778C"
+  },
+  "inputs": [
+    {
+      "path": "pom.xml",
+      "sha256": "5CD6C5BEABA1991FCFA352C0492030B2F2C11B980E018C3A5E0C861FFA9F6CA9"
+    },
+    {
+      "path": "README.md",
+      "sha256": "121547E6F352D80708EE21401D57D07CBEA09029F2AAD2D317F389FA92FE4EA2"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/BodyHash.java",
+      "sha256": "8EE458189AE0EB36067280BF1A6A196EDCBE020AC256C28ABF6F88C9FE04CA35"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/Codec.java",
+      "sha256": "D066B11A23D0EBFD23AA7952E3E6DEF6343B5FBE067CF188BCF51E49CBAE41FE"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/ExpectedRequest.java",
+      "sha256": "C0506FBAED2F8C59F140381A1F5BBC6031BFDC286A49E94BC5A87744B4ECB3E2"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/ExpectedResponse.java",
+      "sha256": "1826D9B5085281FF912A04BD680A7A1E7BBD44A5752E329C791858E67944A826"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/KeyMaterial.java",
+      "sha256": "D976BA782D564627A9CAD6D03AD5F6290E90434508B4FDED1974BCF49FCDD24D"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/KeyPurpose.java",
+      "sha256": "3490E0A08AAEEE7BE62A64AB0D43E0BAF960D22F775CFAE9D553E865FCA8C7EE"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/KeyRegistry.java",
+      "sha256": "A9505711C1E97C5867E9BF610B64D2639021067F14771D29CF9E9A361DE445F0"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/Nonce.java",
+      "sha256": "A023178B867E95F4EDAA9C26726C4E203336AECE7B47690B4D18D241A97F50DD"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/ProtocolException.java",
+      "sha256": "ECD04C7F27715AF7B0E58ED065B053984A10CCA173D7CDF0B2620F5F6F048944"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/ProtocolSigner.java",
+      "sha256": "1C19959933037AFC7CB7168830E9681045DEF873973FDDC0A67D519CFAFD5AFE"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/ProtocolVerifier.java",
+      "sha256": "5C7C45C0D9E37E8A8C8EDF3BD5F8E7D660B2CE0D111B73D44791ACD5A1BD670A"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/Rules.java",
+      "sha256": "CFE1ED569D52B4E0EB46737C45772548507A5D44E367D29FACD84E241A51BC87"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/TimePolicy.java",
+      "sha256": "7C3FC7CB80A57EDB23F1291A81029FF1C9762644370C37F0AD33B8844ECD128D"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/UserProof.java",
+      "sha256": "94D959B047DDC80D03B45179FDAF56DF14DBFEDCD499BEFB43E85975BB110EC6"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/WorkloadRequestProof.java",
+      "sha256": "8AAA01EF0494906A45010511AF921D498E394F83303FD5F3898E020A2406830D"
+    },
+    {
+      "path": "src/main/java/com/aetheris/security/protocol/WorkloadResponseProof.java",
+      "sha256": "1A3E1022481510DED18AB8B9FA8629BF5F1D301773C648BD5A10B3511AE6CCF7"
+    },
+    {
+      "path": "src/test/java/com/aetheris/security/protocol/BoundaryTest.java",
+      "sha256": "AF1880FB233BE0DCB2565B0874F24B1843DDBF2C45FD6A5B7F4EC7F792EEFC96"
+    },
+    {
+      "path": "src/test/java/com/aetheris/security/protocol/FixedVectorsTest.java",
+      "sha256": "FD114CA1D96B81B83EECBF66A0EA6983562696513CCDDE3C7BA9F08E5DB61834"
+    },
+    {
+      "path": "src/test/java/com/aetheris/security/protocol/GenerateVectors.java",
+      "sha256": "51E6154E8AB05B516C198FF651355B53E54171E57E1EED837E11CC01831AD86C"
+    },
+    {
+      "path": "src/test/java/com/aetheris/security/protocol/KeyMaterialTest.java",
+      "sha256": "8E0EA6F6E39412F5DEF3A237631ACE8E33D0C5A1BB6F84511D2A70F91AC6D176"
+    },
+    {
+      "path": "src/test/java/com/aetheris/security/protocol/ProtocolTest.java",
+      "sha256": "5EB02648D56255A7A6061BE2950454660EE504D39BBCCD267CCB3E77161FEB8F"
+    },
+    {
+      "path": "src/test/resources/vectors/v2-fixture.json",
+      "sha256": "4A96A211711D67B66C63947AFCBF73A22815263950093C571A3DD485997055E8"
+    },
+    {
+      "path": "VERIFICATION.md",
+      "sha256": "8EBD0728ADDC2FE586BB3E16CB89B6BBB6E6A057A59C890C35A241D6875C1FA5"
+    }
+  ],
+  "logs": [
+    {
+      "path": "final-test.log",
+      "sha256": "78ADFEC6EDC49790E80B23C441A70020D12D77419BE2ADCB6232A439ECA43D3C"
+    },
+    {
+      "path": "implementation-test.log",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "key-and-vectors-test.log",
+      "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+    },
+    {
+      "path": "package.log",
+      "sha256": "0BD7AB4160E17120BC8CB586A9C6F808170599EC54DA4383EA3E66984298CB7B"
+    },
+    {
+      "path": "red-baseline.log",
+      "sha256": "DDE93F8F3D8219D5EA4187D066910993FE8025EA8D6025A928FD6E9A5AA233C3"
+    },
+    {
+      "path": "registry-regression-red.log",
+      "sha256": "0859617FC2A8738EA80879688E0CD0661BE8941BF0D950A2230F2F8FFA8AC5EF"
+    }
+  ]
+}

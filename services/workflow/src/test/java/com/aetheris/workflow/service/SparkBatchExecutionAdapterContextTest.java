@@ -17,6 +17,7 @@ class SparkBatchExecutionAdapterContextTest {
             .withInitializer(context -> context.getBeanFactory()
                     .setConversionService(ApplicationConversionService.getSharedInstance()))
             .withBean(RestClient.Builder.class, RestClient::builder)
+            .withBean(OutboundTargetPolicy.class, OutboundTargetPolicy::new)
             .withPropertyValues("aetheris.spark-runner.enabled=false")
             .withUserConfiguration(AdapterConfiguration.class);
 

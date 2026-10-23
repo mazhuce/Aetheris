@@ -21,10 +21,16 @@ public class DataSourceSecretMigration implements CommandLineRunner {
     public void run(String... args) {
         for (DataSource dataSource : dataSourceService.list()) {
             String password = dataSource.getPassword();
+            String writePassword = dataSource.getWritePassword();
+            boolean changed = false;
             if (password != null && !password.isEmpty() && !secretService.isEncrypted(password)) {
                 dataSource.setPassword(secretService.encrypt(password));
-                dataSourceService.updateById(dataSource);
+                changed = true;
             }
+            if (writePassword != null && !writePassword.isEmpty() && !secretService.isEncrypted(writePassword)) {
+                dataSource.setWritePassword(secretService.encrypt(writePassword)); changed = true;
+            }
+            if (changed) dataSourceService.updateById(dataSource);
         }
     }
 }

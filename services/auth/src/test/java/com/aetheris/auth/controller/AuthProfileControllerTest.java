@@ -63,7 +63,7 @@ class AuthProfileControllerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         // 关键：持有有效令牌不等于知道密码，令牌可能被盗用或来自未登出的公共设备。
-        verify(f.userService, never()).updateById(any());
+        verify(f.userService, never()).update(any(AuthUser.class), any(Wrapper.class));
     }
 
     @Test
@@ -79,7 +79,7 @@ class AuthProfileControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         ArgumentCaptor<AuthUser> captor = ArgumentCaptor.forClass(AuthUser.class);
-        verify(f.userService).updateById(captor.capture());
+        verify(f.userService).update(captor.capture(), any());
         assertEquals("hash-of-new", captor.getValue().getPasswordHash());
     }
 
@@ -93,7 +93,7 @@ class AuthProfileControllerTest {
                 "alice", new ChangePasswordRequest("same-password-1", "same-password-1"));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        verify(f.userService, never()).updateById(any());
+        verify(f.userService, never()).update(any(AuthUser.class), any(Wrapper.class));
     }
 
     @Test
@@ -109,7 +109,7 @@ class AuthProfileControllerTest {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getBody();
-        // JWT 无状态，旧令牌在过期前仍有效，需要显式提示前端重新登录。
+        // 改密后旧access和refresh都会撤销，提示前端重新登录。
         assertEquals(true, body.get("reloginRequired"));
     }
 
@@ -124,9 +124,9 @@ class AuthProfileControllerTest {
         ArgumentCaptor<AuthUser> captor = ArgumentCaptor.forClass(AuthUser.class);
         verify(f.userService).update(captor.capture(), any());
         // UpdateProfileRequest 不含 role/status 字段，因此 viewer 无法把自己改成 admin。
-        assertEquals("viewer", captor.getValue().getRole());
+        assertEquals(null, captor.getValue().getRole());
         assertNotEquals("admin", captor.getValue().getRole());
-        assertEquals("active", captor.getValue().getStatus());
+        assertEquals(null, captor.getValue().getStatus());
     }
 
     @Test
@@ -171,6 +171,7 @@ class AuthProfileControllerTest {
             user.setRole("viewer");
             user.setStatus("active");
             when(userService.getOne(any(Wrapper.class))).thenReturn(user);
+            when(userService.update(any(AuthUser.class), any(Wrapper.class))).thenReturn(true);
             controller = new AuthProfileController(userService, encoder);
         }
     }

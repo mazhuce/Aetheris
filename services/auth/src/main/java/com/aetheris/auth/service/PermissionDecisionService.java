@@ -26,9 +26,7 @@ import java.util.Set;
  *   <li>账号不存在或禁用：一律拒绝。</li>
  *   <li>写类动作：仅由授权（用户/用户组/角色授权）或系统角色权限集合允许，
  *       admin 通过 sys_admin 角色持全量权限表达，viewer 无任何写权限。</li>
- *   <li>读动作：默认回退系统角色（admin/viewer 全读，兼容历史账号）；
- *      一旦存在带范围（resource_id 或 data_scope 非空）的读授权，
- *      读权限即按该授权收窄（"显式授权收窄默认"）。</li>
+ *   <li>读动作也必须有显式授权；撤销最后一条授权后仍拒绝，不回退 viewer 全读。</li>
  *   <li>资源层级继承：domain 授权覆盖域内 table/model/dimension/metric，
  *      workspace 授权覆盖 dataset/dashboard/data_service。</li>
  * </ol>
@@ -83,16 +81,12 @@ public class PermissionDecisionService {
             return Decision.denied("账号不存在或已禁用");
         }
 
-        boolean isRead = RbacConstants.isReadAction(action);
         List<ScopedGrant> grants = loadGrants(user.getId());
 
         if (grantsAllow(action, resourceType, resourceId, ctx, grants)) {
             return Decision.ALLOWED;
         }
-        // 写动作永不自带默认放行；读动作在未被显式授权收窄时回退系统角色默认
-        // （admin 全量、viewer 全读），收窄后只有匹配授权才能放行。
-        boolean narrowed = isRead && isNarrowed(resourceType, grants);
-        if (!narrowed && systemRoleAllows(user.getRole(), resourceType, action)) {
+        if (systemRoleAllows(user.getRole(), resourceType, action)) {
             return Decision.ALLOWED;
         }
         return Decision.denied("没有 " + resourceType + "." + action + " 权限");
@@ -105,8 +99,7 @@ public class PermissionDecisionService {
         AuthUser user = authUserService.findByUsername(username).orElse(null);
         if (user == null || !"active".equals(user.getStatus())) return Set.of();
         List<ScopedGrant> grants = loadGrants(user.getId());
-        boolean narrowed = RbacConstants.isReadAction(action) && isNarrowed(resourceType, grants);
-        boolean roleDefault = !narrowed && systemRoleAllows(user.getRole(), resourceType, action);
+        boolean roleDefault = systemRoleAllows(user.getRole(), resourceType, action);
         Set<Long> allowed = new HashSet<>();
         for (Map.Entry<Long, Map<String, String>> item : resourceContexts.entrySet()) {
             if (roleDefault || grantsAllow(action, resourceType, item.getKey(), item.getValue(), grants)) {
@@ -130,6 +123,7 @@ public class PermissionDecisionService {
             return new Visibility(Mode.IDS, List.of());
         }
         List<ScopedGrant> grants = loadGrants(user.getId());
+        if (systemRoleAllows(user.getRole(), resourceType, action)) return new Visibility(Mode.ALL, List.of());
         List<String> chain = RbacConstants.lineage(resourceType);
         String root = chain.get(chain.size() - 1);
 
@@ -137,15 +131,21 @@ public class PermissionDecisionService {
         boolean narrowed = false;
         for (ScopedGrant scoped : grants) {
             ResourceGrant grant = scoped.grant();
-            if (!chain.contains(grant.getResourceType()) || !readRelevant(scoped, resourceType)) {
+            if (grant.getDataScope() != null && grant.getDataScope().isEmpty()) continue;
+            if (!chain.contains(grant.getResourceType()) || !supports(scoped, resourceType, action)) {
                 continue;
             }
             if (grant.getResourceId() == null
                     && (grant.getDataScope() == null || grant.getDataScope().isEmpty())) {
-                continue;
+                return new Visibility(Mode.ALL, List.of());
             }
             narrowed = true;
             if (!root.equals(grant.getResourceType())) {
+                return new Visibility(Mode.OPAQUE, List.of());
+            }
+            if (grant.getResourceId() != null && grant.getDataScope() != null && !grant.getDataScope().isEmpty()) {
+                // Both constraints are conjunctive. A union of their IDs would
+                // leak rows that fail the concrete /check decision.
                 return new Visibility(Mode.OPAQUE, List.of());
             }
             if (grant.getResourceId() != null) {
@@ -157,13 +157,18 @@ public class PermissionDecisionService {
                     return new Visibility(Mode.OPAQUE, List.of());
                 }
                 if (scope.getValues() != null) {
-                    scope.getValues().forEach(v -> addLong(ids, v));
+                    for (String value : scope.getValues()) {
+                        // A domain code cannot be represented as an ID set. Dropping it
+                        // would turn a valid grant into an empty or incomplete list.
+                        try { ids.add(Long.parseLong(value)); }
+                        catch (NumberFormatException code) { return new Visibility(Mode.OPAQUE, List.of()); }
+                    }
                 }
             }
         }
 
         if (!narrowed) {
-            return new Visibility(Mode.ALL, List.of());
+            return new Visibility(Mode.IDS, List.of());
         }
         return new Visibility(Mode.IDS, new ArrayList<>(ids));
     }
@@ -288,6 +293,12 @@ public class PermissionDecisionService {
         return scopeAllows(grant, resourceType, resourceId, ctx);
     }
 
+    private boolean supports(ScopedGrant scoped, String resourceType, String action) {
+        return scoped.roleCodes() == null
+                ? scoped.grant().getActions() != null && scoped.grant().getActions().contains(action)
+                : roleSupports(scoped.roleCodes(), resourceType, action);
+    }
+
     /** 授权范围（resource_id / data_scope）与请求目标是否匹配。 */
     private boolean scopeAllows(ResourceGrant grant, String resourceType,
                                 Long resourceId, Map<String, String> ctx) {
@@ -325,7 +336,7 @@ public class PermissionDecisionService {
             return ctx == null;
         }
         if (scope.isEmpty()) {
-            return true;
+            return false;
         }
         if (ctx == null) {
             return false;
@@ -340,10 +351,7 @@ public class PermissionDecisionService {
             case "dashboard" -> ctx.get("dashboardId");
             default -> null;
         };
-        if (searched == null) {
-            return false;
-        }
-        boolean matched = scope.getValues().contains(searched);
+        boolean matched = searched != null && scope.getValues().contains(searched);
         // domain 同时允许按 code（如 electronic_commerce）匹配
         if (!matched && "domain".equals(scope.getKind())) {
             String domainCode = ctx.get("domainCode");
@@ -393,13 +401,12 @@ public class PermissionDecisionService {
         return roleSupportsRead(scoped.roleCodes(), resourceType);
     }
 
-    /** 系统角色默认权限：admin 全量；viewer 只读（与 V3 迁移中 sys_viewer 种子一致）。 */
+    /** Only platform administrators have an implicit resource default. */
     private boolean systemRoleAllows(String role, String resourceType, String action) {
         if ("admin".equals(role)) {
             return true;
         }
-        return RbacConstants.isReadAction(action)
-                && SYSTEM_ALLOWED_CODES.contains(resourceType + "." + action);
+        return false;
     }
 
     private boolean hasCode(AuthUser user, String code) {

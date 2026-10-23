@@ -75,7 +75,7 @@ class AdhocQueryControllerTest {
         var response = controller.query(request, new AdhocQueryRequest(7L, "DELETE FROM orders"));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("仅支持只读查询", ((Map<?, ?>) response.getBody()).get("message"));
+        assertEquals("查询被拒绝，请检查 SQL 与数据源配置", ((Map<?, ?>) response.getBody()).get("message"));
     }
 
     @Test
@@ -121,7 +121,9 @@ class AdhocQueryControllerTest {
 
         verify(queryHistoryService).record(org.mockito.ArgumentMatchers.argThat(history ->
                 "failed".equals(history.getStatus())
-                        && "仅支持只读查询".equals(history.getErrorMessage())));
+                        && Long.valueOf(1L).equals(history.getOwnerUid())
+                        && "SQL_POLICY_REJECTED".equals(history.getErrorCode())
+                        && "查询被拒绝，请检查 SQL 与数据源配置".equals(history.getErrorMessage())));
     }
 
     @Test

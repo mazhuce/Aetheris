@@ -3,19 +3,20 @@ package com.aetheris.auth.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import com.aetheris.auth.security.AuthIdentityInterceptor;
 
-/** 注册内部端点拦截器。 */
+/** API adapter consumes only the trusted identity installed by the v2 filters. */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    private final InternalEndpointInterceptor internalEndpointInterceptor;
+    private final AuthIdentityInterceptor identityInterceptor;
 
-    public WebConfig(InternalEndpointInterceptor internalEndpointInterceptor) {
-        this.internalEndpointInterceptor = internalEndpointInterceptor;
+    public WebConfig(AuthIdentityInterceptor identityInterceptor) {
+        this.identityInterceptor = identityInterceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(internalEndpointInterceptor).addPathPatterns("/internal/**");
+        registry.addInterceptor(identityInterceptor).addPathPatterns("/api/auth/**");
     }
 }

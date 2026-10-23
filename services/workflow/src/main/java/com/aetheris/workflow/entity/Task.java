@@ -51,6 +51,11 @@ public class Task {
     /** Quartz cron 表达式；为空表示仅手动触发。 */
     private String cronExpression;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private Long scheduleVersion;
+    public Long getScheduleVersion(){return scheduleVersion;}
+    public void setScheduleVersion(Long value){scheduleVersion=value;}
+
     private String targetTable;
 
     @Min(value = 1, message = "超时时间至少 1 秒")

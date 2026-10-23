@@ -1,0 +1,71 @@
+{
+  "verifiedAt": "2026-10-18",
+  "method": "git ls-remote official GitHub repositories, exact tag and peeled tag refs",
+  "actions": {
+    "actions/checkout": {
+      "tag": "v4",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "repository": "https://github.com/actions/checkout"
+    },
+    "actions/setup-java": {
+      "tag": "v4",
+      "commit": "cf277c60eb25467037889841efdb72551f06f6c3",
+      "repository": "https://github.com/actions/setup-java"
+    },
+    "actions/setup-node": {
+      "tag": "v4",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "repository": "https://github.com/actions/setup-node"
+    },
+    "actions/setup-python": {
+      "tag": "v5",
+      "commit": "a26af69be951a213d495a4c3e4e4022e16d87065",
+      "repository": "https://github.com/actions/setup-python"
+    },
+    "aquasecurity/trivy-action": {
+      "tag": "v0.30.0",
+      "commit": "6c175e9c4083a92bbca2f9724c8a5e33bc2d97a5",
+      "repository": "https://github.com/aquasecurity/trivy-action"
+    },
+    "docker/setup-buildx-action": {
+      "tag": "v3",
+      "commit": "8d2750c68a42422c14e847fe6c8ac0403b4cbd6f",
+      "repository": "https://github.com/docker/setup-buildx-action"
+    },
+    "docker/login-action": {
+      "tag": "v3",
+      "commit": "c94ce9fb468520275223c153574b00df6fe4bcc9",
+      "repository": "https://github.com/docker/login-action"
+    },
+    "docker/metadata-action": {
+      "tag": "v5",
+      "commit": "c299e40c65443455700f0fdfc63efafe5b349051",
+      "repository": "https://github.com/docker/metadata-action"
+    },
+    "docker/build-push-action": {
+      "tag": "v6",
+      "commit": "10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
+      "repository": "https://github.com/docker/build-push-action"
+    },
+    "sigstore/cosign-installer": {
+      "tag": "v3.9.2",
+      "commit": "d58896d6a1865668819e1d91763c7751a165e159",
+      "repository": "https://github.com/sigstore/cosign-installer"
+    },
+    "appleboy/ssh-action": {
+      "tag": "v1",
+      "commit": "0ff4204d59e8e51228ff73bce53f80d53301dee2",
+      "repository": "https://github.com/appleboy/ssh-action"
+    },
+    "actions/upload-artifact": {
+      "tag": "v4",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "repository": "https://github.com/actions/upload-artifact"
+    },
+    "actions/download-artifact": {
+      "tag": "v4",
+      "commit": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
+      "repository": "https://github.com/actions/download-artifact"
+    }
+  }
+}

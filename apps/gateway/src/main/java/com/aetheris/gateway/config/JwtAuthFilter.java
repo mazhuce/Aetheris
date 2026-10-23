@@ -79,6 +79,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     // writes and similarly named routes remain behind the mutation gate.
     private static final Pattern DATASOURCE_READ_EXECUTION = Pattern.compile(
             "^/api/metadata/datasources/[0-9]+/(query|test|preview)$");
+    private static final Pattern PUBLISHED_API_QUERY = Pattern.compile(
+            "^/api/serving/v1/apis/[A-Za-z][A-Za-z0-9_]{1,63}/query$");
 
     private final SecretKey key;
     private final TokenRevocationStore revocationStore;
@@ -114,10 +116,57 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        ServerHttpRequest sanitized = exchange.getRequest().mutate().headers(headers -> {
+            for (String header : List.of("X-Aetheris-Identity", "X-User-Name", "X-User-Id", "X-User-Role",
+                    "X-Internal-Token", "X-Aetheris-Client-IP", "X-Aetheris-User-Proof",
+                    "X-Aetheris-Workload-Proof", "X-Aetheris-Response-Proof")) headers.remove(header);
+        }).build();
+        return filterSanitized(exchange.mutate().request(sanitized).build(), next -> {
+            if (next.getRequest().getURI().getPath().startsWith("/api/auth/")) return chain.filter(next);
+            ServerHttpRequest noCredentials = next.getRequest().mutate().headers(headers -> {
+                headers.remove(HttpHeaders.AUTHORIZATION); headers.remove(HttpHeaders.COOKIE);
+            }).build();
+            var request = new org.springframework.http.server.reactive.ServerHttpRequestDecorator(noCredentials) {
+                @Override public org.springframework.util.MultiValueMap<String, org.springframework.http.HttpCookie> getCookies() {
+                    return new org.springframework.util.LinkedMultiValueMap<>();
+                }
+            };
+            return chain.filter(next.mutate().request(request).build());
+        });
+    }
+
+    private Mono<Void> filterSanitized(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
         HttpMethod method = exchange.getRequest().getMethod();
+        String rawPath = exchange.getRequest().getURI().getRawPath().toLowerCase(java.util.Locale.ROOT);
+        if (path.contains(";") || path.contains("\\") || path.contains("//")
+                || java.util.Arrays.stream(path.split("/", -1)).anyMatch(segment -> segment.equals(".") || segment.equals(".."))
+                || rawPath.matches(".*%(?:2f|5c|2e|3b|25|00|0a|0d).*")) {
+            exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
+            return exchange.getResponse().setComplete();
+        }
+
+        // Serving authenticates and authorizes this one published-query contract.
+        // Strip every caller supplied service identity before delegating to it.
+        String apiKey = exchange.getRequest().getHeaders().getFirst("X-API-Key");
+        if (method == HttpMethod.POST && PUBLISHED_API_QUERY.matcher(path).matches()
+                && apiKey != null && !apiKey.isBlank()) {
+            ServerHttpRequest request = exchange.getRequest().mutate().headers(headers -> {
+                for (String header : List.of("X-Aetheris-Identity", "X-User-Name", "X-User-Id",
+                        "X-User-Role", "X-Internal-Token", "X-Aetheris-Client-IP")) headers.remove(header);
+            }).build();
+            return chain.filter(exchange.mutate().request(request).build());
+        }
 
         if (method == HttpMethod.OPTIONS || isPublic(path)) {
+            if ("/api/auth/login".equals(path) || "/api/auth/login/".equals(path)) {
+                java.net.InetSocketAddress remote = exchange.getRequest().getRemoteAddress();
+                String source = remote == null ? "unknown"
+                        : remote.getAddress() == null ? remote.getHostString() : remote.getAddress().getHostAddress();
+                ServerHttpRequest request = exchange.getRequest().mutate()
+                        .headers(headers -> headers.set("X-Aetheris-Client-IP", source)).build();
+                return chain.filter(exchange.mutate().request(request).build());
+            }
             return chain.filter(exchange);
         }
 
@@ -142,6 +191,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String authenticatedRole;
         String jti;
         Instant expiresAt;
+        long accessVersion;
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
@@ -157,6 +207,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             authenticatedRole = role == null ? "viewer" : role;
             jti = claims.getId();
             expiresAt = claims.getExpiration() == null ? null : claims.getExpiration().toInstant();
+            Long versionClaim = claims.get("av", Long.class);
+            accessVersion = versionClaim == null ? 0L : versionClaim;
+            if (accessVersion < 0) return unauthorized(exchange);
             if (username == null || username.isBlank() || uid == null || uid <= 0 || expiresAt == null) {
                 return unauthorized(exchange);
             }
@@ -173,8 +226,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         return revocationStore.isRevoked(revocationKey)
                 .flatMap(revoked -> revoked
                         ? "/api/auth/logout".equals(path) ? chain.filter(exchange) : unauthorized(exchange)
-                        : continueAuthenticated(exchange, chain, path, method,
-                                username, uid, authenticatedRole, expiresAt, revocationKey))
+                        : permissionGate.sessionActive(uid, username, accessVersion).defaultIfEmpty(false)
+                            .flatMap(active -> active
+                                ? continueAuthenticated(exchange, chain, path, method,
+                                    username, uid, authenticatedRole, accessVersion, expiresAt, revocationKey)
+                                : "/api/auth/logout".equals(path) ? chain.filter(exchange) : unauthorized(exchange)))
                 // Revocation state is an authentication boundary. If the shared
                 // store is unavailable, accepting tokens would silently undo logout.
                 .onErrorResume(error -> serviceUnavailable(exchange));
@@ -183,7 +239,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private Mono<Void> continueAuthenticated(
             ServerWebExchange exchange, GatewayFilterChain chain, String path,
             HttpMethod method, String username, Long uid, String authenticatedRole,
-            Instant expiresAt, String revocationKey) {
+            long accessVersion, Instant expiresAt, String revocationKey) {
         Mono<Void> revoke = "/api/auth/logout".equals(path)
                 ? revocationStore.revoke(revocationKey, expiresAt)
                 : Mono.empty();
@@ -192,40 +248,33 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         exchange.getAttributes().put(AUTHENTICATED_ROLE_ATTRIBUTE, authenticatedRole);
         exchange.getAttributes().put(AUTHENTICATED_UID_ATTRIBUTE, uid);
 
-        String identitySignature = identitySigner.sign(uid, username);
         String requestId = exchange.getRequest().getHeaders().getFirst("X-Request-Id");
-        if (requestId == null || requestId.isBlank() || requestId.length() > 128) {
+        if (requestId == null || !requestId.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,127}")) {
             requestId = UUID.randomUUID().toString();
         }
         exchange.getResponse().getHeaders().set("X-Request-Id", requestId);
         final String propagatedRequestId = requestId;
-        ServerHttpRequest mutated = exchange.getRequest()
-                .mutate()
-                .headers(headers -> {
-                    headers.set("X-User-Name", username);
-                    headers.set("X-User-Role", authenticatedRole);
-                    // Never preserve a client-provided identity header.  uid is
-                    // required above, so this is always the JWT value.
-                    headers.set("X-User-Id", String.valueOf(uid));
-                    if (identitySignature != null) {
-                        headers.set(IdentitySigner.IDENTITY_HEADER, identitySignature);
-                    }
-                    headers.set("X-Request-Id", propagatedRequestId);
-                })
-                .build();
+        String audience = audienceOf(path);
+        if (audience == null) { exchange.getResponse().setStatusCode(HttpStatus.NOT_FOUND); return exchange.getResponse().setComplete(); }
+        String identitySignature = identitySigner.sign(uid, username, accessVersion, audience, requestId, expiresAt);
+        String gateProof = identitySigner.sign(uid, username, accessVersion, "gateway", requestId, expiresAt);
+        ServerHttpRequest mutated = exchange.getRequest().mutate().headers(headers -> {
+            headers.set(IdentitySigner.IDENTITY_HEADER, identitySignature);
+            headers.set("X-Request-Id", propagatedRequestId);
+        }).build();
         ServerWebExchange authenticated = exchange.mutate().request(mutated).build();
 
         return revoke.then(Mono.defer(() -> {
             String service = serviceOf(path, method);
             if (isSensitive(path)) {
-                return permissionGate.mayManage(username)
+                return permissionGate.mayManage(gateProof)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
                     .onErrorResume(error -> serviceUnavailable(exchange));
             }
             if (service != null) {
-                return permissionGate.mayMutate(username, service)
+                return permissionGate.mayMutate(gateProof, service)
                     .flatMap(allowed -> allowed
                             ? chain.filter(authenticated)
                             : forbidden(exchange))
@@ -233,6 +282,14 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             }
             return chain.filter(authenticated);
         }));
+    }
+
+    static String audienceOf(String path) {
+        for (String service : List.of("auth", "system", "metadata", "quality", "ingestion", "governance", "workflow", "serving"))
+            if (path.startsWith("/api/" + service + "/")) return service;
+        if (path.startsWith("/api/analytics/")) return "serving";
+        if (path.startsWith("/api/ai/")) return "ai-agent";
+        return null;
     }
 
     private boolean isPublic(String path) {
@@ -254,6 +311,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         if (method != HttpMethod.POST && method != HttpMethod.PUT
                 && method != HttpMethod.PATCH && method != HttpMethod.DELETE) {
             return null;
+        }
+        if ((method==HttpMethod.POST&&path.equals("/api/metadata/api-assets"))
+                || ((method==HttpMethod.PUT||method==HttpMethod.DELETE)&&path.matches("/api/metadata/api-assets/[0-9]+"))
+                || (method==HttpMethod.POST&&path.matches("/api/metadata/api-assets/[0-9]+/(publish|deprecate)"))) {
+            return "serving";
         }
         return SERVICE_BY_PREFIX.entrySet().stream()
                 .filter(entry -> path.startsWith(entry.getKey()))

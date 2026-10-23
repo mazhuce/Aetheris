@@ -1,0 +1,45 @@
+{
+  "admin": {
+    "url": "jdbc:postgresql://127.0.0.1:5433/aetheris",
+    "user": "aetheris",
+    "passwordFile": "configs/database/private/admin.password.local"
+  },
+  "credentials": {
+    "auth": {
+      "runtimeFile": "configs/database/private/auth.runtime.password.local",
+      "migrationFile": "configs/database/private/auth.migration.password.local"
+    },
+    "system": {
+      "runtimeFile": "configs/database/private/system.runtime.password.local",
+      "migrationFile": "configs/database/private/system.migration.password.local"
+    },
+    "metadata": {
+      "runtimeFile": "configs/database/private/metadata.runtime.password.local",
+      "migrationFile": "configs/database/private/metadata.migration.password.local"
+    },
+    "serving": {
+      "runtimeFile": "configs/database/private/serving.runtime.password.local",
+      "migrationFile": "configs/database/private/serving.migration.password.local"
+    },
+    "workflow": {
+      "runtimeFile": "configs/database/private/workflow.runtime.password.local",
+      "migrationFile": "configs/database/private/workflow.migration.password.local"
+    },
+    "ingestion": {
+      "runtimeFile": "configs/database/private/ingestion.runtime.password.local",
+      "migrationFile": "configs/database/private/ingestion.migration.password.local"
+    },
+    "quality": {
+      "runtimeFile": "configs/database/private/quality.runtime.password.local",
+      "migrationFile": "configs/database/private/quality.migration.password.local"
+    },
+    "governance": {
+      "runtimeFile": "configs/database/private/governance.runtime.password.local",
+      "migrationFile": "configs/database/private/governance.migration.password.local"
+    },
+    "ai": {
+      "runtimeFile": "configs/database/private/ai.runtime.password.local",
+      "migrationFile": "configs/database/private/ai.migration.password.local"
+    }
+  }
+}

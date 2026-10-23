@@ -7,8 +7,15 @@ package com.aetheris.workflow.service;
  * 避免连接串或库内结构细节经任务日志泄露。
  */
 public class SqlExecutionException extends RuntimeException {
+    private final boolean outcomeUnknown;
+    private final boolean retryable;
 
     public SqlExecutionException(String message) {
-        super(message);
+        this(message,false,true);
     }
+    public SqlExecutionException(String message,boolean outcomeUnknown,boolean retryable) {
+        super(message); this.outcomeUnknown=outcomeUnknown; this.retryable=retryable;
+    }
+    public boolean outcomeUnknown() { return outcomeUnknown; }
+    public boolean retryable() { return retryable && !outcomeUnknown; }
 }

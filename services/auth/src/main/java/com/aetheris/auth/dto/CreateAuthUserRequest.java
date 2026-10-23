@@ -4,9 +4,10 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.aetheris.auth.validation.ValidUsername;
 
 public record CreateAuthUserRequest(
-        @NotBlank @Size(max = 64) @Pattern(regexp = "[^|\\p{Cntrl}]{1,64}") String username,
+        @ValidUsername String username,
         @NotBlank @Size(min = 12, max = 128) String password,
         @Size(max = 64) String nickname,
         @Email @Size(max = 128) String email,

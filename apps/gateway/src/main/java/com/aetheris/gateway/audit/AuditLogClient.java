@@ -1,39 +1,31 @@
 package com.aetheris.gateway.audit;
 
+import com.aetheris.security.protocol.transport.SignedHttpClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @Component
 public class AuditLogClient {
-
     private static final Logger log = LoggerFactory.getLogger(AuditLogClient.class);
-
-    private final WebClient webClient;
-
-    public AuditLogClient(
-            WebClient.Builder builder,
-            @Value("${audit.base-url}") String baseUrl,
-            @Value("${aetheris.internal-token:}") String internalToken) {
-        this.webClient = builder.baseUrl(baseUrl)
-                .defaultHeader("X-Internal-Token", internalToken == null ? "" : internalToken)
-                .build();
+    private final SignedHttpClient transport;
+    private final ObjectMapper json;
+    public AuditLogClient(@Qualifier("gatewaySystemTransport") SignedHttpClient transport, ObjectMapper json) {
+        this.transport = transport; this.json = json;
     }
-
     public Mono<Void> record(AuditEvent event) {
-        return webClient.post()
-                .uri("/internal/audit/logs")
-                .bodyValue(event)
-                .retrieve()
-                .toBodilessEntity()
-                .timeout(Duration.ofSeconds(2))
-                .doOnError(error -> log.warn("Audit log delivery failed: {}", error.getMessage()))
-                .onErrorResume(error -> Mono.empty())
-                .then();
+        return Mono.defer(() -> {
+            try {
+                byte[] bytes = json.writeValueAsBytes(event);
+                return Mono.fromFuture(transport.sendAsync(new SignedHttpClient.Request("system", "POST",
+                        "/internal/v2/audit/logs", "system.audit.record", bytes))).flatMap(response ->
+                        response.status() == 202 && response.body().length == 0 ? Mono.<Void>empty()
+                                : Mono.error(new IllegalStateException("Audit v2 response rejected")));
+            } catch (Exception error) { return Mono.<Void>error(error); }
+        }).doOnError(error -> log.warn("Audit log delivery failed ({})", error.getClass().getSimpleName()))
+                .onErrorResume(error -> Mono.empty());
     }
 }

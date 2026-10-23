@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   App,
   Button,
@@ -41,6 +41,8 @@ import {
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
 import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
+import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 interface Props {
   taskId: number | null
@@ -57,6 +59,15 @@ const LOG_LEVEL_COLOR: Record<string, string> = {
 
 export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) {
   const { message } = App.useApp()
+  const canManage = canManagePlatform()
+  const resources = useMemo(() => taskId == null ? [] : [{ id: taskId }], [taskId])
+  const permissions = useResourceActions('workflow_task', resources)
+  const canUpdate = taskId != null && (canManage || permissions.can('update', taskId))
+  const canExecute = taskId != null && (canManage || permissions.can('execute', taskId))
+  const activeTask = useRef(taskId)
+  activeTask.current = taskId
+  const logEpoch = useRef(0)
+  const detailEpoch = useRef(0)
   const [view, setView] = useState<TaskView | null>(null)
   const [instances, setInstances] = useState<TaskInstance[]>([])
   const [dependencies, setDependencies] = useState<TaskDependency[]>([])
@@ -71,7 +82,8 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const refresh = useCallback(async () => {
-    if (taskId == null) return
+    if (taskId == null || activeTask.current !== taskId) return
+    const current = ++detailEpoch.current
     setLoading(true)
     try {
       const [detail, instanceList, dependencyList] = await Promise.all([
@@ -79,17 +91,28 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
         listInstances(taskId),
         listDependencies(taskId)
       ])
+      if (activeTask.current !== taskId || detailEpoch.current !== current) return
       setView(detail)
       setInstances(instanceList)
       setDependencies(dependencyList)
     } catch {
-      message.error('任务详情加载失败')
+      if (activeTask.current === taskId && detailEpoch.current === current) message.error('任务详情加载失败')
     } finally {
-      setLoading(false)
+      if (activeTask.current === taskId && detailEpoch.current === current) setLoading(false)
     }
   }, [taskId, message])
 
   useEffect(() => {
+    logEpoch.current++
+    setView(null)
+    setDependencies([])
+    setAllTasks([])
+    setUpstreamToAdd(undefined)
+    setUpgradeOpen(false)
+    setUpgradeAttempt(null)
+    setLogs([])
+    setAttempts([])
+    setSelectedInstance(null)
     if (taskId == null) {
       setView(null)
       setInstances([])
@@ -99,18 +122,23 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       return
     }
     void refresh()
+    return () => { logEpoch.current++; detailEpoch.current++ }
   }, [taskId, refresh])
 
   const openLogs = async (instanceId: number) => {
+    const epoch = ++logEpoch.current
+    const requestedTask = taskId
     setSelectedInstance(instanceId)
     try {
       const [instanceLogs, executionAttempts] = await Promise.all([
         listInstanceLogs(instanceId),
         listExecutionAttempts(instanceId)
       ])
+      if (epoch !== logEpoch.current || activeTask.current !== requestedTask) return
       setLogs(instanceLogs)
       setAttempts(executionAttempts)
     } catch {
+      if (epoch !== logEpoch.current || activeTask.current !== requestedTask) return
       message.error('执行详情加载失败')
       setLogs([])
       setAttempts([])
@@ -118,8 +146,10 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   }
 
   const loadCandidates = async () => {
+    const requestedTask = taskId
     try {
-      setAllTasks(await listTasks())
+      const candidates = await listTasks()
+      if (activeTask.current === requestedTask) setAllTasks(candidates)
     } catch {
       message.error('任务列表加载失败')
     }
@@ -179,7 +209,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
   }
 
   const handleUpgradeFlink = async () => {
-    if (selectedInstance == null || upgradeAttempt == null || !upgradeSql.trim()) return
+    if (!canManage || selectedInstance == null || upgradeAttempt == null || !upgradeSql.trim()) return
     try {
       const target = `s3://warehouse/savepoints/aetheris/attempt-${upgradeAttempt.id}`
       await upgradeFlink(selectedInstance, upgradeAttempt.id, {
@@ -290,7 +320,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       }
     >
       <Spin spinning={loading}>
-        {view && (
+        {view?.task.id === taskId && (
           <Tabs
             defaultActiveKey="overview"
             items={[
@@ -424,7 +454,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                                     <Tag color={state === 'running' ? 'processing' : state === 'paused' ? 'warning' : 'default'}>
                                       {label[state] ?? state}
                                     </Tag>
-                                    {state === 'running' && attempt.flinkJobId && (
+                                    {canExecute && state === 'running' && attempt.flinkJobId && (
                                       <Popconfirm
                                         title="暂停 Flink 流任务？"
                                         description="将通过 stop-with-savepoint 暂停，只有保存点完成后才会变为已暂停。"
@@ -433,7 +463,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                                         <Button type="link" size="small">暂停</Button>
                                       </Popconfirm>
                                     )}
-                                    {(state === 'paused' || state === 'stopped') && attempt.flinkSavepointPath && (
+                                    {canExecute && (state === 'paused' || state === 'stopped') && attempt.flinkSavepointPath && (
                                       <Popconfirm
                                         title="从最近 savepoint 恢复？"
                                         onConfirm={() => void handleResumeFlink(attempt)}
@@ -441,7 +471,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                                         <Button type="link" size="small">恢复</Button>
                                       </Popconfirm>
                                     )}
-                                    {state === 'running' && attempt.flinkJobId && view.task.taskType === 'flink' && (
+                                    {canManage && state === 'running' && attempt.flinkJobId && view.task.taskType === 'flink' && (
                                       <Button
                                         type="link"
                                         size="small"
@@ -521,7 +551,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                 label: `上游依赖（${dependencies.length}）`,
                 children: (
                   <>
-                    <Space className="dependency-toolbar">
+                    {canUpdate && <Space className="dependency-toolbar">
                       <Select
                         placeholder="选择上游任务"
                         className="dependency-select"
@@ -540,7 +570,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                       >
                         添加依赖
                       </Button>
-                    </Space>
+                    </Space>}
 
                     {dependencies.length === 0 ? (
                       <Empty
@@ -569,7 +599,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                             title: '操作',
                             key: 'action',
                             width: 90,
-                            render: (_, record) => (
+                            render: (_, record) => canUpdate ? (
                               <Popconfirm
                                 title="移除该依赖？"
                                 onConfirm={() => void handleRemoveDependency(record.upstreamTaskId)}
@@ -578,7 +608,7 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
                                   移除
                                 </Button>
                               </Popconfirm>
-                            )
+                            ) : null
                           }
                         ]}
                       />
@@ -592,12 +622,12 @@ export default function TaskDetailDrawer({ taskId, onClose, onChanged }: Props) 
       </Spin>
       <Modal
         title="升级 Flink 流任务"
-        open={upgradeOpen}
+        open={upgradeOpen && canManage}
         onCancel={() => setUpgradeOpen(false)}
         onOk={() => void handleUpgradeFlink()}
         okText="提交升级"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         <p>任务会先 stop-with-savepoint，再使用下面的 SQL 从该 savepoint 恢复。原 attempt 定义不会被覆盖。</p>
         <Input.TextArea

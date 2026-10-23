@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Content-level validation for the R1/R2 runtime acceptance evidence."""
+"""Audit R1/R2 content; current R1 acceptance also binds referenced files.
+
+Neither content audit supplies release freshness, CI or current-worktree context.
+The separately named historical API never substitutes for validate_r1 or the CLI.
+"""
 
 from __future__ import annotations
 
@@ -12,6 +16,7 @@ import sys
 
 
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def fail(message: str) -> None:
@@ -23,6 +28,16 @@ def read(path: pathlib.Path) -> dict:
 
 
 def validate_r1(path: pathlib.Path) -> dict:
+    return _validate_r1(path, ROOT)
+
+
+def audit_historical_r1(path: pathlib.Path, artifact_root: pathlib.Path) -> dict:
+    """Verify original archived bytes, explicitly without current acceptance."""
+    return {"scope": "historical-content-only", "currentAcceptance": False,
+            "report": _validate_r1(path, artifact_root)}
+
+
+def _validate_r1(path: pathlib.Path, root: pathlib.Path) -> dict:
     body = read(path)
     if body.get("status") != "passed" or body.get("gate") != "R1-empty-rebuild-hard-gate":
         fail("R1 report is not a passed empty-rebuild hard gate")
@@ -48,7 +63,6 @@ def validate_r1(path: pathlib.Path) -> dict:
         required_artifacts.append("compatibilityMatrix")
     if any(name not in artifacts for name in required_artifacts):
         fail("R1 artifact evidence is incomplete")
-    root = pathlib.Path(__file__).resolve().parents[1]
     root_resolved = root.resolve()
     for name in required_artifacts:
         evidence = artifacts[name]
@@ -111,7 +125,7 @@ def main() -> int:
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"runtime evidence validation failed: {error}", file=sys.stderr)
         return 1
-    print("R1/R2 runtime evidence validation passed")
+    print("R1/R2 content and current R1 artifact audit passed; release context/freshness not evaluated")
     return 0
 
 

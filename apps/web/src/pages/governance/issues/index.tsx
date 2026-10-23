@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader'
 import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
-import { getAlertStats, listAlerts, markNotificationRead, type AlertStats, type PlatformNotification } from '@/api/system'
+import { getAlertStats, listAlerts, acknowledgeAlert, type AlertStats, type PlatformNotification } from '@/api/system'
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
@@ -15,7 +15,7 @@ const sourceMeta: Record<string, { label: string; path: string }> = {
   quality: { label: '数据质量', path: '/governance/quality' },
   ingestion: { label: '数据接入', path: '/integration/tasks' },
   workflow: { label: '任务调度', path: '/operations/tasks' },
-  system: { label: '平台系统', path: '/operations/services' }
+  metadata: { label: '元数据服务', path: '/operations/services' }
 }
 
 const levelMeta: Record<string, { label: string; color: string }> = {
@@ -30,6 +30,7 @@ export default function GovernanceIssuesPage() {
   const [issues, setIssues] = useState<PlatformNotification[]>([])
   const [stats, setStats] = useState<AlertStats>()
   const [loading, setLoading] = useState(false)
+  const [acknowledging, setAcknowledging] = useState(false)
   const [source, setSource] = useState<string>()
   const [unreadOnly, setUnreadOnly] = useState(false)
   const pageSize = useResponsivePageSize(6, 5, 4, 3)
@@ -48,6 +49,8 @@ export default function GovernanceIssuesPage() {
       setIssues(governanceIssues)
       setStats(stat)
     } catch {
+      setIssues([])
+      setStats(undefined)
       message.error('治理问题加载失败')
     } finally {
       setLoading(false)
@@ -59,12 +62,16 @@ export default function GovernanceIssuesPage() {
   }, [refresh])
 
   const handleResolve = async (issue: PlatformNotification) => {
+    if (acknowledging) return
+    setAcknowledging(true)
     try {
-      await markNotificationRead(issue.id)
-      message.success('问题已标记为闭环')
+      await acknowledgeAlert(issue.id)
+      message.success('已共享确认；实际故障修复与执行恢复仍需另行核对')
       await refresh()
     } catch {
       message.error('标记失败')
+    } finally {
+      setAcknowledging(false)
     }
   }
 
@@ -111,7 +118,7 @@ export default function GovernanceIssuesPage() {
       dataIndex: 'isRead',
       key: 'isRead',
       width: 100,
-      render: (value?: boolean) => (value ? <Tag color="success">已闭环</Tag> : <Tag color="processing">待处置</Tag>)
+      render: (value?: boolean) => (value ? <Tag color="success">已确认</Tag> : <Tag color="processing">待确认</Tag>)
     },
     {
       title: '发现时间',
@@ -136,8 +143,8 @@ export default function GovernanceIssuesPage() {
             </Button>
           )}
           {!record.isRead && (
-            <Popconfirm title="确认该问题已处置完成？" onConfirm={() => void handleResolve(record)}>
-              <Button size="small" type="link">标记闭环</Button>
+            <Popconfirm title="共享确认团队已知悉？此操作不代表故障修复或执行恢复。" onConfirm={() => void handleResolve(record)}>
+              <Button size="small" type="link" disabled={acknowledging}>共享确认</Button>
             </Popconfirm>
           )}
         </>
@@ -148,15 +155,15 @@ export default function GovernanceIssuesPage() {
   return (
     <div className="governance-issues-page">
       <PageHeader
-        description="数据治理问题台账：集中跟踪数据质量检查未通过与接入任务失败产生的问题，按发现 → 处置 → 闭环管理问题生命周期。"
+        description="治理告警共享台账：需当前系统管理权限。共享确认仅表示团队已知悉，实际数据修复和执行恢复需单独完成。"
         extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>}
       />
 
       <div className="stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 16 }}>
-        <StatCard title="待处置问题" value={String(openCount)} icon={<BugOutlined />} footer="需要人工介入" tone="orange" />
+        <StatCard title="待确认问题" value={String(openCount)} icon={<BugOutlined />} footer="需要人工介入" tone="orange" />
         <StatCard title="严重问题" value={String(stats?.critical ?? 0)} icon={<ExclamationCircleOutlined />} footer="含全部来源" tone="orange" />
         <StatCard title="警告问题" value={String(stats?.warning ?? 0)} icon={<ExclamationCircleOutlined />} footer="建议尽快处理" />
-        <StatCard title="已闭环" value={String(issues.length - openCount)} icon={<CheckCircleOutlined />} footer="当前视图内" tone="green" />
+        <StatCard title="已确认" value={String(issues.length - openCount)} icon={<CheckCircleOutlined />} footer="当前视图内" tone="green" />
       </div>
 
       <PageToolbar>
@@ -180,7 +187,7 @@ export default function GovernanceIssuesPage() {
               onChange={(value) => setUnreadOnly(value === 'open')}
               allowClear
               className="filter-control-sm"
-              options={[{ value: 'open', label: '仅待处置' }]}
+              options={[{ value: 'open', label: '仅待确认' }]}
             />
           </div>
           <Button type="primary" onClick={() => void refresh()}>查询</Button>

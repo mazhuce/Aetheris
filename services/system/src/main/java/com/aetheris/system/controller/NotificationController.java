@@ -1,8 +1,7 @@
 package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.Notification;
-import com.aetheris.system.security.AetherisIdentity;
-import com.aetheris.system.security.SystemIdentityInterceptor;
+import com.aetheris.system.security.NotificationOwner;
 import com.aetheris.system.service.NotificationService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -19,8 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 面向当前用户的通知（我的待办）。用户名来自网关签名身份，
- * 服务自身不再信任客户端可伪造的 X-User-Name。
+ * Personal inbox: stable UID only. Operations events have separate managed acknowledgement endpoints.
  */
 @RestController
 @RequestMapping("/api/system/notifications")
@@ -36,9 +34,9 @@ public class NotificationController {
     public List<Notification> list(
             HttpServletRequest request,
             @RequestParam(required = false) Boolean unread) {
-        String username = username(request);
+        NotificationOwner owner = NotificationOwner.require(request);
         return notificationService.list(new LambdaQueryWrapper<Notification>()
-                .eq(Notification::getRecipient, username)
+                .eq(Notification::getInboxKind, "personal").eq(Notification::getRecipientUid, owner.uid())
                 .eq(Boolean.TRUE.equals(unread), Notification::getIsRead, false)
                 .orderByDesc(Notification::getId)
                 .last("LIMIT 200"));
@@ -47,9 +45,9 @@ public class NotificationController {
     @GetMapping("/unread-count")
     public Map<String, Long> unreadCount(
             HttpServletRequest request) {
-        String username = username(request);
+        NotificationOwner owner = NotificationOwner.require(request);
         long count = notificationService.count(new LambdaQueryWrapper<Notification>()
-                .eq(Notification::getRecipient, username)
+                .eq(Notification::getInboxKind, "personal").eq(Notification::getRecipientUid, owner.uid())
                 .eq(Notification::getIsRead, false));
         return Map.of("count", count);
     }
@@ -58,11 +56,10 @@ public class NotificationController {
     public ResponseEntity<Void> markRead(
             @PathVariable Long id,
             HttpServletRequest request) {
-        String username = username(request);
-        // 条件带 recipient：不能把别人的通知标记为已读。
+        NotificationOwner owner = NotificationOwner.require(request);
         boolean updated = notificationService.update(new LambdaUpdateWrapper<Notification>()
                 .eq(Notification::getId, id)
-                .eq(Notification::getRecipient, username)
+                .eq(Notification::getInboxKind, "personal").eq(Notification::getRecipientUid, owner.uid())
                 .set(Notification::getIsRead, true));
         return updated ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
@@ -70,20 +67,12 @@ public class NotificationController {
     @PutMapping("/read-all")
     public ResponseEntity<Void> markAllRead(
             HttpServletRequest request) {
-        String username = username(request);
+        NotificationOwner owner = NotificationOwner.require(request);
         notificationService.update(new LambdaUpdateWrapper<Notification>()
-                .eq(Notification::getRecipient, username)
+                .eq(Notification::getInboxKind, "personal").eq(Notification::getRecipientUid, owner.uid())
                 .eq(Notification::getIsRead, false)
                 .set(Notification::getIsRead, true));
         return ResponseEntity.noContent().build();
     }
 
-    private String username(HttpServletRequest request) {
-        AetherisIdentity identity = (AetherisIdentity) request.getAttribute(
-                SystemIdentityInterceptor.IDENTITY_ATTRIBUTE);
-        if (identity == null || identity.username() == null || identity.username().isBlank()) {
-            throw new IllegalStateException("缺少有效的系统身份");
-        }
-        return identity.username();
-    }
 }

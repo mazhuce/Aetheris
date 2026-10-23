@@ -14,12 +14,10 @@ class IdentityVerifierTest {
     private static final String TOKEN = "internal-test-token-with-enough-entropy";
 
     @Test
-    void acceptsSharedGatewayProtocolAndRejectsInvalidClaims() throws Exception {
+    void retiredSharedProtocolRejectsEveryLegacyIdentity() throws Exception {
         IdentityVerifier verifier = new IdentityVerifier(TOKEN, 300_000);
-        assertEquals(new AetherisIdentity(42L, "alice"),
-                verifier.verify(sign("42", "alice", System.currentTimeMillis())));
-        assertEquals(new AetherisIdentity(null, "service"),
-                verifier.verify(sign("-", "service", System.currentTimeMillis())));
+        assertNull(verifier.verify(sign("42", "alice", System.currentTimeMillis())));
+        assertNull(verifier.verify(sign("-", "service", System.currentTimeMillis())));
         assertNull(verifier.verify(sign("0", "alice", System.currentTimeMillis())));
         assertNull(verifier.verify(sign("42", "", System.currentTimeMillis())));
         assertNull(verifier.verify(sign("42", "alice", System.currentTimeMillis() - 301_000)));

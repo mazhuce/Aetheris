@@ -47,12 +47,12 @@ public class GrantController {
 
     @GetMapping
     public List<ServiceGrant> list(HttpServletRequest request,@RequestParam(required = false) Optional<String> status) {
-        security.require(request,"data_service",null,"view");
+        security.requireManage(request);
         return service.grants(status);
     }
 
     @GetMapping("/{id}")
-    public ServiceGrant grant(HttpServletRequest request,@PathVariable Long id) { security.require(request,"data_service",id,"view"); return service.grant(id); }
+    public ServiceGrant grant(HttpServletRequest request,@PathVariable Long id) { security.requireManage(request); return service.grant(id); }
 
     @PostMapping
     public ServiceGrant create(

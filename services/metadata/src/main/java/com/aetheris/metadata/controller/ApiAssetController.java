@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 import java.util.Map;
@@ -110,5 +113,20 @@ public class ApiAssetController {
     public ResponseEntity<?> deprecate(HttpServletRequest request, @PathVariable Long id) {
         security.require(request, "data_service", id, "deprecate", Map.of());
         return ResponseEntity.ok(service.deprecate(id));
+    }
+
+    @ExceptionHandler(ApiAssetService.ValidationException.class)
+    public ResponseEntity<Map<String, String>> invalidTarget(ApiAssetService.ValidationException error) {
+        return ResponseEntity.badRequest().body(Map.of("code", "API_ASSET_VALIDATION", "message", error.getMessage()));
+    }
+
+    @ExceptionHandler(ApiAssetService.StateConflictException.class)
+    public ResponseEntity<Map<String, String>> stateConflict(ApiAssetService.StateConflictException error) {
+        return ResponseEntity.status(409).body(Map.of("code", "API_ASSET_STATE_CONFLICT", "message", error.getMessage()));
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String, String>> malformedRequest(Exception ignored) {
+        return ResponseEntity.badRequest().body(Map.of("code", "INVALID_REQUEST", "message", "请求格式无效"));
     }
 }

@@ -9,11 +9,14 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { listAllSyncRuns, listTasks, type SyncRunRecord, type IngestionTask } from '@/api/ingestion'
 import { formatDateTime } from '@/utils/format'
+import { canManagePlatform } from '@/utils/access'
+import ExecutionReconciliationModal from '@/components/ExecutionReconciliationModal'
 
 const statusMeta: Record<SyncRunRecord['status'], { label: string; color: string }> = {
   running: { label: '同步中', color: 'processing' },
   success: { label: '成功', color: 'success' },
-  failed: { label: '失败', color: 'error' }
+  failed: { label: '失败', color: 'error' },
+  unknown: { label: '待对账', color: 'warning' }
 }
 
 export default function DataSyncPage() {
@@ -24,6 +27,7 @@ export default function DataSyncPage() {
   const [loading, setLoading] = useState(false)
   const [taskId, setTaskId] = useState<number>()
   const [status, setStatus] = useState<string>()
+  const [reconcileId, setReconcileId] = useState<number>()
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -63,7 +67,7 @@ export default function DataSyncPage() {
       key: 'status',
       width: 90,
       render: (value: SyncRunRecord['status']) => {
-        const meta = statusMeta[value]
+        const meta = statusMeta[value] ?? { label: value, color: 'default' }
         return <Tag color={meta.color}>{meta.label}</Tag>
       }
     },
@@ -115,9 +119,14 @@ export default function DataSyncPage() {
         : '—'
     }
   ]
+  if (canManagePlatform()) columns.push({ title: '处理', key: 'reconcile', width: 90,
+    render: (_, run) => run.status === 'unknown'
+      ? <Button type="link" size="small" onClick={() => setReconcileId(run.id)}>核实结果</Button> : '—'
+  })
 
   return (
     <div className="data-sync-page">
+      <ExecutionReconciliationModal kind="ingestion" id={reconcileId} onClose={() => setReconcileId(undefined)} onResolved={refresh} />
       <PageHeader
         description="数据同步运行总览：跨任务的批量同步执行历史，含读写行数、耗时与失败原因。同步任务的配置与手动触发在「接入任务」页。"
         extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>}

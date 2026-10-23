@@ -24,8 +24,8 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * 服务间权限判定端点（内部协议，网关不路由 /internal/**，且由
- * InternalEndpointInterceptor 校验共享内部令牌）。
+ * Legacy controller retained for removal. WorkloadProofFilter rejects all old /internal/** routes;
+ * this class is not an authentication entry point. Current callers use InternalV2Controller.
  *
  * <p>判定输入只有认证后的 username + 资源/动作 + 服务端上下文，与浏览器
  * 传来的任何请求头无关：即便调用方携带 X-User-Role=admin 也不会放行。

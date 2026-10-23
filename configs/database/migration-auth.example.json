@@ -1,0 +1,15 @@
+{
+  "command": "migrate",
+  "schema": "auth",
+  "directory": "/migrations",
+  "admin": {
+    "url": "jdbc:postgresql://postgres:5432/aetheris",
+    "user": "aetheris",
+    "passwordFile": "/run/secrets/db-admin-password"
+  },
+  "credentials": {
+    "auth": {
+      "migrationFile": "/run/secrets/db-migration-password"
+    }
+  }
+}

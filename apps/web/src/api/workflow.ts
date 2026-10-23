@@ -227,8 +227,8 @@ export const ATTEMPT_STATUS_META: Record<ExecutionAttemptStatus, { label: string
   skipped: { label: '已跳过', color: 'warning' }
 }
 
-export function listTasks(): Promise<TaskView[]> {
-  return http.get<TaskView[]>('/api/workflow/tasks').then((res) => res.data)
+export function listTasks(signal?: AbortSignal): Promise<TaskView[]> {
+  return readWithSignal<TaskView[]>('/api/workflow/tasks', signal)
 }
 
 export function getTask(id: number): Promise<TaskView> {
@@ -259,6 +259,11 @@ export function runTask(id: number, bizDate?: string): Promise<TaskInstance> {
     .then((res) => res.data)
 }
 
+export interface BusinessCalendarView { zone: string; today: string; previousDate: string }
+export function getBusinessCalendar(): Promise<BusinessCalendarView> {
+  return http.get<BusinessCalendarView>('/api/workflow/business-calendar').then((response) => response.data)
+}
+
 export function listInstances(id: number, limit = 30): Promise<TaskInstance[]> {
   return http
     .get<TaskInstance[]>(`/api/workflow/tasks/${id}/instances`, { params: { limit } })
@@ -266,10 +271,10 @@ export function listInstances(id: number, limit = 30): Promise<TaskInstance[]> {
 }
 
 /** 全局实例列表（任务监控页），按开始时间倒序，可按状态过滤。 */
-export function listAllInstances(status?: string, limit = 100): Promise<TaskInstance[]> {
+export function listAllInstances(status?: string, limit = 100, signal?: AbortSignal): Promise<TaskInstance[]> {
   return http
     .get<TaskInstance[]>('/api/workflow/tasks/instances', {
-      params: status ? { status, limit } : { limit }
+      params: status ? { status, limit } : { limit }, ...(signal ? { signal } : {})
     })
     .then((res) => res.data)
 }
@@ -520,16 +525,18 @@ export interface SourceVerification {
   verifiedBy: string; verifiedAt: string
 }
 
-export const getSparkHealth = () => http.get<SparkRunnerHealth>('/api/workflow/spark/health').then((r) => r.data)
-export const getFlinkHealth = () => http.get<FlinkGatewayHealth>('/api/workflow/spark/flink/health').then((r) => r.data)
+const readWithSignal = <T,>(url: string, signal?: AbortSignal) =>
+  (signal ? http.get<T>(url, { signal }) : http.get<T>(url)).then((response) => response.data)
+export const getSparkHealth = (signal?: AbortSignal) => readWithSignal<SparkRunnerHealth>('/api/workflow/spark/health', signal)
+export const getFlinkHealth = (signal?: AbortSignal) => readWithSignal<FlinkGatewayHealth>('/api/workflow/spark/flink/health', signal)
 export const probeFlinkHealth = (endpoint: string) =>
   http.get<FlinkGatewayHealth>('/api/workflow/spark/flink/health', { params: { endpoint } }).then((r) => r.data)
-export const listSparkEnvironments = () => http.get<SparkEnvironment[]>('/api/workflow/spark/environments').then((r) => r.data)
-export const listSparkRunners = () => http.get<SparkRunner[]>('/api/workflow/spark/runners').then((r) => r.data)
+export const listSparkEnvironments = (signal?: AbortSignal) => readWithSignal<SparkEnvironment[]>('/api/workflow/spark/environments', signal)
+export const listSparkRunners = (signal?: AbortSignal) => readWithSignal<SparkRunner[]>('/api/workflow/spark/runners', signal)
 export const registerSparkRunner = (input: SparkRunnerInput) => http.post<SparkRunner>('/api/workflow/spark/runners', input).then((r) => r.data)
 export const changeSparkRunnerStatus = (id: number, status: SparkRunner['status']) =>
   http.post<SparkRunner>(`/api/workflow/spark/runners/${id}/status`, { status }).then((r) => r.data)
-export const listGitRepositories = () => http.get<GitRepository[]>('/api/workflow/spark/repositories').then((r) => r.data)
+export const listGitRepositories = (signal?: AbortSignal) => readWithSignal<GitRepository[]>('/api/workflow/spark/repositories', signal)
 export const registerGitRepository = (input: GitRepositoryInput) =>
   http.post<GitRepository>('/api/workflow/spark/repositories', input).then((r) => r.data)
 export const synchronizeGitRepository = (id: number) =>
@@ -540,7 +547,7 @@ export const changeGitRepositoryTrust = (id: number, input: GitRepositoryTrustIn
   http.post<GitRepository>(`/api/workflow/spark/repositories/${id}/trust`, input).then((r) => r.data)
 export const listGitRevisions = (id: number) =>
   http.get<GitRevision[]>(`/api/workflow/spark/repositories/${id}/revisions`).then((r) => r.data)
-export const listSparkArtifacts = () => http.get<ManagedArtifact[]>('/api/workflow/spark/artifacts').then((r) => r.data)
+export const listSparkArtifacts = (signal?: AbortSignal) => readWithSignal<ManagedArtifact[]>('/api/workflow/spark/artifacts', signal)
 export const registerSparkArtifact = (input: ManagedArtifactInput) =>
   http.post<ManagedArtifact>('/api/workflow/spark/artifacts', input).then((r) => r.data)
 export const uploadSparkArtifact = (input: { name: string; version: string; artifactKey: string; file: File }) => {
@@ -557,7 +564,7 @@ export const listSparkArtifactVerifications = (id: number) =>
   http.get<SourceVerification[]>(`/api/workflow/spark/artifacts/${id}/verifications`).then((r) => r.data)
 export const revokeSparkArtifact = (id: number) =>
   http.post<ManagedArtifact>(`/api/workflow/spark/artifacts/${id}/revoke`).then((r) => r.data)
-export const listSparkJobs = () => http.get<SparkJobDefinition[]>('/api/workflow/spark/jobs').then((r) => r.data)
+export const listSparkJobs = (signal?: AbortSignal) => readWithSignal<SparkJobDefinition[]>('/api/workflow/spark/jobs', signal)
 export const createSparkJob = (input: SparkJobInput) =>
   http.post<SparkJobDefinition>('/api/workflow/spark/jobs', input).then((r) => r.data)
 export const publishSparkJob = (id: number) =>
@@ -599,8 +606,8 @@ export interface PipelineDetail extends PipelineRun {
   nodes: PipelineNodeRun[]
 }
 
-export const listPipelineRuns = (limit = 30) =>
-  http.get<PipelineRun[]>('/api/workflow/pipelines', { params: { limit } }).then((r) => r.data)
+export const listPipelineRuns = (limit = 30, signal?: AbortSignal) =>
+  http.get<PipelineRun[]>('/api/workflow/pipelines', { params: { limit }, ...(signal ? { signal } : {}) }).then((r) => r.data)
 export const getPipelineRun = (id: number) =>
   http.get<PipelineDetail>(`/api/workflow/pipelines/${id}`).then((r) => r.data)
 export const startPipeline = (targetTaskId: number, bizDate: string) =>

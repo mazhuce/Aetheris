@@ -410,6 +410,13 @@ public class RbacAdminService {
 
     private void validateGrant(String granteeType, Long granteeId, String resourceType,
                                List<String> actions, DataScope dataScope) {
+        if (dataScope != null && dataScope.isEmpty()) {
+            throw new InvalidRequestException("data_scope 必须提供有效 kind 和非空 values；全类型授权请明确使用 null");
+        }
+        if (Set.of("dataset","dashboard").contains(resourceType) && dataScope != null
+                && !dataScope.isEmpty() && "workspace".equals(dataScope.getKind())) {
+            throw new InvalidRequestException("数据集和看板尚无项目空间关联，不能使用 workspace 范围；请授予明确资源 ID");
+        }
         if (!GRANTEE_TYPES.contains(granteeType)) {
             throw new InvalidRequestException("非法授权主体类型：" + granteeType);
         }

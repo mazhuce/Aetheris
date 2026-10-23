@@ -161,9 +161,19 @@ FROM (
             ELSE ELEMENT_AT(ARRAY('4','4','4','4','4','2','2','3','3','1','5','6'),
                             CAST(PMOD(s.seq * 7, 12) + 1 AS INT))
         END                                                       AS order_status,
-        -- 金额：约 1.1% 空值；金额分布右偏（多数小额，少数大额）。
+        -- 金额按整数分由相同明细定价规则汇总，避免订单和商品金额各自随机而不可对账。
+        -- 本模拟不生成运费或订单级优惠（均为0），仅有明细优惠；约1.1%实付金额仍刻意缺失。
         CASE WHEN PMOD(s.seq, 89) = 0 THEN NULL
-             ELSE CAST(ROUND(19.9 + POWER(PMOD(s.seq * 31, 1000) / 1000.0, 3) * 4800, 2) AS STRING)
+             ELSE CAST(CAST(AGGREGATE(
+                 SEQUENCE(1, CAST(PMOD(s.seq * 3, 4) + 1 AS INT)), CAST(0 AS BIGINT),
+                 (total, idx) -> total
+                     + 990 + PMOD(s.seq * 17 + idx * 131, 200000)
+                     - CASE WHEN PMOD(s.seq + idx, 37) = 0 THEN 0
+                            WHEN PMOD(s.seq + idx, 4) = 0
+                            THEN LEAST(990 + PMOD(s.seq * 17 + idx * 131, 200000),
+                                       PMOD(s.seq * 3 + idx, 3000))
+                            ELSE 0 END
+                 ) / 100.0 AS DECIMAL(12,2)) AS STRING)
         END                                                       AS pay_amount,
         ELEMENT_AT(ARRAY('alipay','alipay','wechat','wechat','wechat','card','balance'),
                    CAST(PMOD(s.seq * 11, 7) + 1 AS INT))          AS pay_type,
@@ -230,12 +240,14 @@ SELECT
         WHEN PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) + i.idx, 251) = 0 THEN '-1'
         ELSE CAST(PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) + i.idx, 3) + 1 AS STRING)
     END                                                       AS quantity,
-    CAST(ROUND(9.9 + PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) * 17 + i.idx * 131, 200000) / 100.0, 2) AS STRING) AS item_amount,
+    CAST(CAST((990 + PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) * 17 + i.idx * 131, 200000)) / 100.0 AS DECIMAL(12,2)) AS STRING) AS item_amount,
     -- 优惠金额：约 3% 空值，多数订单无优惠。
     CASE
         WHEN PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) + i.idx, 37) = 0 THEN NULL
         WHEN PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) + i.idx, 4) = 0
-            THEN CAST(ROUND(PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) * 3 + i.idx, 3000) / 100.0, 2) AS STRING)
+            THEN CAST(CAST(LEAST(
+                990 + PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) * 17 + i.idx * 131, 200000),
+                PMOD(CAST(SUBSTR(o.order_id, 9) AS BIGINT) * 3 + i.idx, 3000)) / 100.0 AS DECIMAL(12,2)) AS STRING)
         ELSE '0.00'
     END                                                       AS discount,
     o.dt

@@ -7,9 +7,8 @@ import com.aetheris.aiagent.entity.ChatMessage;
 import com.aetheris.aiagent.llm.LlmException;
 import com.aetheris.aiagent.llm.LlmReply;
 import com.aetheris.aiagent.service.ChatService;
+import com.aetheris.aiagent.service.ChatOwner;
 import com.aetheris.aiagent.service.UserRateLimiter;
-import com.aetheris.aiagent.security.AetherisIdentity;
-import com.aetheris.aiagent.security.IdentityInterceptor;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -37,6 +36,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai")
 public class ChatController {
+    private com.aetheris.aiagent.service.AiRequestExecutor requestExecutor;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRequestExecutor(com.aetheris.aiagent.service.AiRequestExecutor executor){this.requestExecutor=executor;}
 
     private static final Logger log = LoggerFactory.getLogger(ChatController.class);
     private final ChatService chatService;
@@ -49,32 +51,32 @@ public class ChatController {
 
     @GetMapping("/conversations")
     public List<ChatConversation> listConversations(HttpServletRequest request) {
-        return listConversations(username(request));
+        return listConversations(owner(request));
     }
 
     /** 保留纯业务入口，供单元测试使用；HTTP 入口只能传入验签身份。 */
-    public List<ChatConversation> listConversations(String username) {
-        return chatService.listConversations(username);
+    public List<ChatConversation> listConversations(ChatOwner owner) {
+        return chatService.listConversations(owner);
     }
 
     @PostMapping("/conversations")
     public ChatConversation createConversation(HttpServletRequest request) {
-        return createConversation(username(request));
+        return createConversation(owner(request));
     }
 
-    public ChatConversation createConversation(String username) {
-        return chatService.createConversation(username);
+    public ChatConversation createConversation(ChatOwner owner) {
+        return chatService.createConversation(owner);
     }
 
     @GetMapping("/conversations/{id}/messages")
     public ResponseEntity<List<ChatMessage>> listMessages(
             @PathVariable Long id,
             HttpServletRequest request) {
-        return listMessages(id, username(request));
+        return listMessages(id, owner(request));
     }
 
-    public ResponseEntity<List<ChatMessage>> listMessages(Long id, String username) {
-        List<ChatMessage> messages = chatService.listMessages(id, username);
+    public ResponseEntity<List<ChatMessage>> listMessages(Long id, ChatOwner owner) {
+        List<ChatMessage> messages = chatService.listMessages(id, owner);
         return messages == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(messages);
     }
 
@@ -82,29 +84,31 @@ public class ChatController {
     public ResponseEntity<Void> deleteConversation(
             @PathVariable Long id,
             HttpServletRequest request) {
-        return deleteConversation(id, username(request));
+        return deleteConversation(id, owner(request));
     }
 
-    public ResponseEntity<Void> deleteConversation(Long id, String username) {
-        return chatService.deleteConversation(id, username)
+    public ResponseEntity<Void> deleteConversation(Long id, ChatOwner owner) {
+        return chatService.deleteConversation(id, owner)
                 ? ResponseEntity.noContent().build()
                 : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/chat")
-    public ResponseEntity<Map<String, Object>> chat(
+    public org.springframework.web.context.request.async.DeferredResult<ResponseEntity<Map<String,Object>>> chat(
             HttpServletRequest servletRequest,
             @Valid @RequestBody ChatRequest request) {
-        return chat(username(servletRequest), request);
+        ChatOwner actor=owner(servletRequest);
+        ChatRequest snapshot=new ChatRequest(request.conversationId(),List.copyOf(request.messages()),request.dataMode());
+        return requestExecutor.submit(servletRequest,request.conversationId(),()->chat(actor,snapshot));
     }
 
-    public ResponseEntity<Map<String, Object>> chat(String username, ChatRequest request) {
-        ChatConversation conversation = chatService.findOwned(request.conversationId(), username);
+    public ResponseEntity<Map<String, Object>> chat(ChatOwner owner, ChatRequest request) {
+        ChatConversation conversation = chatService.findOwned(request.conversationId(), owner);
         if (conversation == null) {
             return ResponseEntity.badRequest().body(assistant("会话不存在，请刷新后重试", null));
         }
 
-        if (!rateLimiter.tryAcquire(username)) {
+        if (!rateLimiter.tryAcquire(owner)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(assistant("请求过于频繁，请稍后再试", request.conversationId()));
         }
@@ -115,12 +119,13 @@ public class ChatController {
         }
 
         try {
-            LlmReply reply = chatService.chat(conversation, request.messages(), request.isDataMode());
+            LlmReply reply = chatService.chat(owner, conversation, request.messages(), request.isDataMode());
             Map<String, Object> body = assistant(reply.content(), request.conversationId());
             body.put("model", reply.model());
+            attachUsage(body,reply);
             return ResponseEntity.ok(body);
         } catch (LlmException error) {
-            log.warn("Chat failed for user {}: {}", username, error.kind(), error);
+            log.warn("Chat failed for uid {}: {}", owner.uid(), error.kind());
             // 用户提问已落库，此处只回错误提示；刷新后用户仍能看到自己问过什么。
             return ResponseEntity.status(statusOf(error))
                     .body(assistant(error.getMessage(), request.conversationId()));
@@ -132,14 +137,15 @@ public class ChatController {
      * 模型自动检索表结构并执行只读 SQL，回答含结论、口径与 SQL。
      */
     @PostMapping("/chatbi")
-    public ResponseEntity<Map<String, Object>> chatBi(
+    public org.springframework.web.context.request.async.DeferredResult<ResponseEntity<Map<String,Object>>> chatBi(
             HttpServletRequest servletRequest,
             @Valid @RequestBody ChatBiRequest request) {
-        return chatBi(username(servletRequest), request);
+        ChatOwner actor=owner(servletRequest);
+        return requestExecutor.submit(servletRequest,null,()->chatBi(actor,request));
     }
 
-    public ResponseEntity<Map<String, Object>> chatBi(String username, ChatBiRequest request) {
-        if (!rateLimiter.tryAcquire(username)) {
+    public ResponseEntity<Map<String, Object>> chatBi(ChatOwner owner, ChatBiRequest request) {
+        if (!rateLimiter.tryAcquire(owner)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(assistant("请求过于频繁，请稍后再试", null));
         }
@@ -147,9 +153,10 @@ public class ChatController {
             LlmReply reply = chatService.chatBi(request.question());
             Map<String, Object> body = assistant(reply.content(), null);
             body.put("model", reply.model());
+            attachUsage(body,reply);
             return ResponseEntity.ok(body);
         } catch (LlmException error) {
-            log.warn("ChatBI failed for user {}: {}", username, error.kind(), error);
+            log.warn("ChatBI failed for uid {}: {}", owner.uid(), error.kind());
             return ResponseEntity.status(statusOf(error)).body(assistant(error.getMessage(), null));
         }
     }
@@ -161,14 +168,16 @@ public class ChatController {
             case UNAVAILABLE, UNKNOWN -> HttpStatus.BAD_GATEWAY;
         };
     }
+    private void attachUsage(Map<String,Object> body,LlmReply reply) {
+        Map<String,Object> usage=new LinkedHashMap<>();
+        usage.put("inputUnits",reply.promptTokens());usage.put("outputUnits",reply.outputTokens());
+        usage.put("basis",reply.usageBasis());
+        if(reply.estimatedCost()!=null)usage.put("estimatedCost",reply.estimatedCost());
+        body.put("usage",usage);
+    }
 
-    private String username(HttpServletRequest request) {
-        Object value = request == null ? null : request.getAttribute(IdentityInterceptor.IDENTITY_ATTRIBUTE);
-        if (value instanceof AetherisIdentity identity && identity.username() != null
-                && !identity.username().isBlank()) {
-            return identity.username();
-        }
-        throw new IllegalStateException("缺少有效的网关身份签名");
+    private ChatOwner owner(HttpServletRequest request) {
+        return ChatOwner.from(com.aetheris.security.servlet.TrustedUser.require(request));
     }
 
     /** 用可变 Map 以便按需补充 model 字段；Map.of 不允许后续 put。 */

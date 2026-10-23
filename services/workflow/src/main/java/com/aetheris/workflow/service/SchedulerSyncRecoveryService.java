@@ -50,12 +50,12 @@ public class SchedulerSyncRecoveryService {
         try {
             jdbc.update("""
                     INSERT INTO workflow.scheduler_sync_outbox
-                        (task_id, operation, status, attempts, next_attempt_at, last_error, updated_at)
-                    VALUES (?, ?, 'pending', 0, now(), ?, now())
+                        (task_id, operation, target_generation, status, attempts, next_attempt_at, last_error, updated_at)
+                    VALUES (?, ?, COALESCE((SELECT schedule_version FROM workflow.task WHERE id=?),(SELECT max(target_generation) FROM workflow.scheduler_sync_outbox WHERE task_id=?),1), 'pending', 0, now(), ?, now())
                     ON CONFLICT (task_id, operation) WHERE status IN ('pending', 'processing')
                     DO UPDATE SET status = 'pending', next_attempt_at = now(),
-                                  last_error = EXCLUDED.last_error, updated_at = now()
-                    """, taskId, operation, message);
+                                  last_error = EXCLUDED.last_error,target_generation=EXCLUDED.target_generation, updated_at = now()
+                    """, taskId, operation, taskId,taskId,message);
         } catch (DataAccessException persistError) {
             // 原始请求仍应失败；这里只补充日志，不能让记录故障覆盖调度故障。
             org.slf4j.LoggerFactory.getLogger(getClass())
@@ -77,21 +77,21 @@ public class SchedulerSyncRecoveryService {
                 """);
 
         List<RecoveryEntry> entries = jdbc.query("""
-                SELECT id, task_id, operation
+                SELECT id, task_id, operation, target_generation
                   FROM workflow.scheduler_sync_outbox
                  WHERE status = 'pending'
                    AND next_attempt_at <= now()
                  ORDER BY id
                  LIMIT ?
                 """, (rs, rowNum) -> new RecoveryEntry(
-                rs.getLong("id"), rs.getLong("task_id"), rs.getString("operation")), BATCH_SIZE);
+                rs.getLong("id"), rs.getLong("task_id"), rs.getString("operation"),rs.getLong("target_generation")), BATCH_SIZE);
 
         for (RecoveryEntry entry : entries) {
             int claimed = jdbc.update("""
                     UPDATE workflow.scheduler_sync_outbox
                        SET status = 'processing', attempts = attempts + 1, updated_at = now()
-                     WHERE id = ? AND status = 'pending'
-                    """, entry.id());
+                     WHERE id = ? AND status = 'pending' AND target_generation=?
+                    """, entry.id(),entry.generation());
             if (claimed != 1) {
                 continue;
             }
@@ -100,8 +100,8 @@ public class SchedulerSyncRecoveryService {
                 jdbc.update("""
                         UPDATE workflow.scheduler_sync_outbox
                            SET status = 'succeeded', last_error = NULL, updated_at = now()
-                         WHERE id = ?
-                        """, entry.id());
+                         WHERE id = ? AND target_generation=?
+                        """, entry.id(),entry.generation());
             } catch (RuntimeException error) {
                 jdbc.update("""
                         UPDATE workflow.scheduler_sync_outbox
@@ -109,18 +109,16 @@ public class SchedulerSyncRecoveryService {
                                next_attempt_at = CASE WHEN attempts >= ? THEN next_attempt_at
                                                        ELSE now() + (? * interval '1 second') END,
                                last_error = ?, updated_at = now()
-                         WHERE id = ?
+                         WHERE id = ? AND target_generation=?
                         """, maxAttempts, maxAttempts, retryDelaySeconds,
-                        truncate(error.getMessage()), entry.id());
+                        truncate(error.getMessage()), entry.id(),entry.generation());
             }
         }
     }
 
-    private void reconcile(RecoveryEntry entry) {
-        if ("unschedule".equals(entry.operation())) {
-            schedulerService.unschedule(entry.taskId());
-            return;
-        }
+    void reconcile(RecoveryEntry entry) {
+        // Historical operations are hints only. An older unschedule must never
+        // override a newer enable/update that has already committed.
         Task task = taskService.getById(entry.taskId());
         // 任务已删除时，sync 补偿的安全结果是确保没有孤儿 Quartz Job。
         if (task == null) {
@@ -139,5 +137,7 @@ public class SchedulerSyncRecoveryService {
                 : message.substring(0, MAX_ERROR_LENGTH);
     }
 
-    private record RecoveryEntry(long id, long taskId, String operation) { }
+    record RecoveryEntry(long id, long taskId, String operation,long generation) {
+        RecoveryEntry(long id,long taskId,String operation){this(id,taskId,operation,1);}
+    }
 }

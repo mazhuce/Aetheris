@@ -23,6 +23,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ingestion/runs")
 public class IngestionRunListController {
+    private com.aetheris.ingestion.security.ResourceAuthorization authorization = new com.aetheris.ingestion.security.ResourceAuthorization();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAuthorization(com.aetheris.ingestion.security.ResourceAuthorization authorization) { this.authorization = authorization; }
 
     private final IngestionRunService runService;
     private final IngestionTaskService taskService;
@@ -42,11 +45,11 @@ public class IngestionRunListController {
     public List<Map<String, Object>> list(
             @RequestParam(required = false) Long taskId,
             @RequestParam(required = false) String status) {
-        List<IngestionRun> runs = runService.list(new LambdaQueryWrapper<IngestionRun>()
+        List<IngestionRun> runs = authorization.filter("ingestion_task", runService.list(new LambdaQueryWrapper<IngestionRun>()
                 .eq(taskId != null, IngestionRun::getTaskId, taskId)
                 .eq(status != null && !status.isBlank(), IngestionRun::getStatus, status)
                 .orderByDesc(IngestionRun::getStartedAt)
-                .last("LIMIT 200"));
+                .last("LIMIT 200")), IngestionRun::getTaskId);
         // 任务可能已被删除：用任务快照字段兜底，避免页面出现纯数字 taskId 无法辨认。
         Map<Long, String> taskNames = new HashMap<>();
         for (IngestionRun run : runs) {

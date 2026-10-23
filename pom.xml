@@ -11,6 +11,8 @@
     <name>Aetheris</name>
 
     <modules>
+        <module>libs/security-protocol</module>
+        <module>libs/security-servlet</module>
         <module>apps/gateway</module>
         <module>services/auth</module>
         <module>services/system</module>

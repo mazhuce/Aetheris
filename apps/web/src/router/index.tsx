@@ -145,11 +145,7 @@ export const router = createBrowserRouter([
       { path: 'analytics/dashboards', element: <DashboardListPage /> },
       {
         path: 'analytics/dashboards/:id/edit',
-        element: (
-          <RequireRole role="admin">
-            <DashboardEditorPage />
-          </RequireRole>
-        )
+        element: <DashboardEditorPage />
       },
 
       // 运维中心
@@ -248,7 +244,7 @@ export const router = createBrowserRouter([
           </RequireRole>
         )
       },
-      { path: 'admin/settings', element: <SystemConfigPage /> },
+      { path: 'admin/settings', element: <RequireRole role="admin"><SystemConfigPage /></RequireRole> },
 
       // 系统与账户偏好（头部下拉进入，不进导航）
       { path: 'settings', element: <SettingsPage /> },

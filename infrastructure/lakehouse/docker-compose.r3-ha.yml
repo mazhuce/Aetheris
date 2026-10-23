@@ -2,7 +2,7 @@
 # ports so the ordinary R1 profile and its volumes remain untouched.
 services:
   zookeeper:
-    image: zookeeper:3.9
+    image: docker.io/library/zookeeper:3.9@sha256:5bad433c71701a1d788b4df86c921d91bfb65c23a1443bcb18a80f40373ae9d9
     restart: unless-stopped
     environment:
       ZOO_4LW_COMMANDS_WHITELIST: ruok,stat,conf
@@ -70,7 +70,7 @@ services:
   # has no host port: the primary service keeps the REST endpoint used by the
   # acceptance script while ZooKeeper elects whichever JobManager is alive.
   flink-jobmanager-standby:
-    image: flink:1.20.1-java17
+    image: docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e
     command:
       - bash
       - -lc

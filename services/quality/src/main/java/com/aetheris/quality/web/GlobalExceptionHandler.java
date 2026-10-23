@@ -6,6 +6,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 @RestControllerAdvice public class GlobalExceptionHandler {
+ @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class) public ResponseEntity<Map<String,Object>> status(org.springframework.web.server.ResponseStatusException e,HttpServletRequest request){return ResponseEntity.status(e.getStatusCode()).body(body(e.getStatusCode().value()==503?"DEPENDENCY_UNAVAILABLE":"REQUEST_REJECTED",e.getReason()==null?"请求被拒绝":e.getReason(),request));}
+ @ExceptionHandler({org.springframework.web.bind.MethodArgumentNotValidException.class,org.springframework.http.converter.HttpMessageNotReadableException.class}) public ResponseEntity<Map<String,Object>> validation(Exception e,HttpServletRequest request){return ResponseEntity.badRequest().body(body("VALIDATION_FAILED","请求参数无效",request));}
  @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<Map<String,Object>> bad(IllegalArgumentException e,HttpServletRequest request){return ResponseEntity.badRequest().body(body("VALIDATION_FAILED",safe(e),request));}
  @ExceptionHandler(IllegalStateException.class) public ResponseEntity<Map<String,Object>> conflict(IllegalStateException e,HttpServletRequest request){return ResponseEntity.status(409).body(body("CONFLICT",safe(e),request));}
  @ExceptionHandler(Exception.class) public ResponseEntity<Map<String,Object>> error(Exception e,HttpServletRequest request){return ResponseEntity.internalServerError().body(body("INTERNAL","服务处理失败",request));}

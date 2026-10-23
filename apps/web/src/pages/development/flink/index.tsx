@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { App, Button, Card, Col, Row, Space, Table, Tag, Tooltip, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CaretRightOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons'
@@ -15,6 +15,8 @@ import {
 } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
+import { useResourceActions } from '@/hooks/useResourceActions'
+import { useSerializedPolling } from '@/hooks/useSerializedPolling'
 import TaskDetailDrawer from '@/pages/workflow/components/TaskDetailDrawer'
 
 /** Flink 运行页：复用任务详情中的 savepoint/resume/upgrade 生命周期操作。 */
@@ -23,30 +25,27 @@ export default function FlinkDevelopmentPage() {
   const canManage = canManagePlatform()
   const [health, setHealth] = useState<FlinkGatewayHealth | null>(null)
   const [tasks, setTasks] = useState<TaskView[]>([])
+  const resources = useMemo(() => tasks.map((view) => view.task), [tasks])
+  const permissions = useResourceActions('workflow_task', resources)
   const [loading, setLoading] = useState(false)
   const [running, setRunning] = useState<number | null>(null)
   const [detailId, setDetailId] = useState<number | null>(null)
 
-  const refresh = useCallback(async () => {
+  const refresh = useSerializedPolling((signal) => {
     setLoading(true)
-    const [healthResult, taskResult] = await Promise.allSettled([getFlinkHealth(), listTasks()])
+    return Promise.allSettled([getFlinkHealth(signal), listTasks(signal)])
+  }, ([healthResult, taskResult]) => {
     if (healthResult.status === 'fulfilled') setHealth(healthResult.value)
     else setHealth({ status: 'DOWN', message: 'Flink SQL Gateway 不可达' })
     if (taskResult.status === 'fulfilled') setTasks(taskResult.value.filter((view) => view.task.taskType === 'flink'))
     else message.error('Flink 任务列表加载失败')
     setLoading(false)
-  }, [message])
-
-  useEffect(() => {
-    void refresh()
-    const timer = window.setInterval(() => void refresh(), 5000)
-    return () => window.clearInterval(timer)
-  }, [refresh])
+  }, 5000)
 
   const execute = async (view: TaskView) => {
     setRunning(view.task.id)
     try {
-      await runTask(view.task.id, new Date().toISOString().slice(0, 10))
+      await runTask(view.task.id)
       message.success(`Flink 任务「${view.task.name}」已提交`)
       await refresh()
     } catch (error) {
@@ -95,10 +94,10 @@ export default function FlinkDevelopmentPage() {
       align: 'right',
       render: (_, view) => <Space>
         <Button size="small" icon={<EyeOutlined />} onClick={() => setDetailId(view.task.id)}>详情</Button>
-        {canManage && <Button size="small" type="primary" icon={<CaretRightOutlined />} loading={running === view.task.id} onClick={() => void execute(view)}>运行</Button>}
+        {(canManage || permissions.can('execute', view.task.id)) && <Button aria-label={`运行任务 ${view.task.name}`} size="small" type="primary" icon={<CaretRightOutlined />} loading={running === view.task.id} onClick={() => void execute(view)}>运行</Button>}
       </Space>
     }
-  ], [canManage, running])
+  ], [canManage, permissions.can, running])
 
   return <div className="workflow-list-page">
     <PageHeader

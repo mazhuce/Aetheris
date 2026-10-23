@@ -2,3 +2,13 @@
 
 *.bat text eol=crlf
 *.cmd text eol=crlf
+
+# Historical acceptance attachments are authenticated original bytes, including CRLF.
+scripts/tests/fixtures/r1-history/compose.original.txt -text
+scripts/tests/fixtures/r1-history/compatibility-matrix.json -text
+scripts/tests/fixtures/r1-history/bom.original.toml -text
+scripts/tests/fixtures/r1-history/connector-allowlist.original.toml -text
+scripts/tests/fixtures/r1-history/connector-manifest.original.json -text
+scripts/tests/fixtures/r1-history/table-contract.original.toml -text
+scripts/tests/fixtures/r1-history/fixture-manifest.original.json -text
+scripts/tests/fixtures/r1-history/flink-submission.original.json -text

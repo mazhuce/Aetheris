@@ -24,8 +24,15 @@ public class AgentConfig {
     public LlmClient llmClient(
             ChatModel chatModel,
             DataTools dataTools,
+            com.aetheris.aiagent.llm.AiBudgetLimits limits,
+            @Value("${aetheris.ai.estimated-price.input-per-million:0}") java.math.BigDecimal inputPrice,
+            @Value("${aetheris.ai.estimated-price.output-per-million:0}") java.math.BigDecimal outputPrice,
             @Value("${spring.ai.deepseek.chat.options.model:deepseek-chat}") String configuredModel,
             @Value("${spring.ai.deepseek.api-key:}") String apiKey) {
-        return new SpringAiLlmClient(chatModel, configuredModel, apiKey, List.of(dataTools));
+        if(chatModel instanceof org.springframework.ai.deepseek.DeepSeekChatModel deepSeek)
+            deepSeek.retryTemplate.setRetryPolicy(new org.springframework.retry.policy.NeverRetryPolicy());
+        var client=new SpringAiLlmClient(chatModel, configuredModel, apiKey, List.of(dataTools),limits);
+        client.setEstimatedPrices(inputPrice,outputPrice);
+        return client;
     }
 }

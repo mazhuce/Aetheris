@@ -46,8 +46,9 @@ public class BusinessDomainController {
 
     @GetMapping("/{id}")
     public BusinessDomain get(HttpServletRequest request, @PathVariable Long id) {
-        security.require(request, "domain", id, "view", Map.of("domainId", String.valueOf(id)));
-        return service.require(id);
+        BusinessDomain domain = service.require(id);
+        security.require(request, "domain", id, "view", DomainPermissionContext.of(domain));
+        return domain;
     }
 
     @PostMapping
@@ -59,13 +60,13 @@ public class BusinessDomainController {
     @PutMapping("/{id}")
     public BusinessDomain update(HttpServletRequest request, @PathVariable Long id,
                                  @Valid @RequestBody BusinessDomain domain) {
-        security.require(request, "domain", id, "update", Map.of("domainId", String.valueOf(id)));
+        security.require(request, "domain", id, "update", DomainPermissionContext.of(service.require(id)));
         return service.update(id, domain);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(HttpServletRequest request, @PathVariable Long id) {
-        security.require(request, "domain", id, "delete", Map.of("domainId", String.valueOf(id)));
+        security.require(request, "domain", id, "delete", DomainPermissionContext.of(service.require(id)));
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -75,7 +76,7 @@ public class BusinessDomainController {
         String username = security.requireIdentity(request).username();
         java.util.Set<Long> allowed = security.allowedIds(username, "domain", "view",
                 domains.stream().collect(java.util.stream.Collectors.toMap(BusinessDomain::getId,
-                        domain -> Map.of("domainId", String.valueOf(domain.getId())), (left, right) -> left)));
+                        DomainPermissionContext::of, (left, right) -> left)));
         return domains.stream()
                 .filter(domain -> allowed.contains(domain.getId()))
                 .toList();

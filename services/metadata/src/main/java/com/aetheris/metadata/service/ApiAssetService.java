@@ -59,7 +59,7 @@ public class ApiAssetService {
         ApiAsset existing = getById(asset.getId());
         if (existing == null) return false;
         if ("published".equals(existing.getStatus()) || "deprecated".equals(existing.getStatus())) {
-            throw new IllegalStateException("已发布或已废弃的 API 资产不能直接编辑，请先创建新版本");
+            throw new StateConflictException("已发布或已废弃的 API 资产不能直接编辑，请先创建新版本");
         }
         normalize(asset);
         asset.setStatus(existing.getStatus() == null ? "registered" : existing.getStatus());
@@ -72,7 +72,7 @@ public class ApiAssetService {
     public ApiAsset publish(Long id, String username) {
         ApiAsset asset = require(id);
         if (!"registered".equals(asset.getStatus())) {
-            throw new IllegalStateException("只有 registered 状态的 API 资产可以发布");
+            throw new StateConflictException("只有 registered 状态的 API 资产可以发布");
         }
         normalize(asset);
         validateTarget(asset);
@@ -88,7 +88,7 @@ public class ApiAssetService {
     public ApiAsset deprecate(Long id) {
         ApiAsset asset = require(id);
         if (!"published".equals(asset.getStatus())) {
-            throw new IllegalStateException("只有 published 状态的 API 资产可以废弃");
+            throw new StateConflictException("只有 published 状态的 API 资产可以废弃");
         }
         asset.setStatus("deprecated");
         asset.setUpdatedAt(OffsetDateTime.now());
@@ -99,7 +99,7 @@ public class ApiAssetService {
     public boolean remove(Long id) {
         ApiAsset asset = getById(id);
         if (asset != null && ("published".equals(asset.getStatus()) || "deprecated".equals(asset.getStatus()))) {
-            throw new IllegalStateException("已发布或已废弃的 API 资产不能删除");
+            throw new StateConflictException("已发布或已废弃的 API 资产不能删除");
         }
         return mapper.deleteById(id) > 0;
     }
@@ -117,26 +117,26 @@ public class ApiAssetService {
     }
 
     private void normalize(ApiAsset asset) {
-        if (asset == null) throw new IllegalArgumentException("API 资产不能为空");
+        if (asset == null) throw new ValidationException("API 资产不能为空");
         if (!StringUtils.hasText(asset.getAssetCode()) || !asset.getAssetCode().matches("[A-Za-z][A-Za-z0-9_]{1,63}")) {
-            throw new IllegalArgumentException("API 资产编码格式无效");
+            throw new ValidationException("API 资产编码格式无效");
         }
         if (!StringUtils.hasText(asset.getAssetName()) || asset.getAssetName().trim().length() > 128) {
-            throw new IllegalArgumentException("API 资产名称不能为空且不能超过 128 个字符");
+            throw new ValidationException("API 资产名称不能为空且不能超过 128 个字符");
         }
         if (!StringUtils.hasText(asset.getApiPath()) || !asset.getApiPath().startsWith("/api/") || asset.getApiPath().contains("..")) {
-            throw new IllegalArgumentException("API 路径必须是 /api/ 开头的安全路径");
+            throw new ValidationException("API 路径必须是 /api/ 开头的安全路径");
         }
         asset.setAssetCode(asset.getAssetCode().trim());
         asset.setAssetName(asset.getAssetName().trim());
         asset.setApiPath(asset.getApiPath().trim());
         asset.setHttpMethod(StringUtils.hasText(asset.getHttpMethod()) ? asset.getHttpMethod().trim().toUpperCase(Locale.ROOT) : "POST");
         if (!List.of("GET", "POST").contains(asset.getHttpMethod())) {
-            throw new IllegalArgumentException("API 资产仅支持 GET 或 POST");
+            throw new ValidationException("API 资产仅支持 GET 或 POST");
         }
         asset.setVersion(StringUtils.hasText(asset.getVersion()) ? asset.getVersion().trim() : "v1");
         if (!asset.getVersion().matches("v[1-9][0-9]*")) {
-            throw new IllegalArgumentException("API 版本必须使用 v1、v2 形式");
+            throw new ValidationException("API 版本必须使用 v1、v2 形式");
         }
         if (StringUtils.hasText(asset.getTargetType())) asset.setTargetType(asset.getTargetType().trim().toLowerCase(Locale.ROOT));
         if (StringUtils.hasText(asset.getTargetRef())) asset.setTargetRef(asset.getTargetRef().trim());
@@ -144,27 +144,35 @@ public class ApiAssetService {
 
     private void validateTarget(ApiAsset asset) {
         if (!"POST".equals(asset.getHttpMethod())) {
-            throw new IllegalArgumentException("可执行 API 资产必须使用 POST 方法");
+            throw new ValidationException("可执行 API 资产必须使用 POST 方法");
         }
         if (!StringUtils.hasText(asset.getTargetType())
                 || !List.of("metric", "table").contains(asset.getTargetType())
                 || !StringUtils.hasText(asset.getTargetRef())) {
-            throw new IllegalArgumentException("发布 API 前必须绑定 metric 或 table 执行目标");
+            throw new ValidationException("发布 API 前必须绑定 metric 或 table 执行目标");
         }
         if ("metric".equals(asset.getTargetType())) {
             if (!asset.getTargetRef().matches("[A-Za-z][A-Za-z0-9_]{1,63}")) {
-                throw new IllegalArgumentException("metric 执行目标编码格式无效");
+                throw new ValidationException("metric 执行目标编码格式无效");
             }
             Integer count = jdbc.queryForObject("SELECT count(*) FROM metadata.metric_definition WHERE metric_code = ? AND status = 'published' AND published_version IS NOT NULL", Integer.class, asset.getTargetRef());
-            if (count == null || count == 0) throw new IllegalArgumentException("执行目标指标不存在或未发布");
+            if (count == null || count == 0) throw new ValidationException("执行目标指标不存在或未发布");
         } else {
             long tableId;
             try { tableId = Long.parseLong(asset.getTargetRef()); }
-            catch (NumberFormatException error) { throw new IllegalArgumentException("table 执行目标必须是正整数 ID"); }
-            if (tableId <= 0) throw new IllegalArgumentException("table 执行目标必须是正整数 ID");
+            catch (NumberFormatException error) { throw new ValidationException("table 执行目标必须是正整数 ID"); }
+            if (tableId <= 0) throw new ValidationException("table 执行目标必须是正整数 ID");
             Integer count = jdbc.queryForObject("SELECT count(*) FROM metadata.metadata_table WHERE id = ? AND status <> 'stale'", Integer.class, tableId);
-            if (count == null || count == 0) throw new IllegalArgumentException("执行目标数据表不存在或已失效");
+            if (count == null || count == 0) throw new ValidationException("执行目标数据表不存在或已失效");
         }
+    }
+
+    public static class ValidationException extends IllegalArgumentException {
+        public ValidationException(String message) { super(message); }
+    }
+
+    public static class StateConflictException extends IllegalStateException {
+        public StateConflictException(String message) { super(message); }
     }
 
     public static class NotFoundException extends RuntimeException {

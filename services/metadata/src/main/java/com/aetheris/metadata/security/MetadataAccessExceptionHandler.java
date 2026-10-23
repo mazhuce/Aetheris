@@ -57,8 +57,9 @@ public class MetadataAccessExceptionHandler {
     }
 
     private Map<String, Object> body(String code, String message, HttpServletRequest request) {
-        String requestId = request.getHeader("X-Request-Id");
-        if (requestId == null || requestId.isBlank() || requestId.length() > 128) requestId = UUID.randomUUID().toString();
+        String requestId = request.getAttribute(com.aetheris.security.servlet.TrustedUser.ATTRIBUTE)
+                instanceof com.aetheris.security.servlet.TrustedUser user
+                ? user.proof().requestId() : UUID.randomUUID().toString();
         return Map.of("requestId", requestId, "code", code,
                 "message", message == null || message.isBlank() ? "请求无法处理" : message,
                 "timestamp", Instant.now());

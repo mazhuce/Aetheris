@@ -10,8 +10,13 @@ import reactor.core.publisher.Mono;
 public interface PermissionGate {
 
     /** 该用户是否具备某服务的写入口（粗粒度）。 */
-    Mono<Boolean> mayMutate(String username, String service);
+    Mono<Boolean> mayMutate(String userProof, String service);
 
     /** 该用户是否具备系统管理入口（用户管理、RBAC 管理、审计日志）。 */
-    Mono<Boolean> mayManage(String username);
+    Mono<Boolean> mayManage(String userProof);
+
+    /** Live account state and access revocation version; missing implementation fails closed. */
+    default Mono<Boolean> sessionActive(Long uid, String username, long accessVersion) {
+        return Mono.just(false);
+    }
 }

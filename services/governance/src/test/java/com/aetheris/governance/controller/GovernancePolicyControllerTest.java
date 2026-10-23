@@ -16,6 +16,20 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class GovernancePolicyControllerTest {
+    @org.junit.jupiter.api.BeforeEach
+    void authorizeBusinessFixture() {
+        var authorization = org.mockito.Mockito.mock(com.aetheris.governance.security.ResourceAuthorization.class);
+        org.mockito.Mockito.doAnswer(call -> call.getArgument(1)).when(authorization)
+                .filter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
+        controller.setAuthorization(authorization);
+    }
+
+    @Test
+    void unsignedDirectReadCannotExposePolicyDefinition() {
+        GovernancePolicyService isolated = mock(GovernancePolicyService.class);
+        when(isolated.list()).thenReturn(List.of(policy(1L, "secret")));
+        assertEquals(List.of(), new GovernancePolicyController(isolated).list());
+    }
 
     private final GovernancePolicyService service = mock(GovernancePolicyService.class);
     private final GovernancePolicyController controller = new GovernancePolicyController(service);

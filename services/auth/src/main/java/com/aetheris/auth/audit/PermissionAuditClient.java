@@ -1,59 +1,60 @@
 package com.aetheris.auth.audit;
 
+import com.aetheris.security.protocol.transport.SignedHttpClient;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-
 import java.time.Duration;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * 把权限审计事件投递到 system 服务的内部端点。
- *
- * <p>投递失败只记日志、不影响主流程（与 gateway 的 AuditLogClient 策略一致）：
- * 审计是尽力而为的旁路，权限判定本身不受审计链路影响。
- */
+/** Bounded, observable best-effort audit side channel. Never changes the permission decision. */
 @Component
-public class PermissionAuditClient {
-
-    private static final Logger log = LoggerFactory.getLogger(PermissionAuditClient.class);
-
-    private final RestClient restClient;
-
-    public PermissionAuditClient(
-            RestClient.Builder builder,
-            @Value("${aetheris.system.base-url:http://localhost:8081}") String baseUrl,
-            @Value("${aetheris.internal-token:}") String internalToken) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(500);
-        factory.setReadTimeout(1500);
-        this.restClient = builder.requestFactory(factory).baseUrl(baseUrl)
-                .defaultHeader("X-Internal-Token", internalToken == null ? "" : internalToken)
-                .build();
-    }
+public class PermissionAuditClient implements AutoCloseable {
+    private static final Logger log=LoggerFactory.getLogger(PermissionAuditClient.class);
+    private static final ObjectMapper JSON=new ObjectMapper();
+    private final SignedHttpClient transport;
+    private final ThreadPoolExecutor tasks=new ThreadPoolExecutor(2,2,0,TimeUnit.MILLISECONDS,
+            new ArrayBlockingQueue<>(64),Thread.ofVirtual().name("auth-permission-audit-",0).factory(),new ThreadPoolExecutor.AbortPolicy());
+    private final AtomicLong delivered=new AtomicLong(),failed=new AtomicLong(),dropped=new AtomicLong();
+    public PermissionAuditClient(@Qualifier("authSystemTransport") SignedHttpClient transport){this.transport=transport;}
+    public record DeliveryStats(long delivered,long failed,long dropped,int queued) { }
+    public DeliveryStats deliveryStats(){return new DeliveryStats(delivered.get(),failed.get(),dropped.get(),tasks.getQueue().size());}
 
     public void record(PermissionEventRequest event) {
-        try {
-            restClient.post()
-                    .uri("/internal/audit/permission-events")
-                    .body(event)
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (RuntimeException error) {
-            log.warn("Permission audit delivery failed: {}", error.getMessage());
-        }
+        byte[] raw=encode(event);if(raw!=null)deliver(raw);
     }
-
-    /** 异步尽力投递：授权/撤销等管理操作同步等待，请求路径内的拒绝则 fire-and-forget。 */
-    public void recordAsync(PermissionEventRequest event, Duration timeout) {
-        Thread.ofVirtual().name("perm-audit").start(() -> {
-            try {
-                record(event);
-            } catch (RuntimeException ignored) {
-                // record 已内部兜底，这里不再重复日志
-            }
-        });
+    public void recordAsync(PermissionEventRequest event,Duration timeout) {
+        byte[] raw=encode(event);if(raw==null)return;
+        if(timeout==null || timeout.isZero() || timeout.isNegative()){drop();return;}
+        long expiry=System.nanoTime()+Math.min(timeout.compareTo(Duration.ofSeconds(2))>0?TimeUnit.SECONDS.toNanos(2):timeout.toNanos(),TimeUnit.SECONDS.toNanos(2));
+        try {tasks.execute(()->{if(System.nanoTime()-expiry>=0)drop();else deliver(raw);});}
+        catch(RejectedExecutionException full){drop();}
+    }
+    private byte[] encode(PermissionEventRequest event) {
+        try {
+            if(event==null)throw new IllegalArgumentException("Missing audit event");
+            byte[] raw=JSON.writeValueAsBytes(event);
+            if(raw.length>16*1024)throw new IllegalArgumentException("Audit event limit exceeded");
+            return raw;
+        }catch(JsonProcessingException | RuntimeException failure){failed.incrementAndGet();log.warn("Permission audit serialization failed: {}",failure.getClass().getSimpleName());return null;}
+    }
+    private void deliver(byte[] raw) {
+        try {
+            var response=transport.send(new SignedHttpClient.Request("system","POST","/internal/v2/audit/permission-events","system.permission-event.record",raw));
+            if(response.status()!=202 || response.body().length!=0)throw new IllegalStateException("Unexpected audit acknowledgement");
+            delivered.incrementAndGet();
+        }catch(InterruptedException interrupted){Thread.currentThread().interrupt();failed.incrementAndGet();log.warn("Permission audit delivery interrupted");}
+        catch(RuntimeException failure){failed.incrementAndGet();log.warn("Permission audit delivery failed: {}",failure.getClass().getSimpleName());}
+    }
+    private void drop(){dropped.incrementAndGet();log.warn("Permission audit delivery dropped: queue unavailable or deadline elapsed");}
+    @Override @PreDestroy public void close(){
+        dropped.addAndGet(tasks.shutdownNow().size());
+        try{if(!tasks.awaitTermination(3,TimeUnit.SECONDS))log.warn("Permission audit shutdown exceeded deadline");}
+        catch(InterruptedException interrupted){Thread.currentThread().interrupt();}
     }
 }

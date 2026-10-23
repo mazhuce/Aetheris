@@ -99,7 +99,7 @@ export default function DataSourcePage() {
 
   const filtered = useMemo(() => {
     return allData.filter((item) => {
-      if (keyword && !item.name.includes(keyword) && !item.host.includes(keyword)) return false
+      if (keyword && !item.name.includes(keyword) && !item.host?.includes(keyword)) return false
       if (type && item.type !== type) return false
       if (status && item.status !== status) return false
       if (range && range[0] && range[1] && item.createdAt) {
@@ -239,10 +239,11 @@ export default function DataSourcePage() {
         return <Tag>{definition.label}</Tag>
       }
     },
-    { title: '主机地址', dataIndex: 'host', key: 'host', width: 120 },
+    { title: '主机地址', dataIndex: 'host', key: 'host', width: 120, render: (value: string | null, record) => value ?? (record.connectionConfigurationRedacted ? '已隐藏' : '—') },
     { title: '端口', dataIndex: 'port', key: 'port', width: 70, render: (value?: number) => value ?? '—' },
     { title: '数据库', dataIndex: 'databaseName', key: 'databaseName', width: 90, render: (value?: string) => value || '—' },
-    { title: '用户名', dataIndex: 'username', key: 'username', width: 90, render: (value?: string) => value || '—' },
+    { title: '读取账户', dataIndex: 'username', key: 'username', width: 100, render: (value?: string) => value || '—' },
+    { title: '写入凭据', dataIndex: 'writeConfigured', key: 'writeConfigured', width: 110, render: (value?: boolean) => <Tag>{value ? '已配置' : '未配置'}</Tag> },
     {
       title: '配置状态',
       dataIndex: 'status',
@@ -254,7 +255,7 @@ export default function DataSourcePage() {
       }
     },
     {
-      title: '连接健康',
+      title: '读取连接健康',
       key: 'connectionHealth',
       width: 210,
       render: (_, record) => <ConnectionHealthStatus health={record.connectionHealth} now={healthNow} testing={testingIds.has(record.id)} />
@@ -272,8 +273,8 @@ export default function DataSourcePage() {
       render: (_, record) => (
         <RowActions
           primary={(
-            <Tooltip title="执行轻量连接探测，不采集库表；需要数据源查询权限">
-              <Button type="text" size="small" icon={<ThunderboltOutlined />} loading={testingIds.has(record.id)} disabled={effectiveConnectionStatus(record.connectionHealth, healthNow) === 'checking'} aria-label={`测试数据源 ${record.name}`} onClick={() => void handleTest(record)}>测试连接</Button>
+            <Tooltip title="仅使用读取账户执行 SELECT 1，不验证写入权限；需要数据源查询权限">
+              <Button type="text" size="small" icon={<ThunderboltOutlined />} loading={testingIds.has(record.id)} disabled={effectiveConnectionStatus(record.connectionHealth, healthNow) === 'checking'} aria-label={`测试数据源 ${record.name}`} onClick={() => void handleTest(record)}>测试读取</Button>
             </Tooltip>
           )}
           items={canManage ? [
@@ -329,8 +330,8 @@ export default function DataSourcePage() {
         type="info"
         showIcon
         className="form-section-space"
-        message="配置启用不代表连接可用。连接健康来自手动轻量探测，结果过期后显示未知；最近成功时间保留为历史记录。"
-        description="打开或刷新此页只读取已保存的状态。点击“测试连接”才发起连接探测；库表采集与业务查询耗时单独查看。"
+        message="配置启用不代表连接可用。读取连接健康来自手动 SELECT 1 探测，不证明写入权限；结果过期后显示未知。"
+        description="打开或刷新此页只读取已保存的状态。点击“测试读取”才发起探测；写凭据已配置也不等于数据库已授予写权限。"
       />
 
       <PageToolbar>

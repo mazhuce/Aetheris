@@ -5,6 +5,8 @@ import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.entity.DataSourceHealthObservation;
 import com.aetheris.metadata.mapper.DataSourceHealthMapper;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.sql.SQLException;
 import java.time.Clock;
@@ -25,6 +27,61 @@ class DataSourceHealthServiceTest {
     private final JdbcService jdbc = mock(JdbcService.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-09-07T06:00:00Z"), ZoneOffset.UTC);
     private final OffsetDateTime now = OffsetDateTime.now(clock);
+
+    static java.util.stream.Stream<String> nonActive() { return DataSourceAdmissionTest.nonActive(); }
+
+    @ParameterizedTest @MethodSource("nonActive")
+    void savedNonActiveProbeRejectsBeforeClaimOrWorker(String status) {
+        var source = source(); source.setStatus(status);
+        try (var closing = closeable(service(100))) {
+            assertThrows(IllegalArgumentException.class, () -> closing.service.test(source));
+            verifyNoInteractions(mapper, jdbc);
+        }
+    }
+
+    @Test
+    void preSaveTestCopiesOnlySubmittedConnectionAndNeverRevivesPersistedIdentity() throws Exception {
+        var original = source(); original.setStatus("inactive"); original.setType("postgresql");
+        original.setHost("fixture"); original.setPort(5432); original.setDatabaseName("business");
+        original.setUsername("reader"); original.setPassword("read-fixture");
+        original.setWriteUsername("writer"); original.setWritePassword("write-fixture");
+        when(jdbc.probe(any(), anyInt())).thenReturn(Map.of());
+        try (var closing = closeable(service(1000))) {
+            assertEquals(true, closing.service.testBeforeSave(original).get("success"));
+            var submitted = org.mockito.ArgumentCaptor.forClass(DataSource.class);
+            verify(jdbc).probe(submitted.capture(), anyInt());
+            var draft = submitted.getValue(); assertNotSame(original, draft);
+            assertNull(draft.getId()); assertNull(draft.getConnectionRevision());
+            assertFalse(draft.getManaged()); assertEquals("active", draft.getStatus());
+            assertEquals(original.getHost(), draft.getHost()); assertEquals("read-fixture", draft.getPassword());
+            assertNull(draft.getWriteUsername()); assertNull(draft.getWritePassword());
+            assertEquals("inactive", original.getStatus()); assertEquals(5L, original.getId());
+            verifyNoInteractions(mapper);
+        }
+    }
+
+    @Test
+    void preSaveTestCannotCopyAnIsolatedOrUnknownConfiguration() {
+        try (var closing = closeable(service(100))) {
+            for (String state : List.of("isolated", "disabled", "unknown", "ACTIVE")) {
+                var source = source(); source.setStatus(state);
+                assertThrows(IllegalArgumentException.class, () -> closing.service.testBeforeSave(source));
+            }
+            var managed = source(); managed.setManaged(true);
+            assertThrows(IllegalArgumentException.class, () -> closing.service.testBeforeSave(managed));
+            verifyNoInteractions(mapper, jdbc);
+        }
+    }
+
+    @Test
+    void nonActiveSourceCannotReuseOldAvailableHealth() {
+        var source = source(); source.setStatus("inactive");
+        try (var closing = closeable(service(100))) {
+            assertEquals(ConnectionHealth.unknown(), closing.service.effective(source,
+                    observation("available", now, now.plusSeconds(60), 0)));
+            verifyNoInteractions(mapper, jdbc);
+        }
+    }
 
     @Test
     void storedActiveWithoutProbeIsUnknownAndListNeverConnects() {
@@ -149,6 +206,7 @@ class DataSourceHealthServiceTest {
         DataSource source = new DataSource();
         source.setId(5L);
         source.setConnectionRevision(0L);
+        source.setStatus("active");
         return source;
     }
     private DataSourceHealthObservation observation(String status, OffsetDateTime checked, OffsetDateTime expires, long revision) {

@@ -28,14 +28,24 @@ public class FlinkJobManagerClient {
             RestClient.Builder builder,
             @Value("${aetheris.flink-jobmanager.base-url:http://127.0.0.1:18081}") String baseUrl,
             @Value("${aetheris.flink-jobmanager.connect-timeout:PT3S}") java.time.Duration connectTimeout,
-            @Value("${aetheris.flink-jobmanager.read-timeout:PT10S}") java.time.Duration readTimeout) {
+            @Value("${aetheris.flink-jobmanager.read-timeout:PT10S}") java.time.Duration readTimeout,
+            OutboundTargetPolicy targetPolicy) {
         // HttpURLConnection-backed SimpleClientHttpRequestFactory cannot send
         // PATCH, which Flink requires for cancelling a submitted Job.
         java.net.http.HttpClient httpClient = java.net.http.HttpClient.newBuilder()
-                .connectTimeout(connectTimeout).build();
+                .connectTimeout(connectTimeout).followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(readTimeout);
-        this.client = builder.requestFactory(factory).baseUrl(trimBaseUrl(baseUrl)).build();
+        this.client = builder.clone().requestFactory(factory).baseUrl(targetPolicy.httpOrigin(baseUrl))
+                .requestInterceptor((request, body, execution) -> {
+                    targetPolicy.requireHost(request.getURI().getHost());
+                    var response = execution.execute(request, body);
+                    if (response.getStatusCode().is3xxRedirection()) {
+                        response.close();
+                        throw new IllegalArgumentException("计算引擎重定向被拒绝");
+                    }
+                    return response;
+                }).build();
     }
 
     /** Package-private constructor keeps MockRestServiceServer able to inject its request factory. */

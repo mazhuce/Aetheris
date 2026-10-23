@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,7 +38,7 @@ import java.util.List;
 @RequestMapping("/api/auth/rbac")
 public class RbacAdminController {
 
-    private static final String USER_HEADER = "X-User-Name";
+    private static final String USERNAME_ATTRIBUTE = "aetheris.username";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final RbacAdminService service;
@@ -52,7 +53,7 @@ public class RbacAdminController {
 
     @GetMapping("/roles")
     public List<RbacRole> listRoles(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         return service.listRoles();
@@ -60,7 +61,7 @@ public class RbacAdminController {
 
     @PostMapping("/roles")
     public ResponseEntity<RbacRole> createRole(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody RbacRoleRequest request) {
         guard(requester, requestId);
@@ -70,7 +71,7 @@ public class RbacAdminController {
 
     @PutMapping("/roles/{id}")
     public RbacRole updateRole(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody RbacRoleRequest request) {
@@ -80,7 +81,7 @@ public class RbacAdminController {
 
     @DeleteMapping("/roles/{id}")
     public ResponseEntity<Void> deleteRole(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);
@@ -90,7 +91,7 @@ public class RbacAdminController {
 
     @GetMapping("/roles/{id}/permission-codes")
     public List<String> rolePermissionCodes(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);
@@ -99,7 +100,7 @@ public class RbacAdminController {
 
     @PutMapping("/roles/{id}/permissions")
     public ResponseEntity<Void> bindRolePermissions(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody PermissionBindRequest request) {
@@ -112,7 +113,7 @@ public class RbacAdminController {
 
     @GetMapping("/permissions")
     public List<RbacPermission> listPermissions(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         return service.listPermissions();
@@ -122,7 +123,7 @@ public class RbacAdminController {
 
     @GetMapping("/groups")
     public List<UserGroup> listGroups(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId) {
         guard(requester, requestId);
         return service.listGroups();
@@ -130,7 +131,7 @@ public class RbacAdminController {
 
     @PostMapping("/groups")
     public ResponseEntity<UserGroup> createGroup(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody UserGroupRequest request) {
         guard(requester, requestId);
@@ -140,7 +141,7 @@ public class RbacAdminController {
 
     @PutMapping("/groups/{id}")
     public UserGroup updateGroup(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody UserGroupRequest request) {
@@ -150,7 +151,7 @@ public class RbacAdminController {
 
     @DeleteMapping("/groups/{id}")
     public ResponseEntity<Void> deleteGroup(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);
@@ -160,7 +161,7 @@ public class RbacAdminController {
 
     @GetMapping("/groups/{id}/members")
     public List<GroupMemberView> listGroupMembers(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);
@@ -169,7 +170,7 @@ public class RbacAdminController {
 
     @PostMapping("/groups/{id}/members")
     public ResponseEntity<Void> addGroupMembers(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody GroupMembersRequest request) {
@@ -180,7 +181,7 @@ public class RbacAdminController {
 
     @DeleteMapping("/groups/{id}/members/{userId}")
     public ResponseEntity<Void> removeGroupMember(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @PathVariable Long userId) {
@@ -193,7 +194,7 @@ public class RbacAdminController {
 
     @GetMapping("/users/{userId}/roles")
     public List<String> userRoleCodes(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long userId) {
         guard(requester, requestId);
@@ -202,7 +203,7 @@ public class RbacAdminController {
 
     @PutMapping("/users/{userId}/roles")
     public ResponseEntity<Void> bindUserRoles(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long userId,
             @Valid @RequestBody UserRoleBindRequest request) {

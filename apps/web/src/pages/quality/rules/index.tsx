@@ -7,6 +7,8 @@ import PageToolbar from '@/components/PageToolbar'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge, { type StatusTone } from '@/components/StatusBadge'
 import RowActions from '@/components/RowActions'
+import FixedExecutionApprovalDrawer from '@/components/FixedExecutionApprovalDrawer'
+import { executionApprovalError } from '@/utils/executionApprovalError'
 import {
   createRule,
   deleteRule,
@@ -19,6 +21,7 @@ import {
 import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
 import { listDataSources, type DataSource } from '@/api/metadata'
+import { useResourceActions } from '@/hooks/useResourceActions'
 
 const severityMeta: Record<string, { color: string; text: string }> = {
   low: { color: 'default', text: '低' },
@@ -30,6 +33,7 @@ export default function QualityRulePage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
   const [allData, setAllData] = useState<QualityRule[]>([])
+  const permissions = useResourceActions('quality_rule', allData)
   const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
@@ -38,6 +42,8 @@ export default function QualityRulePage() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<QualityRule | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [approvalId, setApprovalId] = useState<number | null>(null)
+  const [approvalRefresh, setApprovalRefresh] = useState(0)
   const [form] = Form.useForm<QualityRuleInput>()
 
   const refresh = useCallback(async () => {
@@ -53,8 +59,8 @@ export default function QualityRulePage() {
 
   useEffect(() => {
     void refresh()
-    void listDataSources().then(setDataSources).catch(() => message.error('数据源列表加载失败'))
-  }, [refresh, message])
+    if (canManage) void listDataSources().then(setDataSources).catch(() => message.error('数据源列表加载失败'))
+  }, [refresh, message, canManage])
 
   useEffect(() => {
     if (open) {
@@ -76,7 +82,8 @@ export default function QualityRulePage() {
     setSubmitting(true)
     try {
       if (editing) {
-        await updateRule(editing.id, values)
+        await updateRule(editing.id, canManage ? values : { name: values.name, description: values.description, status: values.status, cronExpression: values.cronExpression })
+        if (approvalId === editing.id) setApprovalRefresh((value) => value + 1)
         message.success('规则已更新')
       } else {
         await createRule(values)
@@ -85,8 +92,8 @@ export default function QualityRulePage() {
       setOpen(false)
       setEditing(null)
       await refresh()
-    } catch {
-      message.error('保存失败')
+    } catch (error) {
+      message.error(executionApprovalError(error, '保存失败'))
     } finally {
       setSubmitting(false)
     }
@@ -106,10 +113,11 @@ export default function QualityRulePage() {
     try {
       const result = await runRule(id)
       if (result.status === 'passed') message.success('质量检查通过')
-      else message.warning(`质量检查未通过，发现 ${result.violationCount ?? 0} 条违规数据`)
+      else if (result.status === 'failed') message.warning(`质量检查未通过，发现 ${result.violationCount ?? 0} 条违规数据`)
+      else message.warning(result.status === 'unknown' ? '检查结果待对账，请核实运行记录；不会自动重试' : '本次请求未确认成功，请查看运行记录')
       await refresh()
-    } catch {
-      message.error('质量检查执行失败')
+    } catch (error) {
+      message.error(executionApprovalError(error, '质量检查未确认成功，请查看运行记录'))
       await refresh()
     }
   }
@@ -117,7 +125,7 @@ export default function QualityRulePage() {
   const dataSourceName = (id?: number) => dataSources.find((source) => source.id === id)?.name ?? '待配置'
 
   const columns: TableColumnsType<QualityRule> = [
-    { title: '规则名称', dataIndex: 'name', key: 'name', width: 180 },
+    { title: '规则名称', dataIndex: 'name', key: 'name', width: 180, render: (_, record) => <Button type="link" size="small" aria-label={`查看执行批准 ${record.name}`} onClick={() => setApprovalId(record.id)}>{record.name}</Button> },
     { title: '规则类型', dataIndex: 'ruleType', key: 'ruleType', width: 120, render: (value: string) => <Tag>{value}</Tag> },
     { title: '数据源', dataIndex: 'datasourceId', key: 'datasourceId', width: 140, render: (value?: number) => dataSourceName(value) },
     { title: '目标表', dataIndex: 'targetTable', key: 'targetTable', width: 140 },
@@ -147,27 +155,27 @@ export default function QualityRulePage() {
       key: 'lastCheckStatus',
       width: 110,
       render: (value?: string) => value
-        ? <StatusBadge tone={value === 'passed' ? 'success' : value === 'failed' ? 'danger' : 'warning'}>{value === 'passed' ? '通过' : value === 'failed' ? '未通过' : '执行错误'}</StatusBadge>
+        ? <StatusBadge tone={value === 'passed' ? 'success' : value === 'failed' ? 'danger' : 'warning'}>{({ passed: '通过', failed: '未通过', unknown: '待对账', error: '执行错误', running: '执行中' } as Record<string, string>)[value] ?? value}</StatusBadge>
         : '—'
     },
     { title: '违规数', dataIndex: 'lastViolationCount', key: 'lastViolationCount', width: 80, render: (value?: number) => value ?? '—' },
     { title: '检查时间', dataIndex: 'lastCheckedAt', key: 'lastCheckedAt', width: 170, render: (value?: string) => formatDateTime(value) }
   ]
 
-  if (canManage) columns.push({
+  if (canManage || allData.some((rule) => ['execute', 'update', 'delete'].some((action) => permissions.can(action as 'execute' | 'update' | 'delete', rule.id)))) columns.push({
       title: '操作',
       key: 'action',
       width: 56,
       align: 'right',
       fixed: 'right',
       render: (_, record) => (
-        <RowActions primary={(
+        <RowActions primary={(canManage || permissions.can('execute', record.id)) && (
           <Tooltip title={record.datasourceId ? '立即检查' : '请先配置数据源'}>
-            <Button type="text" size="small" icon={<PlayCircleOutlined />} disabled={!record.datasourceId} onClick={() => void handleRun(record.id)} />
+            <Button type="text" size="small" icon={<PlayCircleOutlined />} aria-label={`检查规则 ${record.name}`} disabled={!record.datasourceId} onClick={() => void handleRun(record.id)} />
           </Tooltip>
         )} items={[
-          { key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } },
-          {
+          ...((canManage || permissions.can('update', record.id)) ? [{ key: 'edit', label: '编辑', onClick: () => { setEditing(record); setOpen(true) } }] : []),
+          ...((canManage || permissions.can('delete', record.id)) ? [{
             key: 'delete',
             label: '删除',
             danger: true,
@@ -178,7 +186,7 @@ export default function QualityRulePage() {
               okButtonProps: { danger: true },
               onOk: () => handleDelete(record.id)
             })
-          }
+          }] : [])
         ]} />
       )
     })
@@ -191,7 +199,7 @@ export default function QualityRulePage() {
           <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>
             新增规则
           </Button>
-        ) : <Tag>只读访问</Tag>}
+        ) : <Tag>按资源授权</Tag>}
       />
 
       <PageToolbar>
@@ -227,6 +235,10 @@ export default function QualityRulePage() {
         />
       </DataSurface>
 
+      <FixedExecutionApprovalDrawer kind="quality" resourceId={approvalId} refreshToken={approvalRefresh}
+        canApprove={approvalId !== null && (canManage || permissions.can('update', approvalId))}
+        canBindCron={approvalId !== null && (canManage || permissions.can('execute', approvalId))}
+        onClose={() => setApprovalId(null)} />
       <Modal
         title={editing ? '编辑规则' : '新增规则'}
         open={open}
@@ -239,29 +251,29 @@ export default function QualityRulePage() {
           <Form.Item name="name" label="规则名称" rules={[{ required: true, message: '请输入规则名称' }]}>
             <Input placeholder="例如：订单表空值检查" />
           </Form.Item>
-          <Form.Item name="ruleType" label="规则类型" rules={[{ required: true, message: '请选择类型' }]}>
-            <Select options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'range', label: '范围检查' }, { value: 'enum', label: '枚举检查' }, { value: 'sql', label: '自定义 SQL' }]} />
+          <Form.Item name="ruleType" label="规则类型" rules={[{ required: canManage, message: '请选择类型' }]}>
+            <Select disabled={!canManage} options={[{ value: 'not_null', label: '空值检查' }, { value: 'duplicate', label: '重复检查' }, { value: 'range', label: '范围检查' }, { value: 'enum', label: '枚举检查' }, { value: 'sql', label: '自定义 SQL' }]} />
           </Form.Item>
-          <Form.Item name="datasourceId" label="数据源" rules={[{ required: true, message: '请选择数据源' }]}>
-            <Select showSearch optionFilterProp="label" options={dataSources.map((source) => ({ value: source.id, label: `${source.name} · ${source.type}` }))} />
+          <Form.Item name="datasourceId" label="数据源" rules={[{ required: canManage, message: '请选择数据源' }]}>
+            <Select disabled={!canManage} showSearch optionFilterProp="label" options={dataSources.map((source) => ({ value: source.id, label: `${source.name} · ${source.type}` }))} />
           </Form.Item>
-          <Form.Item name="targetTable" label="目标表" rules={[{ required: true, message: '请输入目标表' }]}>
-            <Input placeholder="例如：orders" />
+          <Form.Item name="targetTable" label="目标表" rules={[{ required: canManage, message: '请输入目标表' }]}>
+            <Input disabled={!canManage} placeholder="例如：orders" />
           </Form.Item>
-          <Form.Item name="expression" label="有效数据表达式 / SQL" rules={[{ required: true, message: '请输入规则表达式' }]} extra="空值、范围、枚举填写有效数据应满足的条件；重复检查填写逗号分隔字段；自定义 SQL 第一列必须返回违规数。">
-            <Input.TextArea rows={3} placeholder="例如：order_id IS NOT NULL" />
+          <Form.Item name="expression" label="有效数据表达式 / SQL" rules={[{ required: canManage, message: '请输入规则表达式' }]} extra="空值、范围、枚举填写有效数据应满足的条件；重复检查填写逗号分隔字段；自定义 SQL 第一列必须返回违规数。">
+            <Input.TextArea disabled={!canManage} rows={3} placeholder="例如：order_id IS NOT NULL" />
           </Form.Item>
           <Form.Item name="threshold" label="阈值">
-            <InputNumber min={0} className="full-width-control" placeholder="可选" />
+            <InputNumber disabled={!canManage} min={0} className="full-width-control" placeholder="可选" />
           </Form.Item>
           <Form.Item name="severity" label="严重程度">
-            <Select options={[{ value: 'low', label: '低' }, { value: 'medium', label: '中' }, { value: 'high', label: '高' }]} />
+            <Select disabled={!canManage} options={[{ value: 'low', label: '低' }, { value: 'medium', label: '中' }, { value: 'high', label: '高' }]} />
           </Form.Item>
           <Form.Item name="status" label="状态">
-            <Select options={[{ value: 'enabled', label: '启用' }, { value: 'disabled', label: '禁用' }]} />
+            <Select options={[{ value: 'enabled', label: '启用', disabled: !canManage && !!editing && !permissions.can('execute', editing.id) }, { value: 'disabled', label: '禁用' }]} />
           </Form.Item>
           <Form.Item name="cronExpression" label="定时调度" extra="Quartz cron（6/7 段），例如 0 0 2 * * ? 表示每天凌晨 2 点；留空表示仅手动执行。">
-            <Input placeholder="例如：0 0 2 * * ?" />
+            <Input disabled={!canManage && !!editing && !permissions.can('execute', editing.id)} placeholder="例如：0 0 2 * * ?" />
           </Form.Item>
           <Form.Item name="description" label="说明">
             <Input placeholder="可选" />

@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * metadata 服务的统一权限门。
  *
- * <p>身份只来自网关签名（X-Aetheris-Identity 验签），浏览器可伪造的
+ * <p>身份只来自已验签并实时检查的TrustedUser，浏览器可伪造的
  * X-User-Name / X-User-Role 不参与任何判定。每次判定都实时询问
  * auth-service 决策引擎，权限变更立即生效，不维护本地长缓存。
  *
@@ -21,29 +21,25 @@ public class MetadataSecurity {
 
     public static final String IDENTITY_ATTRIBUTE = "aetheris.identity";
 
-    private final IdentityVerifier verifier;
     private final AuthPermissionClient permissionClient;
 
-    public MetadataSecurity(IdentityVerifier verifier, AuthPermissionClient permissionClient) {
-        this.verifier = verifier;
+    public MetadataSecurity(AuthPermissionClient permissionClient) {
         this.permissionClient = permissionClient;
     }
 
     /** 从请求解析验签身份；无有效身份返回 null（由调用方决定 401 或拒绝）。 */
     public AetherisIdentity identity(HttpServletRequest request) {
         if (request == null) return null;
-        Object cached = request.getAttribute(IDENTITY_ATTRIBUTE);
-        if (cached instanceof AetherisIdentity cachedIdentity) return cachedIdentity;
-        AetherisIdentity verified = verifier.verify(request);
-        if (verified != null) request.setAttribute(IDENTITY_ATTRIBUTE, verified);
-        return verified;
+        if (!(request.getAttribute(com.aetheris.security.servlet.TrustedUser.ATTRIBUTE)
+                instanceof com.aetheris.security.servlet.TrustedUser user)) return null;
+        return new AetherisIdentity(user.proof().uid(), user.proof().username());
     }
 
     /** 解析身份，失败抛 401。 */
     public AetherisIdentity requireIdentity(HttpServletRequest request) {
         AetherisIdentity identity = identity(request);
         if (identity == null || identity.username() == null || identity.username().isBlank()) {
-            throw new UnauthorizedException("缺少有效的网关身份签名");
+            throw new UnauthorizedException("缺少有效的用户证明");
         }
         return identity;
     }
@@ -69,9 +65,33 @@ public class MetadataSecurity {
         return permissionClient.check(username, resourceType, resourceId, action, ctx).allowed();
     }
 
+    /** A signed, live auth decision is required even for administrators; request role headers have no meaning. */
+    public boolean canReadGlobalQueryAudit(HttpServletRequest request) {
+        var identity = requireIdentity(request);
+        var access = permissionClient.check(identity.username(), "query_audit", null, "view", Map.of());
+        if (!access.available()) {
+            throw new PermissionServiceUnavailableException("权限服务暂时不可用，请稍后重试");
+        }
+        return access.allowed();
+    }
+
     public java.util.Set<Long> allowedIds(String username, String resourceType, String action,
                                           Map<Long, Map<String, String>> resourceContexts) {
         return permissionClient.checkBatch(username, resourceType, action, resourceContexts);
+    }
+
+    public java.util.Set<Long> allowedIdsStrict(String username,String resourceType,String action,Map<Long,Map<String,String>> contexts) {
+        return permissionClient.checkBatchStrict(username,resourceType,action,contexts);
+    }
+
+    public Scope visibilityStrict(HttpServletRequest request,String resourceType,String action) {
+        var response=permissionClient.visibilityStrict(requireIdentity(request).username(),resourceType,action);
+        return switch(response.mode()) {
+            case "ALL" -> new Scope(ScopeMode.ALL,null);
+            case "IDS" -> new Scope(ScopeMode.IDS,List.copyOf(response.ids()));
+            case "OPAQUE" -> new Scope(ScopeMode.OPAQUE,null);
+            default -> throw new PermissionServiceUnavailableException("权限服务暂时不可用，请稍后重试");
+        };
     }
 
     /** 请求某资源类型读列表时的可见范围（按业务域根资源收敛）。 */
@@ -102,7 +122,7 @@ public class MetadataSecurity {
         public ForbiddenException(String message) { super(message); }
     }
 
-    /** 写入口不能把鉴权依赖故障伪装成普通无权限。列表路径仍采用空集 fail-closed。 */
+    /** 写入口及 strict 列表不能把鉴权依赖故障伪装成无权限或成功空集。 */
     public static class PermissionServiceUnavailableException extends RuntimeException {
         public PermissionServiceUnavailableException(String message) { super(message); }
     }

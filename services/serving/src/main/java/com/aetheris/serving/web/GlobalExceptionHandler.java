@@ -12,6 +12,12 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public org.springframework.http.ResponseEntity<Map<String,Object>> databaseUnavailable(HttpServletRequest request){return org.springframework.http.ResponseEntity.status(503).body(body("DEPENDENCY_UNAVAILABLE","服务暂不可用",request));}
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public org.springframework.http.ResponseEntity<Map<String,Object>> status(org.springframework.web.server.ResponseStatusException ex,HttpServletRequest request){
+        return org.springframework.http.ResponseEntity.status(ex.getStatusCode()).body(body("REQUEST_REJECTED",ex.getReason()==null?"请求被拒绝":ex.getReason(),request));
+    }
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> badRequest(IllegalArgumentException ex, HttpServletRequest request) {

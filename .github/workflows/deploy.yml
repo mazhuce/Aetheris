@@ -1,27 +1,14 @@
 name: Deploy
 
-# CD：SSH 到部署服务器，拉取最新镜像并滚动重启。
-# 手动触发（Actions 页面点 Run workflow），避免 main 每次推送都自动部署。
-#
-# 需要在 GitHub 仓库 Settings -> Secrets and variables -> Actions 配置：
-#   DEPLOY_HOST   服务器地址（IP 或域名）
-#   DEPLOY_USER   SSH 用户名
-#   DEPLOY_SSH_KEY  SSH 私钥（PEM 格式，对应公钥需加入服务器 authorized_keys）
-#   DEPLOY_PATH    服务器上项目路径（须已 checkout 仓库并放置好 .env）
-#
-# 服务器前置条件（一次性）：
-#   1. git clone https://github.com/mazhuce/Aetheris.git 到 DEPLOY_PATH
-#   2. 在 DEPLOY_PATH 创建 .env（JWT_SECRET、DEEPSEEK_API_KEY 等，参考 .env.example）
-#   3. 若镜像仓库为私有：docker login ghcr.io（用 PAT with read:packages）
-#   4. 首次启动：docker compose up -d（自动创建 pgdata 卷并执行 Flyway 迁移）
-#   5. 服务器 PATH 中安装 cosign；部署默认拒绝未签名镜像。仅在明确的
-#      紧急旁路场景下，手动选择 cosign_policy=disabled。
-
 on:
   workflow_dispatch:
     inputs:
+      build_run_id:
+        description: 'Successful Build Images run containing the signed release manifest'
+        required: true
+        type: string
       image_tag:
-        description: 'Immutable image tag; blank uses the checked-out commit sha-<7>'
+        description: 'Optional compatibility check; must match the selected release'
         required: false
         default: ''
         type: string
@@ -30,35 +17,81 @@ on:
         required: true
         default: required
         type: choice
-        options:
-          - required
-          - disabled
+        options: [required, disabled]
       cosign_identity:
-        description: 'Expected GitHub OIDC certificate identity; required for tag builds'
+        description: 'Optional identity check; must match the selected build ref'
         required: false
         default: ''
         type: string
 
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     environment: production
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4; verified 2026-10-18
+      - name: Fetch release and verify exact CI/build attempts
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          REQUESTED_IMAGE_TAG: ${{ inputs.image_tag }}
+          REQUESTED_COSIGN_POLICY: ${{ inputs.cosign_policy }}
+          REQUESTED_COSIGN_IDENTITY: ${{ inputs.cosign_identity }}
+          REQUESTED_DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          [[ "$BUILD_RUN_ID" =~ ^[1-9][0-9]*$ ]] || { echo "Invalid build run ID" >&2; exit 2; }
+          python scripts/release-manifest.py fetch --repository "$GITHUB_REPOSITORY" --build-run-id "$BUILD_RUN_ID" --output-dir release
+      - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2; verified 2026-10-18
+        with:
+          cosign-release: 'v2.5.3'
+      - name: Verify release manifest signature
+        env:
+          COSIGN_POLICY: ${{ inputs.cosign_policy }}
+        run: |
+          if [[ "$COSIGN_POLICY" == required ]]; then
+            expected="$(python scripts/release-manifest.py identity --manifest release/release-manifest.json)"
+            cosign verify-blob --bundle release/release-manifest.bundle.json --certificate-identity "$expected" --certificate-oidc-issuer https://token.actions.githubusercontent.com release/release-manifest.json
+          fi
+      - name: Deploy verified release over SSH
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1; verified 2026-10-18
+        env:
+          AETHERIS_DEPLOY_PATH_B64: ${{ steps.release.outputs.path_base64 }}
+          AETHERIS_RELEASE_MANIFEST_B64: ${{ steps.release.outputs.manifest_base64 }}
+          AETHERIS_RELEASE_BUNDLE_B64: ${{ steps.release.outputs.bundle_base64 }}
+          AETHERIS_IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
+          AETHERIS_COSIGN_CERT_IDENTITY: ${{ steps.release.outputs.identity }}
+          AETHERIS_COSIGN_POLICY: ${{ inputs.cosign_policy }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          version: '1.8.2' # same default as the pinned SSH action entrypoint
+          envs: AETHERIS_DEPLOY_PATH_B64,AETHERIS_RELEASE_MANIFEST_B64,AETHERIS_RELEASE_BUNDLE_B64,AETHERIS_IMAGE_TAG,AETHERIS_COSIGN_CERT_IDENTITY,AETHERIS_COSIGN_POLICY
+          command_timeout: 20m
           script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
+            set -eu
+            # Transferred dynamic values are validated identifiers or base64, so
+            # the SSH action never receives arbitrary shell source in envs.
+            deploy_path="$(printf '%s' "$AETHERIS_DEPLOY_PATH_B64" | base64 --decode)"
+            cd -- "$deploy_path"
             git pull --ff-only
-            # Compose defaults to local build tags for development. Production
-            # must pull the immutable sha tag published by build.yml from GHCR.
+            release_dir="$(mktemp -d /tmp/aetheris-release.XXXXXXXXXX)"
+            trap 'rm -f -- "$release_dir/release-manifest.json" "$release_dir/release-manifest.bundle.json"; rmdir -- "$release_dir"' EXIT
+            printf '%s' "$AETHERIS_RELEASE_MANIFEST_B64" | base64 --decode > "$release_dir/release-manifest.json"
+            printf '%s' "$AETHERIS_RELEASE_BUNDLE_B64" | base64 --decode > "$release_dir/release-manifest.bundle.json"
+            export AETHERIS_RELEASE_MANIFEST="$release_dir/release-manifest.json"
+            export AETHERIS_RELEASE_MANIFEST_BUNDLE="$release_dir/release-manifest.bundle.json"
             export AETHERIS_IMAGE_PREFIX=ghcr.io/mazhuce/aetheris
-            export AETHERIS_IMAGE_TAG='${{ inputs.image_tag }}'
-            export AETHERIS_COSIGN_POLICY='${{ inputs.cosign_policy }}'
-            export AETHERIS_COSIGN_CERT_IDENTITY='${{ inputs.cosign_identity }}'
             export AETHERIS_COOKIE_SECURE=true
             bash scripts/deploy-remote.sh

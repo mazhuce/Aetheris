@@ -24,7 +24,7 @@ x-database-pool: &database-pool
 
 services:
   prometheus:
-    image: prom/prometheus:v2.54.1
+    image: docker.io/prom/prometheus:v2.54.1@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94
     restart: unless-stopped
     volumes:
       - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -42,7 +42,7 @@ services:
       retries: 6
 
   redis:
-    image: docker.1panel.live/library/redis:7.4-alpine
+    image: docker.io/library/redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
     user: "999:1000"
     restart: unless-stopped
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}", "--appendonly", "yes"]
@@ -64,7 +64,7 @@ services:
     cpus: 0.5
 
   postgres:
-    image: postgres:16-alpine
+    image: docker.io/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -130,6 +130,8 @@ services:
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
       AETHERIS_DATASOURCE_MASTER_KEY: ${AETHERIS_DATASOURCE_MASTER_KEY:?AETHERIS_DATASOURCE_MASTER_KEY must be set}
+      AETHERIS_OUTBOUND_ALLOWED_CIDRS: ${AETHERIS_OUTBOUND_ALLOWED_CIDRS:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7}
+      AETHERIS_OUTBOUND_ALLOWED_HOSTS: ${AETHERIS_OUTBOUND_ALLOWED_HOSTS:-}
       AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       AUTH_SERVICE_HOST: auth-service
@@ -255,8 +257,8 @@ services:
       context: .
       dockerfile: services/workflow/Dockerfile
       args:
-        MAVEN_IMAGE: ${MAVEN_IMAGE:-docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21}
-        JAVA_IMAGE: ${JAVA_IMAGE:-docker.1panel.live/library/eclipse-temurin:21-jre}
+        MAVEN_IMAGE: ${MAVEN_IMAGE:-docker.io/library/maven:3.9.9-eclipse-temurin-21@sha256:3a4ab3276a087bf276f79cae96b1af04f53731bec53fb2e651aca79e4b10211e}
+        JAVA_IMAGE: ${JAVA_IMAGE:-docker.io/library/eclipse-temurin:21-jre@sha256:227118764cccd3c3294617061aaa93a08309c63a395eefa83e6b35032992ea99}
     restart: unless-stopped
     volumes:
       - type: bind
@@ -285,6 +287,9 @@ services:
       # 本机开发的唯一受管 Spark 提交后端；默认关闭，令牌必须与 WSL runner 独立配置一致。
       AETHERIS_SPARK_RUNNER_ENABLED: ${AETHERIS_SPARK_RUNNER_ENABLED:-false}
       AETHERIS_SPARK_RUNNER_BASE_URL: ${AETHERIS_SPARK_RUNNER_BASE_URL:-http://host.docker.internal:18081}
+      AETHERIS_SPARK_RUNNER_ALLOWED_ORIGINS: ${AETHERIS_SPARK_RUNNER_ALLOWED_ORIGINS:-}
+      AETHERIS_OUTBOUND_ALLOWED_CIDRS: ${AETHERIS_OUTBOUND_ALLOWED_CIDRS:-127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7}
+      AETHERIS_OUTBOUND_ALLOWED_HOSTS: ${AETHERIS_OUTBOUND_ALLOWED_HOSTS:-}
       AETHERIS_SPARK_RUNNER_TOKEN: ${AETHERIS_SPARK_RUNNER_TOKEN:-}
       AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_POLL_INTERVAL_MS:-5000}
       AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS: ${AETHERIS_SPARK_RUNNER_QUEUE_DISPATCH_INTERVAL_MS:-2000}
@@ -436,8 +441,8 @@ services:
       dockerfile: Dockerfile
       args:
         NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmmirror.com}
-        NODE_IMAGE: ${NODE_IMAGE:-docker.1panel.live/library/node:22-alpine}
-        NGINX_IMAGE: ${NGINX_IMAGE:-docker.1panel.live/library/nginx:1.27-alpine}
+        NODE_IMAGE: ${NODE_IMAGE:-docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402}
+        NGINX_IMAGE: ${NGINX_IMAGE:-docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10}
     restart: unless-stopped
     depends_on:
       gateway:

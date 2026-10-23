@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
  */
 public record PermissionEventRequest(
         @Size(max = 64) String username,
-        Long userId,
+        @jakarta.validation.constraints.Positive Long userId,
         @Size(max = 64) String resourceType,
         @Size(max = 64) String resourceId,
         @Size(max = 64) String action,
@@ -18,5 +18,5 @@ public record PermissionEventRequest(
         @Pattern(regexp = "ALLOWED|DENIED|GRANTED|REVOKED|UPDATED|DELETED|UNAVAILABLE")
         String decision,
         @Size(max = 512) String reason,
-        @Size(max = 64) String requestId) {
+        @Size(max = 128) String requestId) {
 }

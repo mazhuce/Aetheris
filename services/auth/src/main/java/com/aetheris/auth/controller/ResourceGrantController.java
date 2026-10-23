@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +33,7 @@ import java.util.List;
 @RequestMapping("/api/auth/rbac/grants")
 public class ResourceGrantController {
 
-    private static final String USER_HEADER = "X-User-Name";
+    private static final String USERNAME_ATTRIBUTE = "aetheris.username";
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     private final RbacAdminService service;
@@ -45,7 +46,7 @@ public class ResourceGrantController {
 
     @GetMapping
     public List<GrantView> list(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @RequestParam(required = false) String granteeType,
             @RequestParam(required = false) String resourceType,
@@ -56,7 +57,7 @@ public class ResourceGrantController {
 
     @PostMapping
     public ResponseEntity<GrantView> create(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @Valid @RequestBody GrantRequest request) {
         guard(requester, requestId);
@@ -66,7 +67,7 @@ public class ResourceGrantController {
 
     @PutMapping("/{id}")
     public GrantView update(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id,
             @Valid @RequestBody GrantUpdateRequest request) {
@@ -76,7 +77,7 @@ public class ResourceGrantController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> revoke(
-            @RequestHeader(value = USER_HEADER, required = false) String requester,
+            @RequestAttribute(value = USERNAME_ATTRIBUTE, required = false) String requester,
             @RequestHeader(value = REQUEST_ID_HEADER, required = false) String requestId,
             @PathVariable Long id) {
         guard(requester, requestId);

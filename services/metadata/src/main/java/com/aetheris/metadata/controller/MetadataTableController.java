@@ -2,6 +2,10 @@ package com.aetheris.metadata.controller;
 
 import com.aetheris.metadata.dto.MetadataSyncRequest;
 import com.aetheris.metadata.dto.WarehouseMap;
+import com.aetheris.metadata.dto.VisibleListPage;
+import com.aetheris.metadata.dto.TableCatalogGroup;
+import com.aetheris.metadata.mapper.VisibleListMapper;
+import com.aetheris.metadata.service.VisibleListPager;
 import com.aetheris.metadata.entity.DataSource;
 import com.aetheris.metadata.entity.MetadataTable;
 import com.aetheris.metadata.security.MetadataSecurity;
@@ -10,7 +14,6 @@ import com.aetheris.metadata.service.BusinessDomainService;
 import com.aetheris.metadata.service.MetadataSyncService;
 import com.aetheris.metadata.service.MetadataTableService;
 import com.aetheris.metadata.service.WarehouseMapService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -32,6 +35,24 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/metadata/tables")
 public class MetadataTableController {
+    private VisibleListPager pager;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setVisiblePager(VisibleListPager pager) { this.pager=pager; }
+    /** Public operator limits for the deprecated full-array response only. */
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-candidates:100000}")
+    private int compatMaxCandidates=100000;
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.compat-max-rows:20000}")
+    private int compatMaxRows=20000;
+    @org.springframework.beans.factory.annotation.Value("${aetheris.list.search-max-candidates:5000}")
+    private int searchMaxCandidates=5000;
+    @jakarta.annotation.PostConstruct
+    public void validateListLimits() {
+        VisibleListPager.validateBudgets(compatMaxCandidates,compatMaxRows);
+        if(searchMaxCandidates<1 || searchMaxCandidates>5000) throw new IllegalArgumentException("搜索候选预算必须在1到5000之间");
+    }
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
 
     private static final Logger log = LoggerFactory.getLogger(MetadataTableController.class);
 
@@ -59,15 +80,32 @@ public class MetadataTableController {
 
     @GetMapping
     public List<MetadataTable> list(HttpServletRequest request) {
-        security.requireIdentity(request);
-        MetadataSecurity.Scope scope = security.visibility(request, "table", "view");
-        return switch (scope.mode()) {
-            case ALL -> service.list();
-            case IDS -> scope.ids().isEmpty() ? List.of()
-                    : tableList(new LambdaQueryWrapper<MetadataTable>()
-                            .in(MetadataTable::getBusinessDomainId, scope.ids()));
-            case OPAQUE -> filteredList(request, service.list());
-        };
+        validateListLimits();
+        return pager.completeTables(request,compatMaxCandidates,compatMaxRows);
+    }
+
+    @GetMapping("/page")
+    public VisibleListPage<MetadataTable> page(HttpServletRequest request,
+            @RequestParam(defaultValue="50") int size,@RequestParam(required=false) String cursor,
+            @RequestParam(required=false) String keyword,@RequestParam(required=false) String layer,
+            @RequestParam(required=false) Long businessDomainId,@RequestParam(required=false) String domain,
+            @RequestParam(defaultValue="false") boolean unassigned,@RequestParam(required=false) String source) {
+        return pager.tables(request,new VisibleListMapper.TableFilters(keyword,layer,businessDomainId,domain,unassigned,source),size,cursor,false);
+    }
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.ALWAYS)
+    public record CatalogPage(List<TableCatalogGroup> groups,String nextCursor,boolean hasMore) { }
+    @GetMapping("/catalog-page")
+    public CatalogPage catalogPage(HttpServletRequest request,@RequestParam(required=false) String keyword,
+            @RequestParam(defaultValue="50") int size,@RequestParam(required=false) String cursor) {
+        var page=pager.tables(request,new VisibleListMapper.TableFilters(keyword,null,null,null,false,null),size,cursor,true);
+        var groups=new java.util.LinkedHashMap<List<String>,Long>();
+        for(var table:page.items()) {
+            String domain=table.getDomain()==null || table.getDomain().isBlank()?null:table.getDomain();
+            String normalized=table.getLayer()==null?"":table.getLayer().toLowerCase(java.util.Locale.ROOT);
+            String layer=java.util.Set.of("ods","dwd","dws","ads","dim").contains(normalized)?normalized:"other";
+            groups.merge(java.util.Arrays.asList(domain,layer),1L,Long::sum);
+        }
+        return new CatalogPage(groups.entrySet().stream().map(item->new TableCatalogGroup(item.getKey().get(0),item.getKey().get(1),item.getValue())).toList(),page.nextCursor(),page.hasMore());
     }
 
     /**
@@ -97,17 +135,8 @@ public class MetadataTableController {
     public List<MetadataTable> search(HttpServletRequest request,
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "10") int limit) {
-        security.requireIdentity(request);
-        List<MetadataTable> candidates = service.search(keyword, limit);
-        MetadataSecurity.Scope scope = security.visibility(request, "table", "view");
-        return switch (scope.mode()) {
-            case ALL -> candidates;
-            case IDS -> candidates.stream()
-                    .filter(table -> table.getBusinessDomainId() != null
-                            && scope.ids().contains(table.getBusinessDomainId()))
-                    .toList();
-            case OPAQUE -> filteredList(request, candidates);
-        };
+        validateListLimits();
+        return pager.search(request,keyword,limit,searchMaxCandidates);
     }
 
     @GetMapping("/{id}")
@@ -182,21 +211,18 @@ public class MetadataTableController {
         }
     }
 
-    private List<MetadataTable> tableList(LambdaQueryWrapper<MetadataTable> wrapper) {
-        return service.list(wrapper);
+    @org.springframework.web.bind.annotation.ExceptionHandler(VisibleListPager.ListLimitException.class)
+    public ResponseEntity<Map<String,String>> listLimit(VisibleListPager.ListLimitException failure) {
+        return ResponseEntity.status(503).body(Map.of("code","LIST_SCAN_LIMIT","message",failure.getMessage()));
+    }
+    @org.springframework.web.bind.annotation.ExceptionHandler({IllegalArgumentException.class,org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<Map<String,String>> invalidList(RuntimeException failure) {
+        return ResponseEntity.badRequest().body(Map.of("code","INVALID_REQUEST","message",failure.getMessage()));
     }
 
-    private List<MetadataTable> filteredList(HttpServletRequest request, List<MetadataTable> tables) {
-        String username = security.requireIdentity(request).username();
-        java.util.Set<Long> allowed = security.allowedIds(username, "table", "view",
-                tables.stream().collect(java.util.stream.Collectors.toMap(MetadataTable::getId,
-                        table -> domainCtx(table.getBusinessDomainId()), (left, right) -> left)));
-        return tables.stream()
-                .filter(table -> allowed.contains(table.getId()))
-                .toList();
-    }
-
-    private static Map<String, String> domainCtx(Long domainId) {
-        return domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId));
+    private Map<String, String> domainCtx(Long domainId) {
+        return permissionContext == null
+                ? (domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId)))
+                : permissionContext.of(domainId);
     }
 }

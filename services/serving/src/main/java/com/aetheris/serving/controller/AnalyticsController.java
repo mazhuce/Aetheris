@@ -57,7 +57,7 @@ public class AnalyticsController {
     public ResponseEntity<Void> deleteDashboard(Long id, String role) { if (!"admin".equals(role)) throw new ForbiddenException(); service.deleteDashboard(id); return ResponseEntity.noContent().build(); }
 
     @GetMapping("/datasets")
-    public List<AnalyticsDataset> datasets(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return service.datasets(); }
+    public List<AnalyticsDataset> datasets(HttpServletRequest request) { return security.filter(request,"dataset",service.datasets(),AnalyticsDataset::id); }
 
     @GetMapping("/datasets/{id}")
     public AnalyticsDataset dataset(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dataset",id,"view"); return service.dataset(id); }
@@ -68,6 +68,7 @@ public class AnalyticsController {
             HttpServletRequest request,
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
+        security.require(request,"dataset",null,"create");
         security.requireManage(request);
         return service.createDataset(input, security.requireIdentity(request).username());
     }
@@ -78,6 +79,7 @@ public class AnalyticsController {
             @Valid @RequestBody DatasetInput input,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
             HttpServletRequest request) {
+        security.require(request,"dataset",id,"update");
         security.requireManage(request);
         return service.updateDataset(id, input);
     }
@@ -86,7 +88,7 @@ public class AnalyticsController {
     public AnalyticsDataset publishDataset(
             @PathVariable Long id,
             HttpServletRequest request) {
-        security.requireManage(request);
+        security.require(request,"dataset",id,"publish");
         return service.publishDataset(id, security.requireIdentity(request).username());
     }
 
@@ -95,7 +97,7 @@ public class AnalyticsController {
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
             HttpServletRequest request) {
-        security.requireManage(request);
+        security.require(request,"dataset",id,"delete");
         service.deleteDataset(id);
         return ResponseEntity.noContent().build();
     }
@@ -105,20 +107,25 @@ public class AnalyticsController {
             HttpServletRequest request,@PathVariable Long id,
             @RequestParam(defaultValue = "false") boolean refresh) {
         security.require(request,"dataset",id,"query");
-        return service.queryDataset(id, refresh, request.getHeader("X-Aetheris-Identity"));
+        return service.queryDataset(id, refresh, security.compactProof(request));
     }
 
     @GetMapping("/dashboard-templates")
-    public List<DashboardTemplate> templates(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return repository.listTemplates(); }
+    public List<DashboardTemplate> templates(HttpServletRequest request) { security.requireIdentity(request); return repository.listTemplates(); }
 
     @GetMapping("/dashboards")
-    public List<Dashboard> dashboards(HttpServletRequest request) { security.require(request,"dataset",null,"view"); return repository.listDashboards(); }
+    public List<Dashboard> dashboards(HttpServletRequest request) { return security.filter(request,"dashboard",repository.listDashboards(),Dashboard::id); }
 
     @GetMapping("/dashboards/{id}")
-    public Dashboard dashboard(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dataset",id,"view"); return service.dashboard(id); }
+    public Dashboard dashboard(HttpServletRequest request,@PathVariable Long id) { security.require(request,"dashboard",id,"view"); return service.dashboard(id); }
 
     @GetMapping("/dashboards/published/{slug}")
-    public Dashboard published(HttpServletRequest request,@PathVariable String slug) { security.require(request,"dataset",null,"view"); return service.published(slug); }
+    public Dashboard published(HttpServletRequest request,@PathVariable String slug) {
+        security.requireIdentity(request);
+        Dashboard dashboard=service.published(slug);
+        security.require(request,"dashboard",dashboard.id(),"view");
+        return dashboard;
+    }
 
     @PostMapping("/dashboards")
     public Dashboard createDashboard(
@@ -126,7 +133,7 @@ public class AnalyticsController {
             HttpServletRequest request,
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        security.requireManage(request);
+        security.require(request,"dashboard",null,"create");
         return service.createDashboard(body, security.requireIdentity(request).username());
     }
 
@@ -137,7 +144,7 @@ public class AnalyticsController {
             HttpServletRequest request,
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        security.requireManage(request);
+        security.require(request,"dashboard",id,"update");
         return service.updateDashboard(id, body, security.requireIdentity(request).username());
     }
 
@@ -147,7 +154,7 @@ public class AnalyticsController {
             HttpServletRequest request,
             @RequestHeader(value = "X-User-Name", defaultValue = "system") String ignoredUsername,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String role) {
-        security.requireManage(request);
+        security.require(request,"dashboard",id,"publish");
         return service.publish(id, security.requireIdentity(request).username());
     }
 
@@ -156,7 +163,7 @@ public class AnalyticsController {
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Role", defaultValue = "viewer") String ignoredRole,
             HttpServletRequest request) {
-        security.requireManage(request);
+        security.require(request,"dashboard",id,"delete");
         service.deleteDashboard(id);
         return ResponseEntity.noContent().build();
     }

@@ -37,6 +37,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RbacAdminServiceTest {
+    @Test
+    void rejectsUnsupportedWorkspaceScopeWithoutWritingGrant() {
+        var request = new GrantRequest("user",7L,"dataset",8L,
+                new DataScope("workspace",List.of("1")),List.of("view"),true);
+        var error = assertThrows(InvalidRequestException.class,()->service.createGrant("admin",request));
+        assertTrue(error.getMessage().contains("尚无项目空间关联"));
+        verify(resourceGrantMapper,never()).insert(any(ResourceGrant.class));
+    }
+
+    @Test
+    void rejectsAmbiguousEmptyScope() {
+        var request = new GrantRequest("user",7L,"datasource",null,
+                new DataScope("domain",List.of()),List.of("view"),true);
+        assertThrows(InvalidRequestException.class,()->service.createGrant("admin",request));
+        verify(resourceGrantMapper,never()).insert(any(ResourceGrant.class));
+    }
 
     private AuthUserService authUserService;
     private RbacRoleMapper rbacRoleMapper;
@@ -156,6 +172,19 @@ class RbacAdminServiceTest {
                 List.of("view"), null);
         assertThrows(InvalidRequestException.class, () -> service.createGrant("admin", request));
         verify(resourceGrantMapper, never()).insert(any(ResourceGrant.class));
+    }
+    @Test void datasourceWriteRequiresItsOwnCatalogEntryAndPersistsOnlyExplicitWrite() {
+        when(authUserService.getById(7L)).thenReturn(user(7L,"alice"));
+        when(rbacPermissionMapper.selectResourceTypes()).thenReturn(List.of("datasource"));
+        when(rbacPermissionMapper.selectActions("datasource")).thenReturn(List.of("update","query"));
+        var request=new GrantRequest("user",7L,"datasource",8L,null,List.of("write"),true);
+        assertThrows(InvalidRequestException.class,()->service.createGrant("admin",request));
+        verify(resourceGrantMapper,never()).insert(any(ResourceGrant.class));
+        when(rbacPermissionMapper.selectActions("datasource")).thenReturn(List.of("update","query","write"));
+        service.createGrant("admin",request);
+        var captured=ArgumentCaptor.forClass(ResourceGrant.class);verify(resourceGrantMapper).insert(captured.capture());
+        assertEquals(List.of("write"),captured.getValue().getActions());
+        verify(permissionVersionService).bump();verify(auditClient).record(any());
     }
 
     @Test

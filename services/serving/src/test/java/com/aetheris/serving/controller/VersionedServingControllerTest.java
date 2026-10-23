@@ -38,6 +38,7 @@ class VersionedServingControllerTest {
     void executesPublishedMetricAssetOnlyAfterAssetPermission() {
         when(security.requireIdentity(request)).thenReturn(new ServingIdentity(1L, "alice"));
         when(request.getHeader("X-Aetheris-Identity")).thenReturn("signed-alice");
+        when(security.compactProof(request)).thenReturn("verified-original-user");
         when(metadata.publishedApiAsset("PUBLIC_METRIC")).thenReturn(Map.of(
                 "id", 7L, "targetType", "metric", "targetRef", "GMV_DAILY", "version", "v1"));
         when(rateLimiter.allow("alice", "api:PUBLIC_METRIC")).thenReturn(true);
@@ -48,7 +49,7 @@ class VersionedServingControllerTest {
 
         assertEquals(1, result.get("rowCount"));
         verify(security).require(request, "data_service", 7L, "execute");
-        verify(metadata).queryMetric(eq("GMV_DAILY"), any(), eq("signed-alice"));
+        verify(metadata).queryMetric(eq("GMV_DAILY"), any(), eq("verified-original-user"));
     }
 
     @Test
@@ -75,9 +76,10 @@ class VersionedServingControllerTest {
     }
 
     @Test
-    void apiKeyIdentityIsBoundToOwnerAndQuotaBeforePermissionCheck() {
+    void apiKeyCannotBeConvertedToAnOrdinaryUserQuery() {
         ApiKeyService apiKeys = mock(ApiKeyService.class);
-        VersionedServingController securedController = new VersionedServingController(metadata, security, rateLimiter,
+        var actualSecurity=new ServingSecurity(mock(com.aetheris.security.protocol.authorization.AuthProtocolClient.class));
+        VersionedServingController securedController = new VersionedServingController(metadata, actualSecurity, rateLimiter,
                 apiKeys, null, null, new ServiceIdentitySigner("01234567890123456789012345678901"));
         when(request.getHeader("X-API-Key")).thenReturn("ak_prefix_secret");
         when(request.getHeader("X-Aetheris-Identity")).thenReturn("forged-gateway-identity");
@@ -89,11 +91,11 @@ class VersionedServingControllerTest {
         when(rateLimiter.allow("partner-a", "api:PUBLIC_METRIC")).thenReturn(true);
         when(metadata.queryMetric(eq("GMV_DAILY"), any(), any())).thenReturn(Map.of("rowCount", 1));
 
-        assertEquals(1, securedController.apiAsset(request, "PUBLIC_METRIC", null).get("rowCount"));
-        verify(apiKeys).consumeQuota(11L);
-        verify(security).require(request, "data_service", 7L, "execute");
-        verify(metadata).queryMetric(eq("GMV_DAILY"), any(), org.mockito.ArgumentMatchers.argThat(value ->
-                value != null && !value.isBlank() && !value.equals("forged-gateway-identity")));
+        org.junit.jupiter.api.Assertions.assertThrows(ServingSecurity.UnauthorizedException.class,()->securedController.apiAsset(request,"PUBLIC_METRIC",null));
+        verify(apiKeys,never()).consumeQuota(11L);
+        verify(metadata,never()).queryMetric(any(),any(),any());
+        verify(metadata,never()).queryTable(any(),any(),any());
+        verify(metadata,never()).publishedApiAsset(any());
     }
 
     @Test

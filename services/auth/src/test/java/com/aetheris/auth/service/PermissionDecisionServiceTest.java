@@ -37,6 +37,14 @@ class PermissionDecisionServiceTest {
     private final List<ResourceGrant> userGrants = new ArrayList<>();
     private AuthUser user;
 
+    @Test void globalQueryAuditRequiresItsOwnGrantOrAnActiveAdministrator() {
+        assertFalse(service.check("alice","query_audit",null,"view",Map.of()).allowed());
+        user.setRole("admin");
+        assertTrue(service.check("alice","query_audit",null,"view",Map.of()).allowed());
+        user.setStatus("disabled");
+        assertFalse(service.check("alice","query_audit",null,"view",Map.of()).allowed());
+    }
+
     @BeforeEach
     void setUp() {
         authUserService = mock(AuthUserService.class);
@@ -68,6 +76,18 @@ class PermissionDecisionServiceTest {
         assertFalse(decision.allowed());
     }
 
+    @Test void datasourceWriteIsDistinctFromUpdateQueryAndAdminKeepsExistingSemantics() {
+        assertTrue(com.aetheris.auth.rbac.RbacConstants.WRITE_ACTIONS.contains("write"));
+        assertFalse(com.aetheris.auth.rbac.RbacConstants.READ_ACTIONS.contains("write"));
+        userGrants.add(grant("datasource",7L,null,"update","query"));
+        assertFalse(service.check("alice","datasource",7L,"write",Map.of()).allowed());
+        userGrants.add(grant("datasource",7L,null,"write"));
+        assertTrue(service.check("alice","datasource",7L,"write",Map.of()).allowed());
+        assertFalse(service.check("alice","datasource",8L,"write",Map.of()).allowed());
+        userGrants.clear();assertFalse(service.check("alice","datasource",7L,"write",Map.of()).allowed());
+        user.setRole("admin");assertTrue(service.check("alice","datasource",7L,"write",Map.of()).allowed());
+    }
+
     @Test
     @DisplayName("admin 兼容：无显式授权也拥有全量权限（经由系统角色表达）")
     void adminCompatKeepsFullAccess() {
@@ -77,10 +97,11 @@ class PermissionDecisionServiceTest {
     }
 
     @Test
-    @DisplayName("viewer 兼容：无收窄授权时保留全读回退")
-    void viewerCompatKeepsReadFallback() {
-        assertTrue(service.check("alice", "metric", 1L, "view", Map.of("domainId", "5")).allowed());
-        assertTrue(service.check("alice", "dataset", 9L, "query", Map.of()).allowed());
+    @DisplayName("viewer 数据读取与查询需要显式授权")
+    void viewerRequiresExplicitReadGrant() {
+        assertFalse(service.check("alice", "metric", 1L, "view", Map.of("domainId", "5")).allowed());
+        assertFalse(service.check("alice", "dataset", 9L, "query", Map.of()).allowed());
+        assertFalse(service.check("alice", "datasource", 9L, "query", Map.of()).allowed());
     }
 
     @Test
@@ -150,11 +171,68 @@ class PermissionDecisionServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("无收窄授权时可见性为 ALL")
-    void visibilityAllWhenNoNarrowing() {
+    @DisplayName("无授权时可见性为空")
+    void visibilityEmptyWithoutGrant() {
         PermissionDecisionService.Visibility visibility =
                 service.visibility("alice", "metric", "view");
-        assertEquals(PermissionDecisionService.Mode.ALL, visibility.mode());
+        assertEquals(PermissionDecisionService.Mode.IDS, visibility.mode());
+        assertTrue(visibility.ids().isEmpty());
+    }
+
+    @Test
+    void lastReadGrantRevocationNeverRestoresGlobalRead() {
+        userGrants.add(grant("datasource", 8L, null, "view", "query"));
+        assertTrue(service.check("alice", "datasource", 8L, "query", Map.of()).allowed());
+        userGrants.clear();
+        assertFalse(service.check("alice", "datasource", 8L, "query", Map.of()).allowed());
+        assertTrue(service.allowedIds("alice", "datasource", "view", Map.of(8L, Map.of())).isEmpty());
+        assertEquals(new PermissionDecisionService.Visibility(PermissionDecisionService.Mode.IDS, List.of()),
+                service.visibility("alice", "datasource", "view"));
+    }
+
+    @Test
+    void visibilityRespectsRequestedActionAndDomainCodesNeedContext() {
+        userGrants.add(grant("domain", null, new DataScope("domain", List.of("sales")), "query"));
+        assertEquals(new PermissionDecisionService.Visibility(PermissionDecisionService.Mode.IDS, List.of()),
+                service.visibility("alice", "metric", "view"));
+        assertEquals(PermissionDecisionService.Mode.OPAQUE, service.visibility("alice", "metric", "query").mode());
+        assertTrue(service.allowedIds("alice", "metric", "query",
+                Map.of(1L, Map.of("domainCode", "sales"), 2L, Map.of("domainCode", "other"))).equals(Set.of(1L)));
+    }
+
+    @Test
+    void delegatedTaskWriteDoesNotConferManagementOrAnotherResource() {
+        userGrants.add(grant("workflow_task", 8L, null, "update", "execute"));
+        assertTrue(service.mayMutate("alice", "workflow").allowed());
+        assertFalse(service.mayManage("alice").allowed());
+        assertTrue(service.check("alice", "workflow_task", 8L, "execute", Map.of()).allowed());
+        assertFalse(service.check("alice", "workflow_task", 9L, "execute", Map.of()).allowed());
+        assertFalse(service.mayMutate("alice", "quality").allowed());
+    }
+
+    @Test
+    void scopedGrantCannotNarrowAdministrator() {
+        user.setRole("admin");
+        userGrants.add(grant("metric", 8L, null, "view"));
+        assertTrue(service.check("alice", "metric", 9L, "view", Map.of()).allowed());
+        assertEquals(PermissionDecisionService.Mode.ALL, service.visibility("alice", "metric", "view").mode());
+    }
+
+    @Test
+    void visibilityNeverUnionsConjunctiveGrantConstraints() {
+        userGrants.add(grant("domain",5L,new DataScope("domain",List.of("6")),"view"));
+        assertEquals(PermissionDecisionService.Mode.OPAQUE,service.visibility("alice","table","view").mode());
+        assertFalse(service.check("alice","table",1L,"view",Map.of("domainId","5")).allowed());
+        assertFalse(service.check("alice","table",2L,"view",Map.of("domainId","6")).allowed());
+    }
+
+    @Test
+    void emptyScopeNeverBecomesAnUnboundedGrant() {
+        userGrants.add(grant("datasource",null,new DataScope("domain",List.of()),"view","query"));
+        assertFalse(service.check("alice","datasource",8L,"query",Map.of()).allowed());
+        assertTrue(service.allowedIds("alice","datasource","view",Map.of(8L,Map.of())).isEmpty());
+        assertEquals(new PermissionDecisionService.Visibility(PermissionDecisionService.Mode.IDS,List.of()),
+                service.visibility("alice","datasource","view"));
     }
 
     @Test

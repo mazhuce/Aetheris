@@ -1,6 +1,7 @@
 package com.aetheris.system.controller;
 
 import com.aetheris.system.entity.SysUser;
+import com.aetheris.system.dto.SysUserResponse;
 import com.aetheris.system.service.SysUserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,27 +27,27 @@ public class SysUserController {
     }
 
     @GetMapping
-    public List<SysUser> list() {
-        return sysUserService.list();
+    public List<SysUserResponse> list() {
+        return sysUserService.list().stream().map(SysUserResponse::from).toList();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SysUser> getById(@PathVariable Long id) {
+    public ResponseEntity<SysUserResponse> getById(@PathVariable Long id) {
         SysUser user = sysUserService.getById(id);
-        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+        return user != null ? ResponseEntity.ok(SysUserResponse.from(user)) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
-    public SysUser create(@Valid @RequestBody SysUser user) {
+    public SysUserResponse create(@Valid @RequestBody SysUser user) {
         sysUserService.save(user);
-        return user;
+        return SysUserResponse.from(user);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<SysUser> update(@PathVariable Long id, @Valid @RequestBody SysUser user) {
+    public ResponseEntity<SysUserResponse> update(@PathVariable Long id, @Valid @RequestBody SysUser user) {
         user.setId(id);
         boolean updated = sysUserService.updateById(user);
-        return updated ? ResponseEntity.ok(sysUserService.getById(id)) : ResponseEntity.notFound().build();
+        return updated ? ResponseEntity.ok(SysUserResponse.from(sysUserService.getById(id))) : ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")

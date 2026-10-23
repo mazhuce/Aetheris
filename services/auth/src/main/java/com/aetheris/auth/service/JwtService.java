@@ -44,12 +44,17 @@ public class JwtService {
      * 下游服务不得信任客户端自带的可伪造请求头。
      */
     public String generateToken(Long userId, String username, String role) {
+        return generateToken(userId, username, role, 0L);
+    }
+
+    public String generateToken(Long userId, String username, String role, long accessVersion) {
         Date now = new Date();
         return Jwts.builder()
                 .id(UUID.randomUUID().toString())
                 .subject(username)
                 .claim("uid", userId)
                 .claim("role", role)
+                .claim("av", accessVersion)
                 .claim("typ", "access")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))

@@ -1,0 +1,1932 @@
+{
+  "schemaVersion": 2,
+  "scope": "Project Dockerfile and Compose dependency defaults; application images use signed release manifests; ARG overrides are not locked",
+  "images": [
+    {
+      "reference": "docker.io/clickhouse/clickhouse-server:24.8.14.39-alpine@sha256:b002e56ed5c16e224c312527f6fcba7e77216fec5d7a88a7828f59efc614feb5",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/datasources/docker-compose.smoke.yml",
+          "line": 23
+        }
+      ],
+      "originalReference": "clickhouse/clickhouse-server:24.8.14.39-alpine",
+      "originalRef": "clickhouse/clickhouse-server:24.8.14.39-alpine",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/clickhouse/clickhouse-server:24.8.14.39-alpine",
+        "resolvedAtUtc": "2026-10-18T14:55:23.057876+00:00",
+        "registry": "docker.io",
+        "repository": "clickhouse/clickhouse-server",
+        "tag": "24.8.14.39-alpine",
+        "digest": "sha256:b002e56ed5c16e224c312527f6fcba7e77216fec5d7a88a7828f59efc614feb5",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UuaW5kZXgudjEranNvbiIsCiAgIm1hbmlmZXN0cyI6IFsKICAgIHsKICAgICAgIm1lZGlhVHlwZSI6ICJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLAogICAgICAiZGlnZXN0IjogInNoYTI1NjowYWVkMzlmMTk4M2MxOGI0ZDIwYzlmMmExOWRmZjc3MmU5N2JhYjEzYmMwMGI4NjM5NTcwOTUwZjJjNGJmZWYzIiwKICAgICAgInNpemUiOiAxOTk4LAogICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJhbWQ2NCIsCiAgICAgICAgIm9zIjogImxpbnV4IgogICAgICB9CiAgICB9LAogICAgewogICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsCiAgICAgICJkaWdlc3QiOiAic2hhMjU2OjQyMWQxZGJkNWU0YTkyMzJmMGVlYTM1ODc3NWJhMDYxZTcyODgyNGU0OGE0MGQxYWE4ODIyMDJlMzdiMDBmZGQiLAogICAgICAic2l6ZSI6IDE5OTgsCiAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAiYXJjaGl0ZWN0dXJlIjogImFybTY0IiwKICAgICAgICAib3MiOiAibGludXgiCiAgICAgIH0KICAgIH0sCiAgICB7CiAgICAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwKICAgICAgImRpZ2VzdCI6ICJzaGEyNTY6YTQ0MDcwNmJiOTAzM2IyYzQ1MTMwYWI3NzE5YzQ4ZDdjOWRmMTJiOWUzMzk5ZTU1ZDczZTU1MzcwYTJkOTIxYyIsCiAgICAgICJzaXplIjogNTY2LAogICAgICAiYW5ub3RhdGlvbnMiOiB7CiAgICAgICAgInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6ICJzaGEyNTY6MGFlZDM5ZjE5ODNjMThiNGQyMGM5ZjJhMTlkZmY3NzJlOTdiYWIxM2JjMDBiODYzOTU3MDk1MGYyYzRiZmVmMyIsCiAgICAgICAgInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiAiYXR0ZXN0YXRpb24tbWFuaWZlc3QiCiAgICAgIH0sCiAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAiYXJjaGl0ZWN0dXJlIjogInVua25vd24iLAogICAgICAgICJvcyI6ICJ1bmtub3duIgogICAgICB9CiAgICB9LAogICAgewogICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsCiAgICAgICJkaWdlc3QiOiAic2hhMjU2OmFkOTMxZTA5MzQ3ZmJkODhmMWI5ZmI5OTFiYWM5YmVjNzliZjkzNDNhYzc4NDE2NjQ1ZjRiY2NkMThlYzVlYTciLAogICAgICAic2l6ZSI6IDU2NiwKICAgICAgImFubm90YXRpb25zIjogewogICAgICAgICJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiAic2hhMjU2OjQyMWQxZGJkNWU0YTkyMzJmMGVlYTM1ODc3NWJhMDYxZTcyODgyNGU0OGE0MGQxYWE4ODIyMDJlMzdiMDBmZGQiLAogICAgICAgICJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjogImF0dGVzdGF0aW9uLW1hbmlmZXN0IgogICAgICB9LAogICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJ1bmtub3duIiwKICAgICAgICAib3MiOiAidW5rbm93biIKICAgICAgfQogICAgfQogIF0KfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:0aed39f1983c18b4d20c9f2a19dff772e97bab13bc00b8639570950f2c4bfef3",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:421d1dbd5e4a9232f0eea358775ba061e728824e48a40d1aa882202e37b00fdd",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:a440706bb9033b2c45130ab7719c48d7c9df12b9e3399e55d73e55370a2d921c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:ad931e09347fbd88f1b9fb991bac9bec79bf9343ac78416645f4bccd18ec5ea7",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/cockroachdb/cockroach:v24.3.6@sha256:21f483d0d7baf1a708fa079e8d0dd72ce4dca10db7216ea6a972fe1a93c91bc8",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/datasources/docker-compose.smoke.yml",
+          "line": 37
+        }
+      ],
+      "originalReference": "cockroachdb/cockroach:v24.3.6",
+      "originalRef": "cockroachdb/cockroach:v24.3.6",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/cockroachdb/cockroach:v24.3.6",
+        "resolvedAtUtc": "2026-10-18T14:55:23.058389+00:00",
+        "registry": "docker.io",
+        "repository": "cockroachdb/cockroach",
+        "tag": "v24.3.6",
+        "digest": "sha256:21f483d0d7baf1a708fa079e8d0dd72ce4dca10db7216ea6a972fe1a93c91bc8",
+        "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+        "rawManifestBase64": "ewogICAic2NoZW1hVmVyc2lvbiI6IDIsCiAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QubGlzdC52Mitqc29uIiwKICAgIm1hbmlmZXN0cyI6IFsKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDI0MDgsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OjFhY2IxZjQ0Y2RhOTI4ZTI1NjEwNWUwMTJmNTFiNDhlOGFiNGM4Y2JlNjUwZDE5MGM0MGM3YWQ1ODNlZmNhNjYiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYW1kNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiCiAgICAgICAgIH0KICAgICAgfSwKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDI0MDgsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OjRmOTY3ZDYwYzVmMmI4Y2I2NzA0MDhlZDk1OTEzYWRhMmJmY2I5NTU1ZjMzNDY4M2JlZmEyOTA4MWI5ZDliY2EiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYXJtNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiCiAgICAgICAgIH0KICAgICAgfQogICBdCn0=",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:1acb1f44cda928e256105e012f51b48e8ab4c8cbe650d190c40c7ad583efca66",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:4f967d60c5f2b8cb670408ed95913ada2bfcb9555f334683befa29081b9d9bca",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/eclipse-temurin:21-jre@sha256:227118764cccd3c3294617061aaa93a08309c63a395eefa83e6b35032992ea99",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "apps/gateway/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 261,
+          "kind": "compose-build-arg",
+          "argument": "JAVA_IMAGE"
+        },
+        {
+          "path": "scripts/database/runner/Dockerfile",
+          "line": 10
+        },
+        {
+          "path": "services/ai-agent/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "services/auth/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "services/governance/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "services/ingestion/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "services/metadata/Dockerfile",
+          "line": 23
+        },
+        {
+          "path": "services/quality/Dockerfile",
+          "line": 20
+        },
+        {
+          "path": "services/serving/Dockerfile",
+          "line": 17
+        },
+        {
+          "path": "services/system/Dockerfile",
+          "line": 20
+        },
+        {
+          "path": "services/workflow/Dockerfile",
+          "line": 23
+        }
+      ],
+      "originalReference": "docker.1panel.live/library/eclipse-temurin:21-jre",
+      "originalRef": "docker.1panel.live/library/eclipse-temurin:21-jre",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/eclipse-temurin:21-jre",
+        "resolvedAtUtc": "2026-10-18T14:55:34.726256+00:00",
+        "registry": "docker.io",
+        "repository": "library/eclipse-temurin",
+        "tag": "21-jre",
+        "digest": "sha256:227118764cccd3c3294617061aaa93a08309c63a395eefa83e6b35032992ea99",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo0MjUyNzY0OWRiYzRmOTE5N2E2MDczZjQyNmY0ODhjYmZmMGU5Y2M5ZjJhZmNlMzJkOTFjMzgzZTQ4NzU2MzRhIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6InVidW50dToyNi4wNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0xMC0xN1QwMDoxOToxOFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI1MTFmOTM1NmRjNGQ1MDkzMmEwYTVmOGNmYjBmODdlZDFhZWY0ZjA3Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9hZG9wdGl1bVwvY29udGFpbmVycy5naXQjNTExZjkzNTZkYzRkNTA5MzJhMGE1ZjhjZmIwZjg3ZWQxYWVmNGYwNzoyMVwvanJlXC91YnVudHVcL3Jlc29sdXRlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvZWNsaXBzZS10ZW11cmluIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIyMS4wLjEyLjFfMS1qcmUtcmVzb2x1dGUifSwiZGlnZXN0Ijoic2hhMjU2OmU2MzU0NTM2Y2E1ODdhZjM1M2Y0OTI3MDk1MDAzYjNhNWZjMjlmZTFhMTM4MGZhMWU1NWNhZWMxMjgxNWQxODgiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjIxMzZ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFtZDY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmU2MzU0NTM2Y2E1ODdhZjM1M2Y0OTI3MDk1MDAzYjNhNWZjMjlmZTFhMTM4MGZhMWU1NWNhZWMxMjgxNWQxODgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjBmYWMzYmYxZjJkZjA4MDY3ZDgzMGFjMWFjZDhhZTNiY2RiMzQyZWUxNDNhY2RjOTA5ZGVjNjBjMGNmYzY5NjUiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTY0djgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6N2Y3ODdkOTY1YmMwZTRjZDQyYjVmNzRjMDEzNTE1ZDZlMjRjZTY5MWM4ODFjODFjNDJlNGRiNTlhNzkxZTVjZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJ1YnVudHU6MjYuMDQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMTAtMTdUMDA6MTk6MThaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNTExZjkzNTZkYzRkNTA5MzJhMGE1ZjhjZmIwZjg3ZWQxYWVmNGYwNyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvYWRvcHRpdW1cL2NvbnRhaW5lcnMuZ2l0IzUxMWY5MzU2ZGM0ZDUwOTMyYTBhNWY4Y2ZiMGY4N2VkMWFlZjRmMDc6MjFcL2pyZVwvdWJ1bnR1XC9yZXNvbHV0ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL2VjbGlwc2UtdGVtdXJpbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMjEuMC4xMi4xXzEtanJlLXJlc29sdXRlIn0sImRpZ2VzdCI6InNoYTI1NjplOGZmY2M4OGVlZWM5MmE5ODYwYzViNTc0ZGZlZGZiOWE3Y2VmMmE1Y2M3ZGU4ZTRmMmQwMjljN2U4YmJkMmRmIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFybTY0Iiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2OCJ9LCJzaXplIjoyMTM4fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmU4ZmZjYzg4ZWVlYzkyYTk4NjBjNWI1NzRkZmVkZmI5YTdjZWYyYTVjYzdkZThlNGYyZDAyOWM3ZThiYmQyZGYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjRkY2VhM2YzZjNhMWYzZWY5ZjM0Y2E3M2E2ZmVjOTRjYmI0OTdlYjRlNTNlNGNkNmNlZTU0N2E0ODgyMzQ3OTIiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6ODE4ZGE4ZTVlOWJlOTM1ZDg3NWY2MWJjNjMxN2FhYzMyNzkyZGFkMWI1ODI1Yjg4YTJlNjc0ZDkxNTIyYjc2NiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJ1YnVudHU6MjYuMDQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMTAtMTdUMDA6MzM6MDFaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNTExZjkzNTZkYzRkNTA5MzJhMGE1ZjhjZmIwZjg3ZWQxYWVmNGYwNyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvYWRvcHRpdW1cL2NvbnRhaW5lcnMuZ2l0IzUxMWY5MzU2ZGM0ZDUwOTMyYTBhNWY4Y2ZiMGY4N2VkMWFlZjRmMDc6MjFcL2pyZVwvdWJ1bnR1XC9yZXNvbHV0ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL2VjbGlwc2UtdGVtdXJpbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMjEuMC4xMi4xXzEtanJlLXJlc29sdXRlIn0sImRpZ2VzdCI6InNoYTI1NjplMDVmMzQ0MWI0YTc4ZDIxMzg1ZjcxOTA2OTU5NjdiMWY2ZDE0Nzg4YzNkODY3MzUwZjQ3ZGRiNjRmNTM0YmJlIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjIxMzh9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZTA1ZjM0NDFiNGE3OGQyMTM4NWY3MTkwNjk1OTY3YjFmNmQxNDc4OGMzZDg2NzM1MGY0N2RkYjY0ZjUzNGJiZSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NmI2ZDJiNWM2NDdmOWYyZmY5Y2MzZTg5ZTI3MmM5OGY5N2I5ZDhlOTZiYWU4MGIxZTM4MzkyNjcxNTMzODE1NyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6NTg0ZjMzMDBmYzM5ZGI0YmFlYTc4MmVjNmRlYjc3M2I3MDk1MDk3MDIwYjZkZjFjZDQwNTA2OTUyYzlhYTU0ZCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJ1YnVudHU6MjYuMDQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMTAtMTdUMDA6MTU6MTNaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNTExZjkzNTZkYzRkNTA5MzJhMGE1ZjhjZmIwZjg3ZWQxYWVmNGYwNyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvYWRvcHRpdW1cL2NvbnRhaW5lcnMuZ2l0IzUxMWY5MzU2ZGM0ZDUwOTMyYTBhNWY4Y2ZiMGY4N2VkMWFlZjRmMDc6MjFcL2pyZVwvdWJ1bnR1XC9yZXNvbHV0ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL2VjbGlwc2UtdGVtdXJpbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMjEuMC4xMi4xXzEtanJlLXJlc29sdXRlIn0sImRpZ2VzdCI6InNoYTI1NjoxYjczODJlN2Q4MDg5MjAwZjk2NDFmM2M5ZTFlMjY1Y2NjNDJiZTZhMGVmZDAwM2FlMDk5MTVjNjBmZjQ2ODZjIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InMzOTB4Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyMTM2fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJzMzkweCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjoxYjczODJlN2Q4MDg5MjAwZjk2NDFmM2M5ZTFlMjY1Y2NjNDJiZTZhMGVmZDAwM2FlMDk5MTVjNjBmZjQ2ODZjIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo2MzBmNGRhYWJkN2RhNjZlODhkYzFiOWYyOTcyYTFlMDM0NmY5MDZmNGFmYTZhZDM3ZTZlZDMzYTM5MDRkNDY4IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJ3aW5kb3dzLWFtZDY0In0sImRpZ2VzdCI6InNoYTI1NjowMWQ4ODNiY2IzZTFkYTdiY2Y1OTY0MmU1YjA5NGEyYWM2MGY4ODAxMDQxZmM5NDc2YThkNzBmMzNlM2QzY2I4IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhbWQ2NCIsIm9zIjoid2luZG93cyIsIm9zLnZlcnNpb24iOiIxMC4wLjI2MTAwLjMzNjUwIn0sInNpemUiOjE1ODJ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6IndpbmRvd3MtYW1kNjQifSwiZGlnZXN0Ijoic2hhMjU2Ojc4OTMyMDU5ZmE3ODI0MTlhMzc2ZWIwYTI0NjE5YWY5YjM1ODEyYTkwZGIxN2E0ZTlkZDkyOWM3NTExY2RjM2QiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QudjIranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFtZDY0Iiwib3MiOiJ3aW5kb3dzIiwib3MudmVyc2lvbiI6IjEwLjAuMjAzNDguNTc2MSJ9LCJzaXplIjoxNTgyfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:e6354536ca587af353f4927095003b3a5fc29fe1a1380fa1e55caec12815d188",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0fac3bf1f2df08067d830ac1acd8ae3bcdb342ee143acdc909dec60c0cfc6965",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:e8ffcc88eeec92a9860c5b574dfedfb9a7cef2a5cc7de8e4f2d029c7e8bbd2df",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:4dcea3f3f3a1f3ef9f34ca73a6fec94cbb497eb4e53e4cd6cee547a488234792",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:e05f3441b4a78d21385f7190695967b1f6d14788c3d867350f47ddb64f534bbe",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:6b6d2b5c647f9f2ff9cc3e89e272c98f97b9d8e96bae80b1e383926715338157",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:1b7382e7d8089200f9641f3c9e1e265ccc42be6a0efd003ae09915c60ff4686c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:630f4daabd7da66e88dc1b9f2972a1e0346f906f4afa6ad37e6ed33a3904d468",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:01d883bcb3e1da7bcf59642e5b094a2ac60f8801041fc9476a8d70f33e3d3cb8",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "windows",
+              "os.version": "10.0.26100.33650"
+            }
+          },
+          {
+            "digest": "sha256:78932059fa782419a376eb0a24619af9b35812a90db17a4e9dd929c7511cdc3d",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "windows",
+              "os.version": "10.0.20348.5761"
+            }
+          }
+        ]
+      },
+      "equivalence": "unverified",
+      "sameTag": true,
+      "replacementReason": "mirror HTTP403; explicitly authorized official supply-chain default migration",
+      "mirrorComparison": {
+        "originalReference": "docker.1panel.live/library/eclipse-temurin:21-jre",
+        "candidate": "docker.1panel.live/library/eclipse-temurin:21-jre",
+        "queriedAtUtc": "2026-10-18T14:57:00.000624+00:00",
+        "status": "failed",
+        "httpStatus": 403,
+        "errorType": "HTTPError"
+      }
+    },
+    {
+      "reference": "docker.io/library/flink:1.20.1-java17@sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 146
+        },
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 182
+        },
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 211
+        },
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r3-ha.yml",
+          "line": 73
+        }
+      ],
+      "originalReference": "flink:1.20.1-java17",
+      "originalRef": "flink:1.20.1-java17",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/flink:1.20.1-java17",
+        "resolvedAtUtc": "2026-10-18T14:55:56.579140+00:00",
+        "registry": "docker.io",
+        "repository": "library/flink",
+        "tag": "1.20.1-java17",
+        "digest": "sha256:d51a693da76581f2483d3f83d5997d3226b076a9f990a7f7d1eed144434b8e1e",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo0YTBiYzVlYTVkZjQ3MmQzODM1OWNmNWFkNWFlNjZhYzEyMmE2M2ExZTRjMmUyYjczNjIxMzVlNGVjODE3YWU1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoxNy1qcmUtamFtbXkiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDctMDJUMDQ6MTA6NTNaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNWQyNDgwMGM3Njk0NmM5MjcxZDI4NWVmZTE2YTI5OWI2YzBiMDYwNyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvYXBhY2hlXC9mbGluay1kb2NrZXIuZ2l0IzVkMjQ4MDBjNzY5NDZjOTI3MWQyODVlZmUxNmEyOTliNmMwYjA2MDc6MS4yMFwvc2NhbGFfMi4xMi1qYXZhMTctdWJ1bnR1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvZmxpbmsiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjEuMjAuMS1zY2FsYV8yLjEyLWphdmExNyJ9LCJkaWdlc3QiOiJzaGEyNTY6ZjNiMzAyNWQxMTAwZjgzYTIwODNlYWYzMzg4OGUzYzA0YTEyMTc0NDFhZjI0MzJkYWY5ODVlYzUzMDBhZTYzYSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhbWQ2NCIsIm9zIjoibGludXgifSwic2l6ZSI6MzEwNX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYW1kNjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZjNiMzAyNWQxMTAwZjgzYTIwODNlYWYzMzg4OGUzYzA0YTEyMTc0NDFhZjI0MzJkYWY5ODVlYzUzMDBhZTYzYSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZDRiNWEyNDY1ZmI5NjBmMTg5NmUyMTVjMDJmNTZjOGNiYzA0ZDA3MDA5OWU1MjUxZjg5YTA2ZmU2ZjIwMjZkNCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoyN2FlMjg4OWMyOTM0NWM1M2NmMWUwMmQxMWY3YTllNDdkM2Q2MGFiZmYxZDdmNjFkOTM4Y2M1ODE0ZjllZDEwIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoxNy1qcmUtamFtbXkiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDctMDJUMDc6NDk6MjFaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNWQyNDgwMGM3Njk0NmM5MjcxZDI4NWVmZTE2YTI5OWI2YzBiMDYwNyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvYXBhY2hlXC9mbGluay1kb2NrZXIuZ2l0IzVkMjQ4MDBjNzY5NDZjOTI3MWQyODVlZmUxNmEyOTliNmMwYjA2MDc6MS4yMFwvc2NhbGFfMi4xMi1qYXZhMTctdWJ1bnR1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvZmxpbmsiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjEuMjAuMS1zY2FsYV8yLjEyLWphdmExNyJ9LCJkaWdlc3QiOiJzaGEyNTY6NTUyMTVlMWRlZmQxNDkyYjBmZDViMWQ3NjU2OTQzM2E2NjRiNGNkZjQ1NjY3NGFhNGVmZDliNTZiOWYzZGQyNSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsIm9zIjoibGludXgiLCJ2YXJpYW50IjoidjgifSwic2l6ZSI6MzEwN30seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo1NTIxNWUxZGVmZDE0OTJiMGZkNWIxZDc2NTY5NDMzYTY2NGI0Y2RmNDU2Njc0YWE0ZWZkOWI1NmI5ZjNkZDI1Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo5ZjQ2MDQ5ZWMxYjYwM2YzMjM5YmRlNWY0YmNlZjg2ZTExZWI2NWU5NDg2MjdmODAwNGM5YTY1NDdkYzJjZWFlIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:f3b3025d1100f83a2083eaf33888e3c04a1217441af2432daf985ec5300ae63a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:d4b5a2465fb960f1896e215c02f56c8cbc04d070099e5251f89a06fe6f2026d4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:55215e1defd1492b0fd5b1d76569433a664b4cdf456674aa4efd9b56b9f3dd25",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:9f46049ec1b603f3239bde5f4bcef86e11eb65e948627f8004c9a6547dc2ceae",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/mariadb:11.4.3@sha256:e3432369d4d432ec2a3d777ff84ffca11ec8c2188cf1b6a0551a393ae5d833bb",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/datasources/docker-compose.smoke.yml",
+          "line": 8
+        }
+      ],
+      "originalReference": "mariadb:11.4.3",
+      "originalRef": "mariadb:11.4.3",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/mariadb:11.4.3",
+        "resolvedAtUtc": "2026-10-18T14:56:06.539333+00:00",
+        "registry": "docker.io",
+        "repository": "library/mariadb",
+        "tag": "11.4.3",
+        "digest": "sha256:e3432369d4d432ec2a3d777ff84ffca11ec8c2188cf1b6a0551a393ae5d833bb",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo1ZDA3MGFkNWY3ZmU2MzYyM2NiYjk5YjRmYzBmZDk5N2Y1NTkxMzAzZDRiMDNjY2NlNTBmNDAzOTU3ZDBkZGM0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6InVidW50dTpub2JsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNC0xMC0xNlQxNjoxMjo1NVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlZTgwYTk3ZDVjYzJmZDRmODc3OWRiZmVkZWI4ZmM4YzQ3OTQxODEyIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9NYXJpYURCXC9tYXJpYWRiLWRvY2tlci5naXQjZWU4MGE5N2Q1Y2MyZmQ0Zjg3NzlkYmZlZGViOGZjOGM0Nzk0MTgxMjoxMS40Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbWFyaWFkYiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTEuNC4zLW5vYmxlIn0sImRpZ2VzdCI6InNoYTI1NjpiYTc3OWJiM2QzZWVjYjc3ZmEzN2Y0OWFlNTA0MTQ1YjFkNTkyNzEzMjYwMGQ0MmQwNDA5ZTFkZDIzZTQ4NGZiIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFtZDY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyNDc4fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjpiYTc3OWJiM2QzZWVjYjc3ZmEzN2Y0OWFlNTA0MTQ1YjFkNTkyNzEzMjYwMGQ0MmQwNDA5ZTFkZDIzZTQ4NGZiIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo5ZjNmM2NmMDhjNmZiNGQ1ZjQ3MWU5MWU1NjlkMTVjZjRjYzc0ZDQzODY1NWQ2ZmZhMWU2NDZiNzU5ODVhNjJhIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjRmNmVhMThmNjU2YWE2YWNiZWM0MThhZWFmYzRiOTljNDllZDk1OGExYTQ3YjVjZDhjYWZkMjI2OTg0NTQ1MDAiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoidWJ1bnR1Om5vYmxlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI0LTEwLTE2VDAzOjQwOjQ4WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6ImVlODBhOTdkNWNjMmZkNGY4Nzc5ZGJmZWRlYjhmYzhjNDc5NDE4MTIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL01hcmlhREJcL21hcmlhZGItZG9ja2VyLmdpdCNlZTgwYTk3ZDVjYzJmZDRmODc3OWRiZmVkZWI4ZmM4YzQ3OTQxODEyOjExLjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9tYXJpYWRiIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxMS40LjMtbm9ibGUifSwiZGlnZXN0Ijoic2hhMjU2OjkwZmJjNzBhZTlmNjRjYmU5MjM4MzZhYzNhODU0NDhmZDU4ODk5ZDliMjE3Y2EzMmE4ZWIxYjYxZDVjNjE0YjkiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYXJtNjQiLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY4In0sInNpemUiOjI0ODB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTY0djgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6OTBmYmM3MGFlOWY2NGNiZTkyMzgzNmFjM2E4NTQ0OGZkNTg4OTlkOWIyMTdjYTMyYThlYjFiNjFkNWM2MTRiOSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MGRiNWFkNGViZDM5M2Q5MzE0MzdjNzQ3YTEwYzk2NGFmMmUyNTlhZDU0NDE4Y2Q3ZWI3MDRhMThjODA0ZTZmZCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicHBjNjRsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjphY2U2NmI3MzU4NjQxN2JiNzFlYjFjZTNmYTRhNTJlOTZhMDMzNzVjNGI1MjVhNzFkN2Y3YjllYjFhZjViYTNlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6InVidW50dTpub2JsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNC0xMC0xNlQwMjoxMjo1OFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlZTgwYTk3ZDVjYzJmZDRmODc3OWRiZmVkZWI4ZmM4YzQ3OTQxODEyIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9NYXJpYURCXC9tYXJpYWRiLWRvY2tlci5naXQjZWU4MGE5N2Q1Y2MyZmQ0Zjg3NzlkYmZlZGViOGZjOGM0Nzk0MTgxMjoxMS40Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbWFyaWFkYiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTEuNC4zLW5vYmxlIn0sImRpZ2VzdCI6InNoYTI1NjphNTQ2NDAyNWU1YTI3NDlhZDU5MGFhNzljNmQ3YjQ2OTc3YzgwMTU0MzFkZDVhYjE2Nzc5YmUwMDc2MWJhNTIwIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjI0ODB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YTU0NjQwMjVlNWEyNzQ5YWQ1OTBhYTc5YzZkN2I0Njk3N2M4MDE1NDMxZGQ1YWIxNjc3OWJlMDA3NjFiYTUyMCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MDA2M2Y3Mjg0MWIxZTEwNjE4MjNmN2NiMjdlMDMwNGMzMzJhNjg1MjQxMjEwYzBmNzkwYWQyNjY2ZGU1YmY1MCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6ZTNkMGUyZjI0YTg5MzYyNjIzMTlkNTQ2NmJiN2ZkZWM2YjBjZjg4YzBhMTcyYzBlNGZlMTFhMDEyODAwYjE0NSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJ1YnVudHU6bm9ibGUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjQtMTAtMTZUMDI6MDk6MDZaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiZWU4MGE5N2Q1Y2MyZmQ0Zjg3NzlkYmZlZGViOGZjOGM0Nzk0MTgxMiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvTWFyaWFEQlwvbWFyaWFkYi1kb2NrZXIuZ2l0I2VlODBhOTdkNWNjMmZkNGY4Nzc5ZGJmZWRlYjhmYzhjNDc5NDE4MTI6MTEuNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL21hcmlhZGIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjExLjQuMy1ub2JsZSJ9LCJkaWdlc3QiOiJzaGEyNTY6ZDY0ZGI0NWVhNjlhNzE0NGRlMDg2MzBjNmFhMzM4MmU1MmFjMjFjYWMxZDcwMWI1MjM2Yjg0NDQwODZlMjhmZiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJzMzkweCIsIm9zIjoibGludXgifSwic2l6ZSI6MjQ3OH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZDY0ZGI0NWVhNjlhNzE0NGRlMDg2MzBjNmFhMzM4MmU1MmFjMjFjYWMxZDcwMWI1MjM2Yjg0NDQwODZlMjhmZiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NjAxZWFkN2E5MzNmOTBmOGE4YTkzNTM1MWRhY2MzNTZhNzNjNjQ1NTFkYzVlYTQwMjI2ODYyNjBlZDE1MzBhOSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX1dLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5pbmRleC52MStqc29uIiwic2NoZW1hVmVyc2lvbiI6Mn0=",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:ba779bb3d3eecb77fa37f49ae504145b1d5927132600d42d0409e1dd23e484fb",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:9f3f3cf08c6fb4d5f471e91e569d15cf4cc74d438655d6ffa1e646b75985a62a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:90fbc70ae9f64cbe923836ac3a85448fd58899d9b217ca32a8eb1b61d5c614b9",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:0db5ad4ebd393d931437c747a10c964af2e259ad54418cd7eb704a18c804e6fd",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:a5464025e5a2749ad590aa79c6d7b46977c8015431dd5ab16779be00761ba520",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0063f72841b1e1061823f7cb27e0304c332a685241210c0f790ad2666de5bf50",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:d64db45ea69a7144de08630c6aa3382e52ac21cac1d701b5236b8444086e28ff",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:601ead7a933f90f8a8a935351dacc356a73c64551dc5ea4022686260ed1530a9",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/maven:3.9.9-eclipse-temurin-21@sha256:3a4ab3276a087bf276f79cae96b1af04f53731bec53fb2e651aca79e4b10211e",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "apps/gateway/Dockerfile",
+          "line": 3
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 260,
+          "kind": "compose-build-arg",
+          "argument": "MAVEN_IMAGE"
+        },
+        {
+          "path": "scripts/database/runner/Dockerfile",
+          "line": 5
+        },
+        {
+          "path": "services/ai-agent/Dockerfile",
+          "line": 1
+        },
+        {
+          "path": "services/auth/Dockerfile",
+          "line": 1
+        },
+        {
+          "path": "services/governance/Dockerfile",
+          "line": 1
+        },
+        {
+          "path": "services/ingestion/Dockerfile",
+          "line": 1
+        },
+        {
+          "path": "services/metadata/Dockerfile",
+          "line": 6
+        },
+        {
+          "path": "services/quality/Dockerfile",
+          "line": 3
+        },
+        {
+          "path": "services/serving/Dockerfile",
+          "line": 1
+        },
+        {
+          "path": "services/system/Dockerfile",
+          "line": 3
+        },
+        {
+          "path": "services/workflow/Dockerfile",
+          "line": 6
+        }
+      ],
+      "originalReference": "docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21",
+      "originalRef": "docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/maven:3.9.9-eclipse-temurin-21",
+        "resolvedAtUtc": "2026-10-18T14:55:34.752642+00:00",
+        "registry": "docker.io",
+        "repository": "library/maven",
+        "tag": "3.9.9-eclipse-temurin-21",
+        "digest": "sha256:3a4ab3276a087bf276f79cae96b1af04f53731bec53fb2e651aca79e4b10211e",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo5NTc1MzI2NTljNDY3YTUxMzVhN2JjZThkZDBhNTRlZDM4MzQ2YmVlNWU2YWRhNGFlNDU2ODdmZDFkNjVhOWNiIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoyMS1qZGsiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDYtMDNUMDY6MTE6MjRaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvY2FybG9zc2dcL2RvY2tlci1tYXZlbi5naXQjOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMDplY2xpcHNlLXRlbXVyaW4tMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9tYXZlbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMy45LjktZWNsaXBzZS10ZW11cmluLTIxIn0sImRpZ2VzdCI6InNoYTI1Njo0Zjk5MWNkMDk0Mjg1YjdlNjdhZmVhYWIwNWQyMWJhZTYzYmZjODFhYzk0YTdjMjUyN2RmZjEzODUxZDMxODhjIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFtZDY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyODk1fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo0Zjk5MWNkMDk0Mjg1YjdlNjdhZmVhYWIwNWQyMWJhZTYzYmZjODFhYzk0YTdjMjUyN2RmZjEzODUxZDMxODhjIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjoyZmI5OTExNGJhZTJmODczOTljOWUxMGUwZDVmMzQxODg5YjMwMmUzYTU1ZmE5ZjY0YmY2OTE0YzhhNjQ4NTYxIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjhjOWY2N2VlM2IyYzYyOGU0YzdkOWQ4ODE1NDU1YjI1ZGM2ZDc4ZjRiYzU5ZmE3ZGZiZTA1ODZlMGNiNmU3NmIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiZWNsaXBzZS10ZW11cmluOjIxLWpkayIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNi0wM1QxNDowODowOFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI4Y2ZlMjRiYWZmYTViMjUwZjdiYjJkMzFjZTIzM2ZjMjhmM2M0ZjIwIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9jYXJsb3NzZ1wvZG9ja2VyLW1hdmVuLmdpdCM4Y2ZlMjRiYWZmYTViMjUwZjdiYjJkMzFjZTIzM2ZjMjhmM2M0ZjIwOmVjbGlwc2UtdGVtdXJpbi0yMSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL21hdmVuIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIzLjkuOS1lY2xpcHNlLXRlbXVyaW4tMjEifSwiZGlnZXN0Ijoic2hhMjU2OmY5MTc4NmJjYjhhZWYwY2M3Yzk5NTg0Mjk2NzZlNzhjMGFiMWM2YjhhYTM2ZWE1MTYwNTQ2NDk1YzM5NGI1MjciLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYXJtNjQiLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY4In0sInNpemUiOjI4OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTY0djgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZjkxNzg2YmNiOGFlZjBjYzdjOTk1ODQyOTY3NmU3OGMwYWIxYzZiOGFhMzZlYTUxNjA1NDY0OTVjMzk0YjUyNyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6Njk1OGJhNGZmMTczNWVkZTkwYWQ5ZjZhZjFiMmJhM2MwNTBiYjRmYzM1ZmQ3NjViODMwZWExZGVhNGM1MDQ1NyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicHBjNjRsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpiM2I4NTA2Y2M4MTJkYWQ1NTNlNjY5ZWQ3NzE0OGZlYzU5YTdjZjU4ODZhYzZhZTZiZDg2OTZlOTFmOTMyNjk0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoyMS1qZGsiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDYtMDNUMTE6Mjc6NTBaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvY2FybG9zc2dcL2RvY2tlci1tYXZlbi5naXQjOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMDplY2xpcHNlLXRlbXVyaW4tMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9tYXZlbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMy45LjktZWNsaXBzZS10ZW11cmluLTIxIn0sImRpZ2VzdCI6InNoYTI1NjoyNjNhOWUyYTU4ZjM5NzU4YzE0Zjk3OTkxYjIyMjBlOGEwZDY1N2IwN2E0MzExMDI0ZWQ1YTJjMjkwYjdkMzBhIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjI4OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6MjYzYTllMmE1OGYzOTc1OGMxNGY5Nzk5MWIyMjIwZThhMGQ2NTdiMDdhNDMxMTAyNGVkNWEyYzI5MGI3ZDMwYSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NmYzYWYxNTAyMTk5Y2NkZjUwZmUxZWVkMGJiNDY3NGFhZTk1MDZlMjg2ZmYzNGQxMDk5NzM5YzZkNzQ3Y2MxYSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicmlzY3Y2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpiZTljZjM4MjJjNDE0NTFlN2QyYWU2YTEzOTFmZDBkNjE2ZDkxYWEyYmY5ZmIyZWMzODE4YWNjOTg2MDczYTJlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoyMS1qZGsiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDYtMDNUMTM6NTg6MjBaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvY2FybG9zc2dcL2RvY2tlci1tYXZlbi5naXQjOGNmZTI0YmFmZmE1YjI1MGY3YmIyZDMxY2UyMzNmYzI4ZjNjNGYyMDplY2xpcHNlLXRlbXVyaW4tMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9tYXZlbiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMy45LjktZWNsaXBzZS10ZW11cmluLTIxIn0sImRpZ2VzdCI6InNoYTI1NjphZjA0OGQ0YzVhM2IwYWZjOGI3MzY3OWYwNzVmMmU3ZjIzNzQ3ZjRkMWU2NWY4NzE0ZTNlZjlmNmZjNzUyZTYwIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InJpc2N2NjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjI4OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InJpc2N2NjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YWYwNDhkNGM1YTNiMGFmYzhiNzM2NzlmMDc1ZjJlN2YyMzc0N2Y0ZDFlNjVmODcxNGUzZWY5ZjZmYzc1MmU2MCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6OTQ5N2I4YWFjMjQyYWRjZGMwNDY0NmM4ZmFjM2U0MDZhODFjYWY3N2M0OWZmZGY1YTdlZmIyMDc5OGExMDlkOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6OTY2YWViN2EzZWE4MzBkMzA5ZGQ4ZjViZGM2ZTk2ZjI0NzU2MmUxMzhjYThhOGVjMWU2ODZmY2M2MWUwYzZkYSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJlY2xpcHNlLXRlbXVyaW46MjEtamRrIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI1LTA2LTAzVDA3OjU4OjQ3WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjhjZmUyNGJhZmZhNWIyNTBmN2JiMmQzMWNlMjMzZmMyOGYzYzRmMjAiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2Nhcmxvc3NnXC9kb2NrZXItbWF2ZW4uZ2l0IzhjZmUyNGJhZmZhNWIyNTBmN2JiMmQzMWNlMjMzZmMyOGYzYzRmMjA6ZWNsaXBzZS10ZW11cmluLTIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbWF2ZW4iLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjMuOS45LWVjbGlwc2UtdGVtdXJpbi0yMSJ9LCJkaWdlc3QiOiJzaGEyNTY6ZDI3N2RhMjg4OWMxZjgyNDg0NTI2NDNmNzM5NzRhNWY3M2Q4NDUxYjNlNDI4YjJiNGFiZDAwOTA1NmQzM2M3NSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJzMzkweCIsIm9zIjoibGludXgifSwic2l6ZSI6Mjg5NX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZDI3N2RhMjg4OWMxZjgyNDg0NTI2NDNmNzM5NzRhNWY3M2Q4NDUxYjNlNDI4YjJiNGFiZDAwOTA1NmQzM2M3NSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6OTJmZmRkOGJlMDQ4MTQ4NmUxZTRkMTA1ODFmMmRjOTZiMDIxOWU3YTVmYjlkMGMzNmJjYTdjMWQwOGFiZThhMiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX1dLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5pbmRleC52MStqc29uIiwic2NoZW1hVmVyc2lvbiI6Mn0=",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:4f991cd094285b7e67afeaab05d21bae63bfc81ac94a7c2527dff13851d3188c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:2fb99114bae2f87399c9e10e0d5f341889b302e3a55fa9f64bf6914c8a648561",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:f91786bcb8aef0cc7c9958429676e78c0ab1c6b8aa36ea5160546495c394b527",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:6958ba4ff1735ede90ad9f6af1b2ba3c050bb4fc35fd765b830ea1dea4c50457",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:263a9e2a58f39758c14f97991b2220e8a0d657b07a4311024ed5a2c290b7d30a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:6f3af1502199ccdf50fe1eed0bb4674aae9506e286ff34d1099739c6d747cc1a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:af048d4c5a3b0afc8b73679f075f2e7f23747f4d1e65f8714e3ef9f6fc752e60",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "riscv64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:9497b8aac242adcdc04646c8fac3e406a81caf77c49ffdf5a7efb20798a109d8",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:d277da2889c1f8248452643f73974a5f73d8451b3e428b2b4abd009056d33c75",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:92ffdd8be0481486e1e4d10581f2dc96b0219e7a5fb9d0c36bca7c1d08abe8a2",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      },
+      "equivalence": "unverified",
+      "sameTag": true,
+      "replacementReason": "mirror HTTP403; explicitly authorized official supply-chain default migration",
+      "mirrorComparison": {
+        "originalReference": "docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21",
+        "candidate": "docker.1panel.live/library/maven:3.9.9-eclipse-temurin-21",
+        "queriedAtUtc": "2026-10-18T14:57:00.000624+00:00",
+        "status": "failed",
+        "httpStatus": 403,
+        "errorType": "HTTPError"
+      }
+    },
+    {
+      "reference": "docker.io/library/mysql:8.0.40@sha256:d58ac93387f644e4e040c636b8f50494e78e5afc27ca0a87348b2f577da2b7ff",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 84
+        }
+      ],
+      "originalReference": "mysql:8.0.40",
+      "originalRef": "mysql:8.0.40",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/mysql:8.0.40",
+        "resolvedAtUtc": "2026-10-18T14:56:06.574676+00:00",
+        "registry": "docker.io",
+        "repository": "library/mysql",
+        "tag": "8.0.40",
+        "digest": "sha256:d58ac93387f644e4e040c636b8f50494e78e5afc27ca0a87348b2f577da2b7ff",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjphNzQzMjI5MzgyZDM3YzhiYWU3MWU3ZGRhZGMzY2JhNjQ5NzJlM2QyNmNlMWNkZDE5ZTFiYmIwN2ZjNTVmYTI1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im9yYWNsZWxpbnV4Ojktc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNC0xMS0yMVQyMzowODo1OVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIwOTBlYjI1YWM2OWJjYTkyMGZjNTMyMDQ4NGJjMzVhYWM5MmE4MTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvbXlzcWwuZ2l0IzA5MGViMjVhYzY5YmNhOTIwZmM1MzIwNDg0YmMzNWFhYzkyYTgxNDM6OC4wIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbXlzcWwiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjguMC40MCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZWQwNGFjYTQ2YjZmZTBiZGMxOTJiZWNjMTdkMzU4YjQ2ZWViODI3NjJiODFlZTY1YjgwZmVmZjNkMDg3M2U5ZCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhbWQ2NCIsIm9zIjoibGludXgifSwic2l6ZSI6MzA0NH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYW1kNjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZWQwNGFjYTQ2YjZmZTBiZGMxOTJiZWNjMTdkMzU4YjQ2ZWViODI3NjJiODFlZTY1YjgwZmVmZjNkMDg3M2U5ZCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NWI4MmE5MTRiODJlYTA1ZTc0MGVlZDE1MDk1OGZlMWE3ZjZkNjMwZTMyY2YyYjhkYWU5MDFmOTM0YThhYjdlMiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0Mn0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoyNGE3OWNiOGJlNWVjNjYwZTYyYzVhMDkyYzJkMDg4OWM1MzVlOTVmYzY1OTE4ZWEzYmZlNDQ2YjFjOTFhMDRhIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im9yYWNsZWxpbnV4Ojktc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNC0xMS0yMlQwNToxMDo0OFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIwOTBlYjI1YWM2OWJjYTkyMGZjNTMyMDQ4NGJjMzVhYWM5MmE4MTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvbXlzcWwuZ2l0IzA5MGViMjVhYzY5YmNhOTIwZmM1MzIwNDg0YmMzNWFhYzkyYTgxNDM6OC4wIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbXlzcWwiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjguMC40MCJ9LCJkaWdlc3QiOiJzaGEyNTY6OGY0NDBkNzJhYmY1ZmU0YjYyYjI1N2JkMmVlYWZjZDQ0ODc2NTAyZTY0NzViNGI5NTYxYzM1ZTEwZmUxNzRmMyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsIm9zIjoibGludXgiLCJ2YXJpYW50IjoidjgifSwic2l6ZSI6MzA0Nn0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo4ZjQ0MGQ3MmFiZjVmZTRiNjJiMjU3YmQyZWVhZmNkNDQ4NzY1MDJlNjQ3NWI0Yjk1NjFjMzVlMTBmZTE3NGYzIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo4ZGRhNGUyNDY1YTMzMzk4N2MwMzk0MjBjY2QwMjk0NjdhOWYwNTA2Y2Y0N2UyY2VjNzQxZjMzYzQ3NDkzNzUzIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQyfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:ed04aca46b6fe0bdc192becc17d358b46eeb82762b81ee65b80feff3d0873e9d",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:5b82a914b82ea05e740eed150958fe1a7f6d630e32cf2b8dae901f934a8ab7e2",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:8f440d72abf5fe4b62b257bd2eeafcd44876502e6475b4b9561c35e10fe174f3",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:8dda4e2465a333987c039420ccd029467a9f0506cf47e2cec741f33c47493753",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "apps/web/Dockerfile",
+          "line": 13
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 445,
+          "kind": "compose-build-arg",
+          "argument": "NGINX_IMAGE"
+        }
+      ],
+      "originalReference": "docker.1panel.live/library/nginx:1.27-alpine",
+      "originalRef": "docker.1panel.live/library/nginx:1.27-alpine",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/nginx:1.27-alpine",
+        "resolvedAtUtc": "2026-10-18T14:55:44.860893+00:00",
+        "registry": "docker.io",
+        "repository": "library/nginx",
+        "tag": "1.27-alpine",
+        "digest": "sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo4MTZkNmE5NzM2YTNjY2I3NGI1YjBlYjkxNWM0ZmZiMzdiZjZiN2E5OGU3YWFhNzE1MDAxY2UzMjM1YThhMDE5Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im5naW54OjEuMjcuNS1hbHBpbmUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNC0xNlQxNzowNzozM1oiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9uZ2lueFwvZG9ja2VyLW5naW54LmdpdCNlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzOm1haW5saW5lXC9hbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9uZ2lueCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMS4yNy41LWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6NjIyMjNkNjQ0ZmEyMzRjM2ExY2M3ODVlZTE0MjQyZWM0N2E3NzM2NDIyNmYxYzgxMWQyZjY2OWY5NmRjMmFjOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhbWQ2NCIsIm9zIjoibGludXgifSwic2l6ZSI6MjQ5NX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYW1kNjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6NjIyMjNkNjQ0ZmEyMzRjM2ExY2M3ODVlZTE0MjQyZWM0N2E3NzM2NDIyNmYxYzgxMWQyZjY2OWY5NmRjMmFjOCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MjRhYmRiMzc5M2I4MTQxN2RjMmVmNThjZGUzMGJkMWFkZDZjODFkMDNlYmEwNzdhYjRmOGEwMjBkODcwZDc2MyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtMzJ2NiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjphZGE2NTBjY2QxYzM0OTJlMDYyOTE1ZjYxNWFkMGUxODk1MWIxNzhmY2YyM2Y5OWRkOGE4ZTNmYjU0MDhmYjVlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im5naW54OjEuMjcuNS1hbHBpbmUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNC0xNlQxNzowNzoyNFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9uZ2lueFwvZG9ja2VyLW5naW54LmdpdCNlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzOm1haW5saW5lXC9hbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9uZ2lueCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMS4yNy41LWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6MGM0MjM5MTZhYmE1MjZiMzAxM2FiN2M3MjVjY2I4ZGUzODcyZmRiYTE5ODhjZDVmMzFjZmMzZmIxYzQxZTQ4ZSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY2In0sInNpemUiOjI0OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6MGM0MjM5MTZhYmE1MjZiMzAxM2FiN2M3MjVjY2I4ZGUzODcyZmRiYTE5ODhjZDVmMzFjZmMzZmIxYzQxZTQ4ZSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NGNkOGVlN2FlNWI0ZjgyZTAwMTg4NmI2MjcyM2I3ZjY4NTE5OThmYzFkZDQ3ZTAwNGI0YmU3MjBkMjU5N2UzNSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjU2N30seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtMzJ2NyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo1OTg3Y2YyNWJiY2FkMGIyYTMzNjgyMjJkMjE2ZWM4MDUwMTJjMmRmNTI4OTg0NGNhN2Q1NmFkOTI1NGRhMzllIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im5naW54OjEuMjcuNS1hbHBpbmUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNC0xNlQxNzoxNjoxNVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9uZ2lueFwvZG9ja2VyLW5naW54LmdpdCNlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzOm1haW5saW5lXC9hbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9uZ2lueCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMS4yNy41LWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6YTQ3ZTU5Y2I4YjBkYzY1NzEzZGFjMzQ1ZDU4MzU3ZWJjNTg0OWY1MDQzMjJmMDcyNDg0NjdlODRmYjk1ZmYxMSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY3In0sInNpemUiOjI0OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YTQ3ZTU5Y2I4YjBkYzY1NzEzZGFjMzQ1ZDU4MzU3ZWJjNTg0OWY1MDQzMjJmMDcyNDg0NjdlODRmYjk1ZmYxMSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZTliYTk3NDMxMDlmZGU3ZTI3MmI3ZjQzYmFlNjM5MGZiNzQ0MzhiNjE3ZDJjZGYzNjBiOTg3ODkyMDdjN2Y4NSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo4MWM0NTNkZGYwMzcwZWY1NGRjN2VlMjA3YzMzNGRmN2VmYTNjNDUyMTM4MjEyZWViZmUzNzE3ZjQ5NGFkYzRlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im5naW54OjEuMjcuNS1hbHBpbmUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNC0xNlQxNzowNzo1N1oiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9uZ2lueFwvZG9ja2VyLW5naW54LmdpdCNlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzOm1haW5saW5lXC9hbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9uZ2lueCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMS4yNy41LWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6NjNmZmMwZDFmMTRlNDA4MmI4MzJjNmE0MmU2MDZlOWEwMzg0YTUyNmYxNmRkZDcyMGFmN2MxZjAxOGYyZjdjNCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsIm9zIjoibGludXgiLCJ2YXJpYW50IjoidjgifSwic2l6ZSI6MjQ5N30seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo2M2ZmYzBkMWYxNGU0MDgyYjgzMmM2YTQyZTYwNmU5YTAzODRhNTI2ZjE2ZGRkNzIwYWY3YzFmMDE4ZjJmN2M0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjplZmVjOTdlMDdkYjViNjE3ODkyMTI5ZmIyODA1NmIxZjVkZWRhYmY1YmY5YTA1Mjk3ZWM1N2NkYmI2MzQyMWM2IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJpMzg2Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjYyYjFiYTZhNTBlODA0NmUzMDVjODZiNTJhMTI2YmFkNWMxYzc2ZmRlMWFmNDdkNTEwOGUzYWRhYWNiMjQzM2QiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoibmdpbng6MS4yNy41LWFscGluZS1zbGltIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI1LTA0LTE2VDE3OjA3OjM0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6ImVhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL25naW54XC9kb2NrZXItbmdpbnguZ2l0I2VhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDM6bWFpbmxpbmVcL2FscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL25naW54Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxLjI3LjUtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjoyOTcxMDNhM2M2OTFjZGNmOTI0NjhmZTBhMzAwMGUxNDM5OTUzMGM0MmEzZDZhOWVjNGI0ZmMwYjI0NDJhNGJiIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6IjM4NiIsIm9zIjoibGludXgifSwic2l6ZSI6MjQ5NH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiaTM4NiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjoyOTcxMDNhM2M2OTFjZGNmOTI0NjhmZTBhMzAwMGUxNDM5OTUzMGM0MmEzZDZhOWVjNGI0ZmMwYjI0NDJhNGJiIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjoyMDc5NzgyZmNiYmE1YzY4MmU2ZGUwNmU1MGMxNjhhYTM5OTE5YzZjNmRkZDU5ZWExODNlOTQ2MGI2ZDU2NzlmIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJwcGM2NGxlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjhmZDQ0ZDBlYWJlZjczODM4MTg5MTUxZjNlM2JkYjZkMTlmY2MxMzk1ZTRlZjdiZjMwZDAzYzAzZjBlOTdjYTQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoibmdpbng6MS4yNy41LWFscGluZS1zbGltIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI1LTA0LTE2VDE4OjA5OjU1WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6ImVhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL25naW54XC9kb2NrZXItbmdpbnguZ2l0I2VhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDM6bWFpbmxpbmVcL2FscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL25naW54Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxLjI3LjUtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjpkNGIyOWY4ZmFlNmRhNmQ3Y2VlZWY4YjAwY2VjMzY3YWUyYTY1YTI4YTlmOGFiNzhlZjk1ZjE1MTVlNDY2ZWI0IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjI0OTd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZDRiMjlmOGZhZTZkYTZkN2NlZWVmOGIwMGNlYzM2N2FlMmE2NWEyOGE5ZjhhYjc4ZWY5NWYxNTE1ZTQ2NmViNCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NDQxNDYwZWJhYWE3MTdhYmIyMmE3MTcyMjRkMGYwNzEwYmU1NTg3ZDUzMDFmMGQwNDA4ZTY2ZWE0ZWM3MTRkMCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicmlzY3Y2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoyZGE5YTlhMzQ5ZmIwN2JmYzg1NDk5M2JjNjcxZDAxZTAwZGQwN2E1ZDdiZmJiYWI1YTBjMjNhNTcxYzFmYWZmIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6Im5naW54OjEuMjcuNS1hbHBpbmUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wNC0xNlQxODowNzozNVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiJlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9uZ2lueFwvZG9ja2VyLW5naW54LmdpdCNlYWY4ODc1YTE5NjdkMjRjZWE2ZWQ4YjM3MTA5MDc1ZTM5ZWQ5ZTQzOm1haW5saW5lXC9hbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9uZ2lueCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMS4yNy41LWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6YzNjMzkwNjVkODFiMDZiODI2NzYxNjIxM2UwOWJhNGNjZjM1YmMxOGI3M2QxYjk5NjkxYTI4N2M2NmVhZmQ3YiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJyaXNjdjY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyNDk3fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJyaXNjdjY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmMzYzM5MDY1ZDgxYjA2YjgyNjc2MTYyMTNlMDliYTRjY2YzNWJjMThiNzNkMWI5OTY5MWEyODdjNjZlYWZkN2IiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjBmNjJkOTQyZDVlOGRkOThjNTQ1MTI3MGUyM2JiNzQxMTI1N2Q0MmI1ZmQ4ZjUxMjcxMDBkNzYzZGM4NjJkNTIiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InMzOTB4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OmFlYWIzZjBjMDNlMTkwZDJmYmQxZjBlNGI2MTIxYzJjZTAzYTMyNmI0NWE4Njk4YjQyMTY5ZTcxYjBjNTA1OWYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoibmdpbng6MS4yNy41LWFscGluZS1zbGltIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI1LTA0LTE2VDE4OjA4OjAxWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6ImVhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL25naW54XC9kb2NrZXItbmdpbnguZ2l0I2VhZjg4NzVhMTk2N2QyNGNlYTZlZDhiMzcxMDkwNzVlMzllZDllNDM6bWFpbmxpbmVcL2FscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL25naW54Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxLjI3LjUtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjphNjk3MjA5YjRhNDRjYzhmZDA3MThjYzg4M2U5YjZiMDlkYWM5MWI3ZTc3N2EwMGIyNmJmOGI5ZTlhMjA0OGEwIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InMzOTB4Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyNDk1fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJzMzkweCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjphNjk3MjA5YjRhNDRjYzhmZDA3MThjYzg4M2U5YjZiMDlkYWM5MWI3ZTc3N2EwMGIyNmJmOGI5ZTlhMjA0OGEwIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjowMjY4OWNlOGVlMmM5NTkwYTlkNTM4OWEwOTM4MmY2MTI3OTgyODg2ZDYyNjM5N2UyZDYzYTRlMDhjZDJiYzgzIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:62223d644fa234c3a1cc785ee14242ec47a77364226f1c811d2f669f96dc2ac8",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:24abdb3793b81417dc2ef58cde30bd1add6c81d03eba077ab4f8a020d870d763",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:0c423916aba526b3013ab7c725ccb8de3872fdba1988cd5f31cfc3fb1c41e48e",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v6"
+            }
+          },
+          {
+            "digest": "sha256:4cd8ee7ae5b4f82e001886b62723b7f6851998fc1dd47e004b4be720d2597e35",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:a47e59cb8b0dc65713dac345d58357ebc5849f504322f07248467e84fb95ff11",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:e9ba9743109fde7e272b7f43bae6390fb74438b617d2cdf360b98789207c7f85",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:63ffc0d1f14e4082b832c6a42e606e9a0384a526f16ddd720af7c1f018f2f7c4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:efec97e07db5b617892129fb28056b1f5dedabf5bf9a05297ec57cdbb63421c6",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:297103a3c691cdcf92468fe0a3000e14399530c42a3d6a9ec4b4fc0b2442a4bb",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "386",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:2079782fcbba5c682e6de06e50c168aa39919c6c6ddd59ea183e9460b6d5679f",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:d4b29f8fae6da6d7ceeef8b00cec367ae2a65a28a9f8ab78ef95f1515e466eb4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:441460ebaaa717abb22a717224d0f0710be5587d5301f0d0408e66ea4ec714d0",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:c3c39065d81b06b8267616213e09ba4ccf35bc18b73d1b99691a287c66eafd7b",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "riscv64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0f62d942d5e8dd98c5451270e23bb7411257d42b5fd8f5127100d763dc862d52",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:a697209b4a44cc8fd0718cc883e9b6b09dac91b7e777a00b26bf8b9e9a2048a0",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:02689ce8ee2c9590a9d5389a09382f6127982886d626397e2d63a4e08cd2bc83",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      },
+      "equivalence": "unverified",
+      "sameTag": true,
+      "replacementReason": "mirror HTTP403; explicitly authorized official supply-chain default migration",
+      "mirrorComparison": {
+        "originalReference": "docker.1panel.live/library/nginx:1.27-alpine",
+        "candidate": "docker.1panel.live/library/nginx:1.27-alpine",
+        "queriedAtUtc": "2026-10-18T14:57:05.383974+00:00",
+        "status": "failed",
+        "httpStatus": 403,
+        "errorType": "HTTPError"
+      }
+    },
+    {
+      "reference": "docker.io/library/node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "apps/web/Dockerfile",
+          "line": 5
+        },
+        {
+          "path": "apps/web/Dockerfile.dev",
+          "line": 3
+        },
+        {
+          "path": "docker-compose.yml",
+          "line": 444,
+          "kind": "compose-build-arg",
+          "argument": "NODE_IMAGE"
+        }
+      ],
+      "originalReference": "docker.1panel.live/library/node:22-alpine",
+      "originalRef": "docker.1panel.live/library/node:22-alpine",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/node:22-alpine",
+        "resolvedAtUtc": "2026-10-18T14:55:44.877182+00:00",
+        "registry": "docker.io",
+        "repository": "library/node",
+        "tag": "22-alpine",
+        "digest": "sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpkNTZjMzgxZjk2MWQzMDdhMjFiM2NhMDA0Y2YxZTM5MTBmMTA2NjQ0YWVmYjFmNDNlNjU0YzhhNTZjNGZkMzk1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTIzVDIxOjA4OjU0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjgxZjQxOTE0NGExMjUxODU0YzZkOWFmYjA5ZWFhMzk5MjhlNzI0ZTgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL25vZGVqc1wvZG9ja2VyLW5vZGUuZ2l0IzgxZjQxOTE0NGExMjUxODU0YzZkOWFmYjA5ZWFhMzk5MjhlNzI0ZTg6MjJcL2FscGluZTMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9ub2RlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIyMi1hbHBpbmUifSwiZGlnZXN0Ijoic2hhMjU2OjJjNzUyMjI2ZDQ3N2I0YTg4NjM3OGJhYTk1YjlhZjI1MmJlNTkzMDFiNzI1ZmRiMGI3ZTE1MjA4MTMxNTA1YTgiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjE3MjB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFtZDY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OjJjNzUyMjI2ZDQ3N2I0YTg4NjM3OGJhYTk1YjlhZjI1MmJlNTkzMDFiNzI1ZmRiMGI3ZTE1MjA4MTMxNTA1YTgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjE5MjkxNzgwMzA2ZDc4MWM5ZjhlZDdmNGRhYmRhZjJhM2M2OWE3N2ZkZmVkMTE1NGUzYzQ0ZDhiYTE4NzAwNWIiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6ZDNjM2ZkYTNlNGQzZjBmY2ZjODZjZjQ2OWM2ZGZiZTY1MDE3MTQzZGRlMjNmZWI0YjExZGYzN2MzNzNjZGM3NiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJhbHBpbmU6My4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wOS0yM1QyMToxMToyM1oiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI4MWY0MTkxNDRhMTI1MTg1NGM2ZDlhZmIwOWVhYTM5OTI4ZTcyNGU4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9ub2RlanNcL2RvY2tlci1ub2RlLmdpdCM4MWY0MTkxNDRhMTI1MTg1NGM2ZDlhZmIwOWVhYTM5OTI4ZTcyNGU4OjIyXC9hbHBpbmUzLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbm9kZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMjItYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjowOTliYTgxNzg2YTY0MmQyZTU1NzBmOGExODI1ZjRlOTMyYzk0NjUzMjczYTNmMmY1ZGNiNDJlYTJkMzA2NDM1IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFybSIsIm9zIjoibGludXgiLCJ2YXJpYW50IjoidjYifSwic2l6ZSI6MTcyMn0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtMzJ2NiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjowOTliYTgxNzg2YTY0MmQyZTU1NzBmOGExODI1ZjRlOTMyYzk0NjUzMjczYTNmMmY1ZGNiNDJlYTJkMzA2NDM1Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjphYWRmZWI1MjMwMGU5MGUyYmM3MTJiNDhlYWZmZmQ3ZWE5NThhNTE1Y2MwMTdjN2ZiNTgzNzQyNjE1YjYwNjhhIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6NTY3fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm0zMnY3Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjBhMTM2NTRlY2Q5YjE5YTcyOGYwYmVlNDlkNzI0NWZmY2Q5YjlmMzFlZDhkNjlmZTg3NTNlMzlhODQzMmJkYTIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiYWxwaW5lOjMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMDktMjNUMjE6MDg6MTFaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiODFmNDE5MTQ0YTEyNTE4NTRjNmQ5YWZiMDllYWEzOTkyOGU3MjRlOCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvbm9kZWpzXC9kb2NrZXItbm9kZS5naXQjODFmNDE5MTQ0YTEyNTE4NTRjNmQ5YWZiMDllYWEzOTkyOGU3MjRlODoyMlwvYWxwaW5lMy4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL25vZGUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjIyLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6MzhkZDcyYTliZWUzYTkxY2M4ZTJkNzEyNjgwODcxMDBhODQ5OGZkZmVlMjE5ZjE3M2NiOTJhMzliZWEwNzQwOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY3In0sInNpemUiOjE3MjJ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6MzhkZDcyYTliZWUzYTkxY2M4ZTJkNzEyNjgwODcxMDBhODQ5OGZkZmVlMjE5ZjE3M2NiOTJhMzliZWEwNzQwOCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NDhhNWQwNDJlZDQ0NjQ1Y2EwMzE2M2Q2M2EzNDMyYjU2YjZiMTgxM2IzMzE0MDEzMjM0ODAxODliZTc2Njk3YSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoyNjA0NzlhMWNmYWYzMDRjNGMyMGRhN2Y4NDA1ZDNjZTMxMzUxM2RjZDUzNGJiNzQzMjU3YmRkMmZlMGYzZTJkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTIzVDIxOjA4OjU3WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjgxZjQxOTE0NGExMjUxODU0YzZkOWFmYjA5ZWFhMzk5MjhlNzI0ZTgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL25vZGVqc1wvZG9ja2VyLW5vZGUuZ2l0IzgxZjQxOTE0NGExMjUxODU0YzZkOWFmYjA5ZWFhMzk5MjhlNzI0ZTg6MjJcL2FscGluZTMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9ub2RlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIyMi1hbHBpbmUifSwiZGlnZXN0Ijoic2hhMjU2Ojg1Y2RkMTAwMDE2YTJlMDk5MjdjMDc3NmJiN2ViZWJjZmVmY2U1Y2QwYWY0OTg5M2FkYTkxY2JjNGQ3OGVlMjIiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYXJtNjQiLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY4In0sInNpemUiOjE3MjJ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTY0djgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ODVjZGQxMDAwMTZhMmUwOTkyN2MwNzc2YmI3ZWJlYmNmZWZjZTVjZDBhZjQ5ODkzYWRhOTFjYmM0ZDc4ZWUyMiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZGU5YjkzOWYxY2JkMTU2OWE1NWYwNzIyM2UyMGVmOTEzZjQ0OGJmMGJlNDA5NTkzYjg3ZDExZTM4MGMwMmVlOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6Y2UyNzg5MjY0YjU1ZWY1NzY5M2FkM2FlYmM5NWQ0ZWU5ZTQ2Mjg4Zjc2OWY0M2FiNWYzNzU1NDg1MzUwMjI4OSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJhbHBpbmU6My4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wOS0yM1QyMTowNzozMFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI4MWY0MTkxNDRhMTI1MTg1NGM2ZDlhZmIwOWVhYTM5OTI4ZTcyNGU4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9ub2RlanNcL2RvY2tlci1ub2RlLmdpdCM4MWY0MTkxNDRhMTI1MTg1NGM2ZDlhZmIwOWVhYTM5OTI4ZTcyNGU4OjIyXC9hbHBpbmUzLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvbm9kZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMjItYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjoxMDcwNDhmOWRhYjczMzcxMGNlOWNkNTMzOTVlYTdhMWY3YjAxOWZhYmE4MjQzYjJlMDI2NTZhY2I5NGNlNzY0IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InMzOTB4Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoxNzIwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJzMzkweCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjoxMDcwNDhmOWRhYjczMzcxMGNlOWNkNTMzOTVlYTdhMWY3YjAxOWZhYmE4MjQzYjJlMDI2NTZhY2I5NGNlNzY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo0NWFmZjlmZDRjYjJiYjdlOWZhMTczM2YxNzg1Njg4MzQzOTU1ZGI2MWFkYTk5MzkwZWUxZGQ2MWI3ZTFjYWU0IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:2c752226d477b4a886378baa95b9af252be59301b725fdb0b7e15208131505a8",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:19291780306d781c9f8ed7f4dabdaf2a3c69a77fdfed1154e3c44d8ba187005b",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:099ba81786a642d2e5570f8a1825f4e932c94653273a3f2f5dcb42ea2d306435",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v6"
+            }
+          },
+          {
+            "digest": "sha256:aadfeb52300e90e2bc712b48eafffd7ea958a515cc017c7fb583742615b6068a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:38dd72a9bee3a91cc8e2d71268087100a8498fdfee219f173cb92a39bea07408",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:48a5d042ed44645ca03163d63a3432b56b6b1813b331401323480189be76697a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:85cdd100016a2e09927c0776bb7ebebcfefce5cd0af49893ada91cbc4d78ee22",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:de9b939f1cbd1569a55f07223e20ef913f448bf0be409593b87d11e380c02ee8",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:107048f9dab733710ce9cd53395ea7a1f7b019faba8243b2e02656acb94ce764",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:45aff9fd4cb2bb7e9fa1733f1785688343955db61ada99390ee1dd61b7e1cae4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      },
+      "equivalence": "unverified",
+      "sameTag": true,
+      "replacementReason": "mirror HTTP403; explicitly authorized official supply-chain default migration",
+      "mirrorComparison": {
+        "originalReference": "docker.1panel.live/library/node:22-alpine",
+        "candidate": "docker.1panel.live/library/node:22-alpine",
+        "queriedAtUtc": "2026-10-18T14:57:05.408401+00:00",
+        "status": "failed",
+        "httpStatus": 403,
+        "errorType": "HTTPError"
+      }
+    },
+    {
+      "reference": "docker.io/library/postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 67
+        }
+      ],
+      "originalReference": "postgres:16-alpine",
+      "originalRef": "postgres:16-alpine",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/postgres:16-alpine",
+        "resolvedAtUtc": "2026-10-18T14:56:16.543823+00:00",
+        "registry": "docker.io",
+        "repository": "library/postgres",
+        "tag": "16-alpine",
+        "digest": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpkNTZjMzgxZjk2MWQzMDdhMjFiM2NhMDA0Y2YxZTM5MTBmMTA2NjQ0YWVmYjFmNDNlNjU0YzhhNTZjNGZkMzk1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjI5OjE5WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2QiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2RvY2tlci1saWJyYXJ5XC9wb3N0Z3Jlcy5naXQjOWQxNTUzNDE2MGFkZTE3ZjJiNmM0NTVhMzllZTk2N2M0OWIxOTM3ZDoxNlwvYWxwaW5lMy4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi4xNS1hbHBpbmUzLjI0In0sImRpZ2VzdCI6InNoYTI1NjoxYTY2ZDc0NGMxYjQ1OWUxM2IwNWE4ZmNhMzQxZGE4NGNiNjMzODNlOTljZTI2MjIxMGVmZWU1YTMxOWQ0NTUxIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFtZDY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjozMDU0fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjoxYTY2ZDc0NGMxYjQ1OWUxM2IwNWE4ZmNhMzQxZGE4NGNiNjMzODNlOTljZTI2MjIxMGVmZWU1YTMxOWQ0NTUxIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjpiNDM1NGMzYjYwNzc4YTY5ZDgyZDRhZmViNDQ0ZTNkYzUzZjBjZmY2ZmM4ZGI2ZWNkZDMzOGZiZmQwOThkODYwIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm0zMnY2Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OmQzYzNmZGEzZTRkM2YwZmNmYzg2Y2Y0NjljNmRmYmU2NTAxNzE0M2RkZTIzZmViNGIxMWRmMzdjMzczY2RjNzYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiYWxwaW5lOjMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMDktMTdUMjE6NDc6MDBaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiOWQxNTUzNDE2MGFkZTE3ZjJiNmM0NTVhMzllZTk2N2M0OWIxOTM3ZCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvZG9ja2VyLWxpYnJhcnlcL3Bvc3RncmVzLmdpdCM5ZDE1NTM0MTYwYWRlMTdmMmI2YzQ1NWEzOWVlOTY3YzQ5YjE5MzdkOjE2XC9hbHBpbmUzLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvcG9zdGdyZXMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjE2LjE1LWFscGluZTMuMjQifSwiZGlnZXN0Ijoic2hhMjU2OmU4OGRmYmY2OTcxZDE4NTQ3NzdkZDU0ZTljMzcyODg0YjNjMDA2ODQ5ZTlkZTNmMjBiOWU3MzlkODI5MjQwNzkiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYXJtIiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2NiJ9LCJzaXplIjozMDU2fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm0zMnY2Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmU4OGRmYmY2OTcxZDE4NTQ3NzdkZDU0ZTljMzcyODg0YjNjMDA2ODQ5ZTlkZTNmMjBiOWU3MzlkODI5MjQwNzkiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjNiYThhYjQ5MzhjMzRiZTM4YTFhZTY0NGQ1ODNmNzcwNjVlNjFjMGQyMzM4MzMzODIyMGNlYTMxM2ZiNzM0MWMiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo1Njd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6MGExMzY1NGVjZDliMTlhNzI4ZjBiZWU0OWQ3MjQ1ZmZjZDliOWYzMWVkOGQ2OWZlODc1M2UzOWE4NDMyYmRhMiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJhbHBpbmU6My4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wOS0xN1QyMTo0NTo0M1oiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI5ZDE1NTM0MTYwYWRlMTdmMmI2YzQ1NWEzOWVlOTY3YzQ5YjE5MzdkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2Q6MTZcL2FscGluZTMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuMTUtYWxwaW5lMy4yNCJ9LCJkaWdlc3QiOiJzaGEyNTY6N2JkNzcwMDM3MDcwZGQxZjk2MjMyYjdlZTNlYjk3MWI3ZmEyZjA0OGM1NGY1ODcyZjEzOTgxYzYzYWIwZTIwNyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY3In0sInNpemUiOjMwNTZ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6N2JkNzcwMDM3MDcwZGQxZjk2MjMyYjdlZTNlYjk3MWI3ZmEyZjA0OGM1NGY1ODcyZjEzOTgxYzYzYWIwZTIwNyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NjdiZDRkOTUyOGYzMTIwMDY2ZWVmZmZiOGYzNjdlMzk3N2YzNWZlNTVjOTc3MjE3ZDk3MTczZTY5YjM5YjcyMSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoyNjA0NzlhMWNmYWYzMDRjNGMyMGRhN2Y4NDA1ZDNjZTMxMzUxM2RjZDUzNGJiNzQzMjU3YmRkMmZlMGYzZTJkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjMxOjE3WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2QiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2RvY2tlci1saWJyYXJ5XC9wb3N0Z3Jlcy5naXQjOWQxNTUzNDE2MGFkZTE3ZjJiNmM0NTVhMzllZTk2N2M0OWIxOTM3ZDoxNlwvYWxwaW5lMy4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi4xNS1hbHBpbmUzLjI0In0sImRpZ2VzdCI6InNoYTI1NjoyYzk0MjE3NWExMjU1YTlhYmUwMzY2ZTQ4YzFiNDAxZDlmNTBmODM1YjA0ZGZlYTEzZjExMTYwOWI1NTMwZGY3IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFybTY0Iiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2OCJ9LCJzaXplIjozMDU2fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OjJjOTQyMTc1YTEyNTVhOWFiZTAzNjZlNDhjMWI0MDFkOWY1MGY4MzViMDRkZmVhMTNmMTExNjA5YjU1MzBkZjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2Ojc5ZDBhNDFkNjk5NjNmYzBhZDM2M2FhMGM2NDFhNDI5Y2YxM2QyYWM3ZDMwOWZlMWU3MjY4ZGJiNjEwZjVkZDQiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImkzODYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6YzU0YTgwNjc4YTllN2E3NDRiMzlkNDc4MzI5ZDVlYjhlNTY4YzJlMDMyMWRlZmQxNGNhYjU3MDQ3NTU3ZTIwMiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJhbHBpbmU6My4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wOS0xN1QyMToyOTo1NFoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI5ZDE1NTM0MTYwYWRlMTdmMmI2YzQ1NWEzOWVlOTY3YzQ5YjE5MzdkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2Q6MTZcL2FscGluZTMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuMTUtYWxwaW5lMy4yNCJ9LCJkaWdlc3QiOiJzaGEyNTY6NzFmYjE0MDM3OWJhZGU4MjIxOTE3ZDMzYjQ5NWNhMDU0YjZhYzZlYTcyZDEzNGYyMjllYWYzNDRlMGEyNzY3MCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiIzODYiLCJvcyI6ImxpbnV4In0sInNpemUiOjMwNTN9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImkzODYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6NzFmYjE0MDM3OWJhZGU4MjIxOTE3ZDMzYjQ5NWNhMDU0YjZhYzZlYTcyZDEzNGYyMjllYWYzNDRlMGEyNzY3MCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6M2E4OWNmOTM3ZDdkNWNjNTE3ZWUzOWMzYmRiYWFmMjk1MDA1NWY1OGJhM2YzYTgyZTg3NTFjNDYyNmNiZTg2YyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicHBjNjRsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpmMzRiNzI5YmE2ZGM1YmNkMTQ3ZmY5OWFmNDVmODFjMWJjNjhhYjYxOTA2N2MzOWNhZmQxOTMyN2RkMDRiN2RiIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIzOjI2OjU1WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2QiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2RvY2tlci1saWJyYXJ5XC9wb3N0Z3Jlcy5naXQjOWQxNTUzNDE2MGFkZTE3ZjJiNmM0NTVhMzllZTk2N2M0OWIxOTM3ZDoxNlwvYWxwaW5lMy4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi4xNS1hbHBpbmUzLjI0In0sImRpZ2VzdCI6InNoYTI1Njo0NTk0Yjg3N2RiOTc2ZDBmNDkwMzJhYWU3ZDcyYjI2YmJlYWVmOTlhMjg3ZWZhOGE4NjM3MjBlODE1OTQ4YWFkIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjMwNTZ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6NDU5NGI4NzdkYjk3NmQwZjQ5MDMyYWFlN2Q3MmIyNmJiZWFlZjk5YTI4N2VmYThhODYzNzIwZTgxNTk0OGFhZCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MGJiMTZkYjM5MGVhZDMwNDNiOGRiMjBiYWU4OTkyYWU5NTk1MzAxOTU3YWRiZmExNTM4NWE1M2IxMzM0ODlmNiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicmlzY3Y2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjoxMzIwZTg2Zjk0NjQxYWNjNmM1MzFlMDUxOWNhNDI4NWYxODgyNjEyZDUyYzY1NGRmYTRmMWJiNjViNDhhMDRmIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjI0Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTIxVDAxOjI2OjI4WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2QiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2RvY2tlci1saWJyYXJ5XC9wb3N0Z3Jlcy5naXQjOWQxNTUzNDE2MGFkZTE3ZjJiNmM0NTVhMzllZTk2N2M0OWIxOTM3ZDoxNlwvYWxwaW5lMy4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi4xNS1hbHBpbmUzLjI0In0sImRpZ2VzdCI6InNoYTI1NjphMzg2N2RlNjg3NzQ5NGViMWEwYWYyOTFhZWVjOGM2MTQ4NGYyZGUyOWNlYTg1MzgzNGY1ZWViNmQyODNlYWVjIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InJpc2N2NjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjMwNTZ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InJpc2N2NjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YTM4NjdkZTY4Nzc0OTRlYjFhMGFmMjkxYWVlYzhjNjE0ODRmMmRlMjljZWE4NTM4MzRmNWVlYjZkMjgzZWFlYyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NGNjMTE1MTlmYWM4NzRjN2UwMmM5OTdhZTBhNzdkY2JjYjlhYTBmNDk2OGU1NjMwYWE1NGQ1NjUxYTNmOGY4NiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6Y2UyNzg5MjY0YjU1ZWY1NzY5M2FkM2FlYmM5NWQ0ZWU5ZTQ2Mjg4Zjc2OWY0M2FiNWYzNzU1NDg1MzUwMjI4OSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJhbHBpbmU6My4yNCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNi0wOS0xN1QyMzoxMTowMVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiI5ZDE1NTM0MTYwYWRlMTdmMmI2YzQ1NWEzOWVlOTY3YzQ5YjE5MzdkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzlkMTU1MzQxNjBhZGUxN2YyYjZjNDU1YTM5ZWU5NjdjNDliMTkzN2Q6MTZcL2FscGluZTMuMjQiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuMTUtYWxwaW5lMy4yNCJ9LCJkaWdlc3QiOiJzaGEyNTY6NGMxNDNjZDRmZWRhOTkzZjI1ZTJlNTM0YjZiZmY0YmVkNTIzNDQyMTgzZmJhYWE1OTViNjRmMmNlM2RmYjg5ZSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJzMzkweCIsIm9zIjoibGludXgifSwic2l6ZSI6MzA1NH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6NGMxNDNjZDRmZWRhOTkzZjI1ZTJlNTM0YjZiZmY0YmVkNTIzNDQyMTgzZmJhYWE1OTViNjRmMmNlM2RmYjg5ZSIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MGVkZmZjNDVhMzVlMWRhNGIyYTA4NDQwZDJmMDQ5Y2M5NjFkZGFiMjU5ZTZlMmU1MWJmYmJlODAxYmI0ZTEyNyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH1dLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5pbmRleC52MStqc29uIiwic2NoZW1hVmVyc2lvbiI6Mn0=",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:b4354c3b60778a69d82d4afeb444e3dc53f0cff6fc8db6ecdd338fbfd098d860",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:e88dfbf6971d1854777dd54e9c372884b3c006849e9de3f20b9e739d82924079",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v6"
+            }
+          },
+          {
+            "digest": "sha256:3ba8ab4938c34be38a1ae644d583f77065e61c0d23383338220cea313fb7341c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:7bd770037070dd1f96232b7ee3eb971b7fa2f048c54f5872f13981c63ab0e207",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:67bd4d9528f3120066eefffb8f367e3977f35fe55c977217d97173e69b39b721",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:2c942175a1255a9abe0366e48c1b401d9f50f835b04dfea13f111609b5530df7",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:79d0a41d69963fc0ad363aa0c641a429cf13d2ac7d309fe1e7268dbb610f5dd4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:71fb140379bade8221917d33b495ca054b6ac6ea72d134f229eaf344e0a27670",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "386",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:3a89cf937d7d5cc517ee39c3bdbaaf2950055f58ba3f3a82e8751c4626cbe86c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:4594b877db976d0f49032aae7d72b26bbeaef99a287efa8a863720e815948aad",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0bb16db390ead3043b8db20bae8992ae9595301957adbfa15385a53b133489f6",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:a3867de6877494eb1a0af291aeec8c61484f2de29cea853834f5eeb6d283eaec",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "riscv64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:4cc11519fac874c7e02c997ae0a77dcbcb9aa0f4968e5630aa54d5651a3f8f86",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:4c143cd4feda993f25e2e534b6bff4bed523442183fbaaa595b64f2ce3dfb89e",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0edffc45a35e1da4b2a08440d2f049cc961ddab259e6e2e51bfbbe801bb4e127",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/postgres:16.9@sha256:ddfe3e8713e3ee5b8f286082cb12512488dfbf3f5a1ecb0b74a42e6055af0a5f",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 61
+        }
+      ],
+      "originalReference": "postgres:16.9",
+      "originalRef": "postgres:16.9",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/postgres:16.9",
+        "resolvedAtUtc": "2026-10-18T14:56:16.571259+00:00",
+        "registry": "docker.io",
+        "repository": "library/postgres",
+        "tag": "16.9",
+        "digest": "sha256:ddfe3e8713e3ee5b8f286082cb12512488dfbf3f5a1ecb0b74a42e6055af0a5f",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjpmMjMwNmRhN2E4ZmI2NDQwNTM1OTM3YmFlZDBjZTAwMTg3MzY3NDJkNmRjNWJlZWM5ZDZhMzEzNTViMjU5NzI2Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImRlYmlhbjp0cml4aWUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wOC0xMlQyMjozMjowNVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzE3NmJjM2MzZjA2YzdkZjI2MDIzMzFkNjViNzc5YTZkMDhjNTY4NjE6MTZcL3RyaXhpZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi45In0sImRpZ2VzdCI6InNoYTI1Njo5ODBlNWQ5ODk1OGIwOTE4ZmYxYmJiNjNkNWYzZTg4M2RlYmU3NDEzMGVhMTM3ZDExYWMxZjhlNDBhODRkNmRjIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFtZDY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjozNjI2fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo5ODBlNWQ5ODk1OGIwOTE4ZmYxYmJiNjNkNWYzZTg4M2RlYmU3NDEzMGVhMTM3ZDExYWMxZjhlNDBhODRkNmRjIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjpkZWExNjI3ZjgyNjllMjgxNGQ3YWMwYjVkMTg3MDE3YmQ0MWUyMWIxODRkMjIxYTU1NGM4NmUzOGNiNWM5OGViIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm0zMnY1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OjE2Mjk5ZDA5MDdjNjM4M2I3M2Q2NDhhMGViNjlhMWM3NmI3NTNiODU5ZTQ5OThhNDkwZjhmZTNjZDkwOWJlYmYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiZGViaWFuOnRyaXhpZS1zbGltIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI1LTA4LTEzVDA0OjU4OjAzWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjE3NmJjM2MzZjA2YzdkZjI2MDIzMzFkNjViNzc5YTZkMDhjNTY4NjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL2RvY2tlci1saWJyYXJ5XC9wb3N0Z3Jlcy5naXQjMTc2YmMzYzNmMDZjN2RmMjYwMjMzMWQ2NWI3NzlhNmQwOGM1Njg2MToxNlwvdHJpeGllIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnVybCI6Imh0dHBzOlwvXC9odWIuZG9ja2VyLmNvbVwvX1wvcG9zdGdyZXMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjE2LjkifSwiZGlnZXN0Ijoic2hhMjU2OjRmMzg1M2VlZjBhMTJlNTk4YTljOTI3MzJjOWNjODJiNWFhYjAyZDg5ZTQ3NWRjMTBkYjQxY2MxMzljNDAwMDEiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYXJtIiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2NSJ9LCJzaXplIjozNjI4fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm0zMnY1Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OjRmMzg1M2VlZjBhMTJlNTk4YTljOTI3MzJjOWNjODJiNWFhYjAyZDg5ZTQ3NWRjMTBkYjQxY2MxMzljNDAwMDEiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OmM4MzQyZTUyZjhmNzAxZWU2YTc4OTNlZThjZjM5MmI5OWY1ZmMxYjkxZTVjNjQyMmVhZDhkYzQ0MjJiOTBjODEiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6ZTM0MmNjOGExMDUzYzRjMjY3ZDgyMmQwZTkyZmExMTAyZTM1Y2Q1NTQ2ZDAzMzg1NDg5Y2I5OGM1NjFjOWRkZiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJkZWJpYW46dHJpeGllLXNsaW0iLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDgtMTNUMDU6NDU6MDJaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiMTc2YmMzYzNmMDZjN2RmMjYwMjMzMWQ2NWI3NzlhNmQwOGM1Njg2MSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvZG9ja2VyLWxpYnJhcnlcL3Bvc3RncmVzLmdpdCMxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxOjE2XC90cml4aWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuOSJ9LCJkaWdlc3QiOiJzaGEyNTY6ZDA0NTFkZjczNzFiMzU2NmVmN2FkMTFkYmY4YTdiZmE4ZjVjMWFmYTBhMDMyNTcxZmUyYjFmNGE0NGI0OTAwOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY3In0sInNpemUiOjM2Mjh9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZDA0NTFkZjczNzFiMzU2NmVmN2FkMTFkYmY4YTdiZmE4ZjVjMWFmYTBhMDMyNTcxZmUyYjFmNGE0NGI0OTAwOCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6YTdkOTBhNjg2ZWNlN2YwYjczNzA4OGUxOTk3ZGY4ZDQxNDU1ZmI4ZDRkMWVmMTI2MThlOTNhMzYyMjY3ZWU1MiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjozNTk3MDQxOGViMjYwMGZlZTVlMmMwOTkwZjZkMjc1NGYyZGI2MzQ4NWI5ZjczYWMyMjBlZjJmNTE0Y2EwNGI3Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImRlYmlhbjp0cml4aWUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wOC0xM1QwNTo1NTowNVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzE3NmJjM2MzZjA2YzdkZjI2MDIzMzFkNjViNzc5YTZkMDhjNTY4NjE6MTZcL3RyaXhpZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi45In0sImRpZ2VzdCI6InNoYTI1NjplNWFiYjk4OTg3MmRmNTI5MGVkY2JlZmQ2ZTZhMDJiZDZlYTdhYTM2NWU0ODAzOWY3OTg4OWI4NzVhNmRjMmYwIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFybTY0Iiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2OCJ9LCJzaXplIjozNjI4fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmU1YWJiOTg5ODcyZGY1MjkwZWRjYmVmZDZlNmEwMmJkNmVhN2FhMzY1ZTQ4MDM5Zjc5ODg5Yjg3NWE2ZGMyZjAiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjY3MGI1ZGViZjM0YjIxNjllMDIxMTdlZTdkY2I2YWQxMmNkNWUwMzNhYmY5ODVlZWIyNWE3YjU3NjVhZjFkOGEiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImkzODYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6NTI5OGY5ZmVkNDU5NmFkNThmMmM5MjZjOTNiZmJkN2ZlNTRiM2YzNDYzN2I4NWIzZTUzOTNlZmMxODc2YjY2YSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJkZWJpYW46dHJpeGllLXNsaW0iLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDgtMTJUMjI6MzI6MTVaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiMTc2YmMzYzNmMDZjN2RmMjYwMjMzMWQ2NWI3NzlhNmQwOGM1Njg2MSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvZG9ja2VyLWxpYnJhcnlcL3Bvc3RncmVzLmdpdCMxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxOjE2XC90cml4aWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuOSJ9LCJkaWdlc3QiOiJzaGEyNTY6NGY3MzRjYzAwZDc1NTQwMTEwZDc0ZDA1NGZhZjgxMmNlNWRkZmM4Yzk4MDM0ZTFiYzU1MDJlMmVkY2U4YzEyOCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiIzODYiLCJvcyI6ImxpbnV4In0sInNpemUiOjM2MjV9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImkzODYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6NGY3MzRjYzAwZDc1NTQwMTEwZDc0ZDA1NGZhZjgxMmNlNWRkZmM4Yzk4MDM0ZTFiYzU1MDJlMmVkY2U4YzEyOCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MDhiN2IzYmQ3Mjk3ZTM2ZWE5Y2E3MzE1NzJjMjIxNzc2ODkzNDNkZTI5ZjY0MDM2ODc2ZTVkYWMzZWU0YWNiYSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicHBjNjRsZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjowOWMzMDhhN2ZhMWNmMjUyODcwY2UzMDJiY2U2MDI5ODgzNTUwNGE3YzUwNjlkODUwMDFmMTY3NDdlM2NiNGMyIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImRlYmlhbjp0cml4aWUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wOC0xM1QxMToyNDozM1oiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzE3NmJjM2MzZjA2YzdkZjI2MDIzMzFkNjViNzc5YTZkMDhjNTY4NjE6MTZcL3RyaXhpZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi45In0sImRpZ2VzdCI6InNoYTI1NjpjNmM4Yzg4N2EzNDg1YWViMWVkNDJmMWUyZGE3YWYwYjU1NTY0YWJjYWIzYTFjMDEzYmY4OTcxOGVjODhhMjg4IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjM2Mjh9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YzZjOGM4ODdhMzQ4NWFlYjFlZDQyZjFlMmRhN2FmMGI1NTU2NGFiY2FiM2ExYzAxM2JmODk3MThlYzg4YTI4OCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZjNkNWRlMDljNGQzZmE3YWY5ODRkOWFhNTg4MjhhYzM5MzgyMTFhNTA3MGQ1NDM0YjJlZmMxMmY0MmI3YzY0NCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicmlzY3Y2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo2NWZjMmI3NmUxY2Y0YjJlMmI1MzZhOGJiYWI1NTEzZTA0MmQ5NTY4ODA5MDg5ZGExNzU4ZDAzMjJlMzAzYjhiIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImRlYmlhbjp0cml4aWUtc2xpbSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5jcmVhdGVkIjoiMjAyNS0wOC0xNFQwODoyNDoxMVoiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UucmV2aXNpb24iOiIxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnNvdXJjZSI6Imh0dHBzOlwvXC9naXRodWIuY29tXC9kb2NrZXItbGlicmFyeVwvcG9zdGdyZXMuZ2l0IzE3NmJjM2MzZjA2YzdkZjI2MDIzMzFkNjViNzc5YTZkMDhjNTY4NjE6MTZcL3RyaXhpZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3Bvc3RncmVzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiIxNi45In0sImRpZ2VzdCI6InNoYTI1NjpjMGYwNzIwM2VmMzEyZGVkZDIyMjkyZDVjNmY4NDJlMDRmNTk4NjExZjg1Nzg1NzM3YTgyMjA1ODNiNGI0M2YyIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InJpc2N2NjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjM2Mjd9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InJpc2N2NjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YzBmMDcyMDNlZjMxMmRlZGQyMjI5MmQ1YzZmODQyZTA0ZjU5ODYxMWY4NTc4NTczN2E4MjIwNTgzYjRiNDNmMiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6M2ZhNmIwNzFhZmE3NmE1NTMwYjM2YTdjNWQ2YmNlZTc3ODNkNDljZWRlNWYwMDY5MGI3ZWIxNjg1NDM1MWE5YSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6YjI4ZWEzZjk2MzgwOGNlMjZhMWNiNzEwMWIxNTg5YmNlZjAwYzMyZDM2Yjg0MGM2ZGZlOGJlOTQwYmY5MzNlOSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJkZWJpYW46dHJpeGllLXNsaW0iLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjUtMDgtMTNUMDI6MDE6MjNaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiMTc2YmMzYzNmMDZjN2RmMjYwMjMzMWQ2NWI3NzlhNmQwOGM1Njg2MSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvZG9ja2VyLWxpYnJhcnlcL3Bvc3RncmVzLmdpdCMxNzZiYzNjM2YwNmM3ZGYyNjAyMzMxZDY1Yjc3OWE2ZDA4YzU2ODYxOjE2XC90cml4aWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9wb3N0Z3JlcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMTYuOSJ9LCJkaWdlc3QiOiJzaGEyNTY6M2Y4Njg3MjJlOGYxZDA0OWI4NzUxODdlMDY2MmFjMDliYWQzZDVkMjExODU4ZmQyNDNiZTdjMmVkMGQ2NTVmNCIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJzMzkweCIsIm9zIjoibGludXgifSwic2l6ZSI6MzYyNn0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6M2Y4Njg3MjJlOGYxZDA0OWI4NzUxODdlMDY2MmFjMDliYWQzZDVkMjExODU4ZmQyNDNiZTdjMmVkMGQ2NTVmNCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6ZjFjNDVhZjc0Y2EwZmI1NjVjNDhlMmNmYzdjZGE3ZmM3Njc5MTQwMDZmMTI1ZmQ0MmQ3ZTkwYTFlNzJjMmYzOSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX1dLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5pbmRleC52MStqc29uIiwic2NoZW1hVmVyc2lvbiI6Mn0=",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:980e5d98958b0918ff1bbb63d5f3e883debe74130ea137d11ac1f8e40a84d6dc",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:dea1627f8269e2814d7ac0b5d187017bd41e21b184d221a554c86e38cb5c98eb",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:4f3853eef0a12e598a9c92732c9cc82b5aab02d89e475dc10db41cc139c40001",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v5"
+            }
+          },
+          {
+            "digest": "sha256:c8342e52f8f701ee6a7893ee8cf392b99f5fc1b91e5c6422ead8dc4422b90c81",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:d0451df7371b3566ef7ad11dbf8a7bfa8f5c1afa0a032571fe2b1f4a44b49008",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:a7d90a686ece7f0b737088e1997df8d41455fb8d4d1ef12618e93a362267ee52",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:e5abb989872df5290edcbefd6e6a02bd6ea7aa365e48039f79889b875a6dc2f0",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:670b5debf34b2169e02117ee7dcb6ad12cd5e033abf985eeb25a7b5765af1d8a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:4f734cc00d75540110d74d054faf812ce5ddfc8c98034e1bc5502e2edce8c128",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "386",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:08b7b3bd7297e36ea9ca731572c22177689343de29f64036876e5dac3ee4acba",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:c6c8c887a3485aeb1ed42f1e2da7af0b55564abcab3a1c013bf89718ec88a288",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:f3d5de09c4d3fa7af984d9aa58828ac3938211a5070d5434b2efc12f42b7c644",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:c0f07203ef312dedd22292d5c6f842e04f598611f85785737a8220583b4b43f2",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "riscv64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:3fa6b071afa76a5530b36a7c5d6bcee7783d49cede5f00690b7eb16854351a9a",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:3f868722e8f1d049b875187e0662ac09bad3d5d211858fd243be7c2ed0d655f4",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:f1c45af74ca0fb565c48e2cfc7cda7fc767914006f125fd42d7e90a1e72c2f39",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/library/redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 45
+        }
+      ],
+      "originalReference": "docker.1panel.live/library/redis:7.4-alpine",
+      "originalRef": "docker.1panel.live/library/redis:7.4-alpine",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/redis:7.4-alpine",
+        "resolvedAtUtc": "2026-10-18T14:55:56.531386+00:00",
+        "registry": "docker.io",
+        "repository": "library/redis",
+        "tag": "7.4-alpine",
+        "digest": "sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjozYzgxYWE5YTNkNzcwYjMxNjU2OGY0NDk5ZTMwNDYxYTVjZDNmYmQ3MTgwYmQ4OWUyOGUzNDg5NGM3ODQ1ODMyIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjMyOjAwWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6Ijc0NjU0YzYxMmVlMDYyNzUzNzdkNDgzZGM0ZTEzNGU1N2I0NjNlOWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL3JlZGlzXC9kb2NrZXItbGlicmFyeS1yZWRpcy5naXQjNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZTphbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9yZWRpcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiNy40LjExLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6Y2EwYWNiYjEzN2MxZGMzMzM5YzhiMTQ3YTU4ZmQ2ZjQyNzc1ZDQ1OTkzMjdiNTBlN2IxMTZjMjNkZTUwMWFmMiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhbWQ2NCIsIm9zIjoibGludXgifSwic2l6ZSI6MjI4OH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYW1kNjQiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6Y2EwYWNiYjEzN2MxZGMzMzM5YzhiMTQ3YTU4ZmQ2ZjQyNzc1ZDQ1OTkzMjdiNTBlN2IxMTZjMjNkZTUwMWFmMiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MDg1MWE3ODI1YjIzMjY5MzE5ZmRkZmYwYTFjMWUxZDliNzgyZTdhNzQ5YTVhMWFlNDI4MTkxNjc5MGZjNTQzZSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtMzJ2NiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo2M2ExOTdmNzdiYjZkN2RiOWMzYzVmOGJkNTJmMjc3MDU5YmNjMTM4NmEyN2M4ZTBhY2E5MjA1ZmFmZDAyMjUzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjUyOjIxWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6Ijc0NjU0YzYxMmVlMDYyNzUzNzdkNDgzZGM0ZTEzNGU1N2I0NjNlOWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL3JlZGlzXC9kb2NrZXItbGlicmFyeS1yZWRpcy5naXQjNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZTphbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9yZWRpcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiNy40LjExLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6YzI4M2U5Mzk2Y2ZlMGQ1NDdmMmIzMWRjZTliYjViZjhkOTlhNzg1ZmFhMDU0MTc4ODAzNmFlZjVmYzI2Yjg1NyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY2In0sInNpemUiOjIyOTB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YzI4M2U5Mzk2Y2ZlMGQ1NDdmMmIzMWRjZTliYjViZjhkOTlhNzg1ZmFhMDU0MTc4ODAzNmFlZjVmYzI2Yjg1NyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6NGM3ZjZlN2MzN2VjODAyYzM1MzE4ZGFjNmIzZjA4NTQ1YjkwYjNjYTQxZWUzZDI3Njc3NDE4NzkzMzNiNTY1NyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjU2N30seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtMzJ2NyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1Njo1MjExZmYyNDgyMDM4MmQ3OGM2MDQzNDk2MDU3YWNlMzBlMmEwZjQ1MDIzMGI1YjIyZDA1MjZkNjZlZjA0OGFlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjUyOjE0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6Ijc0NjU0YzYxMmVlMDYyNzUzNzdkNDgzZGM0ZTEzNGU1N2I0NjNlOWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL3JlZGlzXC9kb2NrZXItbGlicmFyeS1yZWRpcy5naXQjNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZTphbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9yZWRpcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiNy40LjExLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6YWVkNGUxYzI4MTRlZTcyOTY5ZTZiNzEzMzRiNGVkY2M2ODYxMzA4NmE5NDc0ZWExY2Y1MDlmNjk5ZmI4NGQ0MyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm0iLCJvcyI6ImxpbnV4IiwidmFyaWFudCI6InY3In0sInNpemUiOjIyODl9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTMydjciLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6YWVkNGUxYzI4MTRlZTcyOTY5ZTZiNzEzMzRiNGVkY2M2ODYxMzA4NmE5NDc0ZWExY2Y1MDlmNjk5ZmI4NGQ0MyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6MjBkYzVjZDI2ZDY0OGMxOGY5MDRhYTU5MDg4MTNkNTc0NTJjOGMyOGZlZTNjZDQ5OThlZjE0ZWFmNzkwMTZjZSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjowYTdlZDBkNDQ5YjkzMTg1NDhlNjY2NzQ2MTBkNzU3ZGUxOWI3NjQ1NzU5Zjc0YjU4N2I2MTBiNTlkNmI0M2ZkIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTE3VDIxOjM0OjA0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6Ijc0NjU0YzYxMmVlMDYyNzUzNzdkNDgzZGM0ZTEzNGU1N2I0NjNlOWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL3JlZGlzXC9kb2NrZXItbGlicmFyeS1yZWRpcy5naXQjNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZTphbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9yZWRpcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiNy40LjExLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6MWYwOWE4OWEyMDdkNzk0YThjNjFkOWVkZmMyNmU3YzU4NDI3ZGUxMGNjZWY3YzVkMThkNjM4ZGY3OWE2M2I4NSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJhcm02NCIsIm9zIjoibGludXgiLCJ2YXJpYW50IjoidjgifSwic2l6ZSI6MjI5MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiYXJtNjR2OCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjoxZjA5YTg5YTIwN2Q3OTRhOGM2MWQ5ZWRmYzI2ZTdjNTg0MjdkZTEwY2NlZjdjNWQxOGQ2MzhkZjc5YTYzYjg1Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo3MTA0MGZhNzA5ZmQxNGM0YzM3MTYyOTIxNDM0NjQwOGNiNmQ2ZjgwMDcyY2IwY2I1ZmZhZTU2OGUzODIwNTJkIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJpMzg2Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OmFmNTlmM2E5MzY0MWNiOTI3OGE2MDg2ZWE2ODAzNmUwOTE4M2I2NmQ4YWM3ZWM5MzQ3YzMwYzU2ZjFjODBhMTMiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiYWxwaW5lOjMuMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMDktMTdUMjE6MzI6NTBaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvcmVkaXNcL2RvY2tlci1saWJyYXJ5LXJlZGlzLmdpdCM3NDY1NGM2MTJlZTA2Mjc1Mzc3ZDQ4M2RjNGUxMzRlNTdiNDYzZTllOmFscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3JlZGlzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiI3LjQuMTEtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjpiOWMxZDc3YWQyYjFkOTE4NWUzODk5Yzc3ODcwNGYwZjNjNmJiMTBiZDdmYzQ5MTBhYTBiZDcxZGQyNjI0MGEzIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6IjM4NiIsIm9zIjoibGludXgifSwic2l6ZSI6MjI4Nn0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiaTM4NiIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjpiOWMxZDc3YWQyYjFkOTE4NWUzODk5Yzc3ODcwNGYwZjNjNmJiMTBiZDdmYzQ5MTBhYTBiZDcxZGQyNjI0MGEzIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjpkNDYyOWMyNjI4YWYwNWFlMzZjNDc0NjY3NzEzYTA0ZjdmMDNlNTQ2NmQ5ODc1MWIzY2JhOWY0YzY2NmIwNDM2IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJwcGM2NGxlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OmE4NmI4ZGJiMTBjN2VlMTU4YTAwMmZjMWExZTA4NTlmZmQwODJmYTgwMDhjYzJkMjQzZDczYWYzMzI2NWY5YjciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiYWxwaW5lOjMuMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMDktMTdUMjM6NDQ6MzFaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvcmVkaXNcL2RvY2tlci1saWJyYXJ5LXJlZGlzLmdpdCM3NDY1NGM2MTJlZTA2Mjc1Mzc3ZDQ4M2RjNGUxMzRlNTdiNDYzZTllOmFscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3JlZGlzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiI3LjQuMTEtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1NjpmMjMzYjU4MGEzOGU0YThjOWQ3MDNkOGY0NDE4OTMxNGFiNjhjNTcxYjMyNDIyZmMyNGFhNWE4MTM5Nzk2NzkzIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjIyOTB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6ZjIzM2I1ODBhMzhlNGE4YzlkNzAzZDhmNDQxODkzMTRhYjY4YzU3MWIzMjQyMmZjMjRhYTVhODEzOTc5Njc5MyIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6OWJhMmU4ZTJiNGY1YWQ2YjhlMGU0NGY1NjgwM2FjNTA2MzUzZjZmODZkNjBmY2U1NWY4Yzk5ZTNmZGRhMTc2ZiIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MH0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoicmlzY3Y2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjozMmE2NzU4ZmFjMmQ4NDMyNjYwZWM1MzkwZWY2ZWQ4MWRhMTVjOTJlNjc3NDY4YmZiMjM3OWEyNTQ4MTQ5NTFlIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImFscGluZTozLjIxIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTA5LTIxVDA5OjAxOjQxWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6Ijc0NjU0YzYxMmVlMDYyNzUzNzdkNDgzZGM0ZTEzNGU1N2I0NjNlOWUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cL3JlZGlzXC9kb2NrZXItbGlicmFyeS1yZWRpcy5naXQjNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZTphbHBpbmUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC9yZWRpcyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiNy40LjExLWFscGluZSJ9LCJkaWdlc3QiOiJzaGEyNTY6MjM4NGZlMGVlMmY4MjJhYjkzOWU4YjBjYWU0MjNkMzY2NmY0YWY2YjEyOGE1ZWI2ZWRhZmY3MzY1YTI4NGFlNSIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJyaXNjdjY0Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyMjkwfSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJyaXNjdjY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OjIzODRmZTBlZTJmODIyYWI5MzllOGIwY2FlNDIzZDM2NjZmNGFmNmIxMjhhNWViNmVkYWZmNzM2NWEyODRhZTUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OmM0NWEyMmQ3YjA0ZDY5M2Q1N2VkMzYwZmVjNGY1ZjVhYmQ1YzA0ZTAwZWE4NDJiYjhiYmY5YTRjOTk2YTUxNzEiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDB9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InMzOTB4Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UuZGlnZXN0Ijoic2hhMjU2OmQ0M2FlYzBiZjY0YzRiYTU1NDAxNmJkM2RkYzZjM2Y4NDBmMGZhNTNjMjRmOWY1YWQzYzVmNzAwMzIxMjI1ZDUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5uYW1lIjoiYWxwaW5lOjMuMjEiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMDktMTdUMjM6MTk6NTBaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNzQ2NTRjNjEyZWUwNjI3NTM3N2Q0ODNkYzRlMTM0ZTU3YjQ2M2U5ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvcmVkaXNcL2RvY2tlci1saWJyYXJ5LXJlZGlzLmdpdCM3NDY1NGM2MTJlZTA2Mjc1Mzc3ZDQ4M2RjNGUxMzRlNTdiNDYzZTllOmFscGluZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3JlZGlzIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnZlcnNpb24iOiI3LjQuMTEtYWxwaW5lIn0sImRpZ2VzdCI6InNoYTI1Njo3ZmNlMWI1ZjhiMzk4YzVmNjU2Mzg5MmVjNTdmMjc4NWExZDQwZmY2NjkwODkxNmM0M2Y1NGRlYTEwYmM3NjdjIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InMzOTB4Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyMjg4fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJzMzkweCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1Njo3ZmNlMWI1ZjhiMzk4YzVmNjU2Mzg5MmVjNTdmMjc4NWExZDQwZmY2NjkwODkxNmM0M2Y1NGRlYTEwYmM3NjdjIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1NjphNmE3ZGI0MWMxNTVkNjc1YjMwNGZmYTU0ZDg0NzU0MzRhZGQwZGFiZDcwMTljNTAyMzZmYzc2M2VkNDgwMmQ1IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQwfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:ca0acbb137c1dc3339c8b147a58fd6f42775d4599327b50e7b116c23de501af2",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0851a7825b23269319fddff0a1c1e1d9b782e7a749a5a1ae4281916790fc543e",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:c283e9396cfe0d547f2b31dce9bb5bf8d99a785faa0541788036aef5fc26b857",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v6"
+            }
+          },
+          {
+            "digest": "sha256:4c7f6e7c37ec802c35318dac6b3f08545b90b3ca41ee3d2767741879333b5657",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:aed4e1c2814ee72969e6b71334b4edcc68613086a9474ea1cf509f699fb84d43",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:20dc5cd26d648c18f904aa5908813d57452c8c28fee3cd4998ef14eaf79016ce",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:1f09a89a207d794a8c61d9edfc26e7c58427de10ccef7c5d18d638df79a63b85",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:71040fa709fd14c4c371629214346408cb6d6f80072cb0cb5ffae568e382052d",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:b9c1d77ad2b1d9185e3899c778704f0f3c6bb10bd7fc4910aa0bd71dd26240a3",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "386",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:d4629c2628af05ae36c474667713a04f7f03e5466d98751b3cba9f4c666b0436",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:f233b580a38e4a8c9d703d8f44189314ab68c571b32422fc24aa5a8139796793",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:9ba2e8e2b4f5ad6b8e0e44f56803ac506353f6f86d60fce55f8c99e3fdda176f",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:2384fe0ee2f822ab939e8b0cae423d3666f4af6b128a5eb6edaff7365a284ae5",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "riscv64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:c45a22d7b04d693d57ed360fec4f5f5abd5c04e00ea842bb8bbf9a4c996a5171",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:7fce1b5f8b398c5f6563892ec57f2785a1d40ff66908916c43f54dea10bc767c",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:a6a7db41c155d675b304ffa54d8475434add0dabd7019c50236fc763ed4802d5",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      },
+      "equivalence": "unverified",
+      "sameTag": true,
+      "replacementReason": "mirror HTTP403; explicitly authorized official supply-chain default migration",
+      "mirrorComparison": {
+        "originalReference": "docker.1panel.live/library/redis:7.4-alpine",
+        "candidate": "docker.1panel.live/library/redis:7.4-alpine",
+        "queriedAtUtc": "2026-10-18T14:57:10.504010+00:00",
+        "status": "failed",
+        "httpStatus": 403,
+        "errorType": "HTTPError"
+      }
+    },
+    {
+      "reference": "docker.io/library/zookeeper:3.9@sha256:5bad433c71701a1d788b4df86c921d91bfb65c23a1443bcb18a80f40373ae9d9",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r3-ha.yml",
+          "line": 5
+        }
+      ],
+      "originalReference": "zookeeper:3.9",
+      "originalRef": "zookeeper:3.9",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/library/zookeeper:3.9",
+        "resolvedAtUtc": "2026-10-18T14:56:48.318800+00:00",
+        "registry": "docker.io",
+        "repository": "library/zookeeper",
+        "tag": "3.9",
+        "digest": "sha256:5bad433c71701a1d788b4df86c921d91bfb65c23a1443bcb18a80f40373ae9d9",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "eyJtYW5pZmVzdHMiOlt7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhbWQ2NCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLmRpZ2VzdCI6InNoYTI1NjozMGE4MTc2YWIyMmFmZDE0MWFkOWNkMTk0OGFkMjNiZGI5ZmI3ZGRhZTY2NmJhZDRhMWQxODhkOWY0NzlkNTg1Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmJhc2UubmFtZSI6ImVjbGlwc2UtdGVtdXJpbjoxNy1qcmUtamFtbXkiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuY3JlYXRlZCI6IjIwMjYtMTAtMTdUMDE6NDU6MzhaIiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLnJldmlzaW9uIjoiNGU4YWM3ZDllMjRlYTM5YWM0MmEyODIxOGM5MWQ4MTlhYTY1MGY5NyIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5zb3VyY2UiOiJodHRwczpcL1wvZ2l0aHViLmNvbVwvMzF6NFwvem9va2VlcGVyLWRvY2tlci5naXQjNGU4YWM3ZDllMjRlYTM5YWM0MmEyODIxOGM5MWQ4MTlhYTY1MGY5NzozLjkuNiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS51cmwiOiJodHRwczpcL1wvaHViLmRvY2tlci5jb21cL19cL3pvb2tlZXBlciIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS52ZXJzaW9uIjoiMy45LjYifSwiZGlnZXN0Ijoic2hhMjU2Ojc0OWMwOTZhNzQ5MjAwYjI3M2I4YTc4MzNiNzg4NDc4NjJjMTc2NGVkMDk0NTcxZjZhZDliOWRkODc3MjhiMzYiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoiYW1kNjQiLCJvcyI6ImxpbnV4In0sInNpemUiOjI4NzR9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFtZDY0Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2Ojc0OWMwOTZhNzQ5MjAwYjI3M2I4YTc4MzNiNzg4NDc4NjJjMTc2NGVkMDk0NTcxZjZhZDliOWRkODc3MjhiMzYiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjhhNGNlMmM2MzBlMmQwYzk0YWMwOGI0YjQ0ZDBiNmM3MDcwMWI3NDRmM2M2MjM4Y2IwMTk4NGQ0N2I3YzJjODMiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6ImFybTY0djgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6MmI3YWJkOWE1NzFjN2ZmYzk4MTkxNGE5MTEzOTk0NmJkODU2ZWU1N2QyOTEyZDVjYjMzOTczMWU2MDA5ZGI2ZSIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJlY2xpcHNlLXRlbXVyaW46MTctanJlLWphbW15Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTEwLTE3VDAxOjQ1OjQ0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cLzMxejRcL3pvb2tlZXBlci1kb2NrZXIuZ2l0IzRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTc6My45LjYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC96b29rZWVwZXIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjMuOS42In0sImRpZ2VzdCI6InNoYTI1NjpkNGNkNWUwM2Y5NDRmNjIzNDQ4MzQ0ZTc1ZWIxMTE5ZjRhNzIzMmY0ZTE3ZWRmNmFiYzJiNmRiMzY4ZmJjYWMzIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6ImFybTY0Iiwib3MiOiJsaW51eCIsInZhcmlhbnQiOiJ2OCJ9LCJzaXplIjoyODc2fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJhcm02NHY4Iiwidm5kLmRvY2tlci5yZWZlcmVuY2UuZGlnZXN0Ijoic2hhMjU2OmQ0Y2Q1ZTAzZjk0NGY2MjM0NDgzNDRlNzVlYjExMTlmNGE3MjMyZjRlMTdlZGY2YWJjMmI2ZGIzNjhmYmNhYzMiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjoiYXR0ZXN0YXRpb24tbWFuaWZlc3QifSwiZGlnZXN0Ijoic2hhMjU2OjhjOTE2MjU3NGI3OTUzNDJlMDAwYWY1MmJjMzVlZTk1Mzc0Y2MwMzY4OTZmOWMyYTYwMDgwOTAzMTYyNTE0ZjkiLCJtZWRpYVR5cGUiOiJhcHBsaWNhdGlvblwvdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwicGxhdGZvcm0iOnsiYXJjaGl0ZWN0dXJlIjoidW5rbm93biIsIm9zIjoidW5rbm93biJ9LCJzaXplIjo4NDF9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6MzllN2M0ODA1Mzc4M2JhOWUyYTdjODk3YTAyMWNkMDQ5ZDRiMDFiMmVjY2Y1OGI4Nzc2NDJmNGNkYTM2MWY2OCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJlY2xpcHNlLXRlbXVyaW46MTctanJlLWphbW15Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTEwLTE3VDA0OjU4OjAwWiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cLzMxejRcL3pvb2tlZXBlci1kb2NrZXIuZ2l0IzRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTc6My45LjYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC96b29rZWVwZXIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjMuOS42In0sImRpZ2VzdCI6InNoYTI1NjozNTllZGY2ZmYzNDQ4ZmI3NTU5MDRkN2YzNWEzYjEwYmJhNTA0OGZhZWMwNjhmOWVlYTdlZWI4ODcyM2Q4ZGFkIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InBwYzY0bGUiLCJvcyI6ImxpbnV4In0sInNpemUiOjI4NzZ9LHsiYW5ub3RhdGlvbnMiOnsiY29tLmRvY2tlci5vZmZpY2lhbC1pbWFnZXMuYmFzaGJyZXcuYXJjaCI6InBwYzY0bGUiLCJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiJzaGEyNTY6MzU5ZWRmNmZmMzQ0OGZiNzU1OTA0ZDdmMzVhM2IxMGJiYTUwNDhmYWVjMDY4ZjllZWE3ZWViODg3MjNkOGRhZCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiJhdHRlc3RhdGlvbi1tYW5pZmVzdCJ9LCJkaWdlc3QiOiJzaGEyNTY6OTQ4M2FhZThkNDMzMmQ3NDQ5ZjdkMzc2ZWMzNzQxZGFhZDhhMmZlZjYyZjk4OTAxZTJiYzIxMDhjNTY3MWQ1NyIsIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLCJwbGF0Zm9ybSI6eyJhcmNoaXRlY3R1cmUiOiJ1bmtub3duIiwib3MiOiJ1bmtub3duIn0sInNpemUiOjg0MX0seyJhbm5vdGF0aW9ucyI6eyJjb20uZG9ja2VyLm9mZmljaWFsLWltYWdlcy5iYXNoYnJldy5hcmNoIjoiczM5MHgiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UuYmFzZS5kaWdlc3QiOiJzaGEyNTY6NmFmZDcyZWRmYmUzMGY5NjRhZmNlN2ZjNTdjMzk1MzZiOWMyYmEzYmU3Yzc0ODc5Y2RlNmY1NmRiZjkzM2FmMCIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5iYXNlLm5hbWUiOiJlY2xpcHNlLXRlbXVyaW46MTctanJlLWphbW15Iiwib3JnLm9wZW5jb250YWluZXJzLmltYWdlLmNyZWF0ZWQiOiIyMDI2LTEwLTE3VDAyOjE4OjE0WiIsIm9yZy5vcGVuY29udGFpbmVycy5pbWFnZS5yZXZpc2lvbiI6IjRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTciLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2Uuc291cmNlIjoiaHR0cHM6XC9cL2dpdGh1Yi5jb21cLzMxejRcL3pvb2tlZXBlci1kb2NrZXIuZ2l0IzRlOGFjN2Q5ZTI0ZWEzOWFjNDJhMjgyMThjOTFkODE5YWE2NTBmOTc6My45LjYiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudXJsIjoiaHR0cHM6XC9cL2h1Yi5kb2NrZXIuY29tXC9fXC96b29rZWVwZXIiLCJvcmcub3BlbmNvbnRhaW5lcnMuaW1hZ2UudmVyc2lvbiI6IjMuOS42In0sImRpZ2VzdCI6InNoYTI1NjphYTIxMGE1MjlhNWI5MThlNDQ0YjBkOTUyNmQ5MDFlYjViMmU0ODcxNjU0OTAxZDlkMGE2MTY2YjBmZWVhMTRlIiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InMzOTB4Iiwib3MiOiJsaW51eCJ9LCJzaXplIjoyODc0fSx7ImFubm90YXRpb25zIjp7ImNvbS5kb2NrZXIub2ZmaWNpYWwtaW1hZ2VzLmJhc2hicmV3LmFyY2giOiJzMzkweCIsInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6InNoYTI1NjphYTIxMGE1MjlhNWI5MThlNDQ0YjBkOTUyNmQ5MDFlYjViMmU0ODcxNjU0OTAxZDlkMGE2MTY2YjBmZWVhMTRlIiwidm5kLmRvY2tlci5yZWZlcmVuY2UudHlwZSI6ImF0dGVzdGF0aW9uLW1hbmlmZXN0In0sImRpZ2VzdCI6InNoYTI1Njo3Yzk4YzFhOTIxM2FmMDYxNDNjMmZjODVhYWY4N2JkZDYzMDg3NTA0NThjZDZkMjM4YzM4N2MyMDQzN2Y5NGM5IiwibWVkaWFUeXBlIjoiYXBwbGljYXRpb25cL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsInBsYXRmb3JtIjp7ImFyY2hpdGVjdHVyZSI6InVua25vd24iLCJvcyI6InVua25vd24ifSwic2l6ZSI6ODQxfV0sIm1lZGlhVHlwZSI6ImFwcGxpY2F0aW9uXC92bmQub2NpLmltYWdlLmluZGV4LnYxK2pzb24iLCJzY2hlbWFWZXJzaW9uIjoyfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:749c096a749200b273b8a7833b78847862c1764ed094571f6ad9b9dd87728b36",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:8a4ce2c630e2d0c94ac08b4b44d0b6c70701b744f3c6238cb01984d47b7c2c83",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:d4cd5e03f944f623448344e75eb1119f4a7232f4e17edf6abc2b6db368fbcac3",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:8c9162574b795342e000af52bc35ee95374cc036896f9c2a60080903162514f9",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:359edf6ff3448fb755904d7f35a3b10bba5048faec068f9eea7eeb88723d8dad",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:9483aae8d4332d7449f7d376ec3741daad8a2fef62f98901e2bc2108c5671d57",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:aa210a529a5b918e444b0d9526d901eb5b2e4871654901d9d0a6166b0feea14e",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:7c98c1a9213af06143c2fc85aaf87bdd6308750458cd6d238c387c20437f94c9",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/prom/prometheus:v2.54.1@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 27
+        }
+      ],
+      "originalReference": "prom/prometheus:v2.54.1",
+      "originalRef": "prom/prometheus:v2.54.1",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/prom/prometheus:v2.54.1",
+        "resolvedAtUtc": "2026-10-18T14:56:28.221611+00:00",
+        "registry": "docker.io",
+        "repository": "prom/prometheus",
+        "tag": "v2.54.1",
+        "digest": "sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94",
+        "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+        "rawManifestBase64": "ewogICAic2NoZW1hVmVyc2lvbiI6IDIsCiAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QubGlzdC52Mitqc29uIiwKICAgIm1hbmlmZXN0cyI6IFsKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDI4MjQsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OjY5OTYxZGY2ZmZhNjc1OTgwNDhhMzFhYTI4MjJkNjFmM2M5M2I5MWQ3ZGIyNGU0NGQ5YmIwM2Y5OWQ1MjBkYTkiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYW1kNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiCiAgICAgICAgIH0KICAgICAgfSwKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDI4MjQsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OjAzNzVlNTIzZmZlMGNlNzUyMmE5OTY4NzkzYjU3Y2IzNjM3MmE0YTJhOWE1NzA1NzJiNDgwODIyMjc3OTBlZDciLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYXJtNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiLAogICAgICAgICAgICAidmFyaWFudCI6ICJ2OCIKICAgICAgICAgfQogICAgICB9LAogICAgICB7CiAgICAgICAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QudjIranNvbiIsCiAgICAgICAgICJzaXplIjogMjgyNCwKICAgICAgICAgImRpZ2VzdCI6ICJzaGEyNTY6M2VmOTc0MmJiZmJlMWI3MjMyOWYwMjRjMmE3YmM5OWE4NTUyZmE2OGVjNzQ5N2UxYjFkZGVjNjMxZDZhYTE0NCIsCiAgICAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJhcm0iLAogICAgICAgICAgICAib3MiOiAibGludXgiLAogICAgICAgICAgICAidmFyaWFudCI6ICJ2NyIKICAgICAgICAgfQogICAgICB9LAogICAgICB7CiAgICAgICAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QudjIranNvbiIsCiAgICAgICAgICJzaXplIjogMjgyNSwKICAgICAgICAgImRpZ2VzdCI6ICJzaGEyNTY6MzcxMWE5MTU1NWVkYzVmZWM0OGVkYjM2YTM0MzFhNzNhMTdjZDkzZGEyZmViODE1ZjIxMmEyZTVhNzMxNzEwOCIsCiAgICAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJwcGM2NGxlIiwKICAgICAgICAgICAgIm9zIjogImxpbnV4IgogICAgICAgICB9CiAgICAgIH0sCiAgICAgIHsKICAgICAgICAgIm1lZGlhVHlwZSI6ICJhcHBsaWNhdGlvbi92bmQuZG9ja2VyLmRpc3RyaWJ1dGlvbi5tYW5pZmVzdC52Mitqc29uIiwKICAgICAgICAgInNpemUiOiAyODI1LAogICAgICAgICAiZGlnZXN0IjogInNoYTI1NjoyOTg4YjBjOWIzMWM0MDA2ZjNlOTczYjA2YTQyNGIxNzYwZmFjMmQwNGRjYjg1OWNmNzNkMzgxOWM3MDE1MTk5IiwKICAgICAgICAgInBsYXRmb3JtIjogewogICAgICAgICAgICAiYXJjaGl0ZWN0dXJlIjogInMzOTB4IiwKICAgICAgICAgICAgIm9zIjogImxpbnV4IgogICAgICAgICB9CiAgICAgIH0KICAgXQp9",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:69961df6ffa67598048a31aa2822d61f3c93b91d7db24e44d9bb03f99d520da9",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:0375e523ffe0ce7522a9968793b57cb36372a4a2a9a570572b48082227790ed7",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux",
+              "variant": "v8"
+            }
+          },
+          {
+            "digest": "sha256:3ef9742bbfbe1b72329f024c2a7bc99a8552fa68ec7497e1b1ddec631d6aa144",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "arm",
+              "os": "linux",
+              "variant": "v7"
+            }
+          },
+          {
+            "digest": "sha256:3711a91555edc5fec48edb36a3431a73a17cd93da2feb815f212a2e5a7317108",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:2988b0c9b31c4006f3e973b06a424b1760fac2d04dcb859cf73d3819c7015199",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "s390x",
+              "os": "linux"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/tabulario/iceberg-rest:1.6.0@sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 111
+        }
+      ],
+      "originalReference": "tabulario/iceberg-rest:1.6.0",
+      "originalRef": "tabulario/iceberg-rest:1.6.0",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/tabulario/iceberg-rest:1.6.0",
+        "resolvedAtUtc": "2026-10-18T14:56:38.308640+00:00",
+        "registry": "docker.io",
+        "repository": "tabulario/iceberg-rest",
+        "tag": "1.6.0",
+        "digest": "sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472",
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "rawManifestBase64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UuaW5kZXgudjEranNvbiIsCiAgIm1hbmlmZXN0cyI6IFsKICAgIHsKICAgICAgIm1lZGlhVHlwZSI6ICJhcHBsaWNhdGlvbi92bmQub2NpLmltYWdlLm1hbmlmZXN0LnYxK2pzb24iLAogICAgICAiZGlnZXN0IjogInNoYTI1NjpmNTIwYTAzNzg5MjEwZTFhNGUzOGVhYzU5NzBjYjc3YWJhZTI0OGFhNTExY2ZjZTk4NzdiNzEwOTU5ZmE4ZjIwIiwKICAgICAgInNpemUiOiAxMjQ1LAogICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJhbWQ2NCIsCiAgICAgICAgIm9zIjogImxpbnV4IgogICAgICB9CiAgICB9LAogICAgewogICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsCiAgICAgICJkaWdlc3QiOiAic2hhMjU2OmY3YjVlMTFkMzUyZGFiNjBiZjM5OTNmNDI2ODE2ZTE4ZTliM2NlODlkM2FiYTgxMWM2OTRkYjgzNTljNWJmNjIiLAogICAgICAic2l6ZSI6IDEyNDUsCiAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAiYXJjaGl0ZWN0dXJlIjogImFybTY0IiwKICAgICAgICAib3MiOiAibGludXgiCiAgICAgIH0KICAgIH0sCiAgICB7CiAgICAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLm9jaS5pbWFnZS5tYW5pZmVzdC52MStqc29uIiwKICAgICAgImRpZ2VzdCI6ICJzaGEyNTY6NmQ2NDNlYzBiMmQ3YjNhZGZiZDgwYWE2ODRmNDA2MDczY2NiOTllNjMxMjM5MDA3ZDA1NDE4YWRkMDRhMTlkNyIsCiAgICAgICJzaXplIjogNTY3LAogICAgICAiYW5ub3RhdGlvbnMiOiB7CiAgICAgICAgInZuZC5kb2NrZXIucmVmZXJlbmNlLmRpZ2VzdCI6ICJzaGEyNTY6ZjUyMGEwMzc4OTIxMGUxYTRlMzhlYWM1OTcwY2I3N2FiYWUyNDhhYTUxMWNmY2U5ODc3YjcxMDk1OWZhOGYyMCIsCiAgICAgICAgInZuZC5kb2NrZXIucmVmZXJlbmNlLnR5cGUiOiAiYXR0ZXN0YXRpb24tbWFuaWZlc3QiCiAgICAgIH0sCiAgICAgICJwbGF0Zm9ybSI6IHsKICAgICAgICAiYXJjaGl0ZWN0dXJlIjogInVua25vd24iLAogICAgICAgICJvcyI6ICJ1bmtub3duIgogICAgICB9CiAgICB9LAogICAgewogICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5vY2kuaW1hZ2UubWFuaWZlc3QudjEranNvbiIsCiAgICAgICJkaWdlc3QiOiAic2hhMjU2OjliNzIyNWVhMzkzZmY2ZDE3NzI2Y2Y4ZTNmNWI4NDM2MWVkOGY0OTkyMjNlMjNiMTkyYWIzODQwYmVhOGU5ZTkiLAogICAgICAic2l6ZSI6IDU2NywKICAgICAgImFubm90YXRpb25zIjogewogICAgICAgICJ2bmQuZG9ja2VyLnJlZmVyZW5jZS5kaWdlc3QiOiAic2hhMjU2OmY3YjVlMTFkMzUyZGFiNjBiZjM5OTNmNDI2ODE2ZTE4ZTliM2NlODlkM2FiYTgxMWM2OTRkYjgzNTljNWJmNjIiLAogICAgICAgICJ2bmQuZG9ja2VyLnJlZmVyZW5jZS50eXBlIjogImF0dGVzdGF0aW9uLW1hbmlmZXN0IgogICAgICB9LAogICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgImFyY2hpdGVjdHVyZSI6ICJ1bmtub3duIiwKICAgICAgICAib3MiOiAidW5rbm93biIKICAgICAgfQogICAgfQogIF0KfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:f520a03789210e1a4e38eac5970cb77abae248aa511cfce9877b710959fa8f20",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:f7b5e11d352dab60bf3993f426816e18e9b3ce89d3aba811c694db8359c5bf62",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:6d643ec0b2d7b3adfbd80aa684f406073ccb99e631239007d05418add04a19d7",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "digest": "sha256:9b7225ea393ff6d17726cf8e3f5b84361ed8f499223e23b192ab3840bea8e9e9",
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "docker.io/trinodb/trino:476@sha256:00125e40d063bc4816d165482f6044872b18b56026fb959d3b28ce1f96ffbbee",
+      "digestStatus": "already-pinned",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 130
+        }
+      ],
+      "originalReference": "trinodb/trino:476",
+      "originalRef": "trinodb/trino:476",
+      "fullBuildPending": true,
+      "state": "pinned",
+      "officialResolution": {
+        "reference": "docker.io/trinodb/trino:476",
+        "resolvedAtUtc": "2026-10-18T14:56:39.328556+00:00",
+        "registry": "docker.io",
+        "repository": "trinodb/trino",
+        "tag": "476",
+        "digest": "sha256:00125e40d063bc4816d165482f6044872b18b56026fb959d3b28ce1f96ffbbee",
+        "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+        "rawManifestBase64": "ewogICAic2NoZW1hVmVyc2lvbiI6IDIsCiAgICJtZWRpYVR5cGUiOiAiYXBwbGljYXRpb24vdm5kLmRvY2tlci5kaXN0cmlidXRpb24ubWFuaWZlc3QubGlzdC52Mitqc29uIiwKICAgIm1hbmlmZXN0cyI6IFsKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDIyMTIsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2Ojk4NTI1N2E3ZmI3ZDAwZTBkZDg4ODEwNjZiZmVjNjA5M2FkMjcxOGJmZDU2MjQ3ODRkODAyOWY0Mjc4YjBmNDQiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYW1kNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiCiAgICAgICAgIH0KICAgICAgfSwKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDIyMTIsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OjZkYmFhNmQ2NzUzOTFhZTdkM2I0YmQ2MDMwODcyNzNiMmNiOTkzY2NlOGQzZTA1MTUyMmQ2M2ZjYjAzOTllY2EiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAiYXJtNjQiLAogICAgICAgICAgICAib3MiOiAibGludXgiCiAgICAgICAgIH0KICAgICAgfSwKICAgICAgewogICAgICAgICAibWVkaWFUeXBlIjogImFwcGxpY2F0aW9uL3ZuZC5kb2NrZXIuZGlzdHJpYnV0aW9uLm1hbmlmZXN0LnYyK2pzb24iLAogICAgICAgICAic2l6ZSI6IDIyMTIsCiAgICAgICAgICJkaWdlc3QiOiAic2hhMjU2OmFjZjg5OTI1ZTBhMGY2OTJhYmM3YjNiMzI5ZWQzNzYxZTk4NTMwMjFiYzU5NDBhMDQwNWJlNTZiZjJiNWIwNTMiLAogICAgICAgICAicGxhdGZvcm0iOiB7CiAgICAgICAgICAgICJhcmNoaXRlY3R1cmUiOiAicHBjNjRsZSIsCiAgICAgICAgICAgICJvcyI6ICJsaW51eCIKICAgICAgICAgfQogICAgICB9CiAgIF0KfQ==",
+        "configBase64": null,
+        "platforms": [
+          {
+            "digest": "sha256:985257a7fb7d00e0dd8881066bfec6093ad2718bfd5624784d8029f4278b0f44",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:6dbaa6d675391ae7d3b4bd603087273b2cb993cce8d3e051522d63fcb0399eca",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux"
+            }
+          },
+          {
+            "digest": "sha256:acf89925e0a0f692abc7b3b329ed3761e9853021bc5940a0405be56bf2b5b053",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+            "platform": {
+              "architecture": "ppc64le",
+              "os": "linux"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "reference": "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z",
+      "digestStatus": "resolution-and-review-required",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 39
+        }
+      ],
+      "originalReference": "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z",
+      "originalRef": "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z",
+      "fullBuildPending": true,
+      "state": "blocked",
+      "officialResolution": null,
+      "reason": "Original official Quay and same-publisher DockerHub same-tag candidates both returned401 after anonymous Bearer authentication; no digest fabricated"
+    },
+    {
+      "reference": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+      "digestStatus": "resolution-and-review-required",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r1.yml",
+          "line": 21
+        }
+      ],
+      "originalReference": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+      "originalRef": "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+      "fullBuildPending": true,
+      "state": "blocked",
+      "officialResolution": null,
+      "reason": "Original official Quay and same-publisher DockerHub same-tag candidates both returned401 after anonymous Bearer authentication; no digest fabricated"
+    }
+  ],
+  "localBuildImages": [
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-ai-agent:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 324
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-auth:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 353
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-gateway:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 381
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-governance:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 233
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-ingestion:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 204
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-metadata:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 120
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-quality:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 173
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-serving:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 145
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-system:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 92
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-web:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 438
+        }
+      ]
+    },
+    {
+      "reference": "${AETHERIS_IMAGE_PREFIX:-aetheris-local}-workflow:${AETHERIS_IMAGE_TAG:-security-20260908}",
+      "sources": [
+        {
+          "path": "docker-compose.yml",
+          "line": 255
+        }
+      ]
+    },
+    {
+      "reference": "aetheris-local/workflow:m5b-20260912",
+      "sources": [
+        {
+          "path": "infrastructure/lakehouse/docker-compose.r3-workflow.yml",
+          "line": 8
+        }
+      ]
+    },
+    {
+      "reference": "aetheris-web-dev:latest",
+      "sources": [
+        {
+          "path": "docker-compose.dev.yml",
+          "line": 4
+        }
+      ]
+    }
+  ],
+  "unresolvedDefaults": [],
+  "provenanceReferences": [
+    "https://docs.docker.com/reference/cli/docker/buildx/imagetools/inspect/",
+    "https://docs.docker.com/reference/dockerfile/#from",
+    "https://distribution.github.io/distribution/spec/api/",
+    "https://github.com/docker-library/official-images",
+    "https://prometheus.io/docs/prometheus/latest/installation/",
+    "https://iceberg.apache.org/spark-quickstart/",
+    "https://trino.io/docs/current/installation/containers.html",
+    "https://raw.githubusercontent.com/minio/minio/RELEASE.2025-09-07T16-13-09Z/README.md",
+    "https://raw.githubusercontent.com/minio/mc/RELEASE.2025-08-13T08-35-41Z/README.md"
+  ],
+  "requiredReleaseImages": [
+    {
+      "reference": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "sources": [
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 8
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 65
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 122
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 179
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 236
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 293
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 350
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 407
+        },
+        {
+          "path": "docker-compose.database-migrate.yml",
+          "line": 464
+        }
+      ]
+    }
+  ]
+}

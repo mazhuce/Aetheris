@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Alert, App, Button, Card, Col, DatePicker, Descriptions, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Table, Tabs, Tag, Typography, Upload } from 'antd'
 import { BranchesOutlined, CaretRightOutlined, PlusOutlined, ReloadOutlined, SafetyCertificateOutlined, StopOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -21,6 +21,7 @@ import {
 import { pipelineTargetOptions, sparkTaskOptions } from './taskOptions'
 import { canCancelPipeline, canResolveUnknownInstance, canRetryPipelineNode } from './pipelineActions'
 import { getCurrentRole } from '@/utils/access'
+import { useSerializedPolling } from '@/hooks/useSerializedPolling'
 
 export default function SparkDevelopmentPage() {
   const { message } = App.useApp()
@@ -127,12 +128,11 @@ export default function SparkDevelopmentPage() {
     } finally { setPipelineAction(undefined) }
   }
 
-  const refresh = async () => {
-    const settled = await Promise.allSettled([
-      getSparkHealth(), getFlinkHealth(), listSparkEnvironments(), isAdmin ? listSparkRunners() : Promise.resolve([]),
-      isAdmin ? listGitRepositories() : Promise.resolve([]), listSparkArtifacts(), listSparkJobs(),
-      listTasks(), listAllInstances(undefined, 100), listPipelineRuns()
-    ])
+  const refresh = useSerializedPolling((signal) => Promise.allSettled([
+      getSparkHealth(signal), getFlinkHealth(signal), listSparkEnvironments(signal), isAdmin ? listSparkRunners(signal) : Promise.resolve([]),
+      isAdmin ? listGitRepositories(signal) : Promise.resolve([]), listSparkArtifacts(signal), listSparkJobs(signal),
+      listTasks(signal), listAllInstances(undefined, 100, signal), listPipelineRuns(30, signal)
+    ]), (settled) => {
     if (settled[0].status === 'fulfilled') setHealth(settled[0].value)
     else setHealth({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0 })
     if (settled[1].status === 'fulfilled') setFlinkHealth(settled[1].value)
@@ -144,9 +144,7 @@ export default function SparkDevelopmentPage() {
     if (settled[7].status === 'fulfilled') setTasks(settled[7].value)
     if (settled[8].status === 'fulfilled') setInstances(settled[8].value)
     if (settled[9].status === 'fulfilled') setPipelines(settled[9].value)
-  }
-
-  useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 5000); return () => window.clearInterval(timer) }, [])
+  }, 5000)
   const individualTaskOptions = useMemo(() => sparkTaskOptions(tasks), [tasks])
   const pipelineOptions = useMemo(() => pipelineTargetOptions(tasks), [tasks])
   const sparkTaskIds = useMemo(() => new Set(individualTaskOptions.map((option) => option.value)), [individualTaskOptions])

@@ -8,6 +8,8 @@ import com.aetheris.serving.service.MetadataQueryClient;
 import com.aetheris.serving.service.ApiKeyService;
 import com.aetheris.serving.service.ApiUsageService;
 import com.aetheris.serving.service.DistributedApiRateLimiter;
+import com.aetheris.serving.service.PublishedKeyAdmissionService;
+import com.aetheris.serving.service.PublishedKeyParameters;
 import com.aetheris.serving.security.ServingIdentity;
 import com.aetheris.serving.security.ServiceIdentitySigner;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,12 +27,14 @@ import java.util.*;
 @RequestMapping("/api/serving/v1")
 @Validated
 public class VersionedServingController {
+    private PublishedKeyAdmissionService admissions;
+    @Autowired public void setAdmissions(PublishedKeyAdmissionService admissions){this.admissions=admissions;}
     private final MetadataQueryClient metadata; private final ServingSecurity security; private final ServingRateLimiter rateLimiter; private final ApiKeyService apiKeys; private final ApiUsageService usage; private final DistributedApiRateLimiter distributedRateLimiter; private final ServiceIdentitySigner serviceIdentitySigner;
     public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter){this(metadata,security,rateLimiter,null,null,null,null);}
     public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys){this(metadata,security,rateLimiter,apiKeys,null,null,null);}
     public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage){this(metadata,security,rateLimiter,apiKeys,usage,null,null);}
-    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter){this(metadata,security,rateLimiter,apiKeys,usage,distributedRateLimiter,null);}
     @Autowired
+    public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter){this(metadata,security,rateLimiter,apiKeys,usage,distributedRateLimiter,null);}
     public VersionedServingController(MetadataQueryClient metadata, ServingSecurity security, ServingRateLimiter rateLimiter, ApiKeyService apiKeys, ApiUsageService usage, DistributedApiRateLimiter distributedRateLimiter, ServiceIdentitySigner serviceIdentitySigner){this.metadata=metadata;this.security=security;this.rateLimiter=rateLimiter;this.apiKeys=apiKeys;this.usage=usage;this.distributedRateLimiter=distributedRateLimiter;this.serviceIdentitySigner=serviceIdentitySigner;}
     @PostMapping("/metrics/{code}/query")
     public Map<String,Object> metric(HttpServletRequest request,@PathVariable String code,@RequestParam(required=false) String dimensions,@RequestParam(required=false) String timeGrain,@RequestParam(required=false) String startDate,@RequestParam(required=false) String endDate,@RequestParam(defaultValue="100") @Min(1) @Max(100) Integer limit){
@@ -38,21 +42,25 @@ public class VersionedServingController {
         var identity=security.requireIdentity(request);
         security.require(request,"metric",null,"query");
         if(!rateLimiter.allow(identity.username(),"metric:"+code))throw new RateLimitException();
-        Map<String,Object> body=new LinkedHashMap<>();body.put("dimensions",parseDimensions(dimensions));body.put("timeGrain",timeGrain);body.put("startDate",startDate);body.put("endDate",endDate);body.put("limit",limit);return metadata.queryMetric(code,body,request.getHeader("X-Aetheris-Identity"));
+        Map<String,Object> body=new LinkedHashMap<>();body.put("dimensions",parseDimensions(dimensions));body.put("timeGrain",timeGrain);body.put("startDate",startDate);body.put("endDate",endDate);body.put("limit",limit);return metadata.queryMetric(code,body,security.compactProof(request));
     }
     @PostMapping("/query")
-    public Map<String,Object> sql(HttpServletRequest request,@Valid @RequestBody VersionedSqlQueryRequest body){var identity=security.requireIdentity(request);security.require(request,"datasource",body.datasourceId(),"query");if(!rateLimiter.allow(identity.username(),"sql:"+body.datasourceId()))throw new RateLimitException();return metadata.query(body.datasourceId(),body.sql().trim(),request.getHeader("X-Aetheris-Identity"));}
+    public Map<String,Object> sql(HttpServletRequest request,@Valid @RequestBody VersionedSqlQueryRequest body){var identity=security.requireIdentity(request);security.require(request,"datasource",body.datasourceId(),"query");if(!rateLimiter.allow(identity.username(),"sql:"+body.datasourceId()))throw new RateLimitException();return metadata.query(body.datasourceId(),body.sql().trim(),security.compactProof(request));}
     @PostMapping("/tables/{id}/query")
     public Map<String,Object> table(HttpServletRequest request,@PathVariable Long id,@RequestParam(required=false) String columns,@RequestParam(defaultValue="100") @Min(1) @Max(100) Integer limit){
         var identity=security.requireIdentity(request);security.require(request,"table",id,"query");if(!rateLimiter.allow(identity.username(),"table:"+id))throw new RateLimitException();
-        Map<String,Object> body=new LinkedHashMap<>();body.put("columns",parseColumns(columns));body.put("limit",limit);return metadata.queryTable(id,body,request.getHeader("X-Aetheris-Identity"));
+        Map<String,Object> body=new LinkedHashMap<>();body.put("columns",parseColumns(columns));body.put("limit",limit);return metadata.queryTable(id,body,security.compactProof(request));
     }
 
     /** Execute only a published API asset; callers never submit SQL or choose the target. */
     @PostMapping("/apis/{assetCode}/query")
+    public Map<String,Object> apiAssetWire(HttpServletRequest request,@PathVariable String assetCode)throws java.io.IOException {
+        if(request.getHeader("Content-Encoding")!=null||request.getQueryString()!=null)throw new IllegalArgumentException("发布 API 仅接受规范 JSON 参数");
+        byte[] bytes=request.getInputStream().readNBytes(16385);
+        return apiAsset(request,assetCode,PublishedKeyParameters.publicRequest(bytes));
+    }
     public Map<String, Object> apiAsset(HttpServletRequest request,
-                                        @PathVariable String assetCode,
-                                        @Valid @RequestBody(required = false) ApiAssetQueryRequest queryRequest) {
+                                        String assetCode,ApiAssetQueryRequest queryRequest) {
         if (!assetCode.matches("[A-Za-z][A-Za-z0-9_]{1,63}")) {
             throw new IllegalArgumentException("API 资产编码格式无效");
         }
@@ -60,9 +68,22 @@ public class VersionedServingController {
         int[] status = {200};
         String[] error = {null};
         ServingIdentity[] resolved = {null};
+        ApiUsageService.Context[] context={null};
         String presentedApiKey = request.getHeader("X-API-Key");
         String authType = presentedApiKey == null || presentedApiKey.isBlank() ? "identity" : "api_key";
         try {
+            if("api_key".equals(authType)){
+                var values=request.getHeaders("X-API-Key");
+                if(values!=null&&Collections.list(values).size()!=1)throw new IllegalArgumentException("API key 请求头必须唯一");
+                if(apiKeys==null||admissions==null)throw new ServingSecurity.UnauthorizedException("API key 验证未配置");
+                var principal=apiKeys.authenticate(presentedApiKey).orElseThrow(()->new ServingSecurity.UnauthorizedException("API key 无效或已过期"));
+                var owner=principal.owner();resolved[0]=new ServingIdentity(owner.uid(),owner.username());
+                if(!rateLimiter.allow(owner.username(),"api:"+assetCode))throw new RateLimitException();
+                var asset=metadata.publishedApiAsset(assetCode);
+                var admission=admissions.create(presentedApiKey,asset,queryRequest,request.getHeader("X-Request-Id"));
+                context[0]=new ApiUsageService.Context(admission.keyId(),admission.reference().admissionId(),admission.requestId(),admission.owner().uid());
+                return metadata.publishedKeyQuery(admission.reference());
+            }
             var identity = requireApiAssetIdentity(request);
             resolved[0] = identity;
             String downstreamIdentity = downstreamIdentity(request, identity);
@@ -101,7 +122,10 @@ public class VersionedServingController {
         } finally {
             Object principal = request.getAttribute(ServingSecurity.ATTRIBUTE);
             String subject = resolved[0] != null ? resolved[0].username() : (principal instanceof ServingIdentity identity ? identity.username() : "unknown");
-            if (usage != null) usage.record(assetCode, subject, authType, status[0], (System.nanoTime() - started) / 1_000_000, error[0]);
+            if (usage != null) {
+                if("api_key".equals(authType))usage.record(assetCode,subject,authType,status[0],(System.nanoTime()-started)/1_000_000,error[0],context[0]);
+                else usage.record(assetCode, subject, authType, status[0], (System.nanoTime() - started) / 1_000_000, error[0]);
+            }
         }
     }
     private static int statusFor(RuntimeException exception) {
@@ -109,6 +133,10 @@ public class VersionedServingController {
         if (exception instanceof ServingSecurity.ForbiddenException) return 403;
         if (exception instanceof MetadataQueryClient.ApiAssetNotFoundException) return 404;
         if (exception instanceof RateLimitException) return 429;
+        if (exception instanceof PublishedKeyAdmissionService.QuotaExceeded) return 429;
+        if (exception instanceof PublishedKeyAdmissionService.Conflict) return 409;
+        if (exception instanceof org.springframework.web.server.ResponseStatusException status) return status.getStatusCode().value();
+        if (exception instanceof org.springframework.dao.DataAccessException) return 503;
         if (exception instanceof IllegalArgumentException) return 400;
         return 500;
     }
@@ -119,22 +147,10 @@ public class VersionedServingController {
             request.setAttribute(ServingSecurity.ATTRIBUTE, identity);
             return identity;
         }
-        if (apiKeys == null) throw new ServingSecurity.UnauthorizedException("API key 验证未配置");
-        ApiKeyService.ApiKeyPrincipal principal = apiKeys.authenticate(presented)
-                .orElseThrow(() -> new ServingSecurity.UnauthorizedException("API key 无效或已过期"));
-        if (!apiKeys.consumeQuota(principal.id())) throw new RateLimitException();
-        ServingIdentity identity = new ServingIdentity(null, principal.ownerUsername());
-        request.setAttribute(ServingSecurity.ATTRIBUTE, identity);
-        return identity;
+        throw new ServingSecurity.UnauthorizedException("API key 仅允许独立准入链路");
     }
     private String downstreamIdentity(HttpServletRequest request, ServingIdentity identity) {
-        String presentedApiKey = request.getHeader("X-API-Key");
-        if (presentedApiKey != null && !presentedApiKey.isBlank()) {
-            return serviceIdentitySigner == null ? "" : serviceIdentitySigner.sign(identity.username());
-        }
-        String presented = request.getHeader("X-Aetheris-Identity");
-        if (presented != null && !presented.isBlank()) return presented;
-        return serviceIdentitySigner == null ? "" : serviceIdentitySigner.sign(identity.username());
+        return security.compactProof(request);
     }
     private List<String> parseDimensions(String value){
         if(value==null||value.isBlank())return List.of();
@@ -174,6 +190,8 @@ public class VersionedServingController {
     @ExceptionHandler(ServingSecurity.ForbiddenException.class) public ResponseEntity<Map<String,String>> forbidden(ServingSecurity.ForbiddenException e){return ResponseEntity.status(403).body(Map.of("message",e.getMessage()));}
     @ExceptionHandler(MetadataQueryClient.ApiAssetNotFoundException.class) public ResponseEntity<Map<String,String>> apiAssetNotFound(MetadataQueryClient.ApiAssetNotFoundException e){return ResponseEntity.status(404).body(Map.of("message",e.getMessage()));}
     @ExceptionHandler(RateLimitException.class) public ResponseEntity<Map<String,String>> rateLimited(){return ResponseEntity.status(429).header("Retry-After","60").body(Map.of("message","接口调用频率超限，请稍后重试"));}
+    @ExceptionHandler(PublishedKeyAdmissionService.QuotaExceeded.class) public ResponseEntity<Map<String,String>> keyQuota(){return rateLimited();}
+    @ExceptionHandler(PublishedKeyAdmissionService.Conflict.class) public ResponseEntity<Map<String,String>> admissionConflict(){return ResponseEntity.status(409).body(Map.of("message","API key 准入已失效，请重新发起请求"));}
     @ExceptionHandler(ConstraintViolationException.class) public ResponseEntity<Map<String,String>> constraintViolation(){return ResponseEntity.badRequest().body(Map.of("message","请求参数不符合限制"));}
     @ExceptionHandler({IllegalArgumentException.class,IllegalStateException.class}) public ResponseEntity<Map<String,String>> bad(RuntimeException e){return ResponseEntity.badRequest().body(Map.of("message",e.getMessage()));}
     private static final class RateLimitException extends RuntimeException { }

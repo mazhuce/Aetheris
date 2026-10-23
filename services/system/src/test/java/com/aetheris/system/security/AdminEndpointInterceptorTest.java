@@ -25,17 +25,17 @@ class AdminEndpointInterceptorTest {
     }
 
     @Test
-    void missingConfiguredTokenFailsClosed() throws Exception {
+    void legacyConfigurationDoesNotAuthenticateWithoutFilter() throws Exception {
         AuthPermissionClient client = mock(AuthPermissionClient.class);
         AdminEndpointInterceptor interceptor = new AdminEndpointInterceptor(
                 new IdentityVerifier("", 300_000L), client);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertTrue(!interceptor.preHandle(
-                signedRequest(IdentityVerifierTestHelper.sign(42L, "alice", TOKEN)),
+                signedRequest(IdentityVerifierTestHelper.sign(42L,"alice",TOKEN)),
                 response, mock(Object.class)));
 
-        assertEquals(503, response.getStatus());
+        assertEquals(401, response.getStatus());
         verify(client, never()).mayManage(anyString());
     }
 
@@ -61,7 +61,7 @@ class AdminEndpointInterceptorTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         interceptor.preHandle(
-                signedRequest(IdentityVerifierTestHelper.sign(42L, "alice", TOKEN)),
+                V2TestFixture.trusted(42,"alice").postProcessRequest(signedRequest(null)),
                 response, mock(Object.class));
 
         assertEquals(403, response.getStatus());
@@ -76,7 +76,7 @@ class AdminEndpointInterceptorTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertTrue(interceptor.preHandle(
-                signedRequest(IdentityVerifierTestHelper.sign(1L, "admin", TOKEN)),
+                V2TestFixture.trusted(1,"admin").postProcessRequest(signedRequest(null)),
                 response, mock(Object.class)));
     }
 
@@ -88,8 +88,7 @@ class AdminEndpointInterceptorTest {
         when(client.mayManage("alice")).thenReturn(false);
         AdminEndpointInterceptor interceptor = new AdminEndpointInterceptor(
                 new IdentityVerifier(TOKEN, 300_000L), client);
-        MockHttpServletRequest request = signedRequest(
-                IdentityVerifierTestHelper.sign(42L, "alice", TOKEN));
+        MockHttpServletRequest request = V2TestFixture.trusted(42,"alice").postProcessRequest(signedRequest(null));
         request.addHeader("X-User-Name", "admin");
         MockHttpServletResponse response = new MockHttpServletResponse();
 

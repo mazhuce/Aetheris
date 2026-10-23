@@ -26,6 +26,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/metadata/semantic-dimensions")
 public class SemanticDimensionController {
+    private DomainPermissionContext permissionContext;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setPermissionContext(DomainPermissionContext context) { this.permissionContext = context; }
     private final SemanticDimensionService service;
     private final MetadataSecurity security;
     private final SemanticAssetReviewService reviewService;
@@ -128,8 +131,10 @@ public class SemanticDimensionController {
                 .toList();
     }
 
-    private static Map<String, String> domainCtx(Long domainId) {
-        return domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId));
+    private Map<String, String> domainCtx(Long domainId) {
+        return permissionContext == null
+                ? (domainId == null ? Map.of() : Map.of("domainId", String.valueOf(domainId)))
+                : permissionContext.of(domainId);
     }
 
     @ExceptionHandler(SemanticDimensionService.NotFoundException.class)

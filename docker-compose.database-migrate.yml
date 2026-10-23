@@ -1,0 +1,550 @@
+# Operations-only jobs; never attach privileged secrets to runtime services.
+{
+  "services": {
+    "db-migrate-auth": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_AUTH_DB_MIGRATION_CONFIG:-./configs/database/migration-auth.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/auth/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_auth_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-system": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_SYSTEM_DB_MIGRATION_CONFIG:-./configs/database/migration-system.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/system/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_system_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-metadata": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_METADATA_DB_MIGRATION_CONFIG:-./configs/database/migration-metadata.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/metadata/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_metadata_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-serving": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_SERVING_DB_MIGRATION_CONFIG:-./configs/database/migration-serving.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/serving/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_serving_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-workflow": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_WORKFLOW_DB_MIGRATION_CONFIG:-./configs/database/migration-workflow.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/workflow/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_workflow_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-ingestion": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_INGESTION_DB_MIGRATION_CONFIG:-./configs/database/migration-ingestion.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/ingestion/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_ingestion_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-quality": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_QUALITY_DB_MIGRATION_CONFIG:-./configs/database/migration-quality.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/quality/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_quality_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-governance": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_GOVERNANCE_DB_MIGRATION_CONFIG:-./configs/database/migration-governance.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/governance/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_governance_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "db-migrate-ai": {
+      "profiles": [
+        "db-migrate"
+      ],
+      "image": "${AETHERIS_DB_MIGRATION_IMAGE:?Use the reviewed runner image at sha256 digest}",
+      "pull_policy": "never",
+      "restart": "no",
+      "read_only": true,
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "cap_drop": [
+        "ALL"
+      ],
+      "pids_limit": 128,
+      "mem_limit": "384m",
+      "cpus": 1.0,
+      "command": [
+        "--config",
+        "/run/config/migration.json"
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "${AETHERIS_AI_DB_MIGRATION_CONFIG:-./configs/database/migration-ai.example.json}",
+          "target": "/run/config/migration.json",
+          "read_only": true
+        },
+        {
+          "type": "bind",
+          "source": "./services/ai-agent/src/main/resources/db/migration",
+          "target": "/migrations",
+          "read_only": true
+        }
+      ],
+      "secrets": [
+        {
+          "source": "db_admin_password",
+          "target": "db-admin-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        },
+        {
+          "source": "db_ai_migration",
+          "target": "db-migration-password",
+          "uid": "10001",
+          "gid": "10001",
+          "mode": 256
+        }
+      ],
+      "depends_on": {
+        "postgres": {
+          "condition": "service_healthy"
+        }
+      }
+    }
+  },
+  "secrets": {
+    "db_admin_password": {
+      "file": "${AETHERIS_DB_ADMIN_PASSWORD_FILE:?Set an ignored private admin password file}"
+    },
+    "db_auth_migration": {
+      "file": "${AETHERIS_AUTH_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_system_migration": {
+      "file": "${AETHERIS_SYSTEM_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_metadata_migration": {
+      "file": "${AETHERIS_METADATA_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_serving_migration": {
+      "file": "${AETHERIS_SERVING_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_workflow_migration": {
+      "file": "${AETHERIS_WORKFLOW_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_ingestion_migration": {
+      "file": "${AETHERIS_INGESTION_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_quality_migration": {
+      "file": "${AETHERIS_QUALITY_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_governance_migration": {
+      "file": "${AETHERIS_GOVERNANCE_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    },
+    "db_ai_migration": {
+      "file": "${AETHERIS_AI_DB_MIGRATION_PASSWORD_FILE:?Set an ignored private migration password file}"
+    }
+  }
+}

@@ -102,7 +102,7 @@ export default function LogicalModelPage() {
     { title: '业务域', dataIndex: 'businessDomain', width: 110, render: (value) => value || '—' },
     { title: '模型类型', dataIndex: 'modelType', width: 100, render: (value) => <Tag color={modelTypeMeta[value]?.color}>{modelTypeMeta[value]?.label || value}</Tag> },
     { title: '实体 / 关系', width: 100, render: (_, record) => { const graph = graphOf(record); return `${graph.entities.length} / ${graph.relations.length}` } },
-    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value || 'draft'].tone}>{statusMeta[value || 'draft'].label}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
+    { title: '状态', dataIndex: 'status', width: 150, render: (value, row) => <Space size={4}><StatusBadge tone={statusMeta[value || 'draft']?.tone ?? 'neutral'}>{statusMeta[value || 'draft']?.label ?? value ?? '未知'}</StatusBadge>{row.publishedVersion && value === 'draft' ? <StatusBadge tone="success">线上 v{row.publishedVersion}</StatusBadge> : null}</Space> },
     { title: '版本', dataIndex: 'version', width: 80, render: (value, row) => row.publishedVersion && row.publishedVersion !== value ? `v${value || 1} / v${row.publishedVersion}` : `v${value || 1}` },
     { title: '负责人', dataIndex: 'owner', width: 100, render: (value) => value || '—' },
     { title: '更新时间', dataIndex: 'updatedAt', width: 170, render: formatDateTime }

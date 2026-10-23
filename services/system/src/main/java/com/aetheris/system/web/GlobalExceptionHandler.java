@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 @RestControllerAdvice public class GlobalExceptionHandler {
+ @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class) public ResponseEntity<Map<String,Object>> rejected(org.springframework.web.server.ResponseStatusException e,HttpServletRequest request){return ResponseEntity.status(e.getStatusCode()).body(body("AUTHENTICATION_FAILED","请求身份或操作无效",request));}
  @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<Map<String,Object>> bad(IllegalArgumentException e,HttpServletRequest request){return ResponseEntity.badRequest().body(body("VALIDATION_FAILED",safe(e),request));}
  @ExceptionHandler(Exception.class) public ResponseEntity<Map<String,Object>> error(Exception e,HttpServletRequest request){return ResponseEntity.internalServerError().body(body("INTERNAL","服务处理失败",request));}
  private Map<String,Object> body(String code,String message,HttpServletRequest request){String requestId=request.getHeader("X-Request-Id");if(requestId==null||requestId.isBlank()||requestId.length()>128)requestId=UUID.randomUUID().toString();return Map.of("requestId",requestId,"code",code,"message",message,"timestamp",Instant.now());}

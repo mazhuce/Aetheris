@@ -8,13 +8,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * 系统管理敏感端点的服务端权限门（审计日志、权限审计事件）。
- *
- * <p>判定链：身份验签（X-Aetheris-Identity，防止绕过网关直接伪造请求头）
- * → auth 决策引擎 may-manage。内部令牌未配置时 503（fail-closed），
- * 缺签名 401，无系统管理权限 403。与网关的粗粒度拦截是两层独立防线。
- */
+/** Management guard: only a v2 TrustedUser plus a live signed auth decision is accepted. */
 @Component
 public class AdminEndpointInterceptor implements HandlerInterceptor {
 
@@ -30,10 +24,6 @@ public class AdminEndpointInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws IOException {
-        if (!identityVerifier.isConfigured()) {
-            writeJson(response, 503, "system-service 未配置内部令牌（AETHERIS_INTERNAL_TOKEN）");
-            return false;
-        }
         AetherisIdentity identity = identityVerifier.verify(request);
         if (identity == null || identity.username() == null || identity.username().isBlank()) {
             writeJson(response, 401, "缺少有效的网关身份签名");
