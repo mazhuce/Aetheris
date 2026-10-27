@@ -1,4 +1,5 @@
 import http from './http'
+import { collectVisiblePages, type VisibleListPage, type VisibleListOptions } from './metadata'
 
 export interface GovernancePolicy {
   id: number
@@ -22,7 +23,12 @@ export interface GovernancePolicyInput {
 }
 
 export function listPolicies(): Promise<GovernancePolicy[]> {
-  return http.get<GovernancePolicy[]>('/api/governance/policies').then((res) => res.data)
+  return collectVisiblePages((cursor, signal) => listPoliciesPage({ cursor, size: 200, signal }))
+}
+
+export function listPoliciesPage(options: VisibleListOptions = {}): Promise<VisibleListPage<GovernancePolicy>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<GovernancePolicy>>('/api/governance/policies/page', { params: paging, signal }).then((res) => res.data)
 }
 
 export function createPolicy(payload: GovernancePolicyInput): Promise<GovernancePolicy> {
@@ -70,11 +76,14 @@ export interface DataStandardInput {
 }
 
 export function listDataStandards(keyword?: string, status?: string, standardType?: string): Promise<DataStandard[]> {
-  return http
-    .get<DataStandard[]>('/api/governance/standards', {
-      params: { keyword: keyword || undefined, status: status || undefined, standardType: standardType || undefined }
-    })
-    .then((res) => res.data)
+  return collectVisiblePages((cursor, signal) => listDataStandardsPage(keyword, status, standardType, { cursor, size: 200, signal }))
+}
+
+export function listDataStandardsPage(keyword?: string, status?: string, standardType?: string, options: VisibleListOptions = {}): Promise<VisibleListPage<DataStandard>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<DataStandard>>('/api/governance/standards/page', {
+    params: { keyword: keyword || undefined, status: status || undefined, standardType: standardType || undefined, ...paging }, signal
+  }).then((res) => res.data)
 }
 
 export function createDataStandard(payload: DataStandardInput): Promise<DataStandard> {

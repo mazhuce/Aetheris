@@ -6,12 +6,14 @@ import * as api from '@/api/quality'
 import QualityRulePage from './index'
 
 vi.mock('@/hooks/useResourceActions', () => ({ useResourceActions: () => ({ can: (action: string, id: number) => id === 1 && action === 'execute', loading: false }) }))
-vi.mock('@/api/quality', () => ({ listRules: vi.fn(), runRule: vi.fn(), updateRule: vi.fn(), createRule: vi.fn(), deleteRule: vi.fn(), getRule: vi.fn(), getRuleApproval: vi.fn(), approveRule: vi.fn(), bindRuleCron: vi.fn() }))
+vi.mock('@/api/quality', () => ({ listRules: vi.fn(), listRulesPage: vi.fn(), runRule: vi.fn(), updateRule: vi.fn(), createRule: vi.fn(), deleteRule: vi.fn(), getRule: vi.fn(), getRuleApproval: vi.fn(), approveRule: vi.fn(), bindRuleCron: vi.fn() }))
 vi.mock('@/api/metadata', () => ({ listDataSources: vi.fn() }))
 beforeEach(() => {
   vi.clearAllMocks()
   setAuthenticated({ id: 15, accessVersion: 0, permissionVersion: 0, username: 'operator', role: 'viewer' })
-  vi.mocked(api.listRules).mockResolvedValue([1, 2].map((id) => ({ id, name: `规则${id}`, ruleType: 'sql', datasourceId: 3, expression: 'SELECT 0', targetTable: 'warehouse.t' })))
+  const rules = [1, 2].map((id) => ({ id, name: `规则${id}`, ruleType: 'sql', datasourceId: 3, expression: 'SELECT 0', targetTable: 'warehouse.t' }))
+  vi.mocked(api.listRules).mockResolvedValue(rules)
+  vi.mocked(api.listRulesPage).mockResolvedValue({ items: rules, nextCursor: null, hasMore: false })
   vi.mocked(api.runRule).mockResolvedValue({ id: 8, ruleId: 1, status: 'passed', startedAt: '2026-10-18T00:00:00Z' })
 })
 it('offers only the granted fixed-rule execution to a non-admin', async () => {

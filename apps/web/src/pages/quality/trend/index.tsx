@@ -8,19 +8,18 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import {
   getQualitySummary,
-  listAllResults,
-  listQualityQuarantine,
-  listRules,
+  listAllResultsPage,
+  listQualityQuarantinePage,
+  listRulesPage,
   releaseQualityQuarantine,
   type QualityCheckResult,
   type QualityQuarantineRecord,
-  type QualityRule,
   type QualitySummary
 } from '@/api/quality'
 import { formatDateTime } from '@/utils/format'
-import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import { canManagePlatform } from '@/utils/access'
 import ExecutionReconciliationModal from '@/components/ExecutionReconciliationModal'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 const statusMeta: Record<string, { label: string; color: string }> = {
   passed: { label: '通过', color: 'success' },
@@ -32,42 +31,37 @@ const statusMeta: Record<string, { label: string; color: string }> = {
 
 export default function QualityTrendPage() {
   const { message } = App.useApp()
-  const [results, setResults] = useState<QualityCheckResult[]>([])
-  const [rules, setRules] = useState<QualityRule[]>([])
   const [summary, setSummary] = useState<QualitySummary>()
-  const [quarantine, setQuarantine] = useState<QualityQuarantineRecord[]>([])
   const [quarantineStatus, setQuarantineStatus] = useState('open')
   const [quarantineLoading, setQuarantineLoading] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<string>()
   const [ruleId, setRuleId] = useState<number>()
   const [reconcileId, setReconcileId] = useState<number>()
-  const pageSize = useResponsivePageSize(6, 5, 4, 3)
   const canManage = canManagePlatform()
+  const resultListing = useVisibleListPage(
+    (cursor, signal) => listAllResultsPage(status, ruleId, { cursor, size: 50, signal }),
+    JSON.stringify({ status, ruleId })
+  )
+  const rulesListing = useVisibleListPage(
+    (cursor, signal) => listRulesPage({ cursor, size: 100, signal }), 'quality-rules'
+  )
+  const quarantineListing = useVisibleListPage(
+    (cursor, signal) => listQualityQuarantinePage(quarantineStatus, { cursor, size: 50, signal }),
+    JSON.stringify({ quarantineStatus })
+  )
+  const results = resultListing.items
+  const rules = rulesListing.items
+  const quarantine = quarantineListing.items
+  const loading = resultListing.loading || rulesListing.loading
 
   const refresh = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [resultList, ruleList, summaryData, quarantineList] = await Promise.all([
-        listAllResults(status, ruleId, 100),
-        listRules(),
-        getQualitySummary(),
-        listQualityQuarantine(quarantineStatus, 100)
-      ])
-      setResults(resultList)
-      setRules(ruleList)
-      setSummary(summaryData)
-      setQuarantine(quarantineList)
-    } catch {
-      message.error('质量检查历史加载失败')
-    } finally {
-      setLoading(false)
-    }
-  }, [message, status, ruleId, quarantineStatus])
+    resultListing.refresh()
+    rulesListing.refresh()
+    quarantineListing.refresh()
+    try { setSummary(await getQualitySummary()) } catch { message.error('质量检查概览加载失败') }
+  }, [message, resultListing, rulesListing, quarantineListing])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
+  useEffect(() => { void getQualitySummary().then(setSummary).catch(() => message.error('质量检查概览加载失败')) }, [message, status, ruleId])
 
   const ruleName = useCallback(
     (id: number) => rules.find((rule) => rule.id === id)?.name ?? `规则 ${id}`,
@@ -79,7 +73,7 @@ export default function QualityTrendPage() {
     try {
       await releaseQualityQuarantine(id)
       message.success('隔离记录已释放')
-      setQuarantine((items) => items.filter((item) => item.id !== id))
+      quarantineListing.refresh()
     } catch {
       message.error('隔离记录释放失败')
     } finally {
@@ -218,9 +212,14 @@ export default function QualityTrendPage() {
           dataSource={results}
           loading={loading}
           scroll={{ x: 1100 }}
-          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
-          locale={{ emptyText: <Typography.Text type="secondary">暂无检查记录。在数据质量页创建并运行规则，或配置定时调度后，历史会出现在这里。</Typography.Text> }}
+          pagination={false}
+          locale={{ emptyText: <Typography.Text type="secondary">{resultListing.error ?? (resultListing.hasMore ? '暂未找到可见记录，可继续查看' : '暂无检查记录。在数据质量页创建并运行规则，或配置定时调度后，历史会出现在这里。')}</Typography.Text> }}
         />
+        <div className="table-pagination-bar">
+          <Button disabled={!resultListing.canPrevious || resultListing.loading} onClick={resultListing.previous}>上一页</Button>
+          <span>第 {resultListing.pageNumber} 页 · 本页 {results.length} 条</span>
+          <Button disabled={!resultListing.hasMore || resultListing.loading || !!resultListing.error} onClick={resultListing.next}>下一页</Button>
+        </div>
       </DataSurface>
 
       <DataSurface title="质量隔离区" description="质量未通过的运行记录；释放动作会保留处理人和时间" label="质量隔离记录">
@@ -243,9 +242,14 @@ export default function QualityTrendPage() {
           dataSource={quarantine}
           loading={quarantineLoading || loading}
           scroll={{ x: 1000 }}
-          pagination={{ pageSize, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
-          locale={{ emptyText: <Typography.Text type="secondary">当前状态没有隔离记录。</Typography.Text> }}
+          pagination={false}
+          locale={{ emptyText: <Typography.Text type="secondary">{quarantineListing.error ?? (quarantineListing.hasMore ? '暂未找到可见记录，可继续查看' : '当前状态没有隔离记录。')}</Typography.Text> }}
         />
+        <div className="table-pagination-bar">
+          <Button disabled={!quarantineListing.canPrevious || quarantineListing.loading} onClick={quarantineListing.previous}>上一页</Button>
+          <span>第 {quarantineListing.pageNumber} 页 · 本页 {quarantine.length} 条</span>
+          <Button disabled={!quarantineListing.hasMore || quarantineListing.loading || !!quarantineListing.error} onClick={quarantineListing.next}>下一页</Button>
+        </div>
       </DataSurface>
     </div>
   )

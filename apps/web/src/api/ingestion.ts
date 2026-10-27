@@ -1,5 +1,6 @@
 import http from './http'
 import { approvalMutationConfig, readExecutionApproval, type ExecutionApproval } from './executionApproval'
+import { collectVisiblePages, type VisibleListPage, type VisibleListOptions } from './metadata'
 
 export interface IngestionTask {
   id: number
@@ -39,7 +40,12 @@ export interface IngestionTaskInput {
 }
 
 export function listTasks(): Promise<IngestionTask[]> {
-  return http.get<IngestionTask[]>('/api/ingestion/tasks').then((res) => res.data)
+  return collectVisiblePages((cursor, signal) => listTasksPage({ cursor, size: 200, signal }))
+}
+
+export function listTasksPage(options: VisibleListOptions = {}): Promise<VisibleListPage<IngestionTask>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<IngestionTask>>('/api/ingestion/tasks/page', { params: paging, signal }).then((res) => res.data)
 }
 
 export function createTask(payload: IngestionTaskInput): Promise<IngestionTask> {
@@ -89,7 +95,12 @@ export function replayRun(id: number, requestKey = crypto.randomUUID()): Promise
 }
 
 export function listRuns(id: number, limit = 30): Promise<IngestionRun[]> {
-  return http.get<IngestionRun[]>(`/api/ingestion/tasks/${id}/runs`, { params: { limit } }).then((res) => res.data)
+  return listRunsPage(id, { size: Math.min(Math.max(limit, 1), 200) }).then((page) => page.items)
+}
+
+export function listRunsPage(id: number, options: VisibleListOptions = {}): Promise<VisibleListPage<IngestionRun>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<IngestionRun>>(`/api/ingestion/tasks/${id}/runs/page`, { params: paging, signal }).then((res) => res.data)
 }
 
 // —— 数据同步：跨任务的全局运行记录 ——
@@ -112,11 +123,14 @@ export interface SyncRunRecord {
 }
 
 export function listAllSyncRuns(taskId?: number, status?: string): Promise<SyncRunRecord[]> {
-  return http
-    .get<SyncRunRecord[]>('/api/ingestion/runs', {
-      params: { taskId: taskId || undefined, status: status || undefined }
-    })
-    .then((res) => res.data)
+  return collectVisiblePages((cursor, signal) => listAllSyncRunsPage(taskId, status, { cursor, size: 200, signal }))
+}
+
+export function listAllSyncRunsPage(taskId?: number, status?: string, options: VisibleListOptions = {}): Promise<VisibleListPage<SyncRunRecord>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<SyncRunRecord>>('/api/ingestion/runs/page', {
+    params: { taskId: taskId || undefined, status: status || undefined, ...paging }, signal
+  }).then((res) => res.data)
 }
 
 /** A fresh view-authorized definition, never a caller supplied approval snapshot. */

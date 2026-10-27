@@ -1,4 +1,5 @@
 import http from './http'
+import { collectVisiblePages, type VisibleListPage, type VisibleListOptions } from './metadata'
 
 /** 任务定义。字段与后端 workflow.task 表一致。 */
 export interface Task {
@@ -228,7 +229,12 @@ export const ATTEMPT_STATUS_META: Record<ExecutionAttemptStatus, { label: string
 }
 
 export function listTasks(signal?: AbortSignal): Promise<TaskView[]> {
-  return readWithSignal<TaskView[]>('/api/workflow/tasks', signal)
+  return collectVisiblePages((cursor, pageSignal) => listTasksPage({ cursor, size: 200, signal: pageSignal }), { signal })
+}
+
+export function listTasksPage(options: VisibleListOptions = {}): Promise<VisibleListPage<TaskView>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<TaskView>>('/api/workflow/tasks/page', { params: paging, signal }).then((res) => res.data)
 }
 
 export function getTask(id: number): Promise<TaskView> {
@@ -265,18 +271,24 @@ export function getBusinessCalendar(): Promise<BusinessCalendarView> {
 }
 
 export function listInstances(id: number, limit = 30): Promise<TaskInstance[]> {
-  return http
-    .get<TaskInstance[]>(`/api/workflow/tasks/${id}/instances`, { params: { limit } })
-    .then((res) => res.data)
+  return listInstancesPage(id, { size: Math.min(Math.max(limit, 1), 200) }).then((page) => page.items)
+}
+
+export function listInstancesPage(id: number, options: VisibleListOptions = {}): Promise<VisibleListPage<TaskInstance>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<TaskInstance>>(`/api/workflow/tasks/${id}/instances/page`, { params: paging, signal }).then((res) => res.data)
 }
 
 /** 全局实例列表（任务监控页），按开始时间倒序，可按状态过滤。 */
 export function listAllInstances(status?: string, limit = 100, signal?: AbortSignal): Promise<TaskInstance[]> {
-  return http
-    .get<TaskInstance[]>('/api/workflow/tasks/instances', {
-      params: status ? { status, limit } : { limit }, ...(signal ? { signal } : {})
-    })
-    .then((res) => res.data)
+  return listAllInstancesPage(status, { size: Math.min(Math.max(limit, 1), 200), signal }).then((page) => page.items)
+}
+
+export function listAllInstancesPage(status?: string, options: VisibleListOptions = {}): Promise<VisibleListPage<TaskInstance>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<TaskInstance>>('/api/workflow/tasks/instances/page', {
+    params: { status: status || undefined, ...paging }, signal
+  }).then((res) => res.data)
 }
 
 export function listInstanceLogs(instanceId: number): Promise<TaskLog[]> {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { App, Button, Form, Input, InputNumber, Modal, Select, Table, Tag, Tooltip } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { PlayCircleOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
@@ -12,7 +12,7 @@ import { executionApprovalError } from '@/utils/executionApprovalError'
 import {
   createRule,
   deleteRule,
-  listRules,
+  listRulesPage,
   runRule,
   updateRule,
   type QualityRule,
@@ -22,6 +22,7 @@ import { formatDateTime } from '@/utils/format'
 import { canManagePlatform } from '@/utils/access'
 import { listDataSources, type DataSource } from '@/api/metadata'
 import { useResourceActions } from '@/hooks/useResourceActions'
+import { useVisibleListPage } from '@/hooks/useVisibleListPage'
 
 const severityMeta: Record<string, { color: string; text: string }> = {
   low: { color: 'default', text: '低' },
@@ -32,13 +33,17 @@ const severityMeta: Record<string, { color: string; text: string }> = {
 export default function QualityRulePage() {
   const { message, modal } = App.useApp()
   const canManage = canManagePlatform()
-  const [allData, setAllData] = useState<QualityRule[]>([])
-  const permissions = useResourceActions('quality_rule', allData)
-  const [dataSources, setDataSources] = useState<DataSource[]>([])
-  const [loading, setLoading] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [ruleType, setRuleType] = useState<string>()
   const [status, setStatus] = useState<string>()
+  const queryKey = JSON.stringify({ keyword, ruleType, status })
+  const listing = useVisibleListPage(
+    (cursor, signal) => listRulesPage({ cursor, size: 50, signal }, { keyword: keyword || undefined, ruleType, status }),
+    queryKey
+  )
+  const allData = listing.items
+  const permissions = useResourceActions('quality_rule', allData)
+  const [dataSources, setDataSources] = useState<DataSource[]>([])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<QualityRule | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -46,21 +51,11 @@ export default function QualityRulePage() {
   const [approvalRefresh, setApprovalRefresh] = useState(0)
   const [form] = Form.useForm<QualityRuleInput>()
 
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    try {
-      setAllData(await listRules())
-    } catch {
-      message.error('质量规则加载失败')
-    } finally {
-      setLoading(false)
-    }
-  }, [message])
+  const refresh = useCallback(() => listing.refresh(), [listing])
 
   useEffect(() => {
-    void refresh()
     if (canManage) void listDataSources().then(setDataSources).catch(() => message.error('数据源列表加载失败'))
-  }, [refresh, message, canManage])
+  }, [message, canManage])
 
   useEffect(() => {
     if (open) {
@@ -69,14 +64,7 @@ export default function QualityRulePage() {
     }
   }, [open, editing, form])
 
-  const filtered = useMemo(() => {
-    return allData.filter((rule) => {
-      if (keyword && !rule.name.includes(keyword) && !rule.targetTable.includes(keyword)) return false
-      if (ruleType && rule.ruleType !== ruleType) return false
-      if (status && rule.status !== status) return false
-      return true
-    })
-  }, [allData, keyword, ruleType, status])
+  const filtered = allData
 
   const handleSubmit = async (values: QualityRuleInput) => {
     setSubmitting(true)
@@ -91,7 +79,7 @@ export default function QualityRulePage() {
       }
       setOpen(false)
       setEditing(null)
-      await refresh()
+      refresh()
     } catch (error) {
       message.error(executionApprovalError(error, '保存失败'))
     } finally {
@@ -103,7 +91,7 @@ export default function QualityRulePage() {
     try {
       await deleteRule(id)
       message.success('规则已删除')
-      await refresh()
+      refresh()
     } catch {
       message.error('删除失败')
     }
@@ -115,10 +103,10 @@ export default function QualityRulePage() {
       if (result.status === 'passed') message.success('质量检查通过')
       else if (result.status === 'failed') message.warning(`质量检查未通过，发现 ${result.violationCount ?? 0} 条违规数据`)
       else message.warning(result.status === 'unknown' ? '检查结果待对账，请核实运行记录；不会自动重试' : '本次请求未确认成功，请查看运行记录')
-      await refresh()
+      refresh()
     } catch (error) {
       message.error(executionApprovalError(error, '质量检查未确认成功，请查看运行记录'))
-      await refresh()
+      refresh()
     }
   }
 
@@ -218,7 +206,7 @@ export default function QualityRulePage() {
             <Select value={status} onChange={setStatus} allowClear placeholder="全部" className="filter-control-xs"
               options={[{ value: 'enabled', label: '启用' }, { value: 'disabled', label: '禁用' }]} />
           </div>
-          <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
+          <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
         </div>
       </PageToolbar>
 
@@ -228,12 +216,17 @@ export default function QualityRulePage() {
           rowKey="id"
           columns={columns}
           dataSource={filtered}
-          loading={loading}
+          loading={listing.loading}
           scroll={{ x: 1100 }}
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
-          locale={{ emptyText: '暂无质量规则' }}
+          locale={{ emptyText: listing.error ?? (listing.hasMore ? '暂未找到可见规则，可继续查看' : '暂无质量规则') }}
         />
       </DataSurface>
+      <div className="table-pagination-bar">
+        <Button disabled={!listing.canPrevious || listing.loading} onClick={listing.previous}>上一页</Button>
+        <span>第 {listing.pageNumber} 页 · 本页 {listing.items.length} 条</span>
+        <Button disabled={!listing.hasMore || listing.loading || !!listing.error} onClick={listing.next}>下一页</Button>
+      </div>
 
       <FixedExecutionApprovalDrawer kind="quality" resourceId={approvalId} refreshToken={approvalRefresh}
         canApprove={approvalId !== null && (canManage || permissions.can('update', approvalId))}

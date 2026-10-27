@@ -1,0 +1,78 @@
+{
+  "purpose": "N11 可见资源分页与有界批量授权实现的提交前证据索引",
+  "recordedAt": "2026-10-28",
+  "sourceCommitBeforeN11": "2f4d3be1a07164e43e12b2569ab3fbe2a9152e68",
+  "sourceCommitAtEvidence": "2f4d3be1a07164e43e12b2569ab3fbe2a9152e68",
+  "scope": {
+    "services": [
+      "quality",
+      "ingestion",
+      "governance",
+      "workflow"
+    ],
+    "sharedContract": "libs/security-protocol/src/main/java/com/aetheris/security/protocol/pagination",
+    "behavior": [
+      "ID descending keyset with first-page upper bound",
+      "cursor bound to resource, filter, page size, UID, username and accessVersion",
+      "per-window authorization with at most 5000 candidates scanned per request",
+      "authenticated legacy arrays fail explicitly above the 200-row compatibility limit"
+    ]
+  },
+  "tests": [
+    {
+      "command": "mvn -pl libs/security-protocol,services/quality,services/ingestion,services/governance,services/workflow -am -DskipTests=false -Dsurefire.failIfNoSpecifiedTests=false -Dtest=VisibleListScannerTest,QualityRuleControllerTest,IngestionTaskControllerTest,GovernancePolicyControllerTest,DataStandardControllerTest,TaskControllerSchedulingTest test",
+      "status": "passed",
+      "result": "VisibleListScanner 2/2; Quality 12/12; Ingestion 16/16; Governance 19/19; Workflow 2/2; Maven SUCCESS"
+    },
+    {
+      "command": "npm run type-check",
+      "workingDirectory": "apps/web",
+      "status": "passed",
+      "result": "tsc --noEmit exit 0"
+    },
+    {
+      "command": "npx vitest run src/pages/quality/rules/index.test.tsx src/hooks/useVisibleListPage.test.tsx",
+      "workingDirectory": "apps/web",
+      "status": "passed",
+      "result": "2 files, 6 tests passed"
+    },
+    {
+      "command": "npm test -- --run",
+      "workingDirectory": "apps/web",
+      "status": "not_release_evidence",
+      "result": "Existing/non-N11 failures or timeouts remain in ExecutionReconciliationModal, asyncLintContract and governance issues page"
+    }
+  ],
+  "sourceFiles": [
+    {"path": "apps/web/src/api/governance.ts", "sha256": "9130a8128b2c004223583a8b5e623b37808f476a8801d60200d9bcb194f07956"},
+    {"path": "apps/web/src/api/ingestion.ts", "sha256": "2655069490258ac06179bf6d0b6544dc4d84949b75a9b38c8ed98226cd152975"},
+    {"path": "apps/web/src/api/quality.ts", "sha256": "98e23b2dce0c22226e450f6a89d0869c54970965f0d4c1b82351cb1709fdf022"},
+    {"path": "apps/web/src/api/workflow.ts", "sha256": "eac1b64c87e578a0bcfbd324c9f527f2b9c515302c87a7a94058d3c868001f29"},
+    {"path": "apps/web/src/pages/quality/rules/index.test.tsx", "sha256": "08f8ad3bbfff1050cebf0124f3f9d3b5ddc8ea72c338afd4b4252a1f39aeb0ae"},
+    {"path": "apps/web/src/pages/quality/rules/index.tsx", "sha256": "8d95215814563699ee40952361b7c3957824daecf0c5d9ecc401e0dd8a8612da"},
+    {"path": "apps/web/src/pages/quality/trend/index.tsx", "sha256": "c1410d03aa543672d050bcfb56dadd586c5c0efca6aa5b965d0b8343e746171d"},
+    {"path": "docs/next-goals-2026-10-26.md", "sha256": "a2e84ab38fbaf15234de171a9fef4b65721cff5df885dbdbae56e746cae4eb75"},
+    {"path": "docs/remediation/2026-10-18-audit-plan.md", "sha256": "ac9576b163b5b46e48003f4a59c65904fefbbe18e457aa3fc8f0d044460ea4cc"},
+    {"path": "docs/remediation/visible-resource-pagination-contract.md", "sha256": "4f2d4ca2886d0a3aa4dbf2fb257787eab9191e3b49573e4d248fc06499168426"},
+    {"path": "libs/security-protocol/src/main/java/com/aetheris/security/protocol/pagination/VisibleListCursor.java", "sha256": "2500cf3b0b44af36c83306c757db16f43310c4e40ede61c21c515c81733eac0c"},
+    {"path": "libs/security-protocol/src/main/java/com/aetheris/security/protocol/pagination/VisibleListPage.java", "sha256": "e6c4aae970bc9dd54a680891042418c1cc6ec69ce1bfafa53d4543dc1ef64cc9"},
+    {"path": "libs/security-protocol/src/main/java/com/aetheris/security/protocol/pagination/VisibleListScanner.java", "sha256": "8b34ec6c8036d1b588d7aab7b88582fc79e05592c048f0944d5f0eb383a94589"},
+    {"path": "libs/security-protocol/src/test/java/com/aetheris/security/protocol/pagination/VisibleListScannerTest.java", "sha256": "2e83bf6922ea0ed5d95aa5a837ba1b16ddb94f31474733b7bca2fa6b79165e35"},
+    {"path": "services/governance/src/main/java/com/aetheris/governance/controller/DataStandardController.java", "sha256": "298eb1ed7ff1accb4f6d85f18af17d7d06d381637705124fa62aef3c3a1ac948"},
+    {"path": "services/governance/src/main/java/com/aetheris/governance/controller/GovernancePolicyController.java", "sha256": "aa2cfdd44cc02e3adddbc6eacda656fe14d25d54e62d0005e7c003d377f0250b"},
+    {"path": "services/governance/src/main/java/com/aetheris/governance/security/ResourceAuthorization.java", "sha256": "aae21b71fbfa30f19ad5f04188595f4cf6b0df39f773147b2a39fc1265a9dfa9"},
+    {"path": "services/ingestion/src/main/java/com/aetheris/ingestion/controller/IngestionRunListController.java", "sha256": "1d2ab7babc4186eb94cabed02301638dd0290db8a1cb2eac18916b46f1db67a8"},
+    {"path": "services/ingestion/src/main/java/com/aetheris/ingestion/controller/IngestionTaskController.java", "sha256": "b6ff58cd01f80407dc4579278c5f3301e941ca66361e0d2f7772c471bafe2dd0"},
+    {"path": "services/quality/src/main/java/com/aetheris/quality/controller/QualityQuarantineController.java", "sha256": "6a2716afef59fae8439a72c1d0ff401fd270728597a906b298dabfe2b4fbfae1"},
+    {"path": "services/quality/src/main/java/com/aetheris/quality/controller/QualityRuleController.java", "sha256": "43565bded8ee3d758324f04d1c93a9b1aedb88a0f844ad702aff72942d43f559"},
+    {"path": "services/workflow/src/main/java/com/aetheris/workflow/controller/TaskController.java", "sha256": "cd4644fb00f2cec0f0739ef25fbacb6659d207ab28b22d9f42dac43494d44d90"}
+  ],
+  "unverified": [
+    "真实 PostgreSQL 中超过 1000 条记录的后页完整可见性",
+    "翻页期间新增、删除、撤权与 accessVersion 变化",
+    "真实权限服务 Auth 503 在 HTTP 入口的故障语义",
+    "真实浏览器页面翻页、错误态和卸载响应隔离",
+    "同一冻结源码、配置、迁移和制品下的 W6 发布验收"
+  ],
+  "releaseEligible": false
+}

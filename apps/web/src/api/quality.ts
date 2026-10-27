@@ -1,5 +1,6 @@
 import http from './http'
 import { approvalMutationConfig, readExecutionApproval, type ExecutionApproval } from './executionApproval'
+import { collectVisiblePages, type VisibleListPage, type VisibleListOptions } from './metadata'
 
 export interface QualityRule {
   id: number
@@ -63,7 +64,12 @@ export interface QualityQuarantineRecord {
 }
 
 export function listRules(): Promise<QualityRule[]> {
-  return http.get<QualityRule[]>('/api/quality/rules').then((res) => res.data)
+  return collectVisiblePages((cursor, signal) => listRulesPage({ cursor, size: 200, signal }))
+}
+
+export function listRulesPage(options: VisibleListOptions = {}, filters: { keyword?: string; ruleType?: string; status?: string } = {}): Promise<VisibleListPage<QualityRule>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<QualityRule>>('/api/quality/rules/page', { params: { ...filters, ...paging }, signal }).then((res) => res.data)
 }
 
 export function createRule(payload: QualityRuleInput): Promise<QualityRule> {
@@ -83,14 +89,23 @@ export function runRule(id: number): Promise<QualityCheckResult> {
 }
 
 export function listRuleResults(id: number, limit = 30): Promise<QualityCheckResult[]> {
-  return http.get<QualityCheckResult[]>(`/api/quality/rules/${id}/results`, { params: { limit } }).then((res) => res.data)
+  return listRuleResultsPage(id, { size: Math.min(Math.max(limit, 1), 200) }).then((page) => page.items)
+}
+
+export function listRuleResultsPage(id: number, options: VisibleListOptions = {}): Promise<VisibleListPage<QualityCheckResult>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<QualityCheckResult>>(`/api/quality/rules/${id}/results/page`, { params: paging, signal }).then((res) => res.data)
 }
 
 export function listAllResults(status?: string, ruleId?: number, limit = 100): Promise<QualityCheckResult[]> {
-  const params: Record<string, number | string> = { limit }
-  if (status) params.status = status
-  if (ruleId) params.ruleId = ruleId
-  return http.get<QualityCheckResult[]>('/api/quality/rules/results/all', { params }).then((res) => res.data)
+  return listAllResultsPage(status, ruleId, { size: Math.min(Math.max(limit, 1), 200) }).then((page) => page.items)
+}
+
+export function listAllResultsPage(status?: string, ruleId?: number, options: VisibleListOptions = {}): Promise<VisibleListPage<QualityCheckResult>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<QualityCheckResult>>('/api/quality/rules/results/page', {
+    params: { status: status || undefined, ruleId: ruleId || undefined, ...paging }, signal
+  }).then((res) => res.data)
 }
 
 export interface QualitySummary {
@@ -108,9 +123,14 @@ export function getQualitySummary(): Promise<QualitySummary> {
 }
 
 export function listQualityQuarantine(status = 'open', limit = 100): Promise<QualityQuarantineRecord[]> {
-  return http
-    .get<QualityQuarantineRecord[]>('/api/quality/quarantine', { params: { status, limit } })
-    .then((res) => res.data)
+  return listQualityQuarantinePage(status, { size: Math.min(Math.max(limit, 1), 200) }).then((page) => page.items)
+}
+
+export function listQualityQuarantinePage(status = 'open', options: VisibleListOptions = {}): Promise<VisibleListPage<QualityQuarantineRecord>> {
+  const { signal, ...paging } = options
+  return http.get<VisibleListPage<QualityQuarantineRecord>>('/api/quality/quarantine/page', {
+    params: { status, ...paging }, signal
+  }).then((res) => res.data)
 }
 
 export function releaseQualityQuarantine(id: number): Promise<QualityQuarantineRecord> {

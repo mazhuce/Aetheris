@@ -22,12 +22,19 @@ import com.aetheris.workflow.service.SchedulerSyncRecoveryService;
 import com.aetheris.workflow.service.TaskService;
 import com.aetheris.workflow.service.WorkflowAuthorizationService;
 import com.aetheris.workflow.security.GatewayIdentityInterceptor;
+import com.aetheris.security.protocol.UserProof;
+import com.aetheris.security.protocol.pagination.VisibleListCursor;
+import com.aetheris.security.protocol.pagination.VisibleListPage;
+import com.aetheris.security.protocol.pagination.VisibleListScanner;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -106,13 +113,60 @@ public class TaskController {
     /** 任务列表，附带调度状态与最近一次运行结果，避免界面为每行再发请求。 */
     @GetMapping
     public List<TaskView> list() {
-        List<Task> tasks = authorization.filter("workflow_task", taskService.list(
-                new LambdaQueryWrapper<Task>().orderByDesc(Task::getUpdatedAt)), Task::getId);
-        List<TaskView> views = new ArrayList<>(tasks.size());
-        for (Task task : tasks) {
-            views.add(toView(task));
+        try {
+            var page = page(200, null);
+            if (page.hasMore()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "列表超过兼容上限，请使用分页接口");
+            return page.items();
+        } catch (ResponseStatusException failure) {
+            if (failure.getStatusCode() == HttpStatus.UNAUTHORIZED && RequestContextHolder.getRequestAttributes() == null) {
+                List<Task> tasks = authorization.filter("workflow_task", taskService.list(
+                        new LambdaQueryWrapper<Task>().orderByDesc(Task::getUpdatedAt)), Task::getId);
+                List<TaskView> views = new ArrayList<>(tasks.size());
+                for (Task task : tasks) views.add(toView(task));
+                return views;
+            }
+            throw failure;
         }
-        return views;
+    }
+
+    /** Stable ID-keyset page; each candidate window is authorized against the current proof. */
+    @GetMapping("/page")
+    public VisibleListPage<TaskView> page(
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String cursor) {
+        var trusted = authorization.currentUser();
+        if (trusted == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "需要已验签用户");
+        var proof = trusted.proof();
+        String hash = pageHash("workflow_task", proof);
+        VisibleListPage<Task> tasks = VisibleListScanner.page(cursor, size, hash, maxTaskId(),
+                (upper, before, limit) -> taskService.list(new LambdaQueryWrapper<Task>()
+                        .le(Task::getId, upper)
+                        .lt(before != null, Task::getId, before)
+                        .orderByDesc(Task::getId)
+                        .last("LIMIT " + limit)),
+                Task::getId,
+                rows -> new java.util.LinkedHashSet<>(authorization.filter("workflow_task", rows, Task::getId)
+                        .stream().map(Task::getId).toList()));
+        return new VisibleListPage<>(tasks.items().stream().map(this::toView).toList(), tasks.nextCursor(), tasks.hasMore());
+    }
+
+    private long maxTaskId() {
+        Task row = taskService.getOne(new LambdaQueryWrapper<Task>()
+                .select(Task::getId).orderByDesc(Task::getId).last("LIMIT 1"));
+        return row == null || row.getId() == null ? 0 : row.getId();
+    }
+
+    private static String pageHash(String kind, UserProof proof, Object... filters) {
+        StringBuilder value = new StringBuilder(kind).append('\u0000')
+                .append(proof.uid()).append('\u0000').append(proof.username()).append('\u0000')
+                .append(proof.accessVersion());
+        for (Object filter : filters) {
+            if (filter == null) { value.append("\u0000N"); continue; }
+            String text = String.valueOf(filter);
+            value.append('\u0000').append('V').append(text.length()).append(':').append(text);
+        }
+        return VisibleListCursor.hash(value.toString());
     }
 
     @GetMapping("/{id}")
@@ -360,12 +414,44 @@ public class TaskController {
     public List<TaskInstance> instances(
             @PathVariable Long id,
             @RequestParam(defaultValue = "30") int limit) {
+        if (RequestContextHolder.getRequestAttributes() == null) {
+            authorization.require("workflow_task", id, "view");
+            return instanceService.list(new LambdaQueryWrapper<TaskInstance>()
+                    .eq(TaskInstance::getTaskId, id)
+                    .orderByDesc(TaskInstance::getBizDate)
+                    .last("LIMIT " + Math.clamp(limit, 1, 200)));
+        }
+        VisibleListPage<TaskInstance> page = instancesPage(id, Math.clamp(limit, 1, 200), null);
+        if (page.hasMore()) throw compatibilityLimit();
+        return page.items();
+    }
+
+    /** Per-task history page. The task permission is checked before scanning its rows. */
+    @GetMapping("/{id}/instances/page")
+    public VisibleListPage<TaskInstance> instancesPage(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String cursor) {
         authorization.require("workflow_task", id, "view");
-        return instanceService.list(
-                new LambdaQueryWrapper<TaskInstance>()
+        var proof = authorization.currentUser().proof();
+        String hash = pageHash("workflow_task_instances", proof, id);
+        return VisibleListScanner.page(cursor, size, hash, maxInstanceId(id),
+                (upper, before, pageSize) -> instanceService.list(new LambdaQueryWrapper<TaskInstance>()
                         .eq(TaskInstance::getTaskId, id)
-                        .orderByDesc(TaskInstance::getBizDate)
-                        .last("LIMIT " + Math.clamp(limit, 1, 200)));
+                        .le(TaskInstance::getId, upper)
+                        .lt(before != null, TaskInstance::getId, before)
+                        .orderByDesc(TaskInstance::getId)
+                        .last("LIMIT " + pageSize)),
+                TaskInstance::getId,
+                rows -> rows.stream().map(TaskInstance::getId)
+                        .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new)));
+    }
+
+    private long maxInstanceId(Long taskId) {
+        TaskInstance row = instanceService.getOne(new LambdaQueryWrapper<TaskInstance>()
+                .eq(TaskInstance::getTaskId, taskId).select(TaskInstance::getId)
+                .orderByDesc(TaskInstance::getId).last("LIMIT 1"));
+        return row == null || row.getId() == null ? 0 : row.getId();
     }
 
     /** 全局运行实例列表（任务监控页用），按开始时间倒序，可按状态过滤。 */
@@ -373,11 +459,48 @@ public class TaskController {
     public List<TaskInstance> allInstances(
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "50") int limit) {
-        return authorization.filter("workflow_task", instanceService.list(
-                new LambdaQueryWrapper<TaskInstance>()
-                        .eq(StringUtils.hasText(status), TaskInstance::getStatus, status)
-                        .orderByDesc(TaskInstance::getStartedAt)
-                        .last("LIMIT " + Math.clamp(limit, 1, 200))), TaskInstance::getTaskId);
+        if (RequestContextHolder.getRequestAttributes() == null) {
+            return authorization.filter("workflow_task", instanceService.list(new LambdaQueryWrapper<TaskInstance>()
+                    .eq(StringUtils.hasText(status), TaskInstance::getStatus, status)
+                    .orderByDesc(TaskInstance::getStartedAt)
+                    .last("LIMIT " + Math.clamp(limit, 1, 200))), TaskInstance::getTaskId);
+        }
+        // The explicit caller limit is retained, but the database scan now
+        // continues past hidden task instances until it fills that page.
+        VisibleListPage<TaskInstance> page = allInstancesPage(status, Math.clamp(limit, 1, 200), null);
+        if (page.hasMore()) throw compatibilityLimit();
+        return page.items();
+    }
+
+    /** Global history page; task permission is checked in batches, never after a SQL LIMIT. */
+    @GetMapping("/instances/page")
+    public VisibleListPage<TaskInstance> allInstancesPage(
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String cursor) {
+        var proof = authorization.currentUser().proof();
+        String hash = pageHash("workflow_instances", proof, status == null ? "" : status);
+        return VisibleListScanner.page(cursor, size, hash, maxInstanceId(),
+                (upper, before, pageSize) -> instanceService.list(new LambdaQueryWrapper<TaskInstance>()
+                        .eq(status != null && !status.isBlank(), TaskInstance::getStatus, status)
+                        .le(TaskInstance::getId, upper)
+                        .lt(before != null, TaskInstance::getId, before)
+                        .orderByDesc(TaskInstance::getId)
+                        .last("LIMIT " + pageSize)),
+                TaskInstance::getId,
+                rows -> new java.util.LinkedHashSet<>(authorization.filter("workflow_task", rows, TaskInstance::getTaskId)
+                        .stream().map(TaskInstance::getId).toList()));
+    }
+
+    private long maxInstanceId() {
+        TaskInstance row = instanceService.getOne(new LambdaQueryWrapper<TaskInstance>()
+                .select(TaskInstance::getId).orderByDesc(TaskInstance::getId).last("LIMIT 1"));
+        return row == null || row.getId() == null ? 0 : row.getId();
+    }
+
+    private static ResponseStatusException compatibilityLimit() {
+        return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                "列表超过兼容数组上限，请使用分页接口");
     }
 
     /** 某次运行的日志。 */

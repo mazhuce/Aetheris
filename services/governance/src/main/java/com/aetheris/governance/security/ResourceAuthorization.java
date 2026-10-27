@@ -28,6 +28,12 @@ public class ResourceAuthorization {
         return user;
     }
     public String username(){var u=subject();return u==null?null:u.proof().username();}
+    /** The exact gateway-verified subject used to bind pagination cursors. */
+    public TrustedUser currentUser(){
+        var user=subject();
+        if(user==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"需要已验签用户");
+        return user;
+    }
     public boolean allowed(String type,Long id,String action){
         var u=subject();if(u==null || auth==null || type==null || !RESOURCES.contains(type) || (id!=null&&id<=0) || action==null || action.isBlank())return false;
         var r=request();String key=getClass().getName()+":"+type+":"+id+":"+action;

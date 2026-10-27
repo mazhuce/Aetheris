@@ -7,6 +7,9 @@ import com.aetheris.ingestion.service.IngestionRunService;
 import com.aetheris.ingestion.service.IngestionSchedulerService;
 import com.aetheris.ingestion.service.IngestionTaskService;
 import com.aetheris.ingestion.security.GatewayIdentityInterceptor;
+import com.aetheris.security.protocol.pagination.VisibleListCursor;
+import com.aetheris.security.protocol.pagination.VisibleListPage;
+import com.aetheris.security.protocol.pagination.VisibleListScanner;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/ingestion/tasks")
@@ -49,7 +54,35 @@ public class IngestionTaskController {
     }
 
     @GetMapping
-    public List<IngestionTask> list() { return authorization.filter("ingestion_task", service.list(), IngestionTask::getId); }
+    public List<IngestionTask> list() {
+        if (authorization.username() != null) {
+            VisibleListPage<IngestionTask> page = page(200, null, null);
+            if (page.hasMore()) throw compatibilityLimit();
+            return page.items();
+        }
+        return authorization.filter("ingestion_task", service.list(), IngestionTask::getId);
+    }
+
+    @GetMapping("/page")
+    public VisibleListPage<IngestionTask> page(
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false) String keyword) {
+        var proof = authorization.currentUser().proof();
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        String hash = hash("ingestion-tasks", normalizedKeyword, size, proof.uid(), proof.username(), proof.accessVersion());
+        return VisibleListScanner.page(cursor, size, hash, upperTasks(normalizedKeyword),
+                (upper, before, limit) -> service.list(new LambdaQueryWrapper<IngestionTask>()
+                        .and(!normalizedKeyword.isBlank(), q -> q.like(IngestionTask::getName, normalizedKeyword)
+                                .or().like(IngestionTask::getTargetTable, normalizedKeyword))
+                        .le(IngestionTask::getId, upper)
+                        .lt(before != null, IngestionTask::getId, before)
+                        .orderByDesc(IngestionTask::getId)
+                        .last("LIMIT " + limit)),
+                IngestionTask::getId,
+                rows -> authorization.filter("ingestion_task", rows, IngestionTask::getId)
+                        .stream().map(IngestionTask::getId).collect(Collectors.toSet()));
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<IngestionTask> getById(@PathVariable Long id) {
@@ -149,6 +182,11 @@ public class IngestionTaskController {
     public List<IngestionRun> runs(
             @PathVariable Long id,
             @RequestParam(defaultValue = "30") int limit) {
+        if (authorization.username() != null) {
+            VisibleListPage<IngestionRun> page = runPage(id, Math.clamp(limit, 1, 200), null);
+            if (page.hasMore()) throw compatibilityLimit();
+            return page.items();
+        }
         authorization.require("ingestion_task", id, "view");
         return runService.list(new LambdaQueryWrapper<IngestionRun>()
                 .eq(IngestionRun::getTaskId, id)
@@ -156,10 +194,61 @@ public class IngestionTaskController {
                 .last("LIMIT " + Math.clamp(limit, 1, 200)));
     }
 
+    @GetMapping("/{id}/runs/page")
+    public VisibleListPage<IngestionRun> runPage(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "30") int size,
+            @RequestParam(required = false) String cursor) {
+        authorization.require("ingestion_task", id, "view");
+        var proof = authorization.currentUser().proof();
+        String hash = hash("ingestion-runs-task", id, size, proof.uid(), proof.username(), proof.accessVersion());
+        return VisibleListScanner.page(cursor, size, hash, upperRuns(id, null),
+                (upper, before, limit) -> runService.list(new LambdaQueryWrapper<IngestionRun>()
+                        .eq(IngestionRun::getTaskId, id)
+                        .le(IngestionRun::getId, upper)
+                        .lt(before != null, IngestionRun::getId, before)
+                        .orderByDesc(IngestionRun::getId)
+                        .last("LIMIT " + limit)),
+                IngestionRun::getId,
+                rows -> authorization.filter("ingestion_task", rows, IngestionRun::getTaskId)
+                        .stream().map(IngestionRun::getId).collect(Collectors.toSet()));
+    }
+
     private void applyDefaults(IngestionTask task) {
         if (task.getSourceType() == null || task.getSourceType().isBlank()) task.setSourceType("jdbc");
         if (task.getStatus() == null || task.getStatus().isBlank()) task.setStatus("enabled");
         if (task.getWriteMode() == null || task.getWriteMode().isBlank()) task.setWriteMode("append");
         if (task.getBatchSize() == null) task.setBatchSize(500);
+    }
+
+    private long upperTasks(String keyword) {
+        return service.list(new LambdaQueryWrapper<IngestionTask>()
+                .and(keyword != null && !keyword.isBlank(), q -> q.like(IngestionTask::getName, keyword)
+                        .or().like(IngestionTask::getTargetTable, keyword))
+                .select(IngestionTask::getId).orderByDesc(IngestionTask::getId).last("LIMIT 1"))
+                .stream().map(IngestionTask::getId).filter(java.util.Objects::nonNull).findFirst().orElse(0L);
+    }
+
+    private long upperRuns(Long taskId, String status) {
+        return runService.list(new LambdaQueryWrapper<IngestionRun>()
+                .select(IngestionRun::getId)
+                .eq(taskId != null, IngestionRun::getTaskId, taskId)
+                .eq(status != null && !status.isBlank(), IngestionRun::getStatus, status)
+                .orderByDesc(IngestionRun::getId).last("LIMIT 1"))
+                .stream().map(IngestionRun::getId).filter(java.util.Objects::nonNull).findFirst().orElse(0L);
+    }
+
+    private static String hash(Object... parts) {
+        String canonical = Arrays.stream(parts).map(value -> {
+            String text = value == null ? "<null>" : String.valueOf(value);
+            return text.length() + ":" + text;
+        }).collect(Collectors.joining("|"));
+        return VisibleListCursor.hash(canonical);
+    }
+
+    private static org.springframework.web.server.ResponseStatusException compatibilityLimit() {
+        return new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE,
+                "列表超过兼容数组上限，请使用分页接口");
     }
 }

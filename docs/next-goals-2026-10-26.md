@@ -4,7 +4,15 @@
 
 本稿更新执行范围和顺序，不表示原阶段 0–5 已完成，也不自动授权提交、推送、部署、现有数据库变更或真实密钥轮换。
 
-**当前状态：暂停，整体目标未完成。** 用户已明确选择“保持暂停，先整理当前进度与剩余目标”。本次只整理交接文档；最后两项验证命令已结束，两名执行子代理已结束本次任务。读取本文件本身不恢复任务。基线完成后的全项目再次复查和下一版产品目标仍是后续交付项，本次没有声称完成该复查。
+**当前状态：active，整体目标未完成。** 2026-10-28 已在用户继续执行后恢复本目标；本次工作只推进 N11 列表完整性，不表示 W0–W6 或最终全项目复查已完成。原暂停交接语义、历史证据和失败记录继续保留，不能把分项回归当作整体验收。
+
+### 2026-10-28 执行检查点：N11 分页实现已落地，整体验收仍待补
+
+- 新增共享 `security-protocol` 分页契约：ID 倒序 keyset、首屏 `upper` 冻结、游标绑定资源/筛选/页大小/UID/username/accessVersion、每个候选窗口重新批量授权、单请求最多扫描 5000 个候选；权限服务异常透传 503，非法游标由接口转 400，候选未耗尽通过 `hasMore/nextCursor` 明示继续。
+- Quality：规则、全局/单规则检查历史和隔离区新增 `/page`；Ingestion：任务、全局运行记录和单任务运行记录新增 `/page`；Governance：策略与数据标准新增 `/page`；Workflow：任务、全局实例和单任务实例新增 `/page`。旧数组接口在实际 HTTP 请求中遇到超过兼容上限时返回 503，不再静默截断或把权限过滤后的空页当作结束。
+- 前端 API 的旧数组读取改为有界分页收集；质量规则与质量趋势页使用游标导航。页面仍需在真实浏览器、翻页期间新增/撤权和真实 Auth 503 下验证。
+- 已验证：`mvn` 共享协议扫描器 2/2；Quality 12/12；Ingestion 16/16；Governance 19/19；Workflow 2/2；前端 `tsc --noEmit`；质量规则页与分页 hook 6/6。证据与源码指纹见 `output/audit-pagination-n11-20261028/report.json`。这些是组件/服务聚焦证据，不是实际 PostgreSQL、大于 1000 条真实数据、浏览器或 W6 冻结证据。
+- 全量前端套件本轮仍有非 N11 的既有失败/超时，已保留原输出，不能通过重跑、改摘要或放宽规则消除；W3、W6 和整体验收保持未完成。
 
 ## 可直接交给 agent 的目标
 
@@ -52,19 +60,19 @@
 | N05 | 原 Flink active attempt 的 savepoint/pause/stop/cancel 操作持久化与 fence；resume/upgrade 使用批准定义和原 savepoint 创建真正的新提交 | W2：物理保存点、恢复、升级、撤权、响应丢失；停止 unknown 不释放占位或重复派发 |
 | N07/N08 | 湖仓最小资源授权及 DTO；Metadata→Workflow→Runner 的可信维护/Schema submit/status/cancel | W2：实际 Auth、PG 与 Runner 正负例；jobId 从服务器映射 tableId，禁止按相同数字 ID 借用其他资源权限 |
 | N09/N10/N12 | 审批影响/质量读取 V2 接线；执行结果幂等血缘写入与补偿；Gold 必需规则及新鲜度强制门禁 | W2：真实结果读回，同版本/快照/attempt 绑定；缺失、过期、篡改、撤权及 unknown 零推进 |
-| N11 | Quality 历史/隔离列表和 Workflow 实例先 LIMIT 后授权；Ingestion/Quality/Governance 全量加载后过滤 | W3：稳定游标、有界批量授权；超过 1000 项、仅后页授权、翻页变化及 Auth 503 不截断或假空 |
+| N11 | Quality 历史/隔离列表和 Workflow 实例先 LIMIT 后授权；Ingestion/Quality/Governance 全量加载后过滤 | W3：已实现 ID 倒序游标、有界批量授权、主体/筛选/accessVersion 绑定和超限显式失败；真实大规模数据、浏览器翻页变化/撤权及 Auth 503 仍待验证 |
 | N19/N20 | ChatBI 同步请求锁、代际/取消；看板编辑与展示页错误态、重试和路由响应隔离 | W3/W5：免费替身及真实浏览器；重复动作不重复消费预算，旧对象结果不覆盖当前对象 |
 | N13 | 语义资产下线对已发布 dataset/dashboard/API 消费方的依赖约束 | W5：并发发布/下线、撤权和明确迁移；失败不留下半下线状态 |
 | N14/N15、两个 MinIO 引用 | 正式密钥/registry/DB roles 安装接线、共享库冷构建准备、可信镜像与迁移 Runner 来源；实际构建/扫描/SBOM/签验 | W4：干净安装与冷 CI，缺配置或供应链失败阻断；临时 JAR 夹具不能证明默认发行可用 |
 | 原 S/R/E/P 剩余项 | 九类数据源、SQL/JDBC/TLS/出站与历史秘密；日期/调度/恢复/物理取消；新装/已知旧版升级/恢复/数仓对账；连接预算、告警投递、保留策略与 AI 预算整合 | 依 W1–W5 逐项验收；已有代码或分项通过仍须补必要的真实结果 |
 | W0/W6 | 两份原附件仍缺；尚无同一冻结版本 Gateway、九服务和前端及八类正式 producer 的完整证据 | 来源缺口明确保留；所有必要门禁、独立清理和整体验收完成后才可关闭目标 |
 
-N11 暂停前仅完成只读定位，没有修改其实现。可复用 metadata 的 `VisibleListPager`、`VisibleListCursor`、`VisibleListMapper` 与前端 `useVisibleListPage` 的思路；其中 metadata visibility 的 IDS 表示业务域，不能直接当作 quality_rule/ingestion_task 等资源 ID 使用。先固定页 DTO、游标绑定、扫描预算、授权上下文和故障语义，再分模块实施。
+N11 本次恢复已完成实现，核心契约见 [`visible-resource-pagination-contract.md`](remediation/visible-resource-pagination-contract.md)：Quality、Ingestion、Governance、Workflow 的相关列表新增 ID 倒序 keyset 分页和有界批量授权，认证旧数组接口超过兼容上限显式失败。共享实现位于 `libs/security-protocol/src/main/java/com/aetheris/security/protocol/pagination/`。当前仅有组件/服务聚焦验证；真实 PostgreSQL、大于 1000 条数据、浏览器翻页期间变更/撤权和权限服务 503 仍属于 W3/W6 待验，不得把本次实现或局部回归写成整体验收。
 
 ### 1.3 恢复后的实施顺序
 
 1. **先做短基线核对。** 确认用户已恢复、Git/进程/容器和可用内存，重新计算源码及迁移集合；核对本节证据及原失败。修复和测试按受影响范围执行，未变化的调查不重做，历史报告不改绑。
-2. **完成下一组独立工作。** 主代理固定 N11 分页/授权契约并整合共享文件；一个独立子任务承担边界清楚的服务列表，另一个可承担 N19/N20 页面。N16–N18、N21/N22 接着补真实浏览器。不要并行修改统一 HTTP/会话、Auth 资源目录或公共 DTO。
+2. **完成下一组独立工作。** N11 实现已落地，先按契约补真实 PostgreSQL、大于 1000 条、翻页期间增删/撤权和 Auth 503 证据；随后处理 N19/N20 页面。N16–N18、N21/N22 接着补真实浏览器。不要并行修改统一 HTTP/会话、Auth 资源目录或公共 DTO。
 3. **关闭跨服务阻断。** 先确定 N05/N07/N08 的最小主体、资源和 attempt 契约，再接 N09/N10/N12 与 N13；按依赖推进真实引擎和混合流水线。W4 的镜像来源、冷 CI、安装准备可在资源允许时穿插；N03 后端正例依赖 W4 的实际安装观测，不单独以摘要拼接实现。
 4. **补齐交付与治理，再冻结。** 完成 W1–W5 尚缺的正常/负例、升级恢复和业务对账，更新文档后冻结。W6 使用同一 context 实际运行八类 producer 及全部必要检查，独立核对附件与清理；任何必要项失败都保持未完成。通过后再进行用户要求的全项目复查并更新下一版 agent 目标。
 
