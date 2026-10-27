@@ -30,6 +30,29 @@
 | `database/deploy_gate.py` | 内存校验 resolved Compose、实际数据库 cluster/OID、源/secret/receipt，保存私密准入绑定 |
 | `verify-image-signatures.sh` | 对清单中的全部应用镜像验签；兼容旧 tag 状态的回滚验证 |
 | `base-image-inventory.py` | 不拉取镜像的默认引用清单检查，供后续同版本 digest 锁定使用 |
+| `audit-workflow-engine-authority.py` | 自有隔离PG中逐步升级V32→V33→V34，检查可信引擎来源、派发唯一性、默认Runner、容量、原句柄及引擎成功证据放行下游；Auth及引擎业务结果为受控HTTP响应 |
+| `audit-workflow-engine-chain.py` | 默认新鲜构建五个实际JAR与隔离PG/Redis，验证真实Auth至workflow的手动/Quartz/pipeline引擎来源、有界完成及无界意外结束不推进SQL；引擎HTTP结果为受控响应，不执行物理Spark/Flink；显式复用JAR需提供原留存manifest及独立核定的SHA256 |
+| `audit-workflow-quality-child.py` | 六个实际JAR与隔离PG/Redis中的SQL/quality手动、Quartz、pipeline及撤权零reader连接；不覆盖物理Spark/Flink |
+
+## 本地脚本回归的依赖顺序
+
+从仓库根目录使用 JDK 21 及已安装 `requirements-audit.txt` 的 Python 3.12 环境，必须显式设置 `JAVA_HOME`；PATH 上有 Java 不满足真实密钥生成测试的输入契约。脚本单元测试使用自有临时协议 fixture 检查准入规则，不依赖宿主碰巧留存的报告，也不代表真实协议运行验收。实际 `audit-protocol-runtime.py` producer 仍严格读取当前 `libs/security-protocol/target/surefire-reports`、编译类及固定依赖；应用的 `clean/package -DskipTests` 会删除这些报告，运行该 producer 前必须重新实跑协议测试。
+
+依赖包含固定版本的`tzdata`，供Windows上的`ZoneInfo('Asia/Shanghai')`使用。不要以本机Conda已有的时区数据代替独立Python环境的依赖准备；引擎整合脚本在创建容器前检查这一依赖。官方数据来源见[Python tzdata项目](https://github.com/python/tzdata/releases/tag/2026.5)。
+
+引擎整合脚本默认从当前源码新鲜构建五个服务，提供新的 `--output output/audit-workflow-engine-chain/<fresh-run>/report.json` 即可。只有需要复用实际六应用 producer 留存的 JAR 输入时，才同时提供 `--artifacts-manifest` 和先前独立记下的 `--expected-manifest-sha256`；只提供其一会在建容器前拒绝。原 producer 报告、JAR 字节、完整 main 源码集合、当前类/资源及共享库均会核对；坏锚点或源码不匹配不能自动回退，不能重算 manifest 摘要使旧 JAR 通过。所有运行检查重新产生，旧运行结果不复制。公开 Flink 正例使用 bounded；streaming 自然 FINISHED 必须失败且下游 SQL 无 attempt、无业务行。该脚本仍使用受控 Spark/Flink HTTP 响应，不宣称物理引擎已执行。
+
+```powershell
+$env:JAVA_HOME = 'C:/Program Files/Java/jdk-21'
+mvn.cmd -q -o -f libs/security-protocol/pom.xml test
+if ($LASTEXITCODE -ne 0) { throw '当前协议测试失败，停止脚本回归' }
+python -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
+if ($LASTEXITCODE -ne 0) { throw '脚本回归失败，保留原报告并停止' }
+python -B -m unittest discover -s tests -p 'test_spark*.py' -v
+if ($LASTEXITCODE -ne 0) { throw 'Spark脚本回归失败，保留原报告并停止' }
+```
+
+`MissingHostSurefireEvidence` 表示依赖准备未完成，不能复制归档XML到target或放宽校验。保留原失败、重新实跑并分开记录脚本测试和Spark跳过项；这些检查不替代真实运行producer或发布验收。
 
 ## v2 发布证据
 
@@ -76,6 +99,24 @@ Build Images 可以由 main/tag push 触发，但构建/签名前必须通过同
 `.aetheris-last-good-release.json` 原子保存前一次已通过健康检查的清单与签名 bundle 原始字节，只含公开发布元数据。回滚必须复验签名和同一数据库源/收据，继续使用独立 runtime 账号；旧 tag 或跨迁移源不自动回滚。无法取得可信兼容版本时保留失败并要求人工处置。镜像回滚不等于数据库迁移回滚，部署不执行全局 image prune。
 
 `cosign_policy=disabled` 保留为明确的紧急签名旁路；CI、run/attempt、提交和镜像清单结构校验仍不能跳过。production Environment 的审批和分支保护需要在 GitHub 设置中实际配置，仓库里的 YAML 不能证明这些远程策略已经启用。
+
+## 浏览器会话与退出后的批准任务验收
+
+`audit-browser-session-runtime.py` 在本轮自有 PostgreSQL/Redis、Auth/System、两个 Gateway 和独立 Chromium 中执行。它重新构建前端与 Java 制品，缓冲真实 HTTP 响应以覆盖迟到 Set-Cookie、双标签页、服务重启、Redis/数据库故障及撤销重试；不读取用户浏览器 profile。需要 JDK 21、Maven、Node 24、Playwright 包和可启动的 Chromium，路径由调用者显式提供。不得使用付费 AI 凭据或现有业务数据库。
+
+```powershell
+$env:JAVA_HOME = 'C:/Program Files/Java/jdk-21'
+python -B -X utf8 scripts/audit-browser-session-runtime.py `
+  --output output/audit-browser-session-runtime/新的唯一报告名.json `
+  --node C:/path/to/node.exe --playwright C:/path/to/node_modules/playwright `
+  --browser C:/path/to/chrome.exe
+python -B -X utf8 scripts/audit-workflow-sql-chain.py `
+  --output output/audit-workflow-sql-chain/新的唯一报告名.json
+```
+
+后一个执行器默认启动 Auth/System/Metadata/Workflow/Gateway 五个实际服务，检查手动 SQL、真实 Quartz 和两节点 SQL pipeline 的业务行、writer、原主体/批准与结果凭证。执行人和批准人退出浏览器后，已批准任务仍须按原授权执行；另有撤权后零新增执行/写入断言。它不是 Spark/Flink 混合流水线、全产品或八类正式 producer 验收。
+
+这些 identity 派生执行器只在唯一 run 目录内更新 `progress.json`，结束后创建不可覆盖的显式报告和 `report.json`。已有路径会拒绝；失败报告不得复用为新成功。读取报告时同时检查完整 case 集合、源码首尾、迁移集合、制品/配置摘要和自有资源清理。机器环境失败、夹具失败、真实业务失败分别保留，不能因后次成功删除前次记录。
 
 ## 内部协议密钥准备
 

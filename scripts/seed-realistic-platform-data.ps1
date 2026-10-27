@@ -67,7 +67,13 @@ function Set-SessionExpiry {
         -not (Test-Integer $Login.expiresIn) -or $Login.expiresIn -gt 86400000) {
         throw '登录/刷新响应主体或有效期不合法'
     }
-    if ($null -eq $script:Session.Cookies.GetCookies($baseUri)['aetheris_access']) {
+    $browserCookies = $script:Session.Cookies.GetCookies($baseUri)
+    $selector = $browserCookies['aetheris_session']
+    $sessionId = [guid]::Empty
+    if ($null -eq $selector -or -not [guid]::TryParse($selector.Value, [ref]$sessionId) -or $sessionId.ToString('D') -cne $selector.Value) {
+        throw '登录/刷新未建立规范 session family Cookie'
+    }
+    if ($null -eq $browserCookies[('aetheris_access_' + $selector.Value)]) {
         throw '登录/刷新未建立 access Cookie'
     }
     $script:ExpiresAtMs = $script:SessionClock.Elapsed.TotalMilliseconds + $Login.expiresIn

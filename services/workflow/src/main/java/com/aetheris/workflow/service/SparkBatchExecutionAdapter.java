@@ -8,11 +8,12 @@ import com.aetheris.workflow.service.ExecutionAdapter.RemoteExecution;
 import com.aetheris.workflow.service.ExecutionAdapter.Submission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import com.fasterxml.jackson.core.*;
+import com.fasterxml.jackson.databind.*;
 
 import java.time.Duration;
 import java.net.URI;
@@ -25,6 +26,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SparkBatchExecutionAdapter implements ExecutionAdapter {
 
     public static final String DEFAULT_RUNNER = "config://default";
+    private static final int MAX_HANDLE_BYTES = 64 * 1024;
+    private static final java.util.Set<Integer> PRE_EXECUTION_REJECTIONS = java.util.Set.of(400,401,403,404,405,413,415,422);
+    private static final java.util.Set<String> HANDLE_STATES = java.util.Set.of(
+            "queued","submitting","running","cancel_requested","succeeded","failed","cancelled","timed_out","unknown");
+    private static final ObjectMapper HANDLE_JSON = new ObjectMapper(JsonFactory.builder()
+            .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+            .streamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(16)
+                    .maxNumberLength(20).maxStringLength(MAX_HANDLE_BYTES).build()).build())
+            .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
 
     private final RestClient defaultClient;
     private final RestClient.Builder builder;
@@ -132,25 +142,19 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
                 "driverMemoryMb", submission.driverMemoryMb(),
                 "timeoutSeconds", submission.timeoutSeconds()));
         try {
-            ManagedHandle handle = client.post().uri("/v1/jobs").body(body)
-                    .retrieve().body(ManagedHandle.class);
-            if (handle == null || handle.id() == null) {
-                throw new SparkRunnerException("Spark 运行器返回空句柄", 502, true);
-            }
-            return handle;
-        } catch (RestClientResponseException error) {
-            throw response(error, false);
-        } catch (SparkRunnerException error) {
-            throw error;
+            return requireArtifact(managed(client.post().uri("/v1/jobs").body(body), submission.requestKey(), true),
+                    submission.artifactDigest());
         } catch (RuntimeException uncertain) {
-            // POST may already have reached the runner. Resolve the idempotency key
-            // before deciding whether this is unknown; never submit a second job here.
+            if (uncertain instanceof SparkRunnerException known && !known.isSubmissionOutcomeUnknown()) throw known;
+            // Every ambiguous response is read back only at the original runner.
+            // A 404 is still uncertainty, never permission to send a second POST.
             try {
-                return reconcile(submission.requestKey()).orElseThrow(() ->
-                        new SparkRunnerException("Spark 提交结果未知，等待恢复核对", 503, true));
-            } catch (SparkRunnerException recoveryFailure) {
+                ManagedHandle recovered = reconcile(runnerBaseUrl, submission.requestKey()).orElse(null);
+                if (recovered != null) return requireArtifact(recovered, submission.artifactDigest());
+            } catch (RuntimeException recoveryFailure) {
                 throw new SparkRunnerException("Spark 提交结果未知，等待恢复核对", 503, true);
             }
+            throw new SparkRunnerException("Spark 提交结果未知，等待恢复核对", 503, true);
         }
     }
 
@@ -192,6 +196,49 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
         return call(() -> client.delete().uri("/v1/jobs/{id}", remoteHandle)
                 .retrieve().body(RemoteExecution.class), false);
     }
+    /** Sealed sources accept status only for their original key, handle and artifact. */
+    public RemoteExecution statusBound(String origin,String handle,String key,String digest){
+        requireEnabled();return remoteBound(clientFor(origin).get().uri("/v1/jobs/{id}",handle),handle,key,digest);
+    }
+    public RemoteExecution cancelBound(String origin,String handle,String key,String digest){
+        requireEnabled();return remoteBound(clientFor(origin).delete().uri("/v1/jobs/{id}",handle),handle,key,digest);
+    }
+    private RemoteExecution remoteBound(RestClient.RequestHeadersSpec<?> request,String handle,String key,String digest){
+        JsonNode n=bounded(request,MAX_HANDLE_BYTES);requireBinding(n,handle,key,digest);
+        String state=handleText(n,"status");if(!HANDLE_STATES.contains(state))throw invalidHandle();
+        JsonNode count=n.get("affectedRows");Long rows=count==null||count.isNull()?null:
+            count.isIntegralNumber()&&count.canConvertToLong()&&count.longValue()>=0?count.longValue():null;
+        if(count!=null&&!count.isNull()&&rows==null)throw invalidHandle();
+        String cancelled=nullableText(n,"cancellationConfirmedAt");
+        if("cancelled".equals(state)||"timed_out".equals(state)){
+            if(cancelled==null)throw invalidHandle();
+            try{if(java.time.OffsetDateTime.parse(cancelled).isAfter(java.time.OffsetDateTime.now().plusSeconds(30)))throw invalidHandle();}
+            catch(java.time.format.DateTimeParseException bad){throw invalidHandle();}
+        }
+        JsonNode result=n.get("result");if(result!=null&&!result.isNull()&&!result.isObject())throw invalidHandle();
+        Map<String,Object> values=result==null||result.isNull()?Map.of():HANDLE_JSON.convertValue(result,new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
+        String app=nullableText(n,"applicationId");if(app!=null&&!app.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,255}"))throw invalidHandle();
+        return new RemoteExecution(handle,state,app,rows,nullableText(n,"errorCode"),null,values,cancelled);
+    }
+    public LogPage logsBound(String origin,String handle,String key,String digest,long offset,int limit){
+        requireEnabled();int size=Math.clamp(limit,1,32768);long start=Math.max(0,offset);
+        JsonNode n=bounded(clientFor(origin).get().uri(b->b.path("/v1/jobs/{id}/logs").queryParam("offset",start).queryParam("limit",size).build(handle)),256*1024);
+        requireBinding(n,handle,key,digest);String content=handleText(n,"content");var next=n.get("nextOffset");var eof=n.get("eof");
+        if(content.length()>size*3||next==null||!next.isIntegralNumber()||!next.canConvertToLong()||next.longValue()<start
+            ||next.longValue()>start+size||eof==null||!eof.isBoolean())throw invalidHandle();
+        return new LogPage(content,next.longValue(),eof.booleanValue());
+    }
+    private static String nullableText(JsonNode n,String field){return !n.hasNonNull(field)?null:handleText(n,field);}
+    private static void requireBinding(JsonNode n,String handle,String key,String digest){
+        if(!handle.equals(handleText(n,"id"))||!key.equals(handleText(n,"requestKey"))||!digest.equals(handleText(n,"artifactDigest")))throw invalidHandle();
+    }
+    private JsonNode bounded(RestClient.RequestHeadersSpec<?> request,int max){
+        try{return request.exchange((out,response)->{
+            if(!response.getStatusCode().is2xxSuccessful())throw runnerResponse(response.getStatusCode().value(),false);
+            byte[] raw=response.getBody().readNBytes(max+1);if(raw.length==0||raw.length>max)throw invalidHandle();
+            JsonNode n=HANDLE_JSON.readTree(raw);if(n==null||!n.isObject())throw invalidHandle();return n;});
+        }catch(SparkRunnerException safe){throw safe;}catch(RuntimeException bad){throw invalidHandle();}
+    }
 
     @Override
     public Optional<ManagedHandle> reconcile(String requestKey) {
@@ -202,14 +249,45 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
         requireEnabled();
         RestClient client = clientFor(runnerBaseUrl);
         try {
-            return Optional.ofNullable(client.get().uri("/v1/jobs/by-request/{key}", requestKey)
-                    .retrieve().body(ManagedHandle.class));
-        } catch (RestClientResponseException error) {
-            if (error.getStatusCode().value() == 404) return Optional.empty();
-            throw response(error, false);
+            return Optional.of(managed(client.get().uri("/v1/jobs/by-request/{key}", requestKey), requestKey, false));
+        } catch (SparkRunnerException error) {
+            if (error.getStatusCode() == 404) return Optional.empty();
+            throw error;
         } catch (RuntimeException error) {
             throw new SparkRunnerException("无法连接 Spark 运行器", 503, false);
         }
+    }
+
+    private ManagedHandle managed(RestClient.RequestHeadersSpec<?> request, String requestKey, boolean submit) {
+        return request.exchange((outgoing, response) -> {
+            int status = response.getStatusCode().value();
+            if (status < 200 || status >= 300) throw runnerResponse(status, submit);
+            byte[] raw = response.getBody().readNBytes(MAX_HANDLE_BYTES + 1);
+            if (raw.length == 0 || raw.length > MAX_HANDLE_BYTES) throw invalidHandle();
+            JsonNode value = HANDLE_JSON.readTree(raw);
+            if (value == null || !value.isObject()) throw invalidHandle();
+            String id = handleText(value,"id"), key = handleText(value,"requestKey");
+            String state = handleText(value,"status"), digest = handleText(value,"artifactDigest");
+            if (!id.matches("[a-f0-9]{32}") || !key.equals(requestKey)
+                    || !HANDLE_STATES.contains(state) || !digest.matches("[a-f0-9]{64}")) throw invalidHandle();
+            JsonNode app = value.get("applicationId");
+            String applicationId = app == null || app.isNull() ? null : handleText(value,"applicationId");
+            if (applicationId != null && !applicationId.matches("[A-Za-z0-9][A-Za-z0-9._:-]{0,255}")) throw invalidHandle();
+            return new ManagedHandle(id,key,state,applicationId,digest);
+        });
+    }
+    private static String handleText(JsonNode n,String key) {
+        JsonNode v=n.get(key); if(v==null||!v.isTextual())throw invalidHandle(); return v.textValue();
+    }
+    private static ManagedHandle requireArtifact(ManagedHandle handle,String digest) {
+        if(!handle.artifactDigest().equals(digest))throw invalidHandle(); return handle;
+    }
+    private static SparkRunnerException invalidHandle() {
+        return new SparkRunnerException("Spark 运行器返回的句柄无法核实",502,true);
+    }
+    private static SparkRunnerException runnerResponse(int status,boolean submit) {
+        return new SparkRunnerException("Spark 运行器请求未获确认（HTTP "+status+"）",status,
+                submit && !PRE_EXECUTION_REJECTIONS.contains(status));
     }
 
     @Override
@@ -224,7 +302,7 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
     }
 
     /** Validates and canonicalizes administrator-provided runner endpoints. */
-    static String normalizeBaseUrl(String value) {
+    public static String normalizeBaseUrl(String value) {
         if (DEFAULT_RUNNER.equals(value)) return value;
         try {
             URI uri = URI.create(value == null ? "" : value.trim());
@@ -288,17 +366,7 @@ public class SparkBatchExecutionAdapter implements ExecutionAdapter {
     }
 
     private SparkRunnerException response(RestClientResponseException error, boolean submit) {
-        String message = "Spark 运行器拒绝请求（HTTP " + error.getStatusCode().value() + "）";
-        try {
-            Map<?, ?> body = error.getResponseBodyAs(Map.class);
-            if (body != null && body.get("message") instanceof String safe && !safe.isBlank()) {
-                message = safe;
-            }
-        } catch (RuntimeException ignored) {
-            // Keep the bounded status message.
-        }
-        HttpStatusCode status = error.getStatusCode();
-        return new SparkRunnerException(message, status.value(), submit && status.is5xxServerError());
+        return runnerResponse(error.getStatusCode().value(), submit);
     }
 
     private void requireEnabled() {

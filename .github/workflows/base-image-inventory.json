@@ -114,7 +114,7 @@
         },
         {
           "path": "docker-compose.yml",
-          "line": 261,
+          "line": 263,
           "kind": "compose-build-arg",
           "argument": "JAVA_IMAGE"
         },
@@ -445,7 +445,7 @@
         },
         {
           "path": "docker-compose.yml",
-          "line": 260,
+          "line": 262,
           "kind": "compose-build-arg",
           "argument": "MAVEN_IMAGE"
         },
@@ -670,7 +670,7 @@
         },
         {
           "path": "docker-compose.yml",
-          "line": 445,
+          "line": 447,
           "kind": "compose-build-arg",
           "argument": "NGINX_IMAGE"
         }
@@ -849,7 +849,7 @@
         },
         {
           "path": "docker-compose.yml",
-          "line": 444,
+          "line": 446,
           "kind": "compose-build-arg",
           "argument": "NODE_IMAGE"
         }
@@ -1761,7 +1761,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 324
+          "line": 326
         }
       ]
     },
@@ -1770,7 +1770,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 353
+          "line": 355
         }
       ]
     },
@@ -1779,7 +1779,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 381
+          "line": 383
         }
       ]
     },
@@ -1788,7 +1788,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 233
+          "line": 235
         }
       ]
     },
@@ -1797,7 +1797,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 204
+          "line": 206
         }
       ]
     },
@@ -1842,7 +1842,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 438
+          "line": 440
         }
       ]
     },
@@ -1851,7 +1851,7 @@
       "sources": [
         {
           "path": "docker-compose.yml",
-          "line": 255
+          "line": 257
         }
       ]
     },

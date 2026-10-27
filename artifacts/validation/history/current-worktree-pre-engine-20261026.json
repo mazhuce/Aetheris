@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-worktree-validation-record",
+  "recordedAtUtc": "2026-10-25T17:13:23.178834+00:00",
+  "status": "partial",
+  "releaseEligible": false,
+  "frozenReleaseContext": false,
+  "source": {
+    "commit": "8610de063d51a76d97f65d4d003f8b2ec93d307c",
+    "worktreeSha256": "55689221afba12e93e7283284c2a920f11c836b53b830b93d6ff49c90e1df4b9"
+  },
+  "configurationFiles": {
+    "docker-compose.yml": "dce39c91f1fc43260be75ab050fcf65205034d3b75c4a8aae7f24d545d153be9",
+    "docker-compose.database-roles.yml": "0f15c28610a539a7f573cdbfc94b165d8728d32adb9b2f089365372aab5e2701",
+    ".env.example": "2a951fa50c47dda57be4a853457536c69918b22997ed7f143c81ebee586fed37",
+    ".github/workflows/base-image-inventory.json": "65b13e729701cf5fedd03af94a33b4a2976bb2da3505dbc88f3d77159b4c7fc6",
+    "services/quality/src/main/resources/application.yml": "2c1f93aa2cc60e754ec04626a6f4a7b5a51f9f59595b704a150a832576339421"
+  },
+  "migrations": {
+    "count": 120,
+    "manifestSha256": "b37fef48b6d80567218721b264b98cdd8e577c11a977e98c090103e2067dd3b7",
+    "added": "services/workflow/src/main/resources/db/migration/V32__trusted_quality_parent.sql",
+    "addedSha256": "abfd0cfb362dd33bf2db912bd98e9737bcc687d5229cc6dab605454d305c8ec8"
+  },
+  "sourceCompatibility": {
+    "previousWorktreeSha256": "3517964ecd1727f4099950bc03af9d5988bc8dd7bd4e76414e54e25292109d39",
+    "previousRecordArchive": "artifacts/validation/history/current-worktree-pre-v32-20261026.json",
+    "previousRecordSha256": "cc7859ca6aa8ef01469c5b2183b489baa671bfd812adfbd9e005acdc20f2d445",
+    "previousRecordCompatibility": {
+      "previousWorktreeSha256": "c8625769e766b8393a49e3651867b769237c537be313f27058dede7931e0d8d7",
+      "previousRecordArchive": "artifacts/validation/history/current-worktree-pre-v31-20261025.json",
+      "previousRecordSha256": "83ca79395d414a34bcb9bf5490249a3d672a2a31b687f6863e20af9d8a96a179",
+      "earlierPreV30Baseline": {
+        "previousWorktreeSha256": "95835bcb22c2c1dc43d7f5f6f2d1e84ce1da799e23b16d1f6af530f66e6c681b",
+        "previousRecordArchive": "artifacts/validation/history/current-worktree-pre-v30-20261025.json",
+        "previousRecordSha256": "C4B3BCF93881D2720953B9E61A3A64C5AB6C93B01C1EE60345F01E3922CE53B1",
+        "previousRealApplicationSegments": "All PreV30 segments below retain their original 117-migration and source scope; they do not validate the current 118-migration worktree."
+      },
+      "historicalScope": "Every PreV30/PreV31/intermediate report retains its original source, migrations and artifacts. A later record fingerprint never rebinds an earlier producer."
+    },
+    "historicalScope": "The archived pre-V32 index preserves all earlier 117/118/119 migration reports and failures. This current fingerprint never rebinds any previous producer; partial per-producer matching does not establish a frozen release."
+  },
+  "independentCleanup": {
+    "scope": "Read-only independent host inventory; absent parents distinguished from permission failures; no unrelated resources stopped or deleted",
+    "allOwnedResourcesAbsent": true,
+    "oldTempHostRead": {
+      "status": "confirmed-absent",
+      "scope": "host read; no files deleted",
+      "root": "C:\\Users\\yafei\\AppData\\Local\\Packages\\sandbox.{6c6f9b42-9b14-4345-a0b3-a81386bbc90f}\\AC\\Temp"
+    },
+    "privateKeyDirectories": {
+      "count": 0,
+      "exists": false,
+      "parent": "artifacts/security/private"
+    },
+    "matchingLocalAuditJavaProcesses": [],
+    "labels": [
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.workflow-quality-authority.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.workflow-quality-child.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.pipeline-authority.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.workflow-sql-chain.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.execution-uncertainty.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.database.deploy-gate.audit",
+        "networks": 0
+      },
+      {
+        "containers": 0,
+        "volumes": 0,
+        "label": "aetheris.protocol.runtime.audit",
+        "networks": 0
+      }
+    ],
+    "databaseFixtureDirectories": {
+      "count": 0,
+      "exists": true,
+      "parent": "configs/database/private"
+    },
+    "checkedAtUtc": "2026-10-25T17:09:50.6765101Z"
+  },
+  "evidence": {
+    "workflowQualityChildCurrent": {
+      "path": "output/audit-workflow-quality-child/run-20261026-v3/report.json",
+      "sha256": "7115e92f2330032bb3c635ddd1a7219340a6c29a690f19b4db38794adceadaea",
+      "runId": "8b9fff6b041240bd9ff319718b3b851a",
+      "purpose": "six-real-applications-source-bound-workflow-quality-child",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T16:48:28.650628+00:00",
+      "completedAtUtc": "2026-10-25T16:51:24.013964+00:00",
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "connectionLogAttachmentsValidated": true,
+      "limits": "Actual Auth/System/Metadata/Quality/Workflow/Gateway, manual/Quartz/SQL pipeline and quality-child manual/pipeline with real business PG reader/writer. No Spark/Flink, browser, nine-engine, install/recovery or release claim.",
+      "checkCount": 119,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "workflowQualityAuthorityCurrent": {
+      "path": "output/audit-workflow-quality-authority/run-20261026-v5/report.json",
+      "sha256": "176a46d7da1568e258aab691091e1991ebea0d41c5cb683dadad78917f548597",
+      "runId": "99753c20748e47888feb07455c175994",
+      "purpose": "isolated-workflow-quality-parent-authority-postgres",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T16:54:44.198103+00:00",
+      "completedAtUtc": "2026-10-25T16:56:06.715121+00:00",
+      "tests": {
+        "tests": 26,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "workflowTests": {
+        "tests": 19,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "qualityReceiptTests": {
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Real PostgreSQL runtime roles, original history/SQL approval, quality parent/pipeline source, exact child/fence/result constraints. Child definitions/results/receipts and identities are controlled fixtures; not real HTTP/auth/business SQL or release.",
+      "checkCount": 6,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "relatedModuleUnitRegressionCurrent": {
+      "path": "output/audit-workflow-quality-child/unit-ac6b125b81694d10944c2e192bc2620a/report.json",
+      "sha256": "2962ea90fce32a2c6f168035440177be03bd3a2c217a702d24f9920482d4510b",
+      "runId": "ac6b125b81694d10944c2e192bc2620a",
+      "purpose": "workflow-quality-child-final-unit-regression",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T16:56:40.259492+00:00",
+      "completedAtUtc": "2026-10-25T16:58:15.436907+00:00",
+      "sourceHashesMatchAtEnd": true,
+      "scope": "JDK21 unit/MVC/signed loopback HTTP suites; no live database, browser, business engine or release claim",
+      "modules": {
+        "libs/security-protocol": {
+          "exitCode": 0,
+          "suites": 9,
+          "tests": 166,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "freshMarkerVerified": true,
+          "expectedCountMatched": true
+        },
+        "services/auth": {
+          "exitCode": 0,
+          "suites": 26,
+          "tests": 176,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "freshMarkerVerified": true,
+          "expectedCountMatched": true
+        },
+        "services/metadata": {
+          "exitCode": 0,
+          "suites": 71,
+          "tests": 453,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "freshMarkerVerified": true,
+          "expectedCountMatched": true
+        },
+        "services/quality": {
+          "exitCode": 0,
+          "suites": 22,
+          "tests": 90,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "freshMarkerVerified": true,
+          "expectedCountMatched": true
+        },
+        "services/workflow": {
+          "exitCode": 0,
+          "suites": 46,
+          "tests": 255,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "freshMarkerVerified": true,
+          "expectedCountMatched": true
+        }
+      },
+      "commands": [
+        {
+          "argv": [
+            "C:\\Program Files\\apache-maven-3.9.10\\bin\\mvn.cmd",
+            "-q",
+            "-f",
+            "libs/security-protocol/pom.xml",
+            "-Daetheris.child.audit=ac6b125b81694d10944c2e192bc2620a",
+            "install"
+          ],
+          "exitCode": 0,
+          "log": "protocol.log",
+          "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "argv": [
+            "C:\\Program Files\\apache-maven-3.9.10\\bin\\mvn.cmd",
+            "-q",
+            "-pl",
+            "services/workflow,services/quality,services/metadata,services/auth",
+            "-am",
+            "-Daetheris.child.audit=ac6b125b81694d10944c2e192bc2620a",
+            "test"
+          ],
+          "exitCode": 0,
+          "log": "services.log",
+          "logSha256": "2a70d2ed2cb1a327c314c75f8e728d47c6169e2c88597eb95f3a271ef28d0bf8"
+        }
+      ],
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "databaseDeployGateCurrent": {
+      "path": "output/audit-database-deploy-gate/run-20261026-120/report.json",
+      "sha256": "cd72dd1dc144ab8576a9fae7d173bfd9ef4e9dd2e31b85775b210eb980fe49f5",
+      "runId": "75a7003e50854ad69f8d1ccd674c1cc9",
+      "purpose": "disposable-real-database-deploy-gate-acceptance",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T16:58:36.312481+00:00",
+      "completedAtUtc": "2026-10-25T17:02:36.837351+00:00",
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "migrationSourceCount": 120,
+      "databaseUnchanged": true,
+      "migrationCredentialsRetired": true,
+      "manifestIsUnsignedSyntheticFixture": true,
+      "checkCount": 24,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "protocolRuntimeCurrent": {
+      "path": "output/audit-protocol-runtime/a2233a0f60da4e2589b0863d1d91f3da/report.json",
+      "sha256": "215890dc4f1493a9e3ec37230a21ee4817929ab7054fa4252c882c02b590d31c",
+      "runId": "a2233a0f60da4e2589b0863d1d91f3da",
+      "purpose": "protocol-library-runtime-compatibility-only",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T17:03:53.797761+00:00",
+      "completedAtUtc": "2026-10-25T17:04:13.796626+00:00",
+      "tests": {
+        "startedAtUtc": "2026-10-25T17:03:58.709791279Z",
+        "javaRuntimeVersion": "21.0.12.1+1-LTS",
+        "javaVendor": "Eclipse Adoptium",
+        "javaSpecificationVersion": "21",
+        "osName": "Linux",
+        "osArch": "amd64",
+        "status": "passed",
+        "initialDiscoveredTests": 65,
+        "expectedTests": 166,
+        "found": 166,
+        "succeeded": 166,
+        "failed": 0,
+        "skipped": 0,
+        "aborted": 0,
+        "containersFailed": 0,
+        "containersSkipped": 0,
+        "containersAborted": 0,
+        "failureClasses": {},
+        "completedAtUtc": "2026-10-25T17:04:11.747532218Z"
+      },
+      "cleanup": {
+        "containerRemoved": true,
+        "bundleRemoved": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "artifactHashesMatchAtEnd": true,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "scriptRegressionFailedCurrentRun": {
+      "path": "output/audit-workflow-quality-child/scripts-4b18f7d26494480ba4312bf02cdf8974/script-validation.json",
+      "sha256": "ec62570ac97e7ad34f6a997b78208a2b2ffb068c0a152159db4f689dfc7640b2",
+      "runId": "4b18f7d26494480ba4312bf02cdf8974",
+      "status": "failed",
+      "startedAtUtc": "2026-10-25T17:00:34.289689+00:00",
+      "completedAtUtc": "2026-10-25T17:05:09.981720+00:00",
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Workspace-isolated Python 3.12 execution. The Python 3.11 APPCRASH and earlier PS7 CLR failure remain unresolved historical failures; no OS/runtime setting was changed. Not cloud CI, application Docker build or runtime producer evidence.",
+      "commands": [
+        {
+          "name": "scripts",
+          "exitCode": 1,
+          "elapsedSeconds": 272.796,
+          "tests": 357,
+          "skipped": 0,
+          "summary": "FAILED (errors=1)",
+          "log": "output/audit-workflow-quality-child/scripts-4b18f7d26494480ba4312bf02cdf8974/scripts-full.log",
+          "sha256": "7a266757282c6dad60577d9a48fe0e2dd9f147014cfecfb7e8f008e53702d1a7"
+        },
+        {
+          "name": "spark",
+          "exitCode": 0,
+          "elapsedSeconds": 0.719,
+          "tests": 25,
+          "skipped": 4,
+          "summary": "OK (skipped=4)",
+          "log": "output/audit-workflow-quality-child/scripts-4b18f7d26494480ba4312bf02cdf8974/spark-full.log",
+          "sha256": "4f9d4c3625c2d31cc0931f62fc9aac07e3821882f4be1fd87216d63994429bcd"
+        }
+      ],
+      "ownedTempRemoved": true,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    },
+    "scriptRegressionObservedCurrentRun": {
+      "path": "output/audit-workflow-quality-child/scripts-acb5fb24c14d411bb4f883653a14e3ac/script-validation.json",
+      "sha256": "f2c8fbf60abc705a829feb52a11e7a490de5adc414da1669f32fe309e425aa66",
+      "runId": "acb5fb24c14d411bb4f883653a14e3ac",
+      "status": "passed",
+      "startedAtUtc": "2026-10-25T17:06:45.569472+00:00",
+      "completedAtUtc": "2026-10-25T17:11:12.244627+00:00",
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Workspace-isolated Python 3.12 execution. The Python 3.11 APPCRASH and earlier PS7 CLR failure remain unresolved historical failures; no OS/runtime setting was changed. Not cloud CI, application Docker build or runtime producer evidence.",
+      "commands": [
+        {
+          "name": "scripts",
+          "exitCode": 0,
+          "elapsedSeconds": 265.531,
+          "tests": 357,
+          "skipped": 0,
+          "summary": "OK",
+          "log": "output/audit-workflow-quality-child/scripts-acb5fb24c14d411bb4f883653a14e3ac/scripts-full.log",
+          "sha256": "ebb7c382c890177ad4ec0a9968bbcecd4dcbfd11c4bdfd5353245a51fa0e0ebb"
+        },
+        {
+          "name": "spark",
+          "exitCode": 0,
+          "elapsedSeconds": 0.656,
+          "tests": 25,
+          "skipped": 4,
+          "summary": "OK (skipped=4)",
+          "log": "output/audit-workflow-quality-child/scripts-acb5fb24c14d411bb4f883653a14e3ac/spark-full.log",
+          "sha256": "bd27b95ecbcf0b5671f7406aaf3be04eb7e722fc548e4383ed6a991c03e40a7a"
+        }
+      ],
+      "ownedTempRemoved": true,
+      "sourceHashesMatchNow": true,
+      "sourceMismatchPaths": []
+    }
+  },
+  "compiledApplicationArtifactsVerifiedNow": {
+    "auth": {
+      "path": "services/auth/target/auth-service-0.1.0-SNAPSHOT.jar",
+      "sha256": "36bc707ad90145f70092f4ae4b14418e8404a4124af4520112a775fc2299a5f1",
+      "bytes": 36892576
+    },
+    "system": {
+      "path": "services/system/target/system-service-0.1.0-SNAPSHOT.jar",
+      "sha256": "a387cb062a65339cb68e9fa8e0039b339182693ee09922928bf561ab8fc908a5",
+      "bytes": 41167931
+    },
+    "metadata": {
+      "path": "services/metadata/target/metadata-service-0.1.0-SNAPSHOT.jar",
+      "sha256": "35bc5018812202e1a64fce9057b75925a65fa89f9de8f49c81c35ee6402c2612",
+      "bytes": 236167024
+    },
+    "quality": {
+      "path": "services/quality/target/quality-service-0.1.0-SNAPSHOT.jar",
+      "sha256": "1ef2ee719629f9b3966ef5e4e82dc3dd187c13c8c8371317ea15cc7b04e63c1f",
+      "bytes": 42733001
+    },
+    "workflow": {
+      "path": "services/workflow/target/workflow-service-0.1.0-SNAPSHOT.jar",
+      "sha256": "86bc9785bb7b4a0df06e9d0e93fbab38b5d6853b79df4b0539c4218a64232063",
+      "bytes": 58122758
+    },
+    "gateway": {
+      "path": "apps/gateway/target/api-gateway-0.1.0-SNAPSHOT.jar",
+      "sha256": "053162f40ea22cb8638b96c2a8af271ea0756e78a1a0fb9f8607662c2a967add",
+      "bytes": 50790044
+    }
+  },
+  "attachmentVerification": {
+    "freshUnitXmlArchives": 174,
+    "unitXmlDigestsMatched": true,
+    "realAppJarDigestsMatched": 6,
+    "connectionLogAttachmentDigestsMatched": 6,
+    "currentPostgresAndProtocolCompiledDigestsMatched": true
+  },
+  "toolAndStaticEvidence": {
+    "audit-tools-v2.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/audit-tools-v2.log",
+      "sha256": "e0c4aae2024a2fa787f3725ede73c10c73e569c40f6b4525a3817d6d1a4c569b"
+    },
+    "audit-tools.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/audit-tools.log",
+      "sha256": "701bb9c01b4dd28ad24c97f84c9d0f8e66fbc7647018c22514a66329b95c414e"
+    },
+    "base-images-strict-v2.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/base-images-strict-v2.log",
+      "sha256": "948d206461318a155decb2778588de75fe13fb6b73e224877a618d06a552a40f"
+    },
+    "base-images-strict.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/base-images-strict.log",
+      "sha256": "e532eb98cd74f1523905b59afc87a32c42b95fd5b6d3eb8b4b5f94d940ac98da"
+    },
+    "compiled-jar-parity.json": {
+      "path": "output/audit-workflow-quality-child/final-checks/compiled-jar-parity.json",
+      "sha256": "7b9dc85b1ac4280e0ef50e7857d8bc1ddf0f124dc1a3dea0c1a49fe05e847ed4"
+    },
+    "compose-config.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/compose-config.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "diff-check.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/diff-check.log",
+      "sha256": "775e755ffa2148733da9ec74173559de7c97fb415962e9f75d13e9e306d1e362"
+    },
+    "document-integrity.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/document-integrity.log",
+      "sha256": "263a7d9eba2853a58165ffdf9ab9517171cf4bc80c6de3f8b7b303c2385e1541"
+    },
+    "flyway.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/flyway.log",
+      "sha256": "66528ce7116a3d850d71b29fb290e904a75b715bf36457c60ebf8c8ef8f6f0a2"
+    },
+    "full-script-environment-observation.json": {
+      "path": "output/audit-workflow-quality-child/final-checks/full-script-environment-observation.json",
+      "sha256": "f1650f1734696b9d18c6e13fa4a2331c7f117a2853c907d41f335c333d482435"
+    },
+    "gate-tools.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/gate-tools.log",
+      "sha256": "a7f68fd9313cdf5ba8d873d09f9a8040ff20eccf13d9a58c676b55e52cdf57c7"
+    },
+    "independent-cleanup.json": {
+      "path": "output/audit-workflow-quality-child/final-checks/independent-cleanup.json",
+      "sha256": "8ba70392ebf5451e182ab0f26c86b788792878b355ec50953f44b36ff6eac822"
+    },
+    "lock-reference-lines.json": {
+      "path": "output/audit-workflow-quality-child/final-checks/lock-reference-lines.json",
+      "sha256": "00484011f9c25187309bd4c89d5e331b80deceb2c0e79ecc872df29f3c99fd0a"
+    },
+    "old-temp-host-read.json": {
+      "path": "output/audit-workflow-quality-child/final-checks/old-temp-host-read.json",
+      "sha256": "38950afcce7dc3239d724f7557d8a4659215fcf05e363465216ad4a3abe52476"
+    },
+    "release-behavior-after-winerror5.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/release-behavior-after-winerror5.log",
+      "sha256": "4bd14d6152407f6b02502a9020f432867085afcaab833285c2ea2ee0ca8b4cae"
+    },
+    "release-strict.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/release-strict.log",
+      "sha256": "9abbc10bb20e8208ee1957fdb8472b33b35f3ba19eb6ce4dc5905a1893aaf3fd"
+    },
+    "role-tools.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/role-tools.log",
+      "sha256": "3732f6f18119910e720bb47559413292ee062907430013f9d53e93371527c7a2"
+    },
+    "workflow-contract.log": {
+      "path": "output/audit-workflow-quality-child/final-checks/workflow-contract.log",
+      "sha256": "242046dbf9172ad1b5b3bb303758036da7d93bcad4e5fdc9ee9fad943c4341bb"
+    }
+  },
+  "preservedIntermediateRuns": [
+    {
+      "path": "output/audit-workflow-quality-authority/run-20261026-v1/report.json",
+      "sha256": "cbbdd0c0793ca53a3d30ef1e135219b61f0a8be44b636dd4ef27b1fb1f930bf4",
+      "runId": "36f6a124732b4bf1ac1c0168218e57a6",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    },
+    {
+      "path": "output/audit-workflow-quality-authority/run-20261026-v2/report.json",
+      "sha256": "a5b6534552e83dcd7579fd90b2ded2b3f62fcc0118118dc8b2e740798ba25c62",
+      "runId": "2d0c168446c14cb4abc86abfe56b956e",
+      "status": "passed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    },
+    {
+      "path": "output/audit-workflow-quality-authority/run-20261026-v3/report.json",
+      "sha256": "b4073acdbc929290c72c0635953450bc06acceb4900b51505d97df15d53342c6",
+      "runId": "0136f7bc1c0a49ea8bfacc4f65fcd229",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    },
+    {
+      "path": "output/audit-workflow-quality-authority/run-20261026-v4/report.json",
+      "sha256": "c876b1245dc395763094820298fba9bc0e507f1d9c1103a4d49b892064c7ff4e",
+      "runId": "28dd8f8fea694e4fa2a6b31d0d3ace94",
+      "status": "passed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    },
+    {
+      "path": "output/audit-workflow-quality-child/run-20261026-v1/report.json",
+      "sha256": "394073e423fff1efbd059a16d8074e4c27bdb70ba4a3f565273612a12f78180d",
+      "runId": "89ca2e0d7c4c40f5990fad4eea800688",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    },
+    {
+      "path": "output/audit-workflow-quality-child/run-20261026-v2/report.json",
+      "sha256": "a2ced804bf6f3bb3dcde1cbfa1fc2b7d40e530d9a3243fe0f0a9fbdc311fbea6",
+      "runId": "29a57ea6486647bb9e9af336f48546dd",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Original source, run, failures and attachments retained; no later source rebinding."
+    }
+  ],
+  "blockingEvidence": [
+    "Two MinIO image references remain unresolved; strict image inventory exits 1. Only existing Compose source line coordinates were synchronized; no digest/proof/state changed.",
+    "Strict release -ValidateExisting exits 1. Eight required real producers, same frozen artifacts/config/migrations, build/scan/sign/verify and complete release acceptance remain absent.",
+    "Spark/Flink original actor/approval/definition recovery and queued dispatch remain incomplete; SQL and quality parent success does not validate their mixed pipelines.",
+    "Authenticated browser concurrency, nine-source engines, full same-version nine-service/frontend acceptance, actual old-install inventory/upgrade/backup-restore, alert delivery and other ledger work remain incomplete.",
+    "A full current 357-test script run encountered WinError5 during atomic manifest replacement. The unchanged targeted pass and observed full rerun do not explain or erase the original failure.",
+    "Original Aetheris_mimo.md and Aetheris_deepseek.md attachments remain absent; ledger mappings cannot replace the missing originals."
+  ],
+  "interpretation": "Current partial checkpoint, not a release aggregate. Real six-app 119 cases, PG26, unit1140, DB gate1+23 and Linux protocol166 retain distinct runs and precise scopes. All prior successes/failures, skipped tests, missing attachments and environment exceptions retain historical meaning. No existing database, real secret, Git commit/push or deployment was changed."
+}

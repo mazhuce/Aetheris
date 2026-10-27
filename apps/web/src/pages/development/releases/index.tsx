@@ -37,8 +37,8 @@ const statusMeta: Record<ReleaseStatus, { label: string; tone: 'neutral' | 'succ
   pending: { label: '待审批', tone: 'warning' },
   approved: { label: '已通过', tone: 'info' },
   rejected: { label: '已拒绝', tone: 'danger' },
-  released: { label: '已上线', tone: 'success' },
-  rolled_back: { label: '已回滚', tone: 'neutral' }
+  released: { label: '已登记发布', tone: 'success' },
+  rolled_back: { label: '已登记回退', tone: 'neutral' }
 }
 
 export default function ReleasePage() {
@@ -66,9 +66,9 @@ export default function ReleasePage() {
   }, [message])
 
   useEffect(() => {
-    void refresh()
+    refresh().catch(() => { message.error('发布记录加载失败') })
     void listRules().then((rules) => setQualityRules(rules.filter((rule) => rule.status === 'enabled'))).catch(() => undefined)
-  }, [refresh])
+  }, [message, refresh])
 
   useEffect(() => {
     if (open) {
@@ -168,22 +168,22 @@ export default function ReleasePage() {
     } else if (record.status === 'approved') {
       items.push({
         key: 'publish',
-        label: '上线',
+        label: '登记发布',
         onClick: () =>
-          void runAction(() => publishRelease(record.id), '已上线', {
-            title: `上线“${record.title}”？`,
-            content: '上线后该版本将对下游消费方生效。'
+          void runAction(() => publishRelease(record.id), '已登记发布', {
+            title: `登记发布“${record.title}”？`,
+            content: '确认后更新发布登记状态和时间。下游投放、消费方切换及其验证需在对应系统另行执行。'
           })
       })
     } else if (record.status === 'released') {
       items.push({
         key: 'rollback',
-        label: '回滚',
+        label: '登记回退',
         danger: true,
         onClick: () =>
-          void runAction(() => rollbackRelease(record.id), '已回滚', {
-            title: `回滚“${record.title}”？`,
-            content: '回滚后该版本将停止对下游生效，请确认影响范围。'
+          void runAction(() => rollbackRelease(record.id), '已登记回退', {
+            title: `登记回退“${record.title}”？`,
+            content: '确认后将此发布单标记为“已登记回退”。下游停用、数据恢复或部署回退需在对应系统另行执行。'
           })
       })
     }
@@ -193,10 +193,12 @@ export default function ReleasePage() {
       }
       items.push({
         key: 'delete', label: '删除', danger: true,
-        onClick: () => modal.confirm({
-          title: `删除发布单“${record.title}”？`, content: '删除后该发布记录将不可恢复。',
-          okText: '确认删除', okButtonProps: { danger: true }, onOk: () => handleDelete(record)
-        })
+        onClick: () => {
+          modal.confirm({
+            title: `删除发布单“${record.title}”？`, content: '删除后该发布记录将不可恢复。',
+            okText: '确认删除', okButtonProps: { danger: true }, onOk: () => handleDelete(record)
+          })
+        }
       })
     }
     return items
@@ -227,7 +229,7 @@ export default function ReleasePage() {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 90,
+      width: 120,
       render: (v?: ReleaseStatus) => {
         const meta = v ? statusMeta[v] : undefined
         return meta ? <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge> : '—'
@@ -239,7 +241,7 @@ export default function ReleasePage() {
       title: '审批摘要', dataIndex: 'approvedDigest', key: 'approvedDigest', width: 130,
       render: (v?: string) => v ? <Typography.Text code copyable={{ text: v }}>{v.slice(0, 10)}…</Typography.Text> : '—'
     },
-    { title: '上线时间', dataIndex: 'releasedAt', key: 'releasedAt', width: 170, render: (v?: string) => formatDateTime(v) },
+    { title: '发布登记时间', dataIndex: 'releasedAt', key: 'releasedAt', width: 170, render: (v?: string) => formatDateTime(v) },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 170, render: (v?: string) => formatDateTime(v) }
   ]
 
@@ -256,7 +258,7 @@ export default function ReleasePage() {
   return (
     <>
       <PageHeader
-        description="管理数据开发产物的发布、审批与版本上线，保障变更可控可追溯。"
+        description="记录数据开发产物的发布申请、审批和发布登记状态，保留变更信息。"
         extra={
           canManage ? (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setOpen(true) }}>
@@ -272,7 +274,7 @@ export default function ReleasePage() {
           <StatCard title="发布单总数" value={String(stats.total)} icon={<CloudUploadOutlined />} />
         </Col>
         <Col span={8}>
-          <StatCard title="已上线" value={String(stats.released)} icon={<CloudUploadOutlined />} tone="green" />
+          <StatCard title="已登记发布" value={String(stats.released)} icon={<CloudUploadOutlined />} tone="green" />
         </Col>
         <Col span={8}>
           <StatCard title="待审批" value={String(stats.pending)} icon={<CloudUploadOutlined />} tone="orange" />
@@ -339,7 +341,7 @@ export default function ReleasePage() {
             </Col>
           </Row>
           <Form.Item name="title" label="标题" rules={[{ required: true, message: '请输入标题' }]}>
-            <Input placeholder="如 用户画像标签包 v2 上线" />
+            <Input placeholder="如 用户画像标签包 v2 发布登记" />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>

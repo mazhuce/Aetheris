@@ -34,11 +34,15 @@ def runtime_role(service):return base.database_contract.role(base.database_contr
 
 def literal(value):return "'"+str(value).replace("'","''")+"'"
 
+WORKFLOW_ENGINE_ENV=frozenset(('AETHERIS_SPARK_RUNNER_ENABLED','AETHERIS_SPARK_RUNNER_BASE_URL','AETHERIS_SPARK_RUNNER_TOKEN',
+    'AETHERIS_SPARK_RUNNER_ALLOWED_ORIGINS','AETHERIS_FLINK_SQL_GATEWAY_BASE_URL','AETHERIS_FLINK_JOBMANAGER_BASE_URL'))
+
 class Audit(identity.Audit):
     def __init__(self,output):
         super().__init__(output)
         self.report.update(purpose='isolated-six-real-application-fixed-execution',limits='Manual transfer and quality segments, not workflow/Spark/Flink/pipeline, browser, MySQL or production deployment')
     def jvm_memory_flags(self):return ('-Xms32m','-Xmx256m','-XX:MaxMetaspaceSize=192m','-XX:ReservedCodeCacheSize=64m')
+    def workflow_engine_environment(self):return {}
     def setup_database(self):
         super().setup_database()
         self.reader_password=self.secret();self.target_reader_password=self.secret();self.writer_password=self.secret()
@@ -65,8 +69,8 @@ class Audit(identity.Audit):
         self.master=base64.b64encode(secrets.token_bytes(32)).decode('ascii');self.secrets.append(self.master)
         common=clean_environment();common.update(SERVER_ADDRESS='127.0.0.1',DB_HOST='127.0.0.1',DB_PORT=str(self.report['ports']['postgres']),
             DB_NAME='aetheris_api_key_audit',JWT_SECRET=self.secret(),REDIS_HOST='127.0.0.1',REDIS_PORT=str(self.report['ports']['redis']),REDIS_PASSWORD=redis_password,
-            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE='4',
-            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MIN_SPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',
+            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUMIDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE='4',
+            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MINSPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',
             AETHERIS_SECURITY_REGISTRY_FILE=str(self.private_keys/'public-registry.json'),AETHERIS_OUTBOUND_ALLOWED_CIDRS='127.0.0.1/32',
             AETHERIS_FIXED_EXECUTION_RECEIPT_LIFETIME='PT2M',AETHERIS_FIXED_EXECUTION_WAIT_TIMEOUT='PT30S')
         for name,prefix in {'auth':'AUTH_SERVICE','system':'SYSTEM_SERVICE','metadata':'METADATA_SERVICE','ingestion':'INGESTION_SERVICE','quality':'QUALITY_SERVICE',
@@ -74,6 +78,11 @@ class Audit(identity.Audit):
             common[prefix+'_HOST']='127.0.0.1';common[prefix+'_PORT']=str(ports.get(name,ports['unused']))
         for name in MODULES:
             env=common.copy();env['SERVER_PORT']=str(ports[name]);key=self.key_manifest['services'][name]
+            if name=='workflow':
+                compute=self.workflow_engine_environment()
+                if not isinstance(compute,dict) or not set(compute).issubset(WORKFLOW_ENGINE_ENV) or any(not isinstance(v,str) for v in compute.values()):
+                    raise base.AuditFailure('UnexpectedWorkflowEngineEnvironment')
+                env.update(compute)
             env.update(AETHERIS_SECURITY_WORKLOAD_KID=key['workloadKid'],AETHERIS_SECURITY_WORKLOAD_PRIVATE_FILE=str(self.private_keys/key['workloadPrivateFile']))
             if name=='gateway':env.update(AETHERIS_SECURITY_USER_KID=key['userKid'],AETHERIS_SECURITY_USER_PRIVATE_FILE=str(self.private_keys/key['userPrivateFile']))
             else:

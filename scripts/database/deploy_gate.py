@@ -61,8 +61,8 @@ def verify_wiring(model,document,manifest):
         if any(str(env.get(k))!=v for k,v in {'DB_HOST':'postgres','DB_PORT':'5432','DB_NAME':database}.items()):
             raise ValueError('Runtime points outside the verified Compose database')
         if item.get('command') or item.get('entrypoint'):raise ValueError('Unreviewed runtime entrypoint override')
-        spring_allowed={'SPRING_DATASOURCE_USERNAME','SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE',
-                        'SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE','SPRING_CONFIG_IMPORT','SPRING_FLYWAY_ENABLED'}
+        spring_allowed={'SPRING_DATASOURCE_USERNAME','SPRING_DATASOURCE_HIKARI_MINIMUMIDLE',
+                        'SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE','SPRING_CONFIG_IMPORT','SPRING_FLYWAY_ENABLED'}
         for key,value in env.items():
             canonical=key.upper().replace('.','_').replace('-','_')
             if canonical.startswith('SPRING_') and (key!=canonical or canonical not in spring_allowed):

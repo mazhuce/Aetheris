@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Empty, Row, Select, Table, Tag, Typography } from 'antd'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, App, Button, Col, Empty, Row, Select, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { ApartmentOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -17,6 +17,11 @@ import {
 } from '@/api/workflow'
 import { canManagePlatform } from '@/utils/access'
 import { useResourceActions } from '@/hooks/useResourceActions'
+import { checkedDependencies, DEPENDENCY_CONCURRENCY, DependencyRequestQueue, dependencyFailure } from './dependencyRequests'
+
+interface Selection { id: number | null; epoch: number }
+type DependencyRead = { status: 'loading' } | { status: 'ready'; rows: TaskDependency[] } | { status: 'error'; error: string }
+interface DetailRead { owner: Selection; value: DependencyRead }
 
 /** DAG 节点：任务 + 拓扑层级 + 画布坐标。 */
 interface DagNode {
@@ -66,64 +71,172 @@ export default function WorkflowGraphPage() {
   const [tasks, setTasks] = useState<TaskView[]>([])
   const resources = useMemo(() => tasks.map((view) => view.task), [tasks])
   const permissions = useResourceActions('workflow_task', resources)
-  const [deps, setDeps] = useState<Map<number, number[]>>(new Map())
+  const [graphReads, setGraphReads] = useState<Map<number, DependencyRead>>(new Map())
   const [loading, setLoading] = useState(false)
-  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [graphError, setGraphError] = useState<string | null>(null)
+  const selectionRef = useRef<Selection>({ id: null, epoch: 0 })
+  const [selection, setSelection] = useState(selectionRef.current)
+  const selectedId = selection.id
   const canUpdate = selectedId != null && (canManage || permissions.can('update', selectedId))
-  const [selectedDeps, setSelectedDeps] = useState<TaskDependency[]>([])
-  const [depsLoading, setDepsLoading] = useState(false)
+  const [detail, setDetail] = useState<DetailRead | null>(null)
   const [addUpstream, setAddUpstream] = useState<number | undefined>(undefined)
+  const [mutationPending, setMutationPending] = useState(false)
+  const mutationRef = useRef<symbol | null>(null)
+  const live = useRef(true)
+  const graphEpoch = useRef(0)
+  const detailEpoch = useRef(0)
+  const graphController = useRef<AbortController | null>(null)
+  const detailController = useRef<AbortController | null>(null)
+  const queue = useMemo(() => new DependencyRequestQueue(), [])
+  const currentSelection = useCallback((owner: Selection) => live.current && owner.id === selectionRef.current.id
+    && owner.epoch === selectionRef.current.epoch, [])
+
+  const changeSelection = useCallback((id: number | null) => {
+    detailController.current?.abort()
+    detailEpoch.current++
+    const owner = { id, epoch: selectionRef.current.epoch + 1 }
+    selectionRef.current = owner
+    setSelection(owner)
+    setDetail(id === null ? null : { owner, value: { status: 'loading' } })
+    setAddUpstream(undefined)
+    mutationRef.current = null
+    setMutationPending(false)
+  }, [])
+
+  const loadSelectedDeps = useCallback(async (owner: Selection) => {
+    if (owner.id === null || !currentSelection(owner)) return
+    detailController.current?.abort()
+    const controller = new AbortController()
+    detailController.current = controller
+    const epoch = ++detailEpoch.current
+    setDetail({ owner, value: { status: 'loading' } })
+    try {
+      const rows = checkedDependencies(owner.id, await queue.run(() => listDependencies(owner.id!, controller.signal), controller.signal))
+      if (currentSelection(owner) && epoch === detailEpoch.current && !controller.signal.aborted) {
+        setDetail({ owner, value: { status: 'ready', rows } })
+      }
+    } catch (error) {
+      if (currentSelection(owner) && epoch === detailEpoch.current && !controller.signal.aborted) {
+        setDetail({ owner, value: { status: 'error', error: dependencyFailure(error) } })
+      }
+    }
+  }, [currentSelection, queue])
+
+  const loadGraphReads = useCallback(async (views: TaskView[], controller: AbortController, epoch: number) => {
+    let cursor = 0
+    const active = () => live.current && epoch === graphEpoch.current && !controller.signal.aborted
+    await Promise.all(Array.from({ length: Math.min(DEPENDENCY_CONCURRENCY, views.length) }, async () => {
+      while (active()) {
+        const view = views[cursor++]
+        if (!view) return
+        const id = view.task.id
+        let value: DependencyRead
+        try {
+          const rows = checkedDependencies(id, await queue.run(() => listDependencies(id, controller.signal), controller.signal))
+          value = { status: 'ready', rows }
+        } catch (error) {
+          if (!active()) return
+          value = { status: 'error', error: dependencyFailure(error) }
+        }
+        if (active()) setGraphReads((previous) => new Map(previous).set(id, value))
+      }
+    }))
+  }, [queue])
 
   const refresh = useCallback(async () => {
+    graphController.current?.abort()
+    const controller = new AbortController()
+    graphController.current = controller
+    const epoch = ++graphEpoch.current
+    const active = () => live.current && epoch === graphEpoch.current && !controller.signal.aborted
     setLoading(true)
+    setGraphError(null)
     try {
-      const views = await listTasks()
+      const views = await listTasks(controller.signal)
+      if (!active()) return
       setTasks(views)
-      // 逐任务拉取依赖，构建全局邻接表（上游列表）。
-      const map = new Map<number, number[]>()
-      await Promise.all(
-        views.map(async (view) => {
-          try {
-            const list = await listDependencies(view.task.id)
-            map.set(
-              view.task.id,
-              list.map((dep) => dep.upstreamTaskId)
-            )
-          } catch {
-            map.set(view.task.id, [])
-          }
-        })
-      )
-      setDeps(map)
+      if (selectionRef.current.id !== null && !views.some((view) => view.task.id === selectionRef.current.id)) changeSelection(null)
+      setGraphReads(new Map(views.map((view) => [view.task.id, { status: 'loading' } as DependencyRead])))
+      await loadGraphReads(views, controller, epoch)
     } catch {
-      message.error('任务依赖加载失败')
+      if (active()) setGraphError('任务列表读取失败，无法确认完整依赖图，请重试')
     } finally {
-      setLoading(false)
+      if (active()) setLoading(false)
     }
-  }, [message])
+  }, [changeSelection, loadGraphReads])
 
-  useEffect(() => {
-    void refresh()
+  const refreshInBackground = useCallback(() => {
+    const pending = refresh()
+    const epoch = graphEpoch.current
+    pending.catch(() => {
+      if (live.current && epoch === graphEpoch.current) {
+        setGraphError('依赖图读取中断，请重试')
+        setLoading(false)
+      }
+    })
   }, [refresh])
 
-  const loadSelectedDeps = useCallback(
-    async (id: number) => {
-      setDepsLoading(true)
-      try {
-        setSelectedDeps(await listDependencies(id))
-      } catch {
-        message.error('依赖详情加载失败')
-      } finally {
-        setDepsLoading(false)
-      }
-    },
-    [message]
-  )
+  const stopReads = useCallback(() => {
+    live.current = false
+    graphEpoch.current++
+    detailEpoch.current++
+    graphController.current?.abort()
+    detailController.current?.abort()
+  }, [])
 
   useEffect(() => {
-    if (selectedId != null) void loadSelectedDeps(selectedId)
-    else setSelectedDeps([])
-  }, [selectedId, loadSelectedDeps])
+    live.current = true
+    refreshInBackground()
+    return stopReads
+  }, [refreshInBackground, stopReads])
+
+  useEffect(() => {
+    if (selection.id !== null) {
+      const pending = loadSelectedDeps(selection)
+      const epoch = detailEpoch.current
+      pending.catch((error) => {
+        if (currentSelection(selection) && epoch === detailEpoch.current) {
+          setDetail({ owner: selection, value: { status: 'error', error: dependencyFailure(error) } })
+        }
+      })
+    }
+    return () => { detailController.current?.abort() }
+  }, [selection, loadSelectedDeps, currentSelection])
+
+  const retryUnknown = async () => {
+    const views = tasks.filter((view) => graphReads.get(view.task.id)?.status !== 'ready')
+    graphController.current?.abort()
+    const controller = new AbortController()
+    graphController.current = controller
+    const epoch = ++graphEpoch.current
+    setLoading(true)
+    setGraphReads((previous) => {
+      const next = new Map(previous)
+      views.forEach((view) => next.set(view.task.id, { status: 'loading' }))
+      return next
+    })
+    await loadGraphReads(views, controller, epoch)
+    if (live.current && epoch === graphEpoch.current && !controller.signal.aborted) setLoading(false)
+  }
+
+  const cancelGraphRead = () => {
+    graphEpoch.current++
+    graphController.current?.abort()
+    setLoading(false)
+    if (!tasks.length) setGraphError('任务列表读取已取消，请重试')
+    setGraphReads((previous) => {
+      const next = new Map(previous)
+      for (const [id, value] of next) if (value.status === 'loading') next.set(id, { status: 'error', error: '加载已取消，请重试' })
+      return next
+    })
+  }
+
+  const deps = useMemo(() => new Map(Array.from(graphReads).flatMap(([id, value]) =>
+    value.status === 'ready' ? [[id, value.rows.map((row) => row.upstreamTaskId)] as const] : [])), [graphReads])
+  const unknownCount = tasks.filter((view) => graphReads.get(view.task.id)?.status !== 'ready').length
+  const detailValue = detail && detail.owner.id === selection.id && detail.owner.epoch === selection.epoch ? detail.value : null
+  const selectedDeps = useMemo(() => detailValue?.status === 'ready' ? detailValue.rows : [], [detailValue])
+  const depsLoading = detailValue?.status === 'loading'
 
   /** 布局：拓扑分层，层内纵向排布。环依赖时整体退化展示为单列。 */
   const { nodes, edges, canvasWidth, canvasHeight, hasCycle } = useMemo(() => {
@@ -182,50 +295,73 @@ export default function WorkflowGraphPage() {
   /** 除自身及其下游外均可选为上游，避免直接成环（后端会拒绝成环依赖）。 */
   const candidateUpstreams = useMemo(() => {
     if (!selectedTask) return []
-    // 求下游闭包：候选上游不能在自身下游集合里。
+    // 由已知上游边向下游扩张；后端仍校验不完整图及并发变更中的环。
     const downstreamClosure = new Set<number>([selectedTask.task.id])
+    const existingUpstreams = new Set([
+      ...(deps.get(selectedTask.task.id) ?? []), ...selectedDeps.map((row) => row.upstreamTaskId)
+    ])
     let growing = true
     while (growing) {
       growing = false
       deps.forEach((upstreams, downstream) => {
-        if (downstreamClosure.has(downstream)) {
-          upstreams.forEach((upstream) => {
-            if (!downstreamClosure.has(upstream)) {
-              downstreamClosure.add(upstream)
-              growing = true
-            }
-          })
+        if (!downstreamClosure.has(downstream) && upstreams.some((upstream) => downstreamClosure.has(upstream))) {
+          downstreamClosure.add(downstream)
+          growing = true
         }
       })
     }
     return tasks
-      .filter((view) => !downstreamClosure.has(view.task.id))
+      .filter((view) => !downstreamClosure.has(view.task.id) && !existingUpstreams.has(view.task.id))
       .map((view) => ({ value: view.task.id, label: view.task.name }))
-  }, [tasks, deps, selectedTask])
+  }, [tasks, deps, selectedTask, selectedDeps])
 
   const handleAddDep = async () => {
-    if (selectedId == null || addUpstream == null) return
+    const owner = selection
+    if (owner.id === null || addUpstream == null || !currentSelection(owner)
+        || detailValue?.status !== 'ready' || !canUpdate || mutationRef.current) return
+    const token = Symbol('add-dependency')
+    mutationRef.current = token
+    setMutationPending(true)
     try {
-      await addDependency(selectedId, addUpstream)
+      await addDependency(owner.id, addUpstream)
+      if (!live.current) return
+      refreshInBackground()
+      if (!currentSelection(owner)) return
       message.success('依赖已添加')
       setAddUpstream(undefined)
-      await refresh()
-      await loadSelectedDeps(selectedId)
+      await loadSelectedDeps(owner)
     } catch (err) {
+      if (!currentSelection(owner)) return
       const detail = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       message.error(detail || '添加失败')
+    } finally {
+      if (currentSelection(owner) && mutationRef.current === token) {
+        mutationRef.current = null
+        setMutationPending(false)
+      }
     }
   }
 
-  const handleRemoveDep = async (upstreamTaskId: number) => {
-    if (selectedId == null) return
+  const handleRemoveDep = async (record: TaskDependency, owner: Selection) => {
+    if (owner.id === null || record.taskId !== owner.id || !currentSelection(owner)
+        || detailValue?.status !== 'ready' || !canUpdate || mutationRef.current) return
+    const token = Symbol('remove-dependency')
+    mutationRef.current = token
+    setMutationPending(true)
     try {
-      await removeDependency(selectedId, upstreamTaskId)
+      await removeDependency(owner.id, record.upstreamTaskId)
+      if (!live.current) return
+      refreshInBackground()
+      if (!currentSelection(owner)) return
       message.success('依赖已移除')
-      await refresh()
-      await loadSelectedDeps(selectedId)
+      await loadSelectedDeps(owner)
     } catch {
-      message.error('移除失败')
+      if (currentSelection(owner)) message.error('移除失败，请核对当前依赖后重试')
+    } finally {
+      if (currentSelection(owner) && mutationRef.current === token) {
+        mutationRef.current = null
+        setMutationPending(false)
+      }
     }
   }
 
@@ -243,12 +379,13 @@ export default function WorkflowGraphPage() {
       align: 'right',
       render: (_, record) => (
         <RowActions
-          items={canUpdate ? [
+          items={canUpdate && detailValue?.status === 'ready' && record.taskId === selectedId ? [
             {
               key: 'remove',
               label: '移除',
               danger: true,
-              onClick: () => void handleRemoveDep(record.upstreamTaskId)
+              disabled: mutationPending,
+              onClick: () => void handleRemoveDep(record, selection)
             }
           ] : []}
         />
@@ -264,19 +401,24 @@ export default function WorkflowGraphPage() {
           <StatCard title="任务节点" value={String(stats.total)} icon={<ApartmentOutlined />} />
         </Col>
         <Col span={8}>
-          <StatCard title="依赖连线" value={String(stats.edgeCount)} icon={<ApartmentOutlined />} tone="green" />
+          <StatCard title="依赖连线" value={`${stats.edgeCount}${unknownCount || graphError ? '（已确认）' : ''}`} icon={<ApartmentOutlined />} tone="green" />
         </Col>
         <Col span={8}>
-          <StatCard title="流水线深度" value={String(stats.depth)} icon={<ApartmentOutlined />} tone="orange" />
+          <StatCard title="流水线深度" value={unknownCount || graphError ? '未知' : String(stats.depth)} icon={<ApartmentOutlined />} tone="orange" />
         </Col>
       </Row>
       <PageToolbar>
         <div className="filter-bar">
           <Typography.Text type="secondary">点击画布中的任务节点，在下方维护其上游依赖</Typography.Text>
-          <Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新</Button>
+          <Button icon={<ReloadOutlined />} onClick={refreshInBackground}>刷新</Button>
+          {loading && <Button onClick={cancelGraphRead}>取消加载</Button>}
         </div>
       </PageToolbar>
       <DataSurface label="任务依赖图" className="dag-surface">
+        {graphError && <Alert type="error" showIcon message={graphError} />}
+        {unknownCount > 0 && <Alert type="warning" showIcon
+          message={`${unknownCount} 个任务的依赖未知，图中只显示已确认的连线`}
+          action={<Button disabled={loading} onClick={() => void retryUnknown()}>重试未知依赖</Button>} />}
         {hasCycle && (
           <div className="dep-cycle-warning">
             <Tag color="error">检测到循环依赖</Tag>
@@ -313,39 +455,46 @@ export default function WorkflowGraphPage() {
             </svg>
             {nodes.map((node) => {
               const selected = selectedId === node.task.task.id
+              const read = graphReads.get(node.task.task.id)
               return (
                 <button
                   key={node.task.task.id}
                   type="button"
                   className={selected ? 'dag-node selected' : 'dag-node'}
                   style={{ left: node.x, top: node.y, width: NODE_WIDTH, height: NODE_HEIGHT }}
-                  onClick={() => setSelectedId(selected ? null : node.task.task.id)}
+                  onClick={() => changeSelection(selected ? null : node.task.task.id)}
                   title={node.task.task.description || node.task.task.name}
                 >
                   <span className="dag-node-name">{node.task.task.name}</span>
-                  <span className="dag-node-meta">
+                  <span className="dag-node-meta" title={read?.status === 'error' ? read.error : undefined}>
                     {node.task.task.targetTable ? node.task.task.targetTable : node.task.task.taskType?.toUpperCase() ?? 'SQL'}
-                    {deps.get(node.task.task.id)?.length ? ` · ${deps.get(node.task.task.id)!.length} 上游` : ''}
+                    {graphReads.get(node.task.task.id)?.status === 'ready'
+                      ? ` · ${deps.get(node.task.task.id)!.length} 上游`
+                      : ' · 依赖未知'}
                   </span>
                 </button>
               )
             })}
           </div>
         ) : (
-          <Empty description={loading ? '依赖关系加载中…' : '暂无任务，请先在任务调度中创建加工任务'} />
+          <Empty description={loading ? '依赖关系加载中…' : graphError ? '任务列表未知' : '暂无任务，请先在任务调度中创建加工任务'} />
         )}
       </DataSurface>
       <DataSurface label={selectedTask ? `上游依赖 · ${selectedTask.task.name}` : '上游依赖'}>
         {selectedTask ? (
           <>
+            {detailValue?.status === 'error' && <Alert type="warning" showIcon message="依赖详情未知"
+              description={detailValue.error}
+              action={<Button onClick={() => void loadSelectedDeps(selection)}>重试依赖详情</Button>} />}
             <Table<TaskDependency>
               size="small"
               rowKey="id"
               columns={depColumns}
               dataSource={selectedDeps}
               loading={depsLoading}
-              pagination={{ pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条依赖` }}
-              locale={{ emptyText: '暂无上游依赖，该任务为流水线起点' }}
+              pagination={detailValue?.status === 'ready' ? { pageSize: 5, showSizeChanger: false, showTotal: (total) => `共 ${total} 条依赖` } : false}
+              locale={{ emptyText: detailValue?.status === 'ready' ? '暂无上游依赖，该任务为流水线起点'
+                : depsLoading ? '依赖详情加载中…' : '尚未确认上游依赖' }}
             />
             {canUpdate && (
               <div className="dep-add-bar">
@@ -353,13 +502,14 @@ export default function WorkflowGraphPage() {
                   showSearch
                   optionFilterProp="label"
                   placeholder="选择任务添加为上游依赖"
+                  disabled={detailValue?.status !== 'ready' || mutationPending}
                   value={addUpstream}
                   onChange={setAddUpstream}
                   options={candidateUpstreams}
                   className="dep-add-select"
                   allowClear
                 />
-                <Button type="primary" disabled={addUpstream == null} onClick={() => void handleAddDep()}>
+                <Button type="primary" disabled={addUpstream == null || detailValue?.status !== 'ready' || mutationPending} onClick={() => void handleAddDep()}>
                   添加依赖
                 </Button>
               </div>

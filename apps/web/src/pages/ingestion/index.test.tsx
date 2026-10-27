@@ -11,7 +11,7 @@ vi.mock('@/api/ingestion', () => ({ listTasks: vi.fn(), runTask: vi.fn(), update
 vi.mock('@/api/metadata', () => ({ listDataSources: vi.fn() }))
 beforeEach(() => {
   vi.clearAllMocks()
-  setAuthenticated({ username: 'operator', role: 'viewer' })
+  setAuthenticated({ id: 15, accessVersion: 0, permissionVersion: 0, username: 'operator', role: 'viewer' })
   vi.mocked(api.listTasks).mockResolvedValue([1, 2].map((id) => ({ id, name: `接入${id}`, sourceType: 'jdbc', sourceDatasourceId: 3, targetDatasourceId: 4, sourceSql: 'SELECT 1', targetTable: 'warehouse.t', status: 'enabled' })))
   vi.mocked(api.runTask).mockResolvedValue({ id: 8, taskId: 1, status: 'success', rowsWritten: 1, startedAt: '2026-10-18T00:00:00Z' })
 })

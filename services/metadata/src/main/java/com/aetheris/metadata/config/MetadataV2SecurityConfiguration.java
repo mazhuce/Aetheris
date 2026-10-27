@@ -79,10 +79,10 @@ public class MetadataV2SecurityConfiguration {
                 new SignedHttpClient.Limits(1024*1024,1024*1024,16,Duration.ofMillis(500),Duration.ofSeconds(2)));
     }
     @Bean public com.aetheris.metadata.fixedexecution.FixedQualityPeers metadataFixedQualityPeers(@Qualifier("metadataQualityTransport") SignedHttpClient source,
-            @Qualifier("metadataAuthTransport") SignedHttpClient auth){return new com.aetheris.metadata.fixedexecution.FixedQualityPeers(source,auth,Clock.systemUTC());}
+            @Qualifier("metadataAuthTransport") SignedHttpClient auth,@Qualifier("metadataWorkflowTransport") SignedHttpClient workflow){return new com.aetheris.metadata.fixedexecution.FixedQualityPeers(source,auth,workflow,Clock.systemUTC());}
     @Bean(destroyMethod="close") public SignedHttpClient metadataWorkflowTransport(ProtocolInstallation installation,Environment env){
         return new SignedHttpClient("metadata",installation.workloadSigner(),installation.verifier(),Clock.systemUTC(),TimePolicy.defaults(),
-            Map.of("workflow",URI.create(env.getRequiredProperty("aetheris.workflow.base-url"))),Map.of("workflow",Set.of("workflow.execution.lookup")),
+            Map.of("workflow",URI.create(env.getRequiredProperty("aetheris.workflow.base-url"))),Map.of("workflow",Set.of("workflow.execution.lookup","workflow.quality-parent.lookup")),
             new SignedHttpClient.Limits(65536,1024*1024,16,Duration.ofMillis(500),Duration.ofSeconds(2)));
     }
     @Bean public com.aetheris.metadata.fixedexecution.FixedSqlPeers metadataFixedSqlPeers(@Qualifier("metadataWorkflowTransport") SignedHttpClient source,@Qualifier("metadataAuthTransport") SignedHttpClient auth){return new com.aetheris.metadata.fixedexecution.FixedSqlPeers(source,auth,Clock.systemUTC());}

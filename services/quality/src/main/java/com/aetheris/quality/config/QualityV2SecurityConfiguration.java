@@ -52,8 +52,18 @@ public class QualityV2SecurityConfiguration {
                 Map.of("metadata",Set.of("metadata.fixed-quality-query.submit","metadata.fixed-execution.status")),
                 new SignedHttpClient.Limits(64*1024,16*1024,16,Duration.ofMillis(500),Duration.ofSeconds(2)));
     }
-    public static RoutePolicy workloadRoutes(){return (method,path)->"POST".equals(method)&&"/internal/v2/executions/lookup".equals(path)
-            ?Optional.of(new RoutePolicy.Route("quality.execution.lookup",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN)):Optional.empty();}
+    @Bean(name="qualityWorkflowTransport",destroyMethod="close")
+    public SignedHttpClient qualityWorkflowTransport(ProtocolInstallation installation,Environment env){
+        return new SignedHttpClient("quality",installation.workloadSigner(),installation.verifier(),Clock.systemUTC(),TimePolicy.defaults(),
+            Map.of("workflow",URI.create(env.getProperty("aetheris.workflow.base-url","http://127.0.0.1:8088"))),
+            Map.of("workflow",Set.of("workflow.quality-parent.lookup")),new SignedHttpClient.Limits(65536,1024*1024,16,Duration.ofMillis(500),Duration.ofSeconds(2)));
+    }
+    public static RoutePolicy workloadRoutes(){return (method,path)->{
+        if(!"POST".equals(method))return Optional.empty();
+        if("/internal/v2/executions/lookup".equals(path))return Optional.of(new RoutePolicy.Route("quality.execution.lookup",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN));
+        String op=switch(path){case "/internal/v2/workflow-children/submit"->"quality.workflow-child.submit";case "/internal/v2/workflow-children/status"->"quality.workflow-child.status";case "/internal/v2/workflow-children/definition"->"quality.workflow-child.definition";default->null;};
+        return op==null?Optional.empty():Optional.of(new RoutePolicy.Route(op,Set.of("workflow"),RoutePolicy.UserMode.FORBIDDEN));
+    };}
     @Bean public AuthProtocolClient qualityAuthClient(@Qualifier("qualityAuthTransport") SignedHttpClient transport) {
         return new AuthProtocolClient(transport);
     }

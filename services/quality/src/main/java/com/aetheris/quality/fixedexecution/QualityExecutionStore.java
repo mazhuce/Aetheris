@@ -71,17 +71,25 @@ public class QualityExecutionStore {
     }
     public Claim claimManual(long ruleId,QualityActor actor,String key) {
         if(actor==null||!"manual".equals(actor.json().path("kind").asText()))throw new IllegalStateException("手动执行需要可信人工主体");
-        try{return transactions.execute(tx->claim(ruleId,actor,key,null));}
+        try{return transactions.execute(tx->claim(ruleId,actor,key,null,null));}
         catch(org.springframework.dao.DataIntegrityViolationException concurrent){throw conflict();}
     }
     public Claim claimScheduled(long ruleId,long generation,String key) {
-        try{return transactions.execute(tx->claim(ruleId,null,key,generation));}
+        try{return transactions.execute(tx->claim(ruleId,null,key,generation,null));}
         catch(org.springframework.dao.DataIntegrityViolationException concurrent){throw conflict();}
     }
-    private Claim claim(long ruleId,QualityActor actor,String key,Long generation) {
+    public Claim claimChild(com.aetheris.security.protocol.execution.WorkflowQualityParent parent){
+        Objects.requireNonNull(parent);return transactions.execute(tx->claim(parent.qualityRuleId(),QualityActor.child(parent),null,null,parent));
+    }
+    private Claim claim(long ruleId,QualityActor actor,String key,Long generation,com.aetheris.security.protocol.execution.WorkflowQualityParent parent) {
         if(key!=null && (key.isBlank()||key.length()>128))throw new IllegalArgumentException("幂等键格式无效");
         Definition current=definition(ruleId,true);requireApproved(current);JsonNode execution=executableDefinition(current);long threshold=threshold(execution);String target=FixedJson.text(execution,"targetTable");
         if(!"enabled".equals(current.status()))throw conflict();
+        if(parent!=null){
+            if(current.revision()!=parent.qualityExecutionRevision()||!current.definitionSha256().equals(parent.qualityDefinitionSha256()))throw conflict();
+            var ref=parent.reference();var old=jdbc.queryForList("SELECT id,manifest_sha256 FROM quality.quality_check_result WHERE parent_origin='workflow' AND parent_run_id=? AND parent_attempt_id=? AND parent_fence=? AND parent_manifest_sha256=? AND rule_id=?",ref.instanceId(),ref.attemptId(),ref.fence(),ref.manifestSha256(),ruleId);
+            if(!old.isEmpty()){var row=old.getFirst();return new Claim(Objects.requireNonNull(results.getById(((Number)row.get("id")).longValue())),current.revision(),(String)row.get("manifest_sha256"),threshold,target,true);}
+        }
         if(generation!=null) {
             if(current.scheduleGeneration()!=generation || !current.cronBound())throw conflict();
             actor=QualityActor.cron(FixedJson.parse(current.cronActor()));
@@ -94,7 +102,7 @@ public class QualityExecutionStore {
                 return new Claim(Objects.requireNonNull(results.getById(((Number)old.get("id")).longValue())),current.revision(),(String)old.get("manifest_sha256"),threshold,target,true);
             }
         }
-        String actorJson=actor.json().toString();
+        String actorJson=actor.json().toString();String parentJson=parent==null?"null":parent.parent().toString();var ref=parent==null?null:parent.reference();
         Long id=jdbc.queryForObject("""
             INSERT INTO quality.quality_check_result(rule_id,status,request_key,triggered_by,execution_snapshot,threshold_value)
             VALUES(?,'running',?,?,?,?) RETURNING id
@@ -105,17 +113,17 @@ public class QualityExecutionStore {
                 SELECT jsonb_build_object('schemaVersion',1,'origin','quality','operation','metadata.fixed-quality-query.submit',
                     'resourceId',id,'runId',?::bigint,'attemptId',0,'fence',1,'executionRevision',execution_revision,
                     'definitionSha256',execution_definition_sha256,'actor',?::jsonb,'approval',execution_approval,
-                    'execution',execution_definition_json,'parameters','{}'::jsonb,'parent','null'::jsonb) body,
+                    'execution',execution_definition_json,'parameters','{}'::jsonb,'parent',?::jsonb) body,
                     schedule_version,cron_binding_generation
                 FROM quality.quality_rule WHERE id=?
             ) UPDATE quality.quality_check_result run SET execution_revision=?,invocation_json=?::jsonb,approval_json=?::jsonb,
                 sealed_manifest=manifest.body,manifest_sha256=encode(sha256(convert_to(manifest.body::text,'UTF8')),'hex'),
-                manifest_sealed_at=clock_timestamp(),
+                manifest_sealed_at=clock_timestamp(),parent_origin=?,parent_run_id=?,parent_attempt_id=?,parent_fence=?,parent_manifest_sha256=?,
                 source_schedule_generation=CASE WHEN manifest.body->'actor'->>'kind'='cron' THEN manifest.schedule_version ELSE NULL END,
                 source_binding_generation=CASE WHEN manifest.body->'actor'->>'kind'='cron' THEN manifest.cron_binding_generation ELSE NULL END
             FROM manifest WHERE run.id=? AND run.status='running' AND run.lease_owner IS NOT NULL AND run.lease_expires_at>clock_timestamp()
             RETURNING run.manifest_sha256
-            """,id,actorJson,ruleId,current.revision(),actorJson,current.approval(),id);
+            """,id,actorJson,parentJson,ruleId,current.revision(),actorJson,current.approval(),parent==null?null:"workflow",ref==null?null:ref.instanceId(),ref==null?null:ref.attemptId(),ref==null?null:ref.fence(),ref==null?null:ref.manifestSha256(),id);
         return new Claim(Objects.requireNonNull(results.getById(id)),current.revision(),(String)sealed.get("manifest_sha256"),threshold,target,false);
     }
     public void bindReceipt(long runId,long receiptId) {
@@ -139,11 +147,17 @@ public class QualityExecutionStore {
               AND run.sealed_manifest=jsonb_build_object('schemaVersion',1,'origin','quality','operation','metadata.fixed-quality-query.submit',
                   'resourceId',task.id,'runId',run.id,'attemptId',0,'fence',run.execution_fence,'executionRevision',run.execution_revision,
                   'definitionSha256',task.execution_definition_sha256,'actor',run.invocation_json,'approval',run.approval_json,
-                  'execution',task.execution_definition_json,'parameters','{}'::jsonb,'parent','null'::jsonb)
+                  'execution',task.execution_definition_json,'parameters','{}'::jsonb,'parent',run.sealed_manifest->'parent')
               AND ((run.invocation_json->>'kind'='manual' AND run.source_schedule_generation IS NULL AND run.source_binding_generation IS NULL)
                   OR (run.invocation_json->>'kind'='cron' AND run.source_schedule_generation=task.schedule_version
                   AND run.source_binding_generation=task.cron_binding_generation
-                  AND run.invocation_json=task.cron_actor AND task.cron_approved_execution_revision=run.execution_revision))
+                  AND run.invocation_json=task.cron_actor AND task.cron_approved_execution_revision=run.execution_revision)
+                OR (run.invocation_json->>'kind'='workflow-child' AND run.parent_origin='workflow'
+                  AND run.sealed_manifest->'parent'->>'runId'=run.parent_run_id::text
+                  AND run.sealed_manifest->'parent'->>'attemptId'=run.parent_attempt_id::text
+                  AND run.sealed_manifest->'parent'->>'fence'=run.parent_fence::text
+                  AND run.sealed_manifest->'parent'->>'manifestSha256'=run.parent_manifest_sha256
+                  AND run.source_schedule_generation IS NULL AND run.source_binding_generation IS NULL))
             """,(r,index)->new Lookup(r.getString("canonical"),r.getString("manifest_sha256"),r.getString("status"),r.getLong("lease")),runId,fence);
         if(rows.isEmpty())throw conflict();return rows.getFirst();
     }

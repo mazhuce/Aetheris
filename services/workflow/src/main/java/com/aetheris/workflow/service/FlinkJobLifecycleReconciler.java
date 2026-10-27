@@ -44,6 +44,7 @@ public class FlinkJobLifecycleReconciler {
                 JOIN workflow.task_instance ti ON ti.id=ea.instance_id
                 JOIN workflow.task t ON t.id=ti.task_id
                 WHERE t.task_type='flink'
+                  AND ea.manifest_sealed_at IS NULL
                   AND ti.active_attempt_id=ea.id
                   AND ea.flink_job_id IS NOT NULL
                   AND ea.status IN ('running','cancel_requested','unknown')

@@ -40,11 +40,15 @@ public class SparkResourceQueueService {
 
     @Transactional
     public void enqueue(ExecutionClaim claim, SparkJobView job) {
+        enqueueFrozen(claim,job.environmentId(),job.driverCores(),job.driverMemoryMb());
+    }
+    @Transactional
+    public void enqueueFrozen(ExecutionClaim claim,long environmentId,int cores,int memoryMb){
         int inserted = jdbc.update("""
                 INSERT INTO workflow.spark_resource_allocation
                     (attempt_id,environment_id,requested_cores,requested_memory_mb,status)
                 VALUES (?,?,?,?,'queued') ON CONFLICT (attempt_id) DO NOTHING
-                """, claim.attemptId(), job.environmentId(), job.driverCores(), job.driverMemoryMb());
+                """, claim.attemptId(),environmentId,cores,memoryMb);
         if (inserted == 0) {
             Integer count = jdbc.queryForObject("""
                     SELECT count(*) FROM workflow.spark_resource_allocation
@@ -57,7 +61,7 @@ public class SparkResourceQueueService {
                         (attempt_id,event_type,from_status,to_status,message,details_json)
                     VALUES (?,'resource_queued','queued','queued','等待 Runner 资源容量',
                         jsonb_build_object('environmentId',?,'cores',?,'memoryMb',?))
-                    """, claim.attemptId(), job.environmentId(), job.driverCores(), job.driverMemoryMb());
+                    """, claim.attemptId(),environmentId,cores,memoryMb);
         }
     }
 
@@ -77,6 +81,9 @@ public class SparkResourceQueueService {
                 WHERE allocation.attempt_id=? AND allocation.status='queued'
                   AND attempt.status='queued' AND instance.status='queued'
                   AND instance.active_attempt_id=attempt.id
+                  AND attempt.fencing_token=instance.fencing_token
+                  AND attempt.lease_expires_at>clock_timestamp() AND instance.lease_expires_at>clock_timestamp()
+                  AND attempt.queued_at+interval '300 seconds'>clock_timestamp()
                   AND NOT EXISTS (
                     SELECT 1 FROM workflow.spark_resource_allocation older
                     WHERE older.environment_id=allocation.environment_id AND older.status='queued'
@@ -88,9 +95,24 @@ public class SparkResourceQueueService {
                 rs.getInt("requested_cores"), rs.getInt("requested_memory_mb")), attemptId);
         if (heads.isEmpty()) return null;
         QueueHead head = heads.getFirst();
+        var environments=jdbc.queryForList("""
+            SELECT max_cores,max_memory_mb,max_concurrency,
+              (SELECT count(*) FROM workflow.spark_resource_allocation a WHERE a.environment_id=e.id AND a.status='admitted') jobs,
+              COALESCE((SELECT sum(a.requested_cores) FROM workflow.spark_resource_allocation a WHERE a.environment_id=e.id AND a.status='admitted'),0) cores,
+              COALESCE((SELECT sum(a.requested_memory_mb) FROM workflow.spark_resource_allocation a WHERE a.environment_id=e.id AND a.status='admitted'),0) memory
+            FROM workflow.compute_environment e WHERE e.id=? AND e.status='active' FOR UPDATE OF e
+            """,head.environmentId());
+        if(environments.size()!=1)return null;var budget=environments.getFirst();
+        if(((Number)budget.get("jobs")).longValue()>=((Number)budget.get("max_concurrency")).longValue()
+            ||((Number)budget.get("cores")).longValue()+head.cores()>((Number)budget.get("max_cores")).longValue()
+            ||((Number)budget.get("memory")).longValue()+head.memoryMb()>((Number)budget.get("max_memory_mb")).longValue())return null;
 
         List<Admission> runners = jdbc.query("""
-                SELECT runner.id,runner.runner_key,runner.base_url
+                SELECT runner.id,runner.runner_key,CASE WHEN runner.base_url='config://default' THEN
+                  (SELECT approved->>'origin' FROM workflow.execution_attempt source,
+                    LATERAL jsonb_array_elements(source.sealed_manifest->'execution'->'engineDefinition'->'runners') approved
+                    WHERE source.id=? AND approved->>'id'=runner.id::text)
+                  ELSE runner.base_url END base_url
                 FROM workflow.compute_runner runner
                 JOIN workflow.spark_job_definition job ON job.id=(
                     SELECT attempt.job_definition_id FROM workflow.execution_attempt attempt
@@ -98,6 +120,10 @@ public class SparkResourceQueueService {
                 )
                 WHERE runner.environment_id=? AND runner.status='active'
                   AND (job.runner_id IS NULL OR job.runner_id=runner.id)
+                  AND EXISTS (SELECT 1 FROM workflow.execution_attempt source,
+                    LATERAL jsonb_array_elements(source.sealed_manifest->'execution'->'engineDefinition'->'runners') approved
+                    WHERE source.id=? AND approved->>'id'=runner.id::text
+                      AND (runner.base_url='config://default' OR approved->>'origin'=rtrim(runner.base_url,'/')))
                   AND runner.max_cores>=? AND runner.max_memory_mb>=?
                   AND (SELECT count(*) FROM workflow.spark_resource_allocation active
                        WHERE active.runner_id=runner.id AND active.status='admitted') < runner.max_concurrency
@@ -112,7 +138,7 @@ public class SparkResourceQueueService {
                 FOR UPDATE OF runner SKIP LOCKED LIMIT 1
                 """, (rs, row) -> new Admission(
                 head.attemptId(), rs.getLong("id"), rs.getString("runner_key"), rs.getString("base_url")),
-                head.attemptId(), head.environmentId(), head.cores(), head.memoryMb(), head.cores(), head.memoryMb());
+                head.attemptId(),head.attemptId(), head.environmentId(),head.attemptId(), head.cores(), head.memoryMb(), head.cores(), head.memoryMb());
         if (runners.isEmpty()) return null;
         Admission admission = runners.getFirst();
 

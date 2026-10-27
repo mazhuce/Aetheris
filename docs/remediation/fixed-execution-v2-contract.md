@@ -1,6 +1,6 @@
 # 固定执行 v2：第一批冻结契约
 
-2026-10-18。本文冻结 SQL、transfer、quality-query 的授权及存储接口，供本轮实现使用；不是已运行或已验收的证明。与 [接线分析](fixed-execution-integration-map.md) 配套。Spark/Flink、quality 子调用和 pipeline 仍须接线，不能由此推定完成。
+2026-10-18。本文冻结 SQL、transfer、quality-query 的授权及存储接口，供本轮实现使用；不是已运行或已验收的证明。与 [接线分析](fixed-execution-integration-map.md) 配套。V31接入已批准SQL pipeline；2026-10-26的V32接入手动、cron、pipeline父任务的固定quality子调用，见[子质量契约](workflow-quality-child-contract.md)和[恢复契约](execution-recovery-contract.md)。V33/V34的Spark/Flink来源及成功证据见[引擎契约](workflow-engine-execution-contract.md)；真实Auth三节点链已验，引擎业务结果仍为受控响应，物理引擎IO与流生命周期不能由SQL/quality链推定完成。
 
 ## auth 窄授权
 

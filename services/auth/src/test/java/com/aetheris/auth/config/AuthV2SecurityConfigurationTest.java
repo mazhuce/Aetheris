@@ -13,6 +13,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AuthV2SecurityConfigurationTest {
+    @Test void browserSessionAdmissionIsGatewayOnlyAndCannotCarryUserProof() {
+        String path = "/internal/v2/browser-sessions/check";
+        var route = AuthV2SecurityConfiguration.workloadRoutes().resolve("POST", path).orElseThrow();
+        assertEquals(java.util.Set.of("gateway"), route.allowedCallers());
+        assertEquals("auth.browser-session.check", route.operation());
+        assertEquals(RoutePolicy.UserMode.FORBIDDEN, route.userMode());
+        assertTrue(AuthV2SecurityConfiguration.workloadRoutes().resolve("GET", path).isEmpty());
+        assertTrue(AuthV2SecurityConfiguration.workloadRoutes().resolve("POST", path + "/neighbor").isEmpty());
+    }
     @Test void onlyMetadataMayAskForGlobalQueryAuditReadCapability() {
         assertTrue(AuthV2SecurityConfiguration.resourceAllowed("metadata","query_audit","view"));
         for (String caller : java.util.List.of("gateway","system","serving","workflow","quality","ingestion","governance","ai-agent"))
@@ -53,7 +62,9 @@ class AuthV2SecurityConfigurationTest {
         assertTrue(AuthV2SecurityConfiguration.resourceAllowed("serving","datasource","query"));
         assertFalse(AuthV2SecurityConfiguration.resourceAllowed("serving","datasource","write"));
         assertFalse(AuthV2SecurityConfiguration.resourceAllowed("serving","table","update"));
-        assertFalse(AuthV2SecurityConfiguration.resourceAllowed("workflow","quality_rule","execute"));
+        assertTrue(AuthV2SecurityConfiguration.resourceAllowed("workflow","quality_rule","execute"));
+        for(String action:java.util.List.of("query","view","update","create","delete"))assertFalse(AuthV2SecurityConfiguration.resourceAllowed("workflow","quality_rule",action));
+        assertFalse(AuthV2SecurityConfiguration.resourceAllowed("ingestion","quality_rule","execute"));
         assertFalse(AuthV2SecurityConfiguration.resourceAllowed("gateway","table","query"));
         assertTrue(AuthV2SecurityConfiguration.mutationAllowed("metadata","metadata"));
         assertFalse(AuthV2SecurityConfiguration.mutationAllowed("metadata","system"));

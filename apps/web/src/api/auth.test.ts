@@ -11,6 +11,8 @@ import {
   changeMyPassword
 } from './auth'
 import type { AxiosResponse } from 'axios'
+import { markLoggedOut } from '@/auth/session'
+import { logoutIntent } from '@/auth/authState'
 
 vi.mock('./http', () => ({
   default: {
@@ -32,8 +34,15 @@ beforeEach(() => {
 })
 
 describe('auth api', () => {
+  it('failed login preserves an unconfirmed logout so a fresh login page can still retry revocation', async () => {
+    markLoggedOut('unconfirmed')
+    mockedHttp.post.mockRejectedValueOnce(new Error('invalid credentials'))
+    await expect(login('alice', 'incorrect')).rejects.toThrow('invalid credentials')
+    expect(logoutIntent()?.revocation).toBe('unconfirmed')
+  })
+
   it('login 向 /api/auth/login 发送用户名密码并返回 data', async () => {
-    const result = { username: 'alice', role: 'admin' as const, expiresIn: 3600 }
+    const result = { id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'admin' as const, expiresIn: 3600 }
     mockedHttp.post.mockReturnValueOnce(resolved(result))
 
     await expect(login('alice', 'secret')).resolves.toEqual(result)

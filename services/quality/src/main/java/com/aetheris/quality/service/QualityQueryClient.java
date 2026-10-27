@@ -84,6 +84,15 @@ public class QualityQueryClient {
     public record QueryResult(long violationCount,long durationMs) {
         public QueryResult {if(violationCount<0||durationMs<0)throw new IllegalArgumentException("执行计数无效");}
     }
+    /** Read one original receipt after a lost response/restart. Never calls the submit path. */
+    public QueryResult reconcile(Submission source,Long receipt,LongConsumer bindReceipt){
+        if(transport==null)throw unknown();var body=new LinkedHashMap<String,Object>();body.put("receiptId",receipt);body.put("runId",source.runId());body.put("attemptId",0);body.put("fence",1);body.put("operation",OP);
+        SignedHttpClient.Response response;try{response=transport.send(new SignedHttpClient.Request("metadata","POST",STATUS,"metadata.fixed-execution.status",FixedJson.bytes(body)));}
+        catch(InterruptedException interrupted){Thread.currentThread().interrupt();throw unknown();}
+        if(response.status()==404)return null;if(response.status()!=200)throw unknown();
+        Receipt current=read(response.body(),source,receipt);bindReceipt.accept(current.id());
+        if(Set.of("queued","executing","unknown").contains(current.state()))return null;return terminal(current);
+    }
     public static class QualityExecutionException extends RuntimeException {
         private final boolean outcomeUnknown;
         public QualityExecutionException(String message){this(message,true);}

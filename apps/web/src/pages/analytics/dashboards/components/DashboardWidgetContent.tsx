@@ -11,6 +11,8 @@ import {
 import EChart from './EChart'
 import { usePreferences } from '@/contexts/PreferencesContext'
 import type { ColorMode } from '@/utils/preferences'
+import { useAuthSession } from '@/hooks/useAuthSession'
+import { sessionIdentity } from '@/auth/authState'
 
 interface DashboardWidgetContentProps {
   widget: DashboardWidget
@@ -123,11 +125,13 @@ function buildChartOption(
 
 export default function DashboardWidgetContent({ widget, datasets }: DashboardWidgetContentProps) {
   const { colorMode, reduceMotion } = usePreferences()
+  const session = useAuthSession()
   const dataset = datasets.find((item) => item.id === widget.datasetId)
   const query = useQuery({
-    queryKey: ['analytics-dataset-result', widget.datasetId],
-    queryFn: () => queryAnalyticsDataset(widget.datasetId!),
-    enabled: Boolean(widget.datasetId),
+    queryKey: ['analytics-dataset-result', session.user ? sessionIdentity(session.user) : null, session.generation, widget.datasetId],
+    queryFn: ({ signal }) => queryAnalyticsDataset(widget.datasetId!, false, signal),
+    enabled: session.status === 'authenticated' && Boolean(widget.datasetId),
+    retry: false,
     refetchInterval: widget.refreshSeconds
       ? Math.max(widget.refreshSeconds, 5) * 1000
       : dataset?.refreshSeconds

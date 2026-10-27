@@ -32,8 +32,12 @@ class FixedExecutionChainSafetyTest(unittest.TestCase):
         candidates += [{**baseline,'cleanup':{**baseline['cleanup'],key:False}} for key in audit.REQUIRED_CLEANUP]
         candidates += [{**baseline,'cleanup':{key:True for key in audit.REQUIRED_CLEANUP if key!=missing}} for missing in audit.REQUIRED_CLEANUP]
         for candidate in candidates:audit.finalize_status(candidate);self.assertEqual('failed',candidate['status'])
-    def test_all_six_applications_transitive_helpers_and_114_sources_are_bound(self):
-        sources=audit.source_hashes();manifest=audit.base.database_contract.source_manifest();self.assertEqual(116,len(manifest))
+    def test_all_six_applications_transitive_helpers_and_current_sources_are_bound(self):
+        sources=audit.source_hashes();manifest=audit.base.database_contract.source_manifest()
+        expected={p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
+                  for p in ROOT.glob('services/*/src/main/resources/db/migration/V*__*.sql')}
+        self.assertEqual(expected,manifest)
+        self.assertIn('services/auth/src/main/resources/db/migration/V11__browser_session_families.sql',manifest)
         required=['scripts/audit-fixed-execution-chain.py','scripts/audit-identity-chain.py','scripts/audit-api-key-chain.py','scripts/security/GenerateKeys.java',
                   'scripts/database/runner/pom.xml',*[module+'/pom.xml' for module in audit.MODULES.values()],*manifest]
         for name in required:

@@ -17,6 +17,12 @@ class DeployGateAuditSafetyTests(unittest.TestCase):
         for count in (0, 93, 105, 109, 112, 113, 115):
             with self.subTest(count=count), self.assertRaises(audit.AuditFailure):
                 audit.require_frozen_sources({str(i): 'a' * 64 for i in range(count)})
+        path = next(iter(current))
+        changed = {**current, path: '0' * 64}
+        renamed = dict(current); renamed['same-count-wrong-path.sql'] = renamed.pop(path)
+        missing = dict(current); missing.pop(path)
+        for invalid in (changed, renamed, missing, {**current, 'unexpected-migration.sql': 'a' * 64}):
+            with self.assertRaises(audit.AuditFailure): audit.require_frozen_sources(invalid)
 
     def test_environment_cannot_inherit_real_application_credentials(self):
         cleaned = audit.clean_environment({'PATH': 'path', 'DB_PASSWORD': 'secret', 'JWT_SECRET': 'secret',
@@ -64,7 +70,7 @@ class DeployGateAuditSafetyTests(unittest.TestCase):
         release.validate(value)
         self.assertIn('UNSIGNED', value['fixturePurpose'])
         self.assertEqual(11, len(value['images']))
-        self.assertEqual(116, len(value['databaseSources']))
+        self.assertEqual(sources, value['databaseSources'])
         mapped = release.compose_override(value)['services']
         self.assertIn('auth-service', mapped)
         self.assertNotIn('auth', mapped)

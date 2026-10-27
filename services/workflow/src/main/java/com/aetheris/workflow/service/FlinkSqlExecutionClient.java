@@ -54,6 +54,47 @@ public class FlinkSqlExecutionClient {
     public ExecutionResult execute(String endpoint, String sql, int timeoutSeconds) {
         return execute(endpoint, sql, timeoutSeconds, null);
     }
+    public interface StepObserver {
+        void before(int index,String kind,String statement);
+        void returned(int index,String kind,String session,String operation);
+    }
+    /** No POST retry or destructive cleanup after an ambiguous response. Every step is durably recorded. */
+    public ExecutionResult startSealed(String endpoint,String sql,boolean streaming,long deadlineMillis,StepObserver observer){
+        var statements=FlinkSqlScript.statements(sql,streaming);var client=client(endpoint);
+        observer.before(0,"session","");
+        String session=sealedHandle(sealedJson(client.post().uri("/v1/sessions").body(Map.of())),"sessionHandle");
+        observer.returned(0,"session",session,null);
+        for(int index=0;index<statements.size();index++){
+            if(System.currentTimeMillis()>=deadlineMillis)throw new FlinkExecutionException("Flink封存执行期限已到，禁止继续提交");
+            boolean last=index==statements.size()-1;String kind=last?"insert":"setup",statement=statements.get(index);
+            observer.before(index+1,kind,statement);
+            String operation=sealedHandle(sealedJson(client.post().uri("/v1/sessions/{session}/statements",session)
+                .body(Map.of("statement",statement))),"operationHandle");
+            observer.returned(index+1,kind,session,operation);
+            if(last)return new ExecutionResult(null,0L,session,operation);
+            waitForFinished(client,session,operation,Math.max(1,deadlineMillis-System.currentTimeMillis()));
+            closeOperation(client,session,operation);
+        }
+        throw new FlinkExecutionException("Flink SQL没有最终INSERT");
+    }
+    private String sealedHandle(com.fasterxml.jackson.databind.JsonNode body,String field){
+        var value=body.get(field);
+        if(value==null||!value.isTextual()||!value.textValue().matches("(?:[a-fA-F0-9]{32}|[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12})"))throw new FlinkExecutionException("Flink句柄未获可靠确认");
+        String handle=value.textValue();
+        return handle;
+    }
+    private com.fasterxml.jackson.databind.JsonNode sealedJson(RestClient.RequestHeadersSpec<?> request){
+        return request.exchange((out,response)->{
+            if(!response.getStatusCode().is2xxSuccessful())throw new FlinkExecutionException("Flink请求未可靠确认");
+            var json=com.aetheris.workflow.fixedexecution.FixedJson.parse(response.getBody().readNBytes(131073),131072);
+            if(!json.isObject())throw new FlinkExecutionException("Flink响应格式无法核实");return json;
+        });
+    }
+    public String submittedJobIdSealed(String origin,String session,String operation){
+        var json=sealedJson(client(origin).get().uri("/v1/sessions/{session}/operations/{operation}/result/0?rowFormat=JSON",session,operation));
+        if(!json.hasNonNull("jobID"))return null;var id=json.get("jobID");
+        if(!id.isTextual()||!JOB_ID.matcher(id.textValue()).matches())throw new FlinkExecutionException("Flink Job身份未可靠确认");return id.textValue().toLowerCase(java.util.Locale.ROOT);
+    }
 
     public ExecutionResult execute(String endpoint, String sql, int timeoutSeconds, String executionKey) {
         if (endpoint == null || endpoint.isBlank()) throw new FlinkExecutionException("Flink SQL Gateway 地址不能为空");

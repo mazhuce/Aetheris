@@ -1,0 +1,24 @@
+COMMAND=C:\ProgramData\anaconda3\python.exe scripts/validate-runtime-evidence.py --r1 artifacts/r1-empty-20261003/acceptance-manifest.json --r2 artifacts/r2-cdc/r2-cdc-20261003-report.json
+EXIT_CODE=0
+R1/R2 runtime evidence validation passed
+
+COMMAND=C:\ProgramData\anaconda3\python.exe scripts/validate-platform-release-report.py --report artifacts/platform-release/platform-release-acceptance-report.json
+EXIT_CODE=0
+platform release report validation passed
+
+COMMAND=C:\ProgramData\anaconda3\python.exe scripts/validate-r3-ha-report.py --report artifacts/r3-ha/r3-ha-lifecycle-report.json
+EXIT_CODE=0
+R3 HA runtime report validation passed
+
+COMMAND=C:\ProgramData\anaconda3\python.exe scripts/audit-r3-ha-evidence.py --report artifacts/r3-ha/r3-ha-lifecycle-report.json
+EXIT_CODE=2
+{"status":"manual_review_required","path":"artifacts\\r3-ha\\r3-ha-lifecycle-report.json","reason":"historical_pass_requires_rerun","ageHours":108.68,"sourceStatus":"passed"}
+
+COMMAND=pwsh -NoProfile -Command $PSVersionTable.PSVersion.ToString(); try { 'review' | Set-Content -Encoding Byte -LiteralPath 'C:\Users\yafei\AppData\Local\Temp\opencode\aetheris-review-encoding-only.bin' -ErrorAction Stop } catch { Write-Output ('ENCODING_BYTE_REJECTED=' + $_.Exception.Message) }
+EXIT_CODE=0
+7.6.6
+ENCODING_BYTE_REJECTED=�޷��������� 'Encoding' �ϵ��Ա���ת����'Byte' is not a supported encoding name. For information on defining a custom encoding, see the documentation for the Encoding.RegisterProvider method. (Parameter 'name')
+
+CI_MASTER_KEY_BASE64_REJECTED=Only base64 data is allowed
+REPORT_GENERATOR_CURRENT_INTERPRETER_SYNTAX_ACCEPTED; Python 3.11 quote reuse compatibility is assessed statically against PEP 701, not tested here
+PYTHON_VERSION=3.12.7 | packaged by Anaconda, Inc. | (main, Oct  4 2024, 13:17:27) [MSC v.1929 64 bit (AMD64)]

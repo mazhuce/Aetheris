@@ -45,6 +45,8 @@ class SparkResourceQueueServiceTest {
             return List.of(mapper.mapRow(sql.contains("FROM workflow.compute_runner") ? runner : head, 0));
         });
         when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+        when(jdbc.queryForList(org.mockito.ArgumentMatchers.contains("FOR UPDATE OF e"),org.mockito.ArgumentMatchers.eq(3L)))
+                .thenReturn(List.of(java.util.Map.of("max_cores",2,"max_memory_mb",2048,"max_concurrency",2,"jobs",0L,"cores",0L,"memory",0L)));
 
         SparkResourceQueueService.Admission admission = service(jdbc).tryAdmit(9L);
 

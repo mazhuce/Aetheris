@@ -1,0 +1,458 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-worktree-validation-record",
+  "recordedAtUtc": "2026-10-26T05:47:47.859531+00:00",
+  "status": "partial",
+  "releaseEligible": false,
+  "frozenReleaseContext": false,
+  "source": {
+    "commit": "8610de063d51a76d97f65d4d003f8b2ec93d307c",
+    "worktreeSha256": "7864f24d4fe9836fa062bc294a5257bd6327d6f9f5bbf2db93734e8368bf7b38"
+  },
+  "configurationFiles": {
+    "docker-compose.yml": "dce39c91f1fc43260be75ab050fcf65205034d3b75c4a8aae7f24d545d153be9",
+    "configs/database/services.json": "04d6b2b9a8a95e34eaeea59c1cb8730c2362cbb187858d65f43e8499087b9310",
+    ".github/workflows/base-image-inventory.json": "65b13e729701cf5fedd03af94a33b4a2976bb2da3505dbc88f3d77159b4c7fc6",
+    "scripts/requirements-audit.txt": "9c3159bc2ec54561b22b767d36a05d0d9b0cbfe7649aebc906c6ada9460e03e6",
+    "services/ai-agent/src/main/resources/application.yml": "4af89c002701b1062e8698f440c943f771575b7cdaeb65c1a55053f1956a52e6",
+    "services/auth/src/main/resources/application.yml": "83e6cfd69daf1843d1467e6e0da63e2a07315922176fcd43de60e4e13d43df22",
+    "services/governance/src/main/resources/application.yml": "a636d58daf24dc9e7a0c0f9cf24ee076d6792622a54205fea4b40f62ae662a96",
+    "services/ingestion/src/main/resources/application.yml": "09daec66278ee35204153a27abb79cb1447e121638b7776dfa193bae4cb189d7",
+    "services/metadata/src/main/resources/application.yml": "1ba2b0b795707931b02808569b18bf3412a0b90b2d965b63916b3b064042636c",
+    "services/quality/src/main/resources/application.yml": "2c1f93aa2cc60e754ec04626a6f4a7b5a51f9f59595b704a150a832576339421",
+    "services/serving/src/main/resources/application.yml": "41cc1dbe1629d1072fd7865f1d92f091928fe5bf42cc2d58b6fc54d133036488",
+    "services/system/src/main/resources/application.yml": "abff4a926c802b4bf91e86ad3bbcbff576a01ce3b7dbb60bd2a21a4d522e1a90",
+    "services/workflow/src/main/resources/application.yml": "666638e9104721b09834e3980d2ca1728d3776a80d63e7720e8b1f773f3f1a7f",
+    "apps/gateway/src/main/resources/application.yml": "1c22bd74f300b6882dbecb9621491ef5fe3232271f0eec2e21554cb2db043f8c"
+  },
+  "configurationScope": "Each producer has its own isolated credentials, ports and runtime configuration. Same application JAR bytes where selected; not one frozen platform deployment.",
+  "migrations": {
+    "total": 122,
+    "byService": {
+      "ai-agent": 5,
+      "auth": 10,
+      "governance": 3,
+      "ingestion": 9,
+      "metadata": 32,
+      "quality": 10,
+      "serving": 11,
+      "system": 8,
+      "workflow": 34
+    },
+    "sourceHashes": {
+      "services/ai-agent/src/main/resources/db/migration/V1__chat.sql": "71cf74f76f07e3a1175ce5ab131de98b76452b0b684005e2c8a3755b189ccf2f",
+      "services/ai-agent/src/main/resources/db/migration/V2__conversation_owner.sql": "49c62434627d0a8e31be7a7c3dd0cf6dc10abc39c97fd95378ab0503f2b94aca",
+      "services/ai-agent/src/main/resources/db/migration/V3__conversation_run_fence.sql": "868186318609b959e200aac9887952431ed72fdeee70c14bec23e628758c74bd",
+      "services/ai-agent/src/main/resources/db/migration/V4__internal_request_nonce.sql": "4c8813fab796449b7d2f6dc7525edb11c83702838053470c422ccf8649343484",
+      "services/ai-agent/src/main/resources/db/migration/V5__conversation_owner_uid.sql": "aa1bac9f816291fe6f83c02d35e248375f242389cb4f6c0a939ad29e21cf8fef",
+      "services/auth/src/main/resources/db/migration/V10__datasource_write_permission.sql": "e856d365b1ffd82c19c32d6024a32de87f9d2f0a155d4ec89125cfc701dae097",
+      "services/auth/src/main/resources/db/migration/V1__auth_user.sql": "d641083e30411ea2e73c0d9c9ccf9d996403dd780cb3b21276c4d279c57e7e81",
+      "services/auth/src/main/resources/db/migration/V2__auth_user_role_profile.sql": "4719d583e071c96c97437e5a7fe20f75c3b505a368a08cf7a4eb4f2a8eb8e51d",
+      "services/auth/src/main/resources/db/migration/V3__rbac.sql": "2c1bf0a785b6d4bdb82446d2ab7177c99839492009dd46e7533573aa4bcb02fd",
+      "services/auth/src/main/resources/db/migration/V4__datasource_query_permission.sql": "2dc6dcc41720b629cbfa6b5f248dcf44b1d12cec003769724ae234a8e557db5c",
+      "services/auth/src/main/resources/db/migration/V5__api_asset_lifecycle_permissions.sql": "779e3bc5bf5b181689e55893364ff792c0fc1787050b42aeeecb038cae407856",
+      "services/auth/src/main/resources/db/migration/V6__auth_session_version.sql": "d30050c50527a58df166c1695f74d237982c8d04fe6f68d98c922420de94649a",
+      "services/auth/src/main/resources/db/migration/V7__auth_access_version.sql": "de83a59b006badcb27a55a0f5a58fd6fdc2064a33079623ad1984116efea0cb0",
+      "services/auth/src/main/resources/db/migration/V8__explicit_resource_permissions.sql": "29225a82b029d1333182f7317fb3fdd0bdbf78ef1fba02aafe36b9dd2effb3f7",
+      "services/auth/src/main/resources/db/migration/V9__internal_request_nonce.sql": "3e2b311473090499958fa51614fe37f6fab8d80259026411d5a6736c5396b90c",
+      "services/governance/src/main/resources/db/migration/V1__init.sql": "5b5f0b9f1a54ca4e3b4da337ee6080a661d591d3fd928162a09a8a61eab33937",
+      "services/governance/src/main/resources/db/migration/V2__data_standard.sql": "e043f63817e5bad08b67f731c75496e1152177d0b73965915bca59f4aeb6237a",
+      "services/governance/src/main/resources/db/migration/V3__internal_request_nonce.sql": "5471c06e184386627aceb6b5d011a5d7121abcb68a3a1d57fbdd27e9ff44ec29",
+      "services/ingestion/src/main/resources/db/migration/V10__source_cron_generation.sql": "56eba24cc6ad9806d68ab973ab65b19675f380c3a240fdcfb344ee2e639848c0",
+      "services/ingestion/src/main/resources/db/migration/V1__init.sql": "f9dd6378dcde6f68fbbb10ffb7ba68f3ccca00f786e7e55015b80f54afdbbc7c",
+      "services/ingestion/src/main/resources/db/migration/V2__execution.sql": "6ee2c69fb8be82a2e8c6fa2f61bc8a720c2e2f44aa12acea375d6a2fef829c07",
+      "services/ingestion/src/main/resources/db/migration/V3__quartz_tables.sql": "ab92a70af1f3ab23154a4d263e8d49b042469b9cfe6736bb29241992532a9445",
+      "services/ingestion/src/main/resources/db/migration/V5__run_idempotency_diagnostics.sql": "7f16043fe4c53f70b91cb48b69a6f06c9a33fda08abf1bbf55cb59f0180a5fa5",
+      "services/ingestion/src/main/resources/db/migration/V6__scheduler_desired_state.sql": "60afc8247ce469e57d0a6ef15d616952cae48eb2738bab61f6fc7976b4edf59d",
+      "services/ingestion/src/main/resources/db/migration/V7__execution_recovery.sql": "e244938d987d94a05577b227ceb7855961e02846c6412a6d6c288613fdec70e1",
+      "services/ingestion/src/main/resources/db/migration/V8__internal_request_nonce.sql": "c9e0c2a04962a6e591078d8f366fb144c96e230585b610841c9c0e4f9b3235ea",
+      "services/ingestion/src/main/resources/db/migration/V9__fixed_execution_identity.sql": "506a8a33460aab5fc4f6c9888b32a6b45caef50cb3f2350726abd511e7ac6301",
+      "services/metadata/src/main/resources/db/migration/V10__adhoc_query_history.sql": "f2dda9d4be0abdbbafce653c18fd48b8750b5d60df66821fb71e23c768dc6d5f",
+      "services/metadata/src/main/resources/db/migration/V11__table_tag.sql": "b5f07e3a8822a29369ebd763a657767b08badf5b9834fc42be44de16fcbb59d5",
+      "services/metadata/src/main/resources/db/migration/V12__b_crud_entities.sql": "78652db4c81fc676c4b46fe462d322762bc99d9a5e615feb4a5a2f09b490989f",
+      "services/metadata/src/main/resources/db/migration/V13__semantic_layer.sql": "604cf83327d260b150890295602dc6f68d1394f007d9e160ab1bb246e54369d7",
+      "services/metadata/src/main/resources/db/migration/V14__semantic_asset_review.sql": "5f0357c32a78f38c01282d48342e09a8c109874ecbaa40230ac3fc6bcad90fed",
+      "services/metadata/src/main/resources/db/migration/V15__field_lineage.sql": "80f732a1c4fa7b8b41bff645fee3e17456879c3f227395c8e60f78fed2b0b932",
+      "services/metadata/src/main/resources/db/migration/V16__semantic_query_audit.sql": "9d500518dc359912f6da96ba5cd7620f803c38f04ec37982ebed0427a33e702a",
+      "services/metadata/src/main/resources/db/migration/V17__datasource_connection_health.sql": "d4adf64ece1b63f7c8e730cd314cb8f85c0db7e2036edb27d480633cd552324d",
+      "services/metadata/src/main/resources/db/migration/V18__lineage_execution_evidence.sql": "0d57592c63eaefe36cc973ce6e4b5d5b87609e194f69ad87e35b08b0328cadf3",
+      "services/metadata/src/main/resources/db/migration/V19__api_asset_execution_contract.sql": "9581ac7640525f0202154f2b6e9f95224c6ab7e44ee70101cb53be2c2f4bf199",
+      "services/metadata/src/main/resources/db/migration/V1__init.sql": "ad175c5be7b48a42b441786e73630213d9b9941c94152225b029cfcdc4bba407",
+      "services/metadata/src/main/resources/db/migration/V20__flink_lineage_evidence.sql": "a3ed627324e7fa02ab8125048f95ef9ff90a62bd78ce0e42b10d9a0e37e9cbd8",
+      "services/metadata/src/main/resources/db/migration/V21__lakehouse_table_control_plane.sql": "d60d85917b78ae409ca73c26d8001d717d3e5bf1837add118bc523e222727aee",
+      "services/metadata/src/main/resources/db/migration/V22__lakehouse_schema_evolution.sql": "b7c1739359012df0b3b82ac4d2cb1d8290a63b525a3d9ac2915ea76dcdff86dd",
+      "services/metadata/src/main/resources/db/migration/V23__lakehouse_maintenance_jobs.sql": "fff01384248504b6bd543b8f699f9da3602b63e60b4e2228428f633a5bb2b77d",
+      "services/metadata/src/main/resources/db/migration/V24__lakehouse_snapshot_refs.sql": "c31a4ce13f3f166f7fdeed6a74afc0e2ae7578088ba3372e34614ec6301d6366",
+      "services/metadata/src/main/resources/db/migration/V25__lakehouse_quality_observations.sql": "887c379c9ca637066552f5c3481fa19154a6a73aa755b1d606194397a1dd4f02",
+      "services/metadata/src/main/resources/db/migration/V26__lakehouse_maintenance_execution.sql": "62ecda6c88b84a9714d7b43d547616107060d61c113d03ba6525a7c0ea64ba76",
+      "services/metadata/src/main/resources/db/migration/V27__lakehouse_schema_change_execution.sql": "5365c0916b51454dd3148b9f7001da8b6ef108164548e7150387ae314357d5bf",
+      "services/metadata/src/main/resources/db/migration/V28__separate_business_write_credentials.sql": "636b6b2e13fe0343b8fead33b28968354d5c6184ef1e74127c9bb44f978412b4",
+      "services/metadata/src/main/resources/db/migration/V29__internal_request_nonce.sql": "c03d2bce6c7827d447927078c56f71f93146fb7032b05c848d494c87ca519352",
+      "services/metadata/src/main/resources/db/migration/V2__metadata_table.sql": "9e081fd47f752d5262a09dd6a9f4790c2cc258816fad04a0e934ab9d88dc800b",
+      "services/metadata/src/main/resources/db/migration/V30__fixed_execution_receipts.sql": "9a92e4c4c54c8df0832aaacc9ddad22881ae2d019dcd8b41c5fda2623068a075",
+      "services/metadata/src/main/resources/db/migration/V31__published_key_query_audit.sql": "479f84692436c214d0ba802cfa2a3239722e17f348bbdf89567c16bf0fb70832",
+      "services/metadata/src/main/resources/db/migration/V32__query_history_and_audit_stable_uid.sql": "63b9caae4222167a40d361d3e0ade1fe14c11d4982d6aeb1c8fa5e4f9e01a69c",
+      "services/metadata/src/main/resources/db/migration/V3__lineage_relation.sql": "3e98c93a8c19e1edf5b83ca310744dbefe18ba13b2d0d5bc9781295c6b738fc9",
+      "services/metadata/src/main/resources/db/migration/V4__add_datasource_password.sql": "6ff6e1ffe64227f67b487a572ea85ec46758dba3fb83795fc407ff6f8c8d0556",
+      "services/metadata/src/main/resources/db/migration/V5__datasource_connection_options.sql": "5f02b811436ba0c5eff4d395e1acc4cbc520c024698549bfc83d241b492beee6",
+      "services/metadata/src/main/resources/db/migration/V6__metadata_table_sync.sql": "d60b04db21f3b3820e9db02df7081e446938fcad3a56e913670b8b20cc704c26",
+      "services/metadata/src/main/resources/db/migration/V7__metadata_table_layer.sql": "e6eda2efadfa6686936a5f0eeac61e689838ef642eaccd949dd3f3d94ce500eb",
+      "services/metadata/src/main/resources/db/migration/V8__lineage_source.sql": "bf780dda17571dbd3edcad3f12200c8e816d63ab76e13d87c864fcc1ca2302a1",
+      "services/metadata/src/main/resources/db/migration/V9__datasource_password_encryption.sql": "9da970ab97c996aaf739de1b44c6fd7b650b496df89611863fe1be0e4cda50a9",
+      "services/quality/src/main/resources/db/migration/V10__source_cron_generation.sql": "f22b0c2f7a5427636de9e8f041562ad2a3dd6d59e9d94d808f022ab8a6e6c3d8",
+      "services/quality/src/main/resources/db/migration/V1__init.sql": "3f13cc0b32a88b741462a053836839605b2d0bb975d841d3aa6ec0baf47107c1",
+      "services/quality/src/main/resources/db/migration/V2__execution.sql": "ffdf83f9e4d245f5ed08da39ce2b45f07d11f06515e724ce663d279014e2c21c",
+      "services/quality/src/main/resources/db/migration/V3__quartz_tables.sql": "ab92a70af1f3ab23154a4d263e8d49b042469b9cfe6736bb29241992532a9445",
+      "services/quality/src/main/resources/db/migration/V4__rule_schedule.sql": "01b6d4091eb8725d723ea27c5ff1a5d4253ed369157aa16abe0885f00a08567d",
+      "services/quality/src/main/resources/db/migration/V5__quarantine_diagnostics.sql": "3f9b69e9d472d7030825bb0113fe348d1f6fec2fe32cee66344e72d7b89729c8",
+      "services/quality/src/main/resources/db/migration/V6__scheduler_desired_state.sql": "39f2d42290edf37c2c8b00998f686fda9646cb56ee86c46b934a79921137a1ea",
+      "services/quality/src/main/resources/db/migration/V7__execution_recovery.sql": "5a17873aaad8edc13e1594c995bbb8765f311e017d22622b9ae4f81475bc0cb6",
+      "services/quality/src/main/resources/db/migration/V8__internal_request_nonce.sql": "c599c4dc9b882a9332f1a2e4de8a92cd6141e4a19c7b1f85f57885ef0edc4280",
+      "services/quality/src/main/resources/db/migration/V9__fixed_execution_identity.sql": "79f0c4b69a8330c0343247d7a6f6ae02b0257e9be3f6efe83bbf8372143c1f0a",
+      "services/serving/src/main/resources/db/migration/V10__internal_request_nonce.sql": "de742235fc0eedb02569ce6c0e0d51c3edcfb82041bc850571c26aff30605004",
+      "services/serving/src/main/resources/db/migration/V11__published_key_admission.sql": "a424e145dc79f0b56d6116e475a89142dbc9c82bf1a86cd2f457d45291c363ed",
+      "services/serving/src/main/resources/db/migration/V1__analytics.sql": "e18d391e6e7ea267a437984792c8699a18c47c5d0513bb2b550cc1b7f50d03c4",
+      "services/serving/src/main/resources/db/migration/V2__subscription_grant.sql": "b472b717d804c3ffde8cd5b54b2bd3888e9ea566f7af1a4cc62c0883f604ed4c",
+      "services/serving/src/main/resources/db/migration/V3__semantic_dataset.sql": "fdb3652a0235063989469db04a8cabad0022e66bf1aca11eb434772805da34fd",
+      "services/serving/src/main/resources/db/migration/V4__service_api_key_applications.sql": "7d2e6eb04ca337c3906fa54f4fdf86b9648bf4ebba20e44808af6f3f2def58e9",
+      "services/serving/src/main/resources/db/migration/V5__service_api_usage_ledger.sql": "2fcbd3b892ad9b32ba6b4f0b1c9e3d7a101fa6b58ac802eeea5f43079c3e4ecf",
+      "services/serving/src/main/resources/db/migration/V6__service_api_distributed_rate_windows.sql": "a150d38d5f3ed825fc930920313982c0ffe4d1a6e83cfc44b9160618fcd5797f",
+      "services/serving/src/main/resources/db/migration/V7__service_api_sla_policies.sql": "9940a224cf45606b89f344e0d9c7d14fbaced57a1790195dd2e37e13d7edc1fc",
+      "services/serving/src/main/resources/db/migration/V8__service_api_keys.sql": "a4b3ca681302beaf3c8e983b2e8e22ae58e4bdb332f55ec0f71c8f1b22e2624c",
+      "services/serving/src/main/resources/db/migration/V9__dataset_publication.sql": "e176883c7cd2dbe187d59da48e1e6a7bc07af3b43943329b49812e16bb9e68fe",
+      "services/system/src/main/resources/db/migration/V1__init.sql": "036b027480e3cc51f5dbda7d288eaf777e0c214cd539dc390a2693d6ec1eaded",
+      "services/system/src/main/resources/db/migration/V2__add_sys_user.sql": "cdd4621de13e6c245409791afd02f2f25282b60d28fd81b65747b161e4e6e78b",
+      "services/system/src/main/resources/db/migration/V3__audit_log.sql": "868bc09b800fec625a6e27bf3d0169bd7c0f79d10f1ad594ca02364f4bd81de8",
+      "services/system/src/main/resources/db/migration/V4__notification.sql": "864e66e1ea0de794202da0745e80616e35bbe8e6f5ba9c8f74a512da11b1fefd",
+      "services/system/src/main/resources/db/migration/V5__permission_event.sql": "96f3c21960f707c3356df7b7a00335d0f4ff4736c77d8d8e2505e542bb9c3cf3",
+      "services/system/src/main/resources/db/migration/V6__internal_request_nonce.sql": "0111ce32f2c62223ad80e11fcc17e081575cf51bc882caadc1bf0ddb8a56f8e1",
+      "services/system/src/main/resources/db/migration/V7__permission_event_request_id_128.sql": "d99c6f7e922f6176751dbb78fa5a6a5f534ea2840f21f2831687676fb5e1eba7",
+      "services/system/src/main/resources/db/migration/V8__notification_stable_ownership_and_events.sql": "3d7d3f37a96a4ea6415d45bcd047c9da7cd2775d8ac8bff53b4b54963b0f9939",
+      "services/workflow/src/main/resources/db/migration/V10__pipeline_unknown_reconciliation.sql": "7d3d1cdbf2e24499c7406c4345e7e420c21743b973859e1ed0e1bcd9f41f34e8",
+      "services/workflow/src/main/resources/db/migration/V11__execution_result_resolution.sql": "f30cf29f15cbaf9083a3f697da35c5aa4365a76a3114c249bbc6bf5e5f1b79be",
+      "services/workflow/src/main/resources/db/migration/V12__spark_runner_resource_queue.sql": "70aa9d76ab7e3a7ba1b04f470a3be3e94d3698ab871ca1718870f20b7401aef7",
+      "services/workflow/src/main/resources/db/migration/V13__git_source_revisions.sql": "69d65685e53f1e0b04ad4478a7a4ebf03bfbccc7891af80fa818911403a52a81",
+      "services/workflow/src/main/resources/db/migration/V14__protect_git_source_history.sql": "e46ca2bfc1583aad8aa743057fb2ad10d5c6e57eaa0ef49cedcf73e2aea12392",
+      "services/workflow/src/main/resources/db/migration/V15__git_source_verification.sql": "8da942a3a225b86a53b1e89343bbb7c9ed66ab3e6c9fa48b2eaa85cf73c6097d",
+      "services/workflow/src/main/resources/db/migration/V16__scheduler_sync_outbox.sql": "18feea26948e43836d9763b80fe473e0b11689c9b6373555dd98ed9a15098749",
+      "services/workflow/src/main/resources/db/migration/V17__flink_sql_tasks.sql": "3aa52ca8f8613fad57e1b3f5892949871e4e06d8e1ed401fae9831d32392c3ca",
+      "services/workflow/src/main/resources/db/migration/V18__spark_jar_artifacts.sql": "873bd2debed8e34f425ffb214003c17a5500fcd7dc34d82f6df87f6a994e4cb8",
+      "services/workflow/src/main/resources/db/migration/V19__spark_job_runner_binding.sql": "9bbafe94994d26928b6a1538effe6c45b9eec56da2309c66ce32fc0f84dd126b",
+      "services/workflow/src/main/resources/db/migration/V1__quartz_tables.sql": "ab92a70af1f3ab23154a4d263e8d49b042469b9cfe6736bb29241992532a9445",
+      "services/workflow/src/main/resources/db/migration/V20__flink_stream_lifecycle.sql": "0f6d3b6f23e40704d216a71d08fc80bf33ad32b8301d5ed82e416754e43db497",
+      "services/workflow/src/main/resources/db/migration/V21__flink_event_time_quality.sql": "595333bba94f41faeb01ca1a917f54db02d7d838c9925fdcbfde33c56cfbd254",
+      "services/workflow/src/main/resources/db/migration/V22__flink_job_lifecycle_evidence.sql": "0472d03c5041f2ffe910c4bf30de458bb0b328718a6787ffefbacb29cb467ce0",
+      "services/workflow/src/main/resources/db/migration/V23__flink_lifecycle_intent.sql": "ae89d7e3ebb70308ba77872936cee1d5aa9788f6a1ba959aa749f409c07188ed",
+      "services/workflow/src/main/resources/db/migration/V24__flink_upgrade_evidence.sql": "ea2ace2aa4ec3479b6458259c083a9b71fa31705e7b004fba907a4f12636d8b2",
+      "services/workflow/src/main/resources/db/migration/V25__task_definition_versions.sql": "31f8b9899298e46da74b2195adc150b848258ad9db05c05f2ae79f019fb799d9",
+      "services/workflow/src/main/resources/db/migration/V26__flink_resuming_lifecycle.sql": "e07adab2352bfbf8d4f2ea754c795f982797fb593d0226cdcb2e66cb3a5b36e6",
+      "services/workflow/src/main/resources/db/migration/V27__internal_request_nonce.sql": "5bd064d117304a4fb2853c7a173f876f1d02092f5424521878e384a5b8c0c5eb",
+      "services/workflow/src/main/resources/db/migration/V28__fixed_execution_identity.sql": "6cc48287761cd5f53f803c71db4f0854c1c39e23767cdfd078a795d8439878dd",
+      "services/workflow/src/main/resources/db/migration/V29__sql_source_approval_and_schedule_generation.sql": "3b013d38c8b95827e62c54a197370b40348b4f08ab5614d558ed2ead280ca36a",
+      "services/workflow/src/main/resources/db/migration/V2__task_tables.sql": "f20002f3c6597585f643cd33013082ea7f473a72da95e150a08cb0860f435d77",
+      "services/workflow/src/main/resources/db/migration/V30__queued_task_instance_status.sql": "b94f11872e05c90ce5d77d7548589ecc8295d52a2d0c2453588a0c2aaf3f459b",
+      "services/workflow/src/main/resources/db/migration/V31__trusted_pipeline_sql_sources.sql": "21696ab9487297f56f51ccdd6b29be20a87c207bcaf430f12f005ea54a6f42d3",
+      "services/workflow/src/main/resources/db/migration/V32__trusted_quality_parent.sql": "abfd0cfb362dd33bf2db912bd98e9737bcc687d5229cc6dab605454d305c8ec8",
+      "services/workflow/src/main/resources/db/migration/V33__trusted_engine_sources.sql": "a20ca7b24cdfb51ebee0a56043247fdfe9839957227551be8fc7b733e37ed69a",
+      "services/workflow/src/main/resources/db/migration/V34__pipeline_engine_success_evidence.sql": "8b91f4defb0199ed4b63aa271a51994951d0ceb25dfcf98a16c127979ae7f302",
+      "services/workflow/src/main/resources/db/migration/V3__release_record.sql": "6850c5819cd0a9feeef7c198fe94dc6b5b1c32d92366cee20bd7f6d685cf3d2f",
+      "services/workflow/src/main/resources/db/migration/V4__execution_attempts.sql": "bef6a9d974fe23c755a07f3c747e5cac4f0acc5dd7bd54f39d918be0ebeda137",
+      "services/workflow/src/main/resources/db/migration/V5__managed_spark_and_pipeline.sql": "95ba1f6f8162d85bb93c16c02ba5f20ec7bf7fa4c5d1c839873bba6172c373bc",
+      "services/workflow/src/main/resources/db/migration/V6__pipeline_execution_leases.sql": "eb816b6fcd8bb9e801ed8140e38013a05e5c53cd3b6c6567fbc02d7c23fbe1c7",
+      "services/workflow/src/main/resources/db/migration/V7__pipeline_node_cancellation.sql": "fcbcd1f793d1f434fb4f2ada6c888e9fdfe681cd1fe02d05b1689b7d3739b394",
+      "services/workflow/src/main/resources/db/migration/V8__pipeline_trigger_contract.sql": "6b1fcc87ca9d53cfb416dcb5abdad3f5796b14b82d32223d40c325c8af0152f9",
+      "services/workflow/src/main/resources/db/migration/V9__pipeline_controlled_retry.sql": "c72f42462183e0ca2c01243ec5b40c778e86fe915ceb482cac9fad11d11dcae4"
+    }
+  },
+  "evidence": {
+    "unit": {
+      "path": "output/audit-engine-execution/unit-v34-full-3ad5850011654fb4a9946c08e4e6cdb3/report.json",
+      "sha256": "81ef1770fa0a3e816694f87e2d17e37f52f85d7f76b6b74dc8a69666b170359b",
+      "runId": "3ad5850011654fb4a9946c08e4e6cdb3",
+      "purpose": "trusted-spark-flink-v34-unit-regression",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:21:21.996249+00:00",
+      "completedAtUtc": "2026-10-26T05:22:55.752173+00:00",
+      "commands": [
+        {
+          "argv": [
+            "C:\\Program Files\\apache-maven-3.9.10\\bin\\mvn.cmd",
+            "-q",
+            "-o",
+            "-pl",
+            "services/workflow,services/quality,services/metadata,services/auth",
+            "-am",
+            "-Daetheris.child.audit=3ad5850011654fb4a9946c08e4e6cdb3",
+            "test"
+          ],
+          "exitCode": 0,
+          "log": "services.log",
+          "logSha256": "db3937d1670bf97df3415ec0a8ee7a70b4e7993ef2d30d6cf2c8b50cfd8a3e0a"
+        }
+      ],
+      "sourceHashesMatchAtEnd": true,
+      "scope": "JDK21 unit/MVC/signed loopback HTTP suites; no live database, browser, business engine or release claim",
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    },
+    "enginePostgres": {
+      "path": "output/audit-workflow-engine-authority/run-20261026-v34-pipeline-green/report.json",
+      "sha256": "5795c2b92c0544921ee7fc5988aa80be8647b46040f942c50f53ac361701616c",
+      "runId": "61c2f792e2db4a8c83e6000f8b441401",
+      "purpose": "isolated-workflow-engine-authority-postgres-http",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:19:21.144742+00:00",
+      "completedAtUtc": "2026-10-26T05:20:30.347763+00:00",
+      "tests": {
+        "tests": 31,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Actual PostgreSQL runtime role, preserved migration history/SQL/quality approvals, actual loopback Spark/Flink transport and durable dispatch/receipt constraints. Actors/authorization decisions and engine business results are controlled peers. No real Spark/Flink engine, deployed Auth, browser, backend I/O sandbox or release claim.",
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    },
+    "sixApplications": {
+      "path": "output/audit-workflow-quality-child/run-20261026-v34/report.json",
+      "sha256": "542e86f06a5ce4b334c3fa2762d0a472bfc0ebe5903d726455cac839c7df942c",
+      "runId": "0bc2f71727234095b38d527067677451",
+      "purpose": "six-real-applications-source-bound-workflow-quality-child",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:24:00.992474+00:00",
+      "completedAtUtc": "2026-10-26T05:27:18.329624+00:00",
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Actual Auth/System/Metadata/Quality/Workflow/Gateway, manual/Quartz/SQL pipeline and quality-child manual/pipeline with real business PG reader/writer. No Spark/Flink, browser, nine-engine, install/recovery or release claim.",
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    },
+    "fiveApplicationsEngine": {
+      "path": "output/audit-workflow-engine-chain/run-20261026-real-auth-v5-v34/report.json",
+      "sha256": "9cd3d94c65560628ed25fea6eae4051f4ccfe6c79e680dcb92f7d6d84a154b66",
+      "runId": "319d4161d3c44f28a15b426f6a8da483",
+      "purpose": "five-real-applications-trusted-engine-auth-chain",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:29:14.999041+00:00",
+      "completedAtUtc": "2026-10-26T05:32:57.062719+00:00",
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "enginePeerCleanup": {
+        "enginePeersStopped": true,
+        "engineTraceRetained": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Actual Gateway/Auth/System/Metadata/Workflow JARs, PG/Redis, original identity/approval and engine authorization. Spark/Flink HTTP responses and registry rows are controlled fixtures; only SQL uses real business JDBC. No quality child rerun, physical Spark/Flink, backend I/O sandbox, browser or formal release claim.",
+      "auditPythonRuntime": {
+        "version": "3.12.14 (main, Aug 25 2026, 14:01:42) [MSC v.1944 64 bit (AMD64)]",
+        "executable": "C:\\Users\\yafei\\RA1NL0VE\\Aetheris\\output\\audit-python-runtime\\venv\\Scripts\\python.exe",
+        "executableSha256": "eb2f24f221e8f8ba5430e4d9d0247f31eba82907ee6f6b95ae424eacdccbea92",
+        "tzdataVersion": "2026.5",
+        "dependencies": {
+          "tzdata": "2026.5",
+          "PyYAML": "6.0.2",
+          "cryptography": "48.0.1"
+        },
+        "businessTimezone": "Asia/Shanghai",
+        "leapDayUtcOffsetSeconds": 28800.0
+      },
+      "engineRuntimeConfigSha256": "6b79792e2850c46690170b054b26bcd347835d7c626a212ea719d6a39f8874e5",
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    },
+    "scripts": {
+      "path": "output/audit-engine-execution/scripts-8d7567b083604edc90a4974aa9c1d70b/script-validation.json",
+      "sha256": "b5f50064f584a375dee7e4376d654a736e892e9682b5cf39ac1a097efaa08c60",
+      "runId": "8d7567b083604edc90a4974aa9c1d70b",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:34:34.669327+00:00",
+      "completedAtUtc": "2026-10-26T05:37:35.482340+00:00",
+      "commands": [
+        {
+          "name": "scripts",
+          "exitCode": 0,
+          "elapsedSeconds": 178.687,
+          "tests": 369,
+          "skipped": 0,
+          "summary": "OK",
+          "log": "output/audit-engine-execution/scripts-8d7567b083604edc90a4974aa9c1d70b/scripts-full.log",
+          "sha256": "6845b18924bd9852b66c2aa801e74b3c5a11b2242dcb258981c33917681e996e"
+        },
+        {
+          "name": "spark",
+          "exitCode": 0,
+          "elapsedSeconds": 0.375,
+          "tests": 25,
+          "skipped": 4,
+          "summary": "OK (skipped=4)",
+          "log": "output/audit-engine-execution/scripts-8d7567b083604edc90a4974aa9c1d70b/spark-full.log",
+          "sha256": "0196f8a4e62317b08f5c9731be68611da99f3a8f5ea295f33f4e46da22308c82"
+        }
+      ],
+      "sourceHashesMatchAtEnd": true,
+      "limits": "Workspace-isolated Python 3.12 execution. The Python 3.11 APPCRASH and earlier PS7 CLR failure remain unresolved historical failures; no global OS, Python 3.11 or PS7 runtime setting was changed. Owned Python 3.12 dependencies include pinned tzdata. Not cloud CI, application Docker build or runtime producer evidence.",
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    },
+    "databaseDeployGate": {
+      "path": "output/audit-database-deploy-gate/run-20261026-122/report.json",
+      "sha256": "e94b1e7eb05653c307782a8035f19318ee176ce8d5245e6a40a9c8b3c142c771",
+      "runId": "02fe59f578304b87a5243f68bcda89c5",
+      "purpose": "disposable-real-database-deploy-gate-acceptance",
+      "status": "passed",
+      "startedAtUtc": "2026-10-26T05:39:49.838394+00:00",
+      "completedAtUtc": "2026-10-26T05:43:02.943270+00:00",
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "sourceHashesMatchAtEnd": true,
+      "migrationSourceCount": 122,
+      "databaseUnchanged": true,
+      "scopeMatchesCurrentFiles": true,
+      "countsAsOverallReleaseAcceptance": false
+    }
+  },
+  "attachmentVerification": {
+    "unitXmlArchives": 182,
+    "allCurrentUnitCompiledClassesMatch": true,
+    "engineTraceReopened": true,
+    "retainedBuildJars": 6,
+    "engineSelectedJarsReopened": 5,
+    "engineJarRetention": "Normal cleanup removes launch-directory copies. The exact pre-run anchored six-service input cache remains; five matching inputs are reopened without reconstructing the deleted launch paths.",
+    "retainedInputManifest": "output/audit-workflow-quality-child/run-20261026-v34/0bc2f71727234095b38d527067677451/retained-artifacts.json",
+    "retainedInputManifestSha256": "d65e1e46d2b0e015d81d3b7b0fa9bc097997c6fe9622ad624c0be47a73078d14",
+    "attachments": {
+      "output/audit-workflow-engine-chain/run-20261026-real-auth-v5-v34/319d4161d3c44f28a15b426f6a8da483/engine-http-traces.json": "95ff6bcdfe7f921fc0123293ea01c31429f5921976673981f7299a27c69009a2",
+      "output/audit-engine-execution/scripts-8d7567b083604edc90a4974aa9c1d70b/atomic-replace-observations.json": "ce78ebf90bf5b8bb447470b12059285eafac42c7dc6f8c9f441ca91dd23d384d",
+      "output/audit-engine-execution/preflight-20261026/engine-chain-independent-cleanup.json": "cf94de98a6f7f84c020ac91cebc519fe9eaf077827f107707d40534e149f4ae5",
+      "output/audit-engine-execution/preflight-20261026/tzdata-install.json": "e12f60903ae2852581d52450c8176e1a3e817ed425b813b96c5e13ac4f6a7b6a",
+      "output/audit-engine-execution/preflight-20261026/docker-startup-error.json": "8a88cb21f092bd0207cd1c1b0ee96e3784a718a3b6bb9aec766730762489ff18",
+      "output/audit-engine-execution/preflight-20261026/docker-endpoint-quarantine.json": "19cbb134bc7a23b0537015d083816a93b39bf411ded0067551f8bbf72fb87cbb",
+      "output/audit-engine-execution/preflight-20261026/docker-run-directory-quarantine.json": "3bcf17f7ddfafb7b6282712b442617cdb439d421349d40324691e111cd25c742",
+      "output/audit-engine-execution/preflight-20261026/docker-after-communication-directory-recovery.json": "32d80dfbfba9fde4b627e0ba86f4f1db5791ed1f2e64fc715d1fa177b8ffe0e5",
+      "output/audit-engine-execution/preflight-20261026/failed-ensurepip-temp-cleanup.json": "c12007d126cab9560b3a4318986174278224aa39a3bfdd448f29d28f21d5b0c7",
+      "output/audit-engine-execution/preflight-20261026/v34-static-and-image-gates.json": "d92120b5108d07cafbc02870304d5b03a3dab0620c2286ee7d659c04c237b8c6",
+      "output/audit-engine-execution/preflight-20261026/python-dependency-preparation.json": "9f86053a9e93421ddfbaf4b5a6e089afa2221d158a0d035642a5818258d20aa6",
+      "output/audit-workflow-engine-chain/run-20261026-real-auth-v1/failure-analysis.json": "712b2239aedcf01edae582f1bf9b82c0fca80bf911cac0423df0c833a40fd8e0",
+      "output/audit-workflow-engine-chain/run-20261026-real-auth-v2/failure-analysis.json": "fd9036729c812abfd63cf288d07b79ab2db7d4e717dfd9ba9fbf079e5fc86777",
+      "output/audit-workflow-engine-chain/run-20261026-real-auth-v3/failure-analysis.json": "ce1e88ca469c5259e06d59a9c09666cfb41117bfa286ff45562b593107eafaed",
+      "output/audit-workflow-engine-chain/run-20261026-real-auth-v4/failure-analysis.json": "98317da47d298518e4dd3e670765c83f0d75a7b0004149ad2ca9ac1a06359153",
+      "output/audit-workflow-engine-authority/run-20261026-pipeline-receipt-red/failure-analysis.json": "0508dbb8450bb6792e199fab58e0c9248edf36af5b050ce46a45a7dae2bbbdae"
+    }
+  },
+  "independentCleanup": {
+    "path": "output/audit-engine-execution/preflight-20261026/engine-chain-independent-cleanup.json",
+    "sha256": "cf94de98a6f7f84c020ac91cebc519fe9eaf077827f107707d40534e149f4ae5",
+    "allOwnedResourcesAbsent": true
+  },
+  "historicalScopedEvidence": [
+    {
+      "path": "artifacts/validation/history/current-worktree-pre-engine-chain-20261026.json",
+      "sha256": "3585ca525bb2b38636aeb83a1636f1069cb1e1c204dd07dbcc9813908e6a69c3",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output/audit-workflow-quality-child/run-20261026-default-runner/report.json",
+      "sha256": "e6f169f4608c972215d11b03225cd14604e49ed4723c3843402f5e2c613f2644",
+      "scope": "119 historical six-application checks. V33 historical six-application scope; wrapper and migration sources have changed. It is not rebound to V34. Current six-application results are a separate producer run.",
+      "currentProducerSourceMismatches": [
+        "scripts/audit-identity-chain.py",
+        "scripts/audit-fixed-execution-chain.py"
+      ],
+      "addedMigrationSources": [
+        "services/workflow/src/main/resources/db/migration/V34__pipeline_engine_success_evidence.sql"
+      ],
+      "countsTowardCurrentAcceptance": false
+    }
+  ],
+  "preservedIntermediateAndRedEvidence": [
+    {
+      "path": "output/audit-engine-execution/unit-v33-first-red/report.json",
+      "sha256": "67ed20d06aee6040c629bf3a17da52ed9969dec416b7b6547fbe784f5606e4c4",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output/audit-engine-execution/unit-v33-191a4add197741a5b8d0d5512d6da0f2/report.json",
+      "sha256": "0a1c192464c4eb3a8149d4c2bbf665e3d19cddaa88b6d75cde7cb75c9988b06c",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output/audit-engine-execution/scripts-911e06c6d4f949d3bd4c6a162e1fef4d/script-validation.json",
+      "sha256": "69d885dabb1e63252b797efddd6e9cd680a1eed8cddc425b0363bd1547973697",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output/audit-workflow-engine-authority/run-20261026-v33-initial/report.json",
+      "sha256": "4812f9252af0a2a75de92a74fd5ade616d39ab750862bb280b4bcda3abda1454",
+      "status": "passed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output\\audit-workflow-engine-chain\\run-20261026-real-auth-v1\\report.json",
+      "sha256": "10e93007ec54a2ecebb55c75bd0317e4188e73200345a806b673e3e190e14c92",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output\\audit-workflow-engine-chain\\run-20261026-real-auth-v2\\report.json",
+      "sha256": "1456697fafe5b511e01b5bc81a0be2bf9ff383737172d94d48c38d7a4963285a",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output\\audit-workflow-engine-chain\\run-20261026-real-auth-v3\\report.json",
+      "sha256": "8bb6afdef73d8498c183e8fe96d6fff040081af5e3e2eb7244245e2ce0356b32",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output\\audit-workflow-engine-chain\\run-20261026-real-auth-v4\\report.json",
+      "sha256": "525094a6f9c8525276858f2e42a3d1c5a3b19889c3642eca0c57dad156d564cf",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    },
+    {
+      "path": "output/audit-workflow-engine-authority/run-20261026-pipeline-receipt-red/report.json",
+      "sha256": "2b1d3d252be4acaf419fa466cfbb3e934a6adc088b82dbc4299552934a54fd74",
+      "status": "failed",
+      "countsTowardCurrentAcceptance": false
+    }
+  ],
+  "blockingEvidence": {
+    "unresolvedImageLocks": 2,
+    "strictImageExitCode": 1,
+    "partialIndexAsRelease": "Not a release report. Final-byte rejection is verified separately after this index is saved."
+  },
+  "remainingWork": [
+    "Actual Spark/Flink business engines, process/credential/network/I/O isolation and side effect checks.",
+    "Flink pause/upgrade/resume with newly approved physical attempts and matching UI.",
+    "Process crash matrix, authenticated browser concurrency, nine data sources/services, explicit legacy upgrade and full backup/restore.",
+    "Resolve two MinIO locks; build/scan/sign/verify frozen artifacts, run eight formal producers and independent final acceptance."
+  ],
+  "interpretation": "Scoped progress only. Current unit1236, PG/controlled HTTP31, six applications119, five actual applications92, scripts369 and Spark21 executed/4 skipped, DB admission1positive23negative. Controlled engine HTTP responses do not prove physical Spark/Flink business execution. All original failures retained. No existing database, real keys, commit, push or deployment changed."
+}

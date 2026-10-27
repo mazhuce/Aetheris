@@ -617,10 +617,8 @@ export const cancelPipeline = (id: number) =>
 export const retryPipeline = (id: number, resumeTaskId: number) =>
   http.post<PipelineRun>(`/api/workflow/pipelines/${id}/retry`, { resumeTaskId }).then((r) => r.data)
 
-export function listDependencies(id: number): Promise<TaskDependency[]> {
-  return http
-    .get<TaskDependency[]>(`/api/workflow/tasks/${id}/dependencies`)
-    .then((res) => res.data)
+export function listDependencies(id: number, signal?: AbortSignal): Promise<TaskDependency[]> {
+  return readWithSignal<TaskDependency[]>(`/api/workflow/tasks/${id}/dependencies`, signal)
 }
 
 export function addDependency(id: number, upstreamTaskId: number): Promise<TaskDependency> {

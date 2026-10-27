@@ -57,9 +57,10 @@ class IdentityAuditSafetyTests(unittest.TestCase):
 
     def test_remote_or_overridden_docker_endpoint_never_reaches_fixture_or_cleanup_engine(self):
         with tempfile.TemporaryDirectory(prefix='identity-audit-test-',dir=ROOT/'output') as folder:
-            for overrides,endpoint in (({'DOCKER_HOST':'tcp://unapproved:2375'},'npipe:////./pipe/docker_engine'),
-                                       ({},'ssh://unapproved'),({},'tcp://127.0.0.1:2375')):
-                instance=self.cleanup_fixture(Path(folder),None,'7'*32);instance.checkpoint=Mock();calls=[]
+            for index,(overrides,endpoint) in enumerate((({'DOCKER_HOST':'tcp://unapproved:2375'},'npipe:////./pipe/docker_engine'),
+                                       ({},'ssh://unapproved'),({},'tcp://127.0.0.1:2375'))):
+                scenario=Path(folder)/str(index);scenario.mkdir()
+                instance=self.cleanup_fixture(scenario,None,'7'*32);instance.checkpoint=Mock();calls=[]
                 def docker(*args,**kwargs):
                     calls.append(args)
                     if args[:2]==('context','inspect'):return json.dumps([{'Endpoints':{'docker':{'Host':endpoint}}}])
@@ -113,7 +114,9 @@ class IdentityAuditSafetyTests(unittest.TestCase):
 
     def test_source_binding_covers_all_current_migrations_helper_and_runner_pom(self):
         hashes=audit.source_hashes();manifest=audit.base.database_contract.source_manifest()
-        self.assertEqual(116,len(manifest))
+        actual={p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in ROOT.glob('services/*/src/main/resources/db/migration/*.sql')}
+        self.assertEqual(actual,manifest)
+        self.assertIn('services/auth/src/main/resources/db/migration/V11__browser_session_families.sql',manifest)
         for relative in ['scripts/security/SignIsolatedUser.java','scripts/security/GenerateKeys.java',
                          'scripts/security/installation.py','scripts/database/runner/pom.xml',*manifest]:
             self.assertTrue(relative in hashes,relative)
@@ -182,8 +185,10 @@ class IdentityAuditSafetyTests(unittest.TestCase):
 
     def test_private_cleanup_preserves_unknown_files_and_outside_directory(self):
         with tempfile.TemporaryDirectory(prefix='identity-audit-test-',dir=ROOT/'output') as folder:
-            root=Path(folder);private=root/'private';private.mkdir();run='2'*32
-            for directory in (private/('audit-identity-'+run),root/('audit-identity-'+run)):
+            run='2'*32
+            for index,outside in enumerate((False,True)):
+                root=Path(folder)/str(index);root.mkdir();private=root/'private';private.mkdir()
+                directory=(root if outside else private)/('audit-identity-'+run)
                 directory.mkdir();keydir=directory/'keys';keydir.mkdir();unknown=keydir/'operator-file.txt';unknown.write_text('preserved',encoding='utf-8')
                 instance=self.cleanup_fixture(root,keydir,run)
                 with patch.object(audit.keys_module,'PRIVATE',private):instance.cleanup()

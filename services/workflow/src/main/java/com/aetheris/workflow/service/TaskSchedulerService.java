@@ -65,7 +65,7 @@ public class TaskSchedulerService {
                 if(!rows.isEmpty()){
                     var current=rows.getFirst();task.setScheduleVersion(((Number)current.get("schedule_version")).longValue());
                     task.setCronExpression((String)current.get("cron_expression"));
-                    schedulable="sql".equals(current.get("task_type"))&&"enabled".equals(current.get("status"))&&StringUtils.hasText(task.getCronExpression())
+                    schedulable=java.util.Set.of("sql","quality","spark","flink").contains(current.get("task_type"))&&"enabled".equals(current.get("status"))&&StringUtils.hasText(task.getCronExpression())
                         &&current.get("execution_approval")!=null&&current.get("cron_actor")!=null&&current.get("execution_revision").equals(current.get("cron_approved_execution_revision"));
                 }
             }

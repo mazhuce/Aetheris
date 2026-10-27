@@ -5,6 +5,7 @@ import com.aetheris.auth.dto.ChangePasswordRequest;
 import com.aetheris.auth.dto.UpdateProfileRequest;
 import com.aetheris.auth.entity.AuthUser;
 import com.aetheris.auth.service.AuthUserService;
+import com.aetheris.auth.service.PermissionVersionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import jakarta.validation.Valid;
@@ -41,10 +42,13 @@ public class AuthProfileController {
 
     private final AuthUserService authUserService;
     private final PasswordEncoder passwordEncoder;
+    private final PermissionVersionService permissionVersions;
 
-    public AuthProfileController(AuthUserService authUserService, PasswordEncoder passwordEncoder) {
+    public AuthProfileController(AuthUserService authUserService, PasswordEncoder passwordEncoder,
+                                 PermissionVersionService permissionVersions) {
         this.authUserService = authUserService;
         this.passwordEncoder = passwordEncoder;
+        this.permissionVersions = permissionVersions;
     }
 
     /** 返回当前登录用户的资料；响应体不含密码哈希（AuthUserResponse 本就不映射该字段）。 */
@@ -55,7 +59,7 @@ public class AuthProfileController {
             // 令牌有效但账号已被删除：让前端把这种情况当作需要重新登录，而非服务故障。
             return ResponseEntity.status(401).body(Map.of("message", "账号不存在，请重新登录"));
         }
-        return ResponseEntity.ok(AuthUserResponse.from(user));
+        return ResponseEntity.ok(AuthUserResponse.from(user, permissionVersions.current()));
     }
 
     @PutMapping
@@ -82,7 +86,7 @@ public class AuthProfileController {
                 .set(request.nickname() == null, AuthUser::getNickname, null)
                 .set(request.email() == null, AuthUser::getEmail, null)
                 .set(request.phone() == null, AuthUser::getPhone, null));
-        return ResponseEntity.ok(AuthUserResponse.from(user));
+        return ResponseEntity.ok(AuthUserResponse.from(user, permissionVersions.current()));
     }
 
     @PutMapping("/password")

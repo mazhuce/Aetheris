@@ -9,7 +9,7 @@ vi.mock('@/hooks/useResourceActions', () => ({ useResourceActions: () => ({ can:
 vi.mock('@/api/analytics', () => ({ listAnalyticsDatasets: vi.fn(), queryAnalyticsDataset: vi.fn(), createAnalyticsDataset: vi.fn(), updateAnalyticsDataset: vi.fn(), publishAnalyticsDataset: vi.fn(), deleteAnalyticsDataset: vi.fn() }))
 vi.mock('@/api/metadata', () => ({ listDataSources: vi.fn(), listPublishedMetricsPage: vi.fn(), listSemanticDimensions: vi.fn() }))
 it('offers only the explicitly granted dataset query without exposing publishing or editing', async () => {
-  setAuthenticated({ username: 'reader', role: 'viewer' })
+  setAuthenticated({ id: 16, accessVersion: 0, permissionVersion: 0, username: 'reader', role: 'viewer' })
   vi.mocked(api.listAnalyticsDatasets).mockResolvedValue([1, 2].map((id) => ({ id, name: `数据${id}`, sourceType: 'sql', status: 'published', createdBy: 'admin', createdAt: '', updatedAt: '', refreshSeconds: 30 })))
   vi.mocked(metadata.listDataSources).mockResolvedValue([])
   vi.mocked(metadata.listPublishedMetricsPage).mockResolvedValue({ items: [], nextCursor: null, hasMore: false })

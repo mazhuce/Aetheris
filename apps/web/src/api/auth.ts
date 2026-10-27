@@ -1,10 +1,9 @@
 import http from './http'
-import { markLoggedOut } from '@/auth/session'
+import { markLoggedIn, markLoggedOut } from '@/auth/session'
+import { captureSession, isCurrentSession, logoutIntent, type SessionUser } from '@/auth/authState'
+import { coordinateSessionMutation } from '@/auth/refreshCoordinator'
 
-export interface LoginResult {
-  username: string
-  nickname?: string
-  role: UserRole
+export interface LoginResult extends SessionUser {
   expiresIn: number
 }
 
@@ -20,6 +19,8 @@ export interface AuthUser {
   status: 'active' | 'disabled'
   createdAt?: string
   updatedAt?: string
+  accessVersion?: number
+  permissionVersion?: number
 }
 
 export interface CreateAuthUserInput {
@@ -42,11 +43,31 @@ export interface UpdateAuthUserInput {
 }
 
 export function login(username: string, password: string): Promise<LoginResult> {
-  return http.post<LoginResult>('/api/auth/login', { username, password }).then((res) => res.data)
+  markLoggedOut(logoutIntent()?.revocation)
+  const started = captureSession()
+  return coordinateSessionMutation(async () => {
+    if (!isCurrentSession(started)) throw new Error('会话已变化，请重新登录')
+    const response = await http.post<LoginResult>('/api/auth/login', { username, password })
+    if (!isCurrentSession(started)) throw new Error('会话已变化，请重新登录')
+    markLoggedIn(response.data)
+    return response.data
+  })
 }
 
 export function logout(): Promise<void> {
-  return http.post('/api/auth/logout').then(() => undefined).finally(markLoggedOut)
+  markLoggedOut('pending')
+  const started = captureSession()
+  return coordinateSessionMutation(async () => {
+    if (!isCurrentSession(started)) throw Object.assign(new Error('会话已变化，请重新操作'), { code: 'SESSION_CHANGED' })
+    try {
+      const response = await http.post('/api/auth/logout')
+      if (response.status !== 204) throw new Error('服务端会话撤销未确认')
+      if (isCurrentSession(started)) markLoggedOut('confirmed')
+    } catch (error) {
+      if (isCurrentSession(started)) markLoggedOut('unconfirmed')
+      throw error
+    }
+  })
 }
 
 export function listAuthUsers(): Promise<AuthUser[]> {
@@ -76,7 +97,7 @@ export interface ChangePasswordResult {
   reloginRequired: boolean
 }
 
-/** 当前登录用户资料（身份由网关注入的 X-User-Name 确定，不接受指定用户）。 */
+/** 当前登录用户资料（身份由网关签名并经服务端验证，不接受指定用户）。 */
 export function getMyProfile(): Promise<AuthUser> {
   return http.get<AuthUser>('/api/auth/me').then((res) => res.data)
 }
@@ -86,5 +107,8 @@ export function updateMyProfile(payload: UpdateProfileInput): Promise<AuthUser> 
 }
 
 export function changeMyPassword(currentPassword: string, newPassword: string): Promise<ChangePasswordResult> {
-  return http.put<ChangePasswordResult>('/api/auth/me/password', { currentPassword, newPassword }).then((res) => res.data)
+  return http.put<ChangePasswordResult>('/api/auth/me/password', { currentPassword, newPassword }).then((res) => {
+    if (res.data.reloginRequired) markLoggedOut()
+    return res.data
+  })
 }

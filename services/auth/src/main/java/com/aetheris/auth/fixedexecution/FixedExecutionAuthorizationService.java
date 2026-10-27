@@ -26,9 +26,7 @@ public final class FixedExecutionAuthorizationService {
     public Result authorize(FixedExecutionRequest input) {
         try {
             var actor=input.actor();var approval=input.approval();var parent=input.parent();
-            if(!sessions.isActive(actor.uid(),actor.username(),actor.accessVersion())
-                    || !sessions.isActive(approval.uid(),approval.username(),approval.accessVersion())
-                    || (parent!=null && !sessions.isActive(parent.approval().uid(),parent.approval().username(),parent.approval().accessVersion())))
+            if(!subjectsActive(input))
                 return denied(input,"SUBJECT_INACTIVE",List.of());
             List<Check> checks=new ArrayList<>();
             String resource=switch(input.binding().origin()) {
@@ -43,6 +41,7 @@ public final class FixedExecutionAuthorizationService {
                 check(checks,"actor",actor.username(),"workflow_task",parent.resourceId(),"execute");
                 check(checks,"parentApproval",parent.approval().username(),"quality_rule",input.binding().resourceId(),"execute");
             }
+            if(!subjectsActive(input))return denied(input,"SUBJECT_INACTIVE",List.of());
             return checks.stream().allMatch(Check::allowed) ? new Result(input.binding(),true,null,checks)
                     : denied(input,"PERMISSION_DENIED",checks);
         }catch(RuntimeException failure){throw new Unavailable();}
@@ -51,6 +50,12 @@ public final class FixedExecutionAuthorizationService {
         var decision=decisions.check(username,type,id,action,Map.of());
         if(decision==null)throw new IllegalStateException();
         checks.add(new Check(subject,type,id,action,decision.allowed()));
+    }
+    private boolean subjectsActive(FixedExecutionRequest input){
+        var actor=input.actor();var approval=input.approval();var parent=input.parent();
+        return sessions.isActive(actor.uid(),actor.username(),actor.accessVersion())
+                && sessions.isActive(approval.uid(),approval.username(),approval.accessVersion())
+                && (parent==null||sessions.isActive(parent.approval().uid(),parent.approval().username(),parent.approval().accessVersion()));
     }
     private Result denied(FixedExecutionRequest input,String reason,List<Check> checks) {
         try {audit.recordAsync(new PermissionEventRequest(input.actor().username(),input.actor().uid(),

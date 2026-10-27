@@ -1,0 +1,5494 @@
+{
+  "source": "OSV querybatch",
+  "coordinates": 421,
+  "queried": 421,
+  "errors": [],
+  "dependencies": [
+    {
+      "name": "aopalliance:aopalliance",
+      "version": "1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "asm:asm",
+      "version": "3.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "ch.qos.logback:logback-classic",
+      "version": "1.5.18",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "ch.qos.logback:logback-core",
+      "version": "1.5.18",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-25qh-j22f-pwp8",
+          "modified": "2026-09-10T03:50:29.081250Z"
+        },
+        {
+          "id": "GHSA-jhq6-gfmj-v8fx",
+          "modified": "2026-09-10T03:50:50.074688Z"
+        },
+        {
+          "id": "GHSA-p47f-322f-whfh",
+          "modified": "2026-09-10T03:50:47.152421Z"
+        },
+        {
+          "id": "GHSA-qqpg-mvqg-649v",
+          "modified": "2026-09-10T03:50:33.725359Z"
+        }
+      ]
+    },
+    {
+      "name": "co.cask.tephra:tephra-api",
+      "version": "0.6.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "co.cask.tephra:tephra-core",
+      "version": "0.6.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "co.cask.tephra:tephra-hbase-compat-1.0",
+      "version": "0.6.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus-annotation",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus-core",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus-extension",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus-spring-boot-autoconfigure",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.baomidou:mybatis-plus-spring-boot3-starter",
+      "version": "3.5.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.carrotsearch:hppc",
+      "version": "0.7.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.cedarsoftware:java-util",
+      "version": "1.9.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.cedarsoftware:json-io",
+      "version": "2.5.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-779h-3r69-4f5p",
+          "modified": "2025-01-06T22:24:48.095592Z"
+        }
+      ]
+    },
+    {
+      "name": "com.clickhouse:clickhouse-jdbc",
+      "version": "0.6.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.core:jackson-annotations",
+      "version": "2.18.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.core:jackson-core",
+      "version": "2.18.4.1",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-72hv-8253-57qq",
+          "modified": "2026-09-10T03:50:34.318297Z"
+        },
+        {
+          "id": "GHSA-7hhh-6rmp-j9qf",
+          "modified": "2026-10-01T15:30:05.552671Z"
+        },
+        {
+          "id": "GHSA-p6pp-m3f8-5c89",
+          "modified": "2026-10-01T15:30:13.452657Z"
+        },
+        {
+          "id": "GHSA-r7wm-3cxj-wff9",
+          "modified": "2026-10-02T23:15:06.853935Z"
+        }
+      ]
+    },
+    {
+      "name": "com.fasterxml.jackson.core:jackson-databind",
+      "version": "2.18.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3pjw-73gf-8qr5",
+          "modified": "2026-09-10T03:51:10.312389Z"
+        },
+        {
+          "id": "GHSA-5gvw-p9qm-jgwh",
+          "modified": "2026-09-10T03:51:10.658074Z"
+        },
+        {
+          "id": "GHSA-5jmj-h7xm-6q6v",
+          "modified": "2026-09-10T03:51:08.069993Z"
+        },
+        {
+          "id": "GHSA-cxp5-3px4-pw24",
+          "modified": "2026-09-30T15:46:18.051343Z"
+        },
+        {
+          "id": "GHSA-gx83-3vf8-gh7j",
+          "modified": "2026-09-28T21:00:05.608227Z"
+        },
+        {
+          "id": "GHSA-hgj6-7826-r7m5",
+          "modified": "2026-09-10T03:50:49.909813Z"
+        },
+        {
+          "id": "GHSA-j3rv-43j4-c7qm",
+          "modified": "2026-09-10T03:50:50.187641Z"
+        },
+        {
+          "id": "GHSA-mhm7-754m-9p8w",
+          "modified": "2026-09-10T03:50:52.852212Z"
+        },
+        {
+          "id": "GHSA-q4xh-88c3-wmh7",
+          "modified": "2026-09-28T20:30:05.315085Z"
+        },
+        {
+          "id": "GHSA-rmj7-2vxq-3g9f",
+          "modified": "2026-09-11T15:45:08.499771Z"
+        },
+        {
+          "id": "GHSA-vvgp-rfg2-7rr6",
+          "modified": "2026-09-28T20:30:05.324367Z"
+        },
+        {
+          "id": "GHSA-wjgm-6hv5-3cvf",
+          "modified": "2026-09-28T20:30:05.331167Z"
+        },
+        {
+          "id": "GHSA-wv8q-qhhj-9h54",
+          "modified": "2026-09-30T15:46:18.451708Z"
+        }
+      ]
+    },
+    {
+      "name": "com.fasterxml.jackson.dataformat:jackson-dataformat-toml",
+      "version": "2.18.4",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml",
+      "version": "2.18.4",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.datatype:jackson-datatype-jdk8",
+      "version": "2.18.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.datatype:jackson-datatype-jsr310",
+      "version": "2.18.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.jaxrs:jackson-jaxrs-base",
+      "version": "2.18.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider",
+      "version": "2.18.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.module:jackson-module-jaxb-annotations",
+      "version": "2.18.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.module:jackson-module-jsonSchema",
+      "version": "2.18.4",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml.jackson.module:jackson-module-parameter-names",
+      "version": "2.18.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.fasterxml:classmate",
+      "version": "1.7.0",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.ben-manes.caffeine:caffeine",
+      "version": "3.1.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\serving"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.joshelser:dropwizard-metrics-hadoop-metrics2-reporter",
+      "version": "0.1.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.jsqlparser:jsqlparser",
+      "version": "4.9",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.stephenc.findbugs:findbugs-annotations",
+      "version": "1.3.9-1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.victools:jsonschema-generator",
+      "version": "4.37.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.victools:jsonschema-module-jackson",
+      "version": "4.37.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.github.victools:jsonschema-module-swagger-2",
+      "version": "4.37.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.code.findbugs:jsr305",
+      "version": "3.0.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.code.gson:gson",
+      "version": "2.11.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.errorprone:error_prone_annotations",
+      "version": "2.21.1",
+      "modules": [
+        "apps\\gateway",
+        "services\\serving"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.errorprone:error_prone_annotations",
+      "version": "2.27.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.guava:guava",
+      "version": "19.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5mg8-w23w-74h3",
+          "modified": "2026-09-10T03:49:26.651391Z"
+        },
+        {
+          "id": "GHSA-7g45-4rm6-3mm3",
+          "modified": "2026-09-10T03:49:53.859811Z"
+        },
+        {
+          "id": "GHSA-mvr2-9pj6-7w5j",
+          "modified": "2026-09-10T03:49:25.526232Z"
+        }
+      ]
+    },
+    {
+      "name": "com.google.inject.extensions:guice-assistedinject",
+      "version": "3.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.inject.extensions:guice-servlet",
+      "version": "4.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.inject:guice",
+      "version": "3.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.google.protobuf:protobuf-java",
+      "version": "4.31.0",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.googlecode.javaewah:JavaEWAH",
+      "version": "1.2.3",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.h2database:h2",
+      "version": "2.2.220",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.jamesmurty.utils:java-xmlbuilder",
+      "version": "0.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3vrc-rrpw-r5pw",
+          "modified": "2024-03-01T14:52:28.150101Z"
+        }
+      ]
+    },
+    {
+      "name": "com.jayway.jsonpath:json-path",
+      "version": "2.9.0",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.jcraft:jsch",
+      "version": "0.1.42",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-q446-82vq-w674",
+          "modified": "2026-09-10T03:49:36.585091Z"
+        }
+      ]
+    },
+    {
+      "name": "com.jolbox:bonecp",
+      "version": "0.8.0.RELEASE",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.knuddels:jtokkit",
+      "version": "1.1.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.lmax:disruptor",
+      "version": "3.3.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.mchange:mchange-commons-java",
+      "version": "0.2.15",
+      "modules": [
+        "services\\ingestion",
+        "services\\quality",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-h84g-69h7-mw6v",
+          "modified": "2026-09-10T03:51:14.278156Z"
+        },
+        {
+          "id": "GHSA-m2cm-222f-qw44",
+          "modified": "2026-09-10T03:50:35.310683Z"
+        }
+      ]
+    },
+    {
+      "name": "com.microsoft.sqlserver:mssql-jdbc",
+      "version": "12.8.1.jre11",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-m494-w24q-6f7w",
+          "modified": "2026-09-10T03:50:30.361235Z"
+        }
+      ]
+    },
+    {
+      "name": "com.mysql:mysql-connector-j",
+      "version": "9.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.oracle.database.jdbc:ojdbc11",
+      "version": "23.6.0.24.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.istack:istack-commons-runtime",
+      "version": "4.1.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.jersey.contribs:jersey-guice",
+      "version": "1.19",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.jersey:jersey-client",
+      "version": "1.19",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.jersey:jersey-core",
+      "version": "1.9",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5m48-vr54-vmh3",
+          "modified": "2025-06-19T18:13:37.881595Z"
+        }
+      ]
+    },
+    {
+      "name": "com.sun.jersey:jersey-json",
+      "version": "1.9",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.jersey:jersey-server",
+      "version": "1.9",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.jersey:jersey-servlet",
+      "version": "1.19",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.xml.bind:jaxb-core",
+      "version": "4.0.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.sun.xml.bind:jaxb-impl",
+      "version": "4.0.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.tdunning:json",
+      "version": "1.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.thoughtworks.paranamer:paranamer",
+      "version": "2.7",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.vaadin.external.google:android-json",
+      "version": "0.0.20131108.vaadin1",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.vlkan:flatbuffers",
+      "version": "1.2.0-3f79e055",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.zaxxer:HikariCP",
+      "version": "5.1.0",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "com.zaxxer:HikariCP-java7",
+      "version": "2.4.12",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-beanutils:commons-beanutils",
+      "version": "1.7.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-6phf-73q6-gh87",
+          "modified": "2026-09-10T03:48:30.075355Z"
+        },
+        {
+          "id": "GHSA-wxr5-93ph-8wr9",
+          "modified": "2026-09-10T03:50:24.755642Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-beanutils:commons-beanutils-core",
+      "version": "1.8.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-cli:commons-cli",
+      "version": "1.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-codec:commons-codec",
+      "version": "1.17.2",
+      "modules": [
+        "services\\metadata",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-collections:commons-collections",
+      "version": "3.2.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-6hgm-866r-3cjv",
+          "modified": "2024-11-28T05:40:45.267146Z"
+        },
+        {
+          "id": "GHSA-fjq5-5j5f-mvxh",
+          "modified": "2024-02-17T05:22:18.562352Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-configuration:commons-configuration",
+      "version": "1.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-pvp8-3xj6-8c6x",
+          "modified": "2026-09-10T03:49:36.524577Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-daemon:commons-daemon",
+      "version": "1.0.13",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-dbcp:commons-dbcp",
+      "version": "1.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-digester:commons-digester",
+      "version": "1.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-el:commons-el",
+      "version": "1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "commons-httpclient:commons-httpclient",
+      "version": "3.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3832-9276-x7gf",
+          "modified": "2026-09-10T03:49:07.300846Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-io:commons-io",
+      "version": "2.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-78wr-2p64-hpwj",
+          "modified": "2026-09-10T03:50:19.619589Z"
+        },
+        {
+          "id": "GHSA-gwrp-pvrq-jmwv",
+          "modified": "2024-02-14T20:25:59Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-lang:commons-lang",
+      "version": "2.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-j288-q9x7-2f5v",
+          "modified": "2026-09-10T03:50:26.176912Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-net:commons-net",
+      "version": "3.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-cgp8-4m63-fhh5",
+          "modified": "2026-09-10T03:49:47.609594Z"
+        }
+      ]
+    },
+    {
+      "name": "commons-pool:commons-pool",
+      "version": "1.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "de.ruedigermoeller:fst",
+      "version": "2.50",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "dnsjava:dnsjava",
+      "version": "2.1.7",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-cfxw-4h78-h7fw",
+          "modified": "2026-09-10T03:50:16.565807Z"
+        }
+      ]
+    },
+    {
+      "name": "io.airlift:aircompressor",
+      "version": "0.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-973x-65j7-xcf4",
+          "modified": "2026-09-10T03:50:15.134863Z"
+        },
+        {
+          "id": "GHSA-vx9q-rhv9-3jvg",
+          "modified": "2026-09-10T03:50:32.261397Z"
+        }
+      ]
+    },
+    {
+      "name": "io.dropwizard.metrics:metrics-core",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.dropwizard.metrics:metrics-json",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.dropwizard.metrics:metrics-jvm",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.jsonwebtoken:jjwt-api",
+      "version": "0.12.6",
+      "modules": [
+        "apps\\gateway",
+        "services\\auth"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.jsonwebtoken:jjwt-impl",
+      "version": "0.12.6",
+      "modules": [
+        "apps\\gateway",
+        "services\\auth"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.jsonwebtoken:jjwt-jackson",
+      "version": "0.12.6",
+      "modules": [
+        "apps\\gateway",
+        "services\\auth"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.lettuce:lettuce-core",
+      "version": "6.4.2.RELEASE",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.micrometer:context-propagation",
+      "version": "1.1.3",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.micrometer:micrometer-commons",
+      "version": "1.14.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.micrometer:micrometer-core",
+      "version": "1.14.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-g3pr-3p32-fp23",
+          "modified": "2026-09-11T15:45:08.795437Z"
+        }
+      ]
+    },
+    {
+      "name": "io.micrometer:micrometer-jakarta9",
+      "version": "1.14.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.micrometer:micrometer-observation",
+      "version": "1.14.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.micrometer:micrometer-registry-prometheus",
+      "version": "1.14.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty",
+      "version": "3.7.0.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5mcr-gq6c-3hq2",
+          "modified": "2026-09-10T03:49:14.198330Z"
+        },
+        {
+          "id": "GHSA-7vpq-g998-qpv7",
+          "modified": "2024-12-08T05:28:34.511125Z"
+        },
+        {
+          "id": "GHSA-9vjp-v76f-g363",
+          "modified": "2026-07-08T06:27:59.313512Z"
+        },
+        {
+          "id": "GHSA-cqqj-4p63-rrmm",
+          "modified": "2025-07-02T15:50:12Z"
+        },
+        {
+          "id": "GHSA-f256-j965-7f32",
+          "modified": "2026-09-10T03:49:02.310119Z"
+        },
+        {
+          "id": "GHSA-grg4-wf29-r9vv",
+          "modified": "2026-07-08T06:29:40.316185Z"
+        },
+        {
+          "id": "GHSA-p2v9-g2qv-p635",
+          "modified": "2023-11-08T04:01:30.506943Z"
+        },
+        {
+          "id": "GHSA-p979-4mfw-53vg",
+          "modified": "2026-06-29T15:46:31.336570Z"
+        },
+        {
+          "id": "GHSA-wm47-8v5p-wjpj",
+          "modified": "2026-09-10T03:48:43.368978Z"
+        },
+        {
+          "id": "GHSA-wx5j-54mm-rqqq",
+          "modified": "2026-09-10T03:49:01.090670Z"
+        },
+        {
+          "id": "GHSA-xfv3-rrfm-f2rv",
+          "modified": "2026-09-10T03:48:50.984056Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-all",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-buffer",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-codec",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3p8m-j85q-pgmj",
+          "modified": "2026-09-10T03:50:27.942019Z"
+        },
+        {
+          "id": "GHSA-558v-64gr-wgg4",
+          "modified": "2026-09-10T03:50:12.358146Z"
+        },
+        {
+          "id": "GHSA-mj4r-2hfc-f8p6",
+          "modified": "2026-09-10T03:51:06.526589Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-dns",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-cm33-6792-r9fm",
+          "modified": "2026-09-10T03:51:05.363150Z"
+        },
+        {
+          "id": "GHSA-mfg7-5gfp-c4w3",
+          "modified": "2026-09-10T03:50:52.794171Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-haproxy",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-cc37-9q2j-3hfv",
+          "modified": "2026-09-10T03:51:08.505489Z"
+        },
+        {
+          "id": "GHSA-h2qv-fj59-j46j",
+          "modified": "2026-09-18T15:45:05.642731Z"
+        },
+        {
+          "id": "GHSA-q6cq-mhr2-jmr5",
+          "modified": "2026-09-10T03:51:11.783924Z"
+        },
+        {
+          "id": "GHSA-wh89-7897-x99h",
+          "modified": "2026-09-10T03:51:12.532785Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-http",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-38f8-5428-x5cv",
+          "modified": "2026-09-10T03:51:04.415985Z"
+        },
+        {
+          "id": "GHSA-4mp9-239f-g9hg",
+          "modified": "2026-09-10T03:51:10.413004Z"
+        },
+        {
+          "id": "GHSA-57rv-r2g8-2cj3",
+          "modified": "2026-09-10T03:51:04.645242Z"
+        },
+        {
+          "id": "GHSA-6cqp-g7gg-8hr5",
+          "modified": "2026-09-10T03:51:10.615779Z"
+        },
+        {
+          "id": "GHSA-6jqx-86gh-f27w",
+          "modified": "2026-09-10T03:51:10.812069Z"
+        },
+        {
+          "id": "GHSA-84h7-rjj3-6jx4",
+          "modified": "2026-09-10T03:50:31.724062Z"
+        },
+        {
+          "id": "GHSA-8c42-7qj2-3j46",
+          "modified": "2026-09-10T03:51:13.389261Z"
+        },
+        {
+          "id": "GHSA-f6hv-jmp6-3vwv",
+          "modified": "2026-09-10T03:51:05.447415Z"
+        },
+        {
+          "id": "GHSA-fghv-69vj-qj49",
+          "modified": "2026-09-10T03:50:28.333050Z"
+        },
+        {
+          "id": "GHSA-gcjf-9mgh-3p7g",
+          "modified": "2026-09-10T03:50:52.172506Z"
+        },
+        {
+          "id": "GHSA-hvcg-qmg6-jm4c",
+          "modified": "2026-09-10T03:50:50.025404Z"
+        },
+        {
+          "id": "GHSA-jppx-w49h-x2qq",
+          "modified": "2026-09-10T03:50:12.368445Z"
+        },
+        {
+          "id": "GHSA-m4cv-j2px-7723",
+          "modified": "2026-09-10T03:51:06.379210Z"
+        },
+        {
+          "id": "GHSA-mvh2-crg5-v77c",
+          "modified": "2026-09-10T03:50:52.830435Z"
+        },
+        {
+          "id": "GHSA-pwqr-wmgm-9rr8",
+          "modified": "2026-09-10T03:50:40.493461Z"
+        },
+        {
+          "id": "GHSA-q4f6-jm68-57ww",
+          "modified": "2026-09-10T03:50:52.883743Z"
+        },
+        {
+          "id": "GHSA-v8h7-rr48-vmmv",
+          "modified": "2026-09-10T03:50:47.637727Z"
+        },
+        {
+          "id": "GHSA-xxqh-mfjm-7mv9",
+          "modified": "2026-09-10T03:51:07.381332Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-http2",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-563q-j3cm-6jxm",
+          "modified": "2026-09-10T03:50:48.396944Z"
+        },
+        {
+          "id": "GHSA-5x3r-wrvg-rp6q",
+          "modified": "2026-09-10T03:50:48.488084Z"
+        },
+        {
+          "id": "GHSA-93wv-jw9v-4972",
+          "modified": "2026-09-10T03:51:11.318239Z"
+        },
+        {
+          "id": "GHSA-c2gf-v879-257j",
+          "modified": "2026-10-06T19:45:03.555042Z"
+        },
+        {
+          "id": "GHSA-c69g-56f8-xwqj",
+          "modified": "2026-09-10T03:51:11.564389Z"
+        },
+        {
+          "id": "GHSA-f6hv-jmp6-3vwv",
+          "modified": "2026-09-10T03:51:05.447415Z"
+        },
+        {
+          "id": "GHSA-prj3-ccx8-p6x4",
+          "modified": "2026-09-10T03:50:27.396257Z"
+        },
+        {
+          "id": "GHSA-w9fj-cfpg-grvv",
+          "modified": "2026-09-10T03:50:41.535305Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-memcache",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-codec-mqtt",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-jfg9-48mv-9qgx",
+          "modified": "2026-09-10T03:51:06.220307Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-redis",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3244-j874-rhc2",
+          "modified": "2026-09-10T03:50:55.415947Z"
+        },
+        {
+          "id": "GHSA-5w86-c3rq-vjj7",
+          "modified": "2026-09-10T03:50:48.383882Z"
+        },
+        {
+          "id": "GHSA-6ghj-frrj-jjj3",
+          "modified": "2026-09-10T03:51:07.998062Z"
+        },
+        {
+          "id": "GHSA-6jv9-x5w9-2ccm",
+          "modified": "2026-09-18T15:45:05.626467Z"
+        },
+        {
+          "id": "GHSA-p9jm-q85p-7mcp",
+          "modified": "2026-09-10T03:50:53.885781Z"
+        },
+        {
+          "id": "GHSA-rgrr-p7gp-5xj7",
+          "modified": "2026-09-10T03:50:47.555800Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-smtp",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-jq43-27x9-3v86",
+          "modified": "2026-09-10T03:50:29.967090Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-socks",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-codec-stomp",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3g8r-4pfx-jmfh",
+          "modified": "2026-09-10T03:51:10.205072Z"
+        },
+        {
+          "id": "GHSA-vhch-2wf3-m8rp",
+          "modified": "2026-09-10T03:51:12.364457Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-codec-xml",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4qhr-g3c6-fcfx",
+          "modified": "2026-09-10T03:50:12.356157Z"
+        },
+        {
+          "id": "GHSA-v74w-7mr3-4qg3",
+          "modified": "2026-09-10T03:51:12.248512Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-common",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-handler",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3qp7-7mw8-wx86",
+          "modified": "2026-09-10T03:50:55.436123Z"
+        },
+        {
+          "id": "GHSA-c4c3-7fpv-j4q5",
+          "modified": "2026-09-08T18:27:48.571082Z"
+        },
+        {
+          "id": "GHSA-c653-97m9-rcg9",
+          "modified": "2026-09-10T03:51:08.552933Z"
+        },
+        {
+          "id": "GHSA-fccg-mwvh-qqg4",
+          "modified": "2026-09-08T18:27:48.113951Z"
+        },
+        {
+          "id": "GHSA-x4gw-5cx5-pgmh",
+          "modified": "2026-09-10T03:50:12.401611Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-handler-proxy",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-45q3-82m4-75jr",
+          "modified": "2026-09-10T03:51:04.662453Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-handler-ssl-ocsp",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-272m-gcwp-mpwg",
+          "modified": "2026-09-10T03:51:10.059541Z"
+        },
+        {
+          "id": "GHSA-g7hg-vrcf-mvmr",
+          "modified": "2026-09-10T03:50:52.144967Z"
+        },
+        {
+          "id": "GHSA-wc96-39fc-566f",
+          "modified": "2026-09-10T03:51:12.489335Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-resolver",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-resolver-dns",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5pvg-856g-cp85",
+          "modified": "2026-09-18T15:45:05.623298Z"
+        },
+        {
+          "id": "GHSA-676x-f7gg-47vc",
+          "modified": "2026-09-18T15:45:05.624818Z"
+        },
+        {
+          "id": "GHSA-xmv7-r254-6q78",
+          "modified": "2026-09-10T03:51:09.874140Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-resolver-dns-classes-macos",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-resolver-dns-native-macos",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport-classes-epoll",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport-classes-kqueue",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport-native-epoll",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-w573-9ffj-6ff9",
+          "modified": "2026-09-10T03:50:12.439404Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-transport-native-kqueue",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-w573-9ffj-6ff9",
+          "modified": "2026-09-10T03:50:12.439404Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-transport-native-unix-common",
+      "version": "4.1.122.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport-rxtx",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.netty:netty-transport-sctp",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2qj4-mmr9-4v2f",
+          "modified": "2026-09-10T03:51:12.916206Z"
+        },
+        {
+          "id": "GHSA-5xrh-qmmq-w6ch",
+          "modified": "2026-09-10T03:50:48.440058Z"
+        }
+      ]
+    },
+    {
+      "name": "io.netty:netty-transport-udt",
+      "version": "4.1.122.Final",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.projectreactor.addons:reactor-extra",
+      "version": "3.5.2",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.projectreactor.netty:reactor-netty-core",
+      "version": "1.2.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.projectreactor.netty:reactor-netty-http",
+      "version": "1.2.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4q2v-9p7v-3v22",
+          "modified": "2026-09-10T03:50:25.758309Z"
+        }
+      ]
+    },
+    {
+      "name": "io.projectreactor:reactor-core",
+      "version": "3.7.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-config",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-core",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-exposition-formats",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-exposition-formats-no-protobuf",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-exposition-textformats",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-model",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.prometheus:prometheus-metrics-tracer-common",
+      "version": "1.3.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.swagger.core.v3:swagger-annotations",
+      "version": "2.2.25",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.swagger.core.v3:swagger-annotations-jakarta",
+      "version": "2.2.29",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.swagger.core.v3:swagger-core-jakarta",
+      "version": "2.2.29",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.swagger.core.v3:swagger-models-jakarta",
+      "version": "2.2.29",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "io.trino:trino-jdbc",
+      "version": "476",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "it.unimi.dsi:fastutil",
+      "version": "6.5.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.activation:jakarta.activation-api",
+      "version": "2.1.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.annotation:jakarta.annotation-api",
+      "version": "2.1.1",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.inject:jakarta.inject-api",
+      "version": "2.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.validation:jakarta.validation-api",
+      "version": "3.0.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.ws.rs:jakarta.ws.rs-api",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jakarta.xml.bind:jakarta.xml.bind-api",
+      "version": "4.0.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.cache:cache-api",
+      "version": "1.1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.inject:javax.inject",
+      "version": "1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.jdo:jdo-api",
+      "version": "3.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.transaction:jta",
+      "version": "1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.transaction:transaction-api",
+      "version": "1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.validation:validation-api",
+      "version": "1.1.0.Final",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.ws.rs:javax.ws.rs-api",
+      "version": "2.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javax.xml.bind:jaxb-api",
+      "version": "2.2.11",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "javolution:javolution",
+      "version": "5.5.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "jline:jline",
+      "version": "2.12",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "joda-time:joda-time",
+      "version": "2.9.9",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "junit:junit",
+      "version": "4.13.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.bytebuddy:byte-buddy",
+      "version": "1.15.11",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.bytebuddy:byte-buddy-agent",
+      "version": "1.15.11",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.java.dev.jets3t:jets3t",
+      "version": "0.9.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.minidev:accessors-smart",
+      "version": "2.5.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.minidev:json-smart",
+      "version": "2.5.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.sf.jpam:jpam",
+      "version": "1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "net.sf.opencsv:opencsv",
+      "version": "2.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.antlr:ST4",
+      "version": "4.3.4",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.antlr:antlr-runtime",
+      "version": "3.5.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.antlr:antlr-runtime",
+      "version": "3.5.3",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.antlr:antlr4-runtime",
+      "version": "4.13.1",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.ant:ant",
+      "version": "1.9.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4p6w-m9wc-c9c9",
+          "modified": "2024-03-15T05:36:14.710154Z"
+        },
+        {
+          "id": "GHSA-5v34-g2px-j4fw",
+          "modified": "2024-03-01T20:31:22.121723Z"
+        },
+        {
+          "id": "GHSA-f62v-xpxf-3v68",
+          "modified": "2026-07-08T05:56:28.963045Z"
+        },
+        {
+          "id": "GHSA-q5r4-cfpx-h6fh",
+          "modified": "2024-02-19T05:33:43.830546Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.ant:ant-launcher",
+      "version": "1.9.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.arrow:arrow-format",
+      "version": "0.8.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.arrow:arrow-memory",
+      "version": "0.8.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.arrow:arrow-vector",
+      "version": "0.8.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.avro:avro",
+      "version": "1.8.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-r7pg-v2c8-mfg3",
+          "modified": "2026-09-10T03:50:20.079597Z"
+        },
+        {
+          "id": "GHSA-rhrv-645h-fjfh",
+          "modified": "2026-09-10T03:50:03.249125Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.commons:commons-collections4",
+      "version": "4.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.commons:commons-compress",
+      "version": "1.19",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4g9r-vxhx-9pgx",
+          "modified": "2026-09-10T03:50:05.286961Z"
+        },
+        {
+          "id": "GHSA-7hfm-57qf-j43q",
+          "modified": "2024-03-08T05:18:24.619639Z"
+        },
+        {
+          "id": "GHSA-crv7-7245-f45f",
+          "modified": "2024-03-08T05:19:35.252507Z"
+        },
+        {
+          "id": "GHSA-mc84-pj99-q6hh",
+          "modified": "2024-03-08T05:19:48.954731Z"
+        },
+        {
+          "id": "GHSA-xqfj-vm6h-2x34",
+          "modified": "2024-03-08T05:19:25.295269Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.commons:commons-crypto",
+      "version": "1.0.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.commons:commons-lang3",
+      "version": "3.17.0",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-j288-q9x7-2f5v",
+          "modified": "2026-09-10T03:50:26.176912Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.commons:commons-math3",
+      "version": "3.1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.curator:curator-client",
+      "version": "2.12.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.curator:curator-framework",
+      "version": "2.12.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.curator:curator-recipes",
+      "version": "2.12.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.derby:derby",
+      "version": "10.16.1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-rcjc-c4pj-xxrp",
+          "modified": "2026-09-10T03:49:48.215345Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.derby:derbyshared",
+      "version": "10.16.1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.directory.api:api-asn1-api",
+      "version": "1.0.0-M20",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.directory.api:api-util",
+      "version": "1.0.0-M20",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.directory.server:apacheds-i18n",
+      "version": "2.0.0-M15",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.directory.server:apacheds-kerberos-codec",
+      "version": "2.0.0-M15",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.geronimo.specs:geronimo-jcache_1.0_spec",
+      "version": "1.0-alpha-1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-annotations",
+      "version": "2.6.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-auth",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-client",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-common",
+      "version": "2.6.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7q56-mp4c-gggg",
+          "modified": "2023-11-08T03:58:31.207186Z"
+        },
+        {
+          "id": "GHSA-8r28-r8cp-g6cp",
+          "modified": "2023-11-08T03:58:30.347713Z"
+        },
+        {
+          "id": "GHSA-8wm5-8h9c-47pc",
+          "modified": "2024-02-21T05:29:29.300541Z"
+        },
+        {
+          "id": "GHSA-f5fw-25gw-5m92",
+          "modified": "2026-09-10T03:50:18.929266Z"
+        },
+        {
+          "id": "GHSA-f8vc-wfc8-hxqh",
+          "modified": "2024-03-08T05:20:12.847694Z"
+        },
+        {
+          "id": "GHSA-g48f-ff5h-5f64",
+          "modified": "2023-11-08T03:57:50.385135Z"
+        },
+        {
+          "id": "GHSA-gx2c-fvhc-ph4j",
+          "modified": "2025-10-01T14:55:55.727257Z"
+        },
+        {
+          "id": "GHSA-h24p-qwf4-84q8",
+          "modified": "2023-11-08T03:59:26.035253Z"
+        },
+        {
+          "id": "GHSA-mf7c-35mq-75pj",
+          "modified": "2023-11-08T03:58:33.830753Z"
+        },
+        {
+          "id": "GHSA-rmpj-7c96-mrg8",
+          "modified": "2024-02-22T05:34:28.037449Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-distcp",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-hdfs",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-mapreduce-client-app",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-mapreduce-client-common",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-mapreduce-client-core",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-mapreduce-client-jobclient",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-mapreduce-client-shuffle",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-api",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-client",
+      "version": "2.7.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-common",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-registry",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-server-applicationhistoryservice",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-server-common",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-58jx-f5rf-qgqf",
+          "modified": "2024-02-21T05:31:52.226908Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-server-resourcemanager",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hadoop:hadoop-yarn-server-web-proxy",
+      "version": "3.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase.thirdparty:hbase-shaded-miscellaneous",
+      "version": "1.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase.thirdparty:hbase-shaded-netty",
+      "version": "1.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase.thirdparty:hbase-shaded-protobuf",
+      "version": "1.0.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-client",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-common",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-hadoop-compat",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-hadoop2-compat",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-http",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-mapreduce",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-metrics",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-metrics-api",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-prefix-tree",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-procedure",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-protocol",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-protocol-shaded",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-replication",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hbase:hbase-server",
+      "version": "2.0.0-alpha4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive.shims:hive-shims-0.23",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive.shims:hive-shims-common",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive.shims:hive-shims-scheduler",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-classification",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-common",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-jdbc",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-llap-client",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-llap-common",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-p953-3j66-hg45",
+          "modified": "2025-01-28T21:27:09.236875Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.hive:hive-llap-server",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-llap-tez",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-metastore",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-serde",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-service",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-77pm-w3hx-f8mj",
+          "modified": "2024-12-26T20:28:22.012485Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.hive:hive-service-rpc",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-shims",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-standalone-metastore",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-storage-api",
+      "version": "2.7.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.hive:hive-upgrade-acid",
+      "version": "3.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.htrace:htrace-core",
+      "version": "3.2.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.httpcomponents:httpclient",
+      "version": "4.5.13",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.httpcomponents:httpcore",
+      "version": "4.4.16",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-1.2-api",
+      "version": "2.24.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-h383-gmxw-35v2",
+          "modified": "2026-09-10T03:51:01.884178Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-api",
+      "version": "2.24.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-qv9r-c865-cp47",
+          "modified": "2026-09-10T03:50:52.972700Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-core",
+      "version": "2.24.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3pxv-7cmr-fjr4",
+          "modified": "2026-09-10T03:50:42.492278Z"
+        },
+        {
+          "id": "GHSA-445c-vh5m-36rj",
+          "modified": "2026-09-10T03:50:42.646598Z"
+        },
+        {
+          "id": "GHSA-6hg6-v5c8-fphq",
+          "modified": "2026-09-10T03:50:43.570169Z"
+        },
+        {
+          "id": "GHSA-vc5p-v9hr-52mj",
+          "modified": "2026-09-10T03:50:32.126499Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-slf4j-impl",
+      "version": "2.24.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-to-slf4j",
+      "version": "2.24.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.logging.log4j:log4j-web",
+      "version": "2.24.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.orc:orc-core",
+      "version": "1.5.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.orc:orc-shims",
+      "version": "1.5.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.parquet:parquet-hadoop-bundle",
+      "version": "1.10.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.thrift:libfb303",
+      "version": "0.9.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.thrift:libthrift",
+      "version": "0.9.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7pwc-h2j2-rjgj",
+          "modified": "2026-09-10T03:50:46.239820Z"
+        },
+        {
+          "id": "GHSA-8wv5-x4w7-5gww",
+          "modified": "2026-09-10T12:25:42.392618Z"
+        },
+        {
+          "id": "GHSA-g2fg-mr77-6vrm",
+          "modified": "2026-09-10T03:49:02.366077Z"
+        },
+        {
+          "id": "GHSA-rj7p-rfgp-852x",
+          "modified": "2026-09-10T03:49:40.657218Z"
+        },
+        {
+          "id": "GHSA-vx85-mj8c-4qm6",
+          "modified": "2026-09-10T03:47:58.933589Z"
+        },
+        {
+          "id": "GHSA-wjxj-f8rg-99wx",
+          "modified": "2026-09-10T03:47:58.972749Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.tomcat.embed:tomcat-embed-core",
+      "version": "10.1.42",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-25xr-qj8w-c4vf",
+          "modified": "2026-09-10T03:50:25.989583Z"
+        },
+        {
+          "id": "GHSA-563x-q5rq-57qp",
+          "modified": "2026-09-11T08:25:36.344434Z"
+        },
+        {
+          "id": "GHSA-5m62-pw8w-7w9f",
+          "modified": "2026-09-11T08:25:25.696036Z"
+        },
+        {
+          "id": "GHSA-5mp6-jrq3-r938",
+          "modified": "2026-09-11T08:25:26.202863Z"
+        },
+        {
+          "id": "GHSA-9m3c-qcxr-9x87",
+          "modified": "2026-09-11T08:25:31.206255Z"
+        },
+        {
+          "id": "GHSA-9m89-8frq-c98c",
+          "modified": "2026-09-11T08:25:30.451322Z"
+        },
+        {
+          "id": "GHSA-9xv2-5v5q-p794",
+          "modified": "2026-09-11T08:25:52.825871Z"
+        },
+        {
+          "id": "GHSA-fpj8-gq4v-p354",
+          "modified": "2026-09-11T08:25:48.825991Z"
+        },
+        {
+          "id": "GHSA-fv25-8xcx-gqjc",
+          "modified": "2026-09-10T03:51:05.853750Z"
+        },
+        {
+          "id": "GHSA-gcx9-497g-6cp6",
+          "modified": "2026-09-11T08:25:41.300012Z"
+        },
+        {
+          "id": "GHSA-gqp3-2cvr-x8m3",
+          "modified": "2026-05-13T16:35:26.549711Z"
+        },
+        {
+          "id": "GHSA-gx5v-xp9w-j4cg",
+          "modified": "2026-09-11T08:25:36.520411Z"
+        },
+        {
+          "id": "GHSA-h3x4-894j-xpx5",
+          "modified": "2026-09-11T08:25:40.118635Z"
+        },
+        {
+          "id": "GHSA-h6fc-48rj-7qqh",
+          "modified": "2026-09-11T08:25:26.501986Z"
+        },
+        {
+          "id": "GHSA-hgrr-935x-pq79",
+          "modified": "2026-09-10T03:50:30.251352Z"
+        },
+        {
+          "id": "GHSA-mgp5-rv84-w37q",
+          "modified": "2026-09-10T03:50:35.574464Z"
+        },
+        {
+          "id": "GHSA-r29c-68gh-xp6x",
+          "modified": "2026-09-10T03:50:55.679134Z"
+        },
+        {
+          "id": "GHSA-rv64-5gf8-9qq8",
+          "modified": "2026-09-11T08:25:42.129097Z"
+        },
+        {
+          "id": "GHSA-vfww-5hm6-hx2j",
+          "modified": "2026-09-10T03:50:30.791118Z"
+        },
+        {
+          "id": "GHSA-wmwf-9ccg-fff5",
+          "modified": "2026-09-10T03:50:30.776927Z"
+        },
+        {
+          "id": "GHSA-wr62-c79q-cv37",
+          "modified": "2026-03-06T22:01:30.941844Z"
+        },
+        {
+          "id": "GHSA-x4m4-345f-5h5g",
+          "modified": "2026-09-11T08:25:51.806825Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apache.tomcat.embed:tomcat-embed-el",
+      "version": "10.1.42",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.tomcat.embed:tomcat-embed-websocket",
+      "version": "10.1.42",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-api",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-common",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-core",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-discovery-api",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-discovery-core",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.twill:twill-zookeeper",
+      "version": "0.6.0-incubating",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.yetus:audience-annotations",
+      "version": "0.5.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.apache.zookeeper:zookeeper",
+      "version": "3.4.6",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2hw2-62cp-p9p7",
+          "modified": "2024-03-14T05:19:59.559879Z"
+        },
+        {
+          "id": "GHSA-7286-pgfv-vxvh",
+          "modified": "2026-09-10T03:49:58.702159Z"
+        },
+        {
+          "id": "GHSA-7cwj-j333-x7f7",
+          "modified": "2023-11-08T03:59:22.246576Z"
+        },
+        {
+          "id": "GHSA-ccqf-c5hq-77mp",
+          "modified": "2023-11-08T04:00:23.872615Z"
+        }
+      ]
+    },
+    {
+      "name": "org.apiguardian:apiguardian-api",
+      "version": "1.1.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.assertj:assertj-core",
+      "version": "3.26.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-rqfh-9r24-8c9r",
+          "modified": "2026-02-03T03:04:53.356771Z"
+        }
+      ]
+    },
+    {
+      "name": "org.awaitility:awaitility",
+      "version": "4.2.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.bouncycastle:bcpg-jdk18on",
+      "version": "1.83",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-cj8j-37rh-8475",
+          "modified": "2026-09-10T03:50:44.136521Z"
+        }
+      ]
+    },
+    {
+      "name": "org.bouncycastle:bcpkix-jdk18on",
+      "version": "1.83",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-wg6q-6289-32hp",
+          "modified": "2026-09-10T03:50:45.075900Z"
+        }
+      ]
+    },
+    {
+      "name": "org.bouncycastle:bcprov-jdk18on",
+      "version": "1.78.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-574f-3g2m-x479",
+          "modified": "2026-09-24T15:30:06.452617Z"
+        },
+        {
+          "id": "GHSA-9pwp-9qqc-pr26",
+          "modified": "2026-09-18T17:45:06.105254Z"
+        },
+        {
+          "id": "GHSA-c3fc-8qff-9hwx",
+          "modified": "2026-09-10T03:51:01.534612Z"
+        },
+        {
+          "id": "GHSA-qp49-qgx5-5m26",
+          "modified": "2026-09-18T17:45:06.096277Z"
+        }
+      ]
+    },
+    {
+      "name": "org.bouncycastle:bcprov-jdk18on",
+      "version": "1.83",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-574f-3g2m-x479",
+          "modified": "2026-09-24T15:30:06.452617Z"
+        },
+        {
+          "id": "GHSA-9pwp-9qqc-pr26",
+          "modified": "2026-09-18T17:45:06.105254Z"
+        },
+        {
+          "id": "GHSA-c3fc-8qff-9hwx",
+          "modified": "2026-09-10T03:51:01.534612Z"
+        },
+        {
+          "id": "GHSA-p93r-85wp-75v3",
+          "modified": "2026-09-10T03:50:44.836711Z"
+        },
+        {
+          "id": "GHSA-qp49-qgx5-5m26",
+          "modified": "2026-09-18T17:45:06.096277Z"
+        }
+      ]
+    },
+    {
+      "name": "org.bouncycastle:bcutil-jdk18on",
+      "version": "1.83",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.checkerframework:checker-qual",
+      "version": "3.37.0",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.checkerframework:checker-qual",
+      "version": "3.49.3",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.checkerframework:checker-qual",
+      "version": "3.55.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.codehaus.jackson:jackson-core-asl",
+      "version": "1.9.13",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.codehaus.jackson:jackson-jaxrs",
+      "version": "1.8.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.codehaus.jackson:jackson-mapper-asl",
+      "version": "1.9.13",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-c27h-mcmw-48hv",
+          "modified": "2026-09-10T03:49:32.733691Z"
+        },
+        {
+          "id": "GHSA-r6j9-8759-g62w",
+          "modified": "2026-09-10T03:48:28.575777Z"
+        }
+      ]
+    },
+    {
+      "name": "org.codehaus.jackson:jackson-xc",
+      "version": "1.8.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.codehaus.jettison:jettison",
+      "version": "1.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-56h3-78gp-v83r",
+          "modified": "2026-09-10T03:50:07.337687Z"
+        },
+        {
+          "id": "GHSA-7rf3-mqpx-h7xg",
+          "modified": "2026-09-10T03:49:47.381549Z"
+        },
+        {
+          "id": "GHSA-grr4-wv38-f68w",
+          "modified": "2026-09-10T03:49:47.620251Z"
+        },
+        {
+          "id": "GHSA-q6g2-g7f3-rr83",
+          "modified": "2026-09-10T03:49:53.094135Z"
+        },
+        {
+          "id": "GHSA-x27m-9w8j-5vcw",
+          "modified": "2026-09-10T03:49:46.116958Z"
+        }
+      ]
+    },
+    {
+      "name": "org.datanucleus:datanucleus-api-jdo",
+      "version": "4.2.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.datanucleus:datanucleus-core",
+      "version": "4.1.17",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.datanucleus:datanucleus-rdbms",
+      "version": "4.1.19",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.datanucleus:javax.jdo",
+      "version": "3.2.0-m3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.eclipse.angus:angus-activation",
+      "version": "2.0.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.eclipse.jgit:org.eclipse.jgit",
+      "version": "7.6.0.202603022253-r",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.eclipse.jgit:org.eclipse.jgit.gpg.bc",
+      "version": "7.6.0.202603022253-r",
+      "modules": [
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.ehcache:ehcache",
+      "version": "3.10.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.flywaydb:flyway-core",
+      "version": "10.20.1",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.flywaydb:flyway-database-postgresql",
+      "version": "10.20.1",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.fusesource.leveldbjni:leveldbjni-all",
+      "version": "1.8",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.hk2:osgi-resource-locator",
+      "version": "1.0.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jaxb:jaxb-core",
+      "version": "4.0.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jaxb:jaxb-runtime",
+      "version": "4.0.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jaxb:txw2",
+      "version": "4.0.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jersey.containers:jersey-container-servlet-core",
+      "version": "3.1.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jersey.core:jersey-client",
+      "version": "3.1.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jersey.core:jersey-common",
+      "version": "3.1.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.glassfish.jersey.core:jersey-server",
+      "version": "3.1.10",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.hamcrest:hamcrest",
+      "version": "2.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.hamcrest:hamcrest-core",
+      "version": "2.2",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.hdrhistogram:HdrHistogram",
+      "version": "2.2.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.hibernate.validator:hibernate-validator",
+      "version": "8.0.2.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.htrace:htrace-core",
+      "version": "3.0.4",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.jamon:jamon-runtime",
+      "version": "2.3.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.jboss.logging:jboss-logging",
+      "version": "3.6.1.Final",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.jruby.jcodings:jcodings",
+      "version": "1.0.18",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.jruby.joni:joni",
+      "version": "2.1.11",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.jspecify:jspecify",
+      "version": "1.0.0",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.jupiter:junit-jupiter",
+      "version": "5.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.jupiter:junit-jupiter-api",
+      "version": "5.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.jupiter:junit-jupiter-engine",
+      "version": "5.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.jupiter:junit-jupiter-params",
+      "version": "5.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.platform:junit-platform-commons",
+      "version": "1.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.junit.platform:junit-platform-engine",
+      "version": "1.11.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.latencyutils:LatencyUtils",
+      "version": "2.0.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mockito:mockito-core",
+      "version": "5.14.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mockito:mockito-junit-jupiter",
+      "version": "5.14.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mortbay.jetty:jetty",
+      "version": "6.1.26",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mortbay.jetty:jetty-util",
+      "version": "6.1.26",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mybatis:mybatis",
+      "version": "3.5.16",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.mybatis:mybatis-spring",
+      "version": "3.0.3",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.objenesis:objenesis",
+      "version": "3.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.opentest4j:opentest4j",
+      "version": "1.3.0",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.ow2.asm:asm",
+      "version": "9.7.1",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.postgresql:postgresql",
+      "version": "42.7.13",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.postgresql:postgresql",
+      "version": "42.7.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-98qh-xjc8-98pq",
+          "modified": "2026-09-10T03:51:05.114618Z"
+        },
+        {
+          "id": "GHSA-j92g-9f8w-j867",
+          "modified": "2026-09-10T03:50:12.377062Z"
+        }
+      ]
+    },
+    {
+      "name": "org.quartz-scheduler:quartz",
+      "version": "2.3.2",
+      "modules": [
+        "services\\ingestion",
+        "services\\quality",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.reactivestreams:reactive-streams",
+      "version": "1.0.4",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.skyscreamer:jsonassert",
+      "version": "1.5.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.slf4j:jul-to-slf4j",
+      "version": "2.0.17",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.slf4j:slf4j-api",
+      "version": "2.0.17",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springdoc:springdoc-openapi-starter-common",
+      "version": "2.8.6",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springdoc:springdoc-openapi-starter-webmvc-api",
+      "version": "2.8.6",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springdoc:springdoc-openapi-starter-webmvc-ui",
+      "version": "2.8.6",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-model-chat-client",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-model-chat-memory",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-model-chat-observation",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-model-deepseek",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-model-tool",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-autoconfigure-retry",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-client-chat",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5852-phmh-8fhr",
+          "modified": "2026-05-18T18:11:26.163469Z"
+        },
+        {
+          "id": "GHSA-q62f-h9x2-gcqc",
+          "modified": "2026-09-10T03:51:07.170745Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-commons",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-deepseek",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-model",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-q62f-h9x2-gcqc",
+          "modified": "2026-09-10T03:51:07.170745Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-retry",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-starter-model-deepseek",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.ai:spring-ai-template-st",
+      "version": "1.0.0",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-wwpq-f5c3-7hvx",
+          "modified": "2026-09-10T03:51:04.035674Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-actuator",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-actuator-autoconfigure",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-autoconfigure",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-ggg2-9786-hwc8",
+          "modified": "2026-09-10T03:51:08.972811Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-actuator",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-8hfc-fq58-r658",
+          "modified": "2026-09-10T03:50:38.468261Z"
+        },
+        {
+          "id": "GHSA-mgvc-8q2h-5pgc",
+          "modified": "2026-09-10T03:50:40.101209Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-data-redis-reactive",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-jdbc",
+      "version": "3.4.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-json",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-logging",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-quartz",
+      "version": "3.4.7",
+      "modules": [
+        "services\\ingestion",
+        "services\\quality",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-reactor-netty",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-test",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-tomcat",
+      "version": "3.4.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-validation",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-web",
+      "version": "3.4.7",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-starter-webflux",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-test",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.boot:spring-boot-test-autoconfigure",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.cloud:spring-cloud-commons",
+      "version": "4.2.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.cloud:spring-cloud-context",
+      "version": "4.2.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.cloud:spring-cloud-gateway-server",
+      "version": "4.2.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-6j2q-c73v-97c5",
+          "modified": "2026-09-10T03:50:24.473973Z"
+        },
+        {
+          "id": "GHSA-fwxx-wv44-7qfg",
+          "modified": "2026-02-19T22:21:56.841405Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.cloud:spring-cloud-starter",
+      "version": "4.2.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.cloud:spring-cloud-starter-gateway",
+      "version": "4.2.1",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.data:spring-data-commons",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-5m4m-73w9-8433",
+          "modified": "2026-09-10T03:51:08.050596Z"
+        },
+        {
+          "id": "GHSA-5vpf-xvv7-c8vh",
+          "modified": "2026-09-10T03:51:08.062104Z"
+        },
+        {
+          "id": "GHSA-88fw-v6x4-3f58",
+          "modified": "2026-09-10T03:51:11.064911Z"
+        },
+        {
+          "id": "GHSA-9fw2-h3hf-293r",
+          "modified": "2026-09-10T03:50:49.419423Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.data:spring-data-keyvalue",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-xg2j-3hj6-pc24",
+          "modified": "2026-09-10T03:50:12.497826Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.data:spring-data-redis",
+      "version": "3.4.7",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework.retry:spring-retry",
+      "version": "2.0.12",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-2827-2mxx-j8pv",
+          "modified": "2026-07-29T18:41:44.617631Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework.security:spring-security-crypto",
+      "version": "6.4.7",
+      "modules": [
+        "apps\\gateway",
+        "services\\auth"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-aop",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-beans",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-context",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-context-support",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\ingestion",
+        "services\\quality",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-core",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-659m-px2c-25wj",
+          "modified": "2026-09-10T03:50:48.636887Z"
+        },
+        {
+          "id": "GHSA-jmp9-x22r-554x",
+          "modified": "2026-09-10T03:50:28.526913Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework:spring-expression",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-9f52-rjqv-25qv",
+          "modified": "2026-09-10T03:50:49.325466Z"
+        },
+        {
+          "id": "GHSA-r5w3-xv2f-j59q",
+          "modified": "2026-09-10T03:50:50.592219Z"
+        },
+        {
+          "id": "GHSA-wxpp-56q6-5pcg",
+          "modified": "2026-09-10T03:50:51.051005Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework:spring-jcl",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-jdbc",
+      "version": "6.2.8",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-messaging",
+      "version": "6.2.8",
+      "modules": [
+        "services\\ai-agent"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-oxm",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-test",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-tx",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.springframework:spring-web",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-7m2p-62gw-p8qq",
+          "modified": "2026-08-06T19:41:01.624958Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework:spring-webflux",
+      "version": "6.2.8",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-4773-3jfm-qmx3",
+          "modified": "2026-09-10T03:50:37.345211Z"
+        },
+        {
+          "id": "GHSA-4hfh-6x8g-gwpp",
+          "modified": "2026-09-10T03:50:48.208174Z"
+        },
+        {
+          "id": "GHSA-5843-p793-ghmm",
+          "modified": "2026-09-10T03:50:43.128086Z"
+        },
+        {
+          "id": "GHSA-6hcq-hmm3-jj3c",
+          "modified": "2026-09-10T03:51:00.075344Z"
+        },
+        {
+          "id": "GHSA-6p4f-wcwh-5vvm",
+          "modified": "2026-09-10T03:50:43.783544Z"
+        },
+        {
+          "id": "GHSA-72pg-x5f8-j25j",
+          "modified": "2026-09-10T03:50:49.015129Z"
+        },
+        {
+          "id": "GHSA-83f7-v6px-pp3h",
+          "modified": "2026-09-10T03:51:08.286303Z"
+        },
+        {
+          "id": "GHSA-9qf2-26p9-2q2q",
+          "modified": "2026-10-07T13:30:04.846318Z"
+        },
+        {
+          "id": "GHSA-cjpg-rgq5-fr37",
+          "modified": "2026-09-10T03:51:08.751198Z"
+        },
+        {
+          "id": "GHSA-h3qp-gqrc-q736",
+          "modified": "2026-09-10T03:50:49.910720Z"
+        },
+        {
+          "id": "GHSA-j9f9-w8pj-32f8",
+          "modified": "2026-10-07T13:30:04.802772Z"
+        },
+        {
+          "id": "GHSA-mq64-j8f9-9gcj",
+          "modified": "2026-09-10T03:51:09.434155Z"
+        },
+        {
+          "id": "GHSA-wg35-8jpf-2xv3",
+          "modified": "2026-09-10T03:51:04.065980Z"
+        },
+        {
+          "id": "GHSA-x23c-287f-qqv5",
+          "modified": "2026-09-10T03:50:51.456648Z"
+        }
+      ]
+    },
+    {
+      "name": "org.springframework:spring-webmvc",
+      "version": "6.2.8",
+      "modules": [
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-3chg-m5w7-qfv5",
+          "modified": "2026-09-10T03:50:55.485813Z"
+        },
+        {
+          "id": "GHSA-4773-3jfm-qmx3",
+          "modified": "2026-09-10T03:50:37.345211Z"
+        },
+        {
+          "id": "GHSA-6hcq-hmm3-jj3c",
+          "modified": "2026-09-10T03:51:00.075344Z"
+        },
+        {
+          "id": "GHSA-6p4f-wcwh-5vvm",
+          "modified": "2026-09-10T03:50:43.783544Z"
+        },
+        {
+          "id": "GHSA-72pg-x5f8-j25j",
+          "modified": "2026-09-10T03:50:49.015129Z"
+        },
+        {
+          "id": "GHSA-957g-f97v-vppc",
+          "modified": "2026-09-10T03:50:49.221153Z"
+        },
+        {
+          "id": "GHSA-cjpg-rgq5-fr37",
+          "modified": "2026-09-10T03:51:08.751198Z"
+        },
+        {
+          "id": "GHSA-h3qp-gqrc-q736",
+          "modified": "2026-09-10T03:50:49.910720Z"
+        },
+        {
+          "id": "GHSA-j9f9-w8pj-32f8",
+          "modified": "2026-10-07T13:30:04.802772Z"
+        },
+        {
+          "id": "GHSA-mq64-j8f9-9gcj",
+          "modified": "2026-09-10T03:51:09.434155Z"
+        },
+        {
+          "id": "GHSA-pc63-qcmh-9cmg",
+          "modified": "2026-10-05T23:30:04.884745Z"
+        },
+        {
+          "id": "GHSA-r936-gwx5-v52f",
+          "modified": "2026-09-10T03:50:27.662656Z"
+        },
+        {
+          "id": "GHSA-wg35-8jpf-2xv3",
+          "modified": "2026-09-10T03:51:04.065980Z"
+        },
+        {
+          "id": "GHSA-x23c-287f-qqv5",
+          "modified": "2026-09-10T03:50:51.456648Z"
+        }
+      ]
+    },
+    {
+      "name": "org.tukaani:xz",
+      "version": "1.5",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.webjars:swagger-ui",
+      "version": "5.20.1",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.webjars:webjars-locator-lite",
+      "version": "1.0.1",
+      "modules": [
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.xerial.snappy:snappy-java",
+      "version": "1.1.1.3",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-55g7-9cwv-5qfv",
+          "modified": "2026-09-10T03:49:57.806661Z"
+        },
+        {
+          "id": "GHSA-fjpj-2g6w-x25r",
+          "modified": "2026-09-10T03:50:02.338471Z"
+        },
+        {
+          "id": "GHSA-pqr6-cmr2-h8hf",
+          "modified": "2026-09-10T03:50:08.421776Z"
+        },
+        {
+          "id": "GHSA-qcwq-55hx-v3vh",
+          "modified": "2026-09-10T03:50:08.419674Z"
+        }
+      ]
+    },
+    {
+      "name": "org.xerial:sqlite-jdbc",
+      "version": "3.46.1.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.xmlunit:xmlunit-core",
+      "version": "2.10.2",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "org.yaml:snakeyaml",
+      "version": "2.3",
+      "modules": [
+        "apps\\gateway",
+        "services\\ai-agent",
+        "services\\auth",
+        "services\\governance",
+        "services\\ingestion",
+        "services\\metadata",
+        "services\\quality",
+        "services\\serving",
+        "services\\system",
+        "services\\workflow"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "sqlline:sqlline",
+      "version": "1.3.0",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "xerces:xercesImpl",
+      "version": "2.9.1",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": [
+        {
+          "id": "GHSA-334p-wv2m-w3vp",
+          "modified": "2024-12-02T05:40:14.119313Z"
+        },
+        {
+          "id": "GHSA-7j4h-8wpf-rqfh",
+          "modified": "2024-12-03T06:18:52.393319Z"
+        },
+        {
+          "id": "GHSA-h65f-jvqw-m9fj",
+          "modified": "2024-02-16T08:21:32.697367Z"
+        },
+        {
+          "id": "GHSA-vmqm-g3vh-847m",
+          "modified": "2024-03-11T05:17:10.701030Z"
+        },
+        {
+          "id": "GHSA-w4jq-qh47-hvjq",
+          "modified": "2026-09-10T03:49:12.846936Z"
+        }
+      ]
+    },
+    {
+      "name": "xml-apis:xml-apis",
+      "version": "1.3.04",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    },
+    {
+      "name": "xmlenc:xmlenc",
+      "version": "0.52",
+      "modules": [
+        "services\\metadata"
+      ],
+      "advisories": []
+    }
+  ]
+}

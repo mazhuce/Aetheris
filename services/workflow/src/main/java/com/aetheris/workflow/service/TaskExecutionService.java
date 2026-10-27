@@ -91,18 +91,23 @@ public class TaskExecutionService {
     }
 
     private com.aetheris.workflow.fixedexecution.WorkflowSqlFacade fixedSql;
+    private com.aetheris.workflow.fixedexecution.WorkflowFlinkExecutor fixedFlink;
+    @Autowired public void installFixedFlink(com.aetheris.workflow.fixedexecution.WorkflowFlinkExecutor executor){this.fixedFlink=java.util.Objects.requireNonNull(executor);}
     @Autowired public void installFixedSql(com.aetheris.workflow.fixedexecution.WorkflowSqlFacade facade){this.fixedSql=java.util.Objects.requireNonNull(facade);}
     public TaskInstance executeManual(long id,String date,com.aetheris.security.servlet.TrustedUser user){
         com.aetheris.workflow.config.BusinessCalendar.parseExact(date);
         var actor=com.aetheris.workflow.fixedexecution.WorkflowActor.manual(user);
         Task task=taskService.getById(id);if(task==null)throw new IllegalArgumentException("任务不存在");
-        if(task.getTaskType()==null||"sql".equals(task.getTaskType())){
+        if(task.getTaskType()==null||java.util.Set.of("sql","quality","spark","flink").contains(task.getTaskType())){
             if(fixedSql==null)throw new IllegalStateException("固定SQL执行器未配置");return fixedSql.manual(id,date,actor);
         }
-        return execute(id,date,"manual",actor.username());
+        throw new IllegalArgumentException("不支持的任务类型");
     }
     public TaskInstance executeScheduled(long id,String date,long generation){
         if(fixedSql==null)throw new IllegalStateException("固定SQL执行器未配置");return fixedSql.scheduled(id,date,generation);
+    }
+    public TaskInstance executePipeline(com.aetheris.workflow.fixedexecution.WorkflowExecutionStore.Claim claim){
+        if(fixedSql==null)throw new IllegalStateException("固定SQL执行器未配置");return fixedSql.pipeline(claim);
     }
 
     /**
@@ -124,7 +129,7 @@ public class TaskExecutionService {
             throw new IllegalStateException("任务已停用，无法执行");
         }
 
-        if(task.getTaskType()==null||"sql".equals(task.getTaskType()))throw new IllegalStateException("SQL必须使用已批准的可信manual或cron来源");
+        if(task.getTaskType()==null||java.util.Set.of("sql","quality","spark","flink").contains(task.getTaskType()))throw new IllegalStateException("执行必须使用已批准的可信manual、cron或pipeline来源");
         int timeout = task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds();
         ExecutionClaim claim = claimCoordinator.claim(
                 task, bizDate, triggerType, triggeredBy, timeout);
@@ -204,6 +209,7 @@ public class TaskExecutionService {
     }
 
     public TaskInstance cancelFlink(long instanceId, long attemptId) {
+        if(fixedFlink!=null&&fixedFlink.sealed(instanceId,attemptId))return fixedFlink.cancel(instanceId,attemptId);
         if (flinkExecutionClient == null) {
             throw new IllegalStateException("Flink SQL 当前没有可取消的远端操作");
         }
@@ -233,6 +239,7 @@ public class TaskExecutionService {
 
     /** Read the remote Gateway state for a persisted streaming attempt. */
     public Map<String, Object> flinkStatus(long instanceId, long attemptId) {
+        if(fixedFlink!=null&&fixedFlink.sealed(instanceId,attemptId))return fixedFlink.status(instanceId,attemptId);
         TaskInstance current = instanceService.getById(instanceId);
         if (current == null) throw new IllegalArgumentException("运行实例不存在");
         Task task = taskService.getById(current.getTaskId());
@@ -542,6 +549,7 @@ public class TaskExecutionService {
     }
 
     private Map<String, Object> requireInstanceAttempt(long instanceId, long attemptId) {
+        if(fixedFlink!=null&&fixedFlink.sealed(instanceId,attemptId))throw new IllegalStateException("封存Flink生命周期必须绑定新的已批准attempt，禁止通过旧接口重用执行权或替换Job");
         TaskInstance current = instanceService.getById(instanceId);
         if (current == null) throw new IllegalArgumentException("运行实例不存在");
         try {
@@ -608,24 +616,23 @@ public class TaskExecutionService {
     }
 
     private TaskInstance runQuality(Task task, ExecutionClaim claim) {
-        long startedAt = System.currentTimeMillis();
         try {
             QualityExecutionClient.QualityResult result = qualityExecutionClient.execute(
                     task.getQualityRuleId(), claim.instance().getTriggeredBy());
-            long duration = System.currentTimeMillis() - startedAt;
+            Map<String, Object> evidence = QualityGateEvidence.result(task.getQualityRuleId(), result);
             if ("passed".equals(result.status())) {
                 writeLog(claim.instance().getId(), claim.attemptId(), "info",
                         "质量门禁通过，违规数 " + result.violationCount());
-                return claimCoordinator.succeed(claim,
-                        result.violationCount() == null ? 0 : result.violationCount(), duration, duration);
+                return claimCoordinator.completeRemote(claim, new ExecutionAdapter.RemoteExecution(
+                        null, "succeeded", null, result.violationCount(), null, null, evidence, null));
             }
-            String message = "质量门禁未通过：" + (result.message() == null ? result.status() : result.message());
+            String message = "质量门禁未通过，违规数 " + result.violationCount();
             writeLog(claim.instance().getId(), claim.attemptId(), "error", message);
-            return claimCoordinator.fail(claim, message, duration, duration);
+            return claimCoordinator.completeRemote(claim, new ExecutionAdapter.RemoteExecution(
+                    null, "failed", null, result.violationCount(), "QUALITY_GATE_FAILED", message, evidence, null));
         } catch (RuntimeException error) {
-            long duration = System.currentTimeMillis() - startedAt;
-            writeLog(claim.instance().getId(), claim.attemptId(), "error", error.getMessage());
-            return claimCoordinator.fail(claim, error.getMessage(), duration, duration);
+            writeLog(claim.instance().getId(), claim.attemptId(), "warn", "质量结果待核对，禁止自动重放");
+            return claimCoordinator.submissionUnknown(claim, "质量结果未可靠确认，禁止自动重放");
         }
     }
 
@@ -663,7 +670,8 @@ public class TaskExecutionService {
                             .eq(TaskInstance::getBizDate, bizDate));
             if (upstream == null || !"success".equals(upstream.getStatus())) {
                 Task upstreamTask = taskService.getById(dependency.getUpstreamTaskId());
-                if ("pipeline".equals(triggerType) && activeQualityWaiver(upstreamTask, bizDate)) {
+                if ("pipeline".equals(triggerType) && QualityGateEvidence.confirmedFailure(jdbc, upstreamTask, upstream)
+                        && activeQualityWaiver(upstreamTask, bizDate)) {
                     continue;
                 }
                 String name = upstreamTask == null

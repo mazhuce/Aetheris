@@ -30,9 +30,8 @@ class UsernameBoundaryRegressionTest {
         var users=mock(AuthUserService.class);var encoder=mock(PasswordEncoder.class);var jwt=mock(JwtService.class);
         var user=new AuthUser();user.setId(1L);user.setUsername("admin");user.setPasswordHash("hash");user.setRole("admin");user.setStatus("active");
         when(users.findByUsername("admin")).thenReturn(Optional.of(user));when(encoder.matches("password","hash")).thenReturn(true);
-        when(jwt.generateToken(1L,"admin","admin",0L)).thenReturn("access");when(jwt.generateRefreshToken(1L,"admin",0L)).thenReturn("refresh");
         when(jwt.getExpirationMs()).thenReturn(60_000L);when(jwt.getRefreshExpirationMs()).thenReturn(600_000L);
-        var controller=new AuthController(users,encoder,jwt,new LoginAttemptService());
+        var controller=new AuthController(users,encoder,jwt,new LoginAttemptService(), mock(com.aetheris.auth.service.PermissionVersionService.class), mock(BrowserSessionService.class));
         assertThrows(IllegalArgumentException.class,()->controller.login(new LoginRequest(" admin ","password")));
         verify(users,never()).findByUsername(anyString());verifyNoInteractions(encoder,jwt);
     }

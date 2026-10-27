@@ -22,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Atomic claim, lease and fencing owner for every physical execution attempt. */
 @Service
@@ -76,6 +77,14 @@ public class ExecutionClaimCoordinator {
         if (task == null || !"sql".equals(task.getTaskType()) || timeout < 1 || timeout > 86400) {
             throw new IllegalArgumentException("固定SQL执行期限无效");
         }
+        return claimFixedSource(task,bizDate,triggerType,triggeredBy,timeout);
+    }
+    public ExecutionClaim claimFixedQuality(Task task,String bizDate,String triggerType,String triggeredBy,Integer timeoutSeconds){
+        int timeout=timeoutSeconds==null?1800:timeoutSeconds;
+        if(task==null||!"quality".equals(task.getTaskType())||timeout<1||timeout>3600)throw new IllegalArgumentException("固定质量父任务执行期限无效");
+        return claimFixedSource(task,bizDate,triggerType,triggeredBy,timeout);
+    }
+    private ExecutionClaim claimFixedSource(Task task,String bizDate,String triggerType,String triggeredBy,int timeout){
         return transactions.execute(status -> {
             OffsetDateTime deadline = jdbc.queryForObject(
                     "SELECT clock_timestamp() + (?::bigint * INTERVAL '1 second')",
@@ -83,6 +92,10 @@ public class ExecutionClaimCoordinator {
             if (deadline == null) throw new IllegalStateException("固定SQL租约不可用");
             return claimInTransaction(task, bizDate, triggerType, triggeredBy, deadline);
         });
+    }
+    public ExecutionClaim claimFixedEngine(Task task,String date,String trigger,String actor,int timeout){
+        if(task==null||!Set.of("spark","flink").contains(task.getTaskType())||timeout<1||timeout>86400)throw new IllegalArgumentException("引擎执行期限无效");
+        return claimFixedSource(task,date,trigger,actor,timeout+("spark".equals(task.getTaskType())?com.aetheris.workflow.fixedexecution.WorkflowEngineMaterial.SPARK_QUEUE_SECONDS:0));
     }
 
     private ExecutionClaim claimInTransaction(

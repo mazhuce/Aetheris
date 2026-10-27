@@ -15,6 +15,7 @@ public final class QualityActor {
     public static QualityActor manual(TrustedUser user){if(user==null||!"quality".equals(user.proof().audience()))throw new IllegalStateException("需要已验签执行主体");var p=user.proof();return new QualityActor("manual",p.uid(),p.username(),p.accessVersion(),p.requestId());}
     static QualityActor cron(JsonNode n){FixedJson.fields(n,"kind","uid","username","accessVersion","requestId");if(!"cron".equals(FixedJson.text(n,"kind")))throw FixedJson.invalid();return new QualityActor("cron",FixedJson.number(n,"uid",1),FixedJson.text(n,"username"),FixedJson.number(n,"accessVersion",0),FixedJson.text(n,"requestId"));}
     public QualityActor forCron(){return new QualityActor("cron",uid,username,accessVersion,requestId);}
+    public static QualityActor child(com.aetheris.security.protocol.execution.WorkflowQualityParent parent){var n=java.util.Objects.requireNonNull(parent).childActor();return new QualityActor("workflow-child",FixedJson.number(n,"uid",1),FixedJson.text(n,"username"),FixedJson.number(n,"accessVersion",0),FixedJson.text(n,"requestId"));}
     public ObjectNode json(){return FixedJson.JSON.createObjectNode().put("kind",kind).put("uid",uid).put("username",username).put("accessVersion",accessVersion).put("requestId",requestId);}
     public String username(){return username;}public long uid(){return uid;}public long accessVersion(){return accessVersion;}
 }

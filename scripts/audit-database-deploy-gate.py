@@ -25,7 +25,6 @@ OUTPUT = ROOT / 'output/audit-database-deploy-gate'
 IMAGE = 'postgres:16-alpine'
 LABEL = 'aetheris.database.deploy-gate.audit'
 DATABASE = 'aetheris_deploy_gate_audit'
-FROZEN_MIGRATION_COUNT = 116
 sys.path.insert(0, str(ROOT / 'scripts/database'))
 import contract
 import database_roles as roles
@@ -35,8 +34,8 @@ class AuditFailure(RuntimeError): pass
 
 
 def require_frozen_sources(sources):
-    if len(sources) != FROZEN_MIGRATION_COUNT:
-        raise AuditFailure('ExpectedFrozen116MigrationSources')
+    if not sources or sources != contract.source_manifest():
+        raise AuditFailure('ExpectedExactCurrentMigrationSources')
 
 
 def utc(): return datetime.now(timezone.utc).isoformat()
@@ -362,7 +361,7 @@ def acceptance(output=None):
         for service, schema in contract.services().items():
             progress('migrate-' + service)
             migrations.append(roles.runner({**base, 'command': 'migrate', 'schema': schema, 'directory': str(ROOT / 'services' / service / 'src/main/resources/db/migration')}))
-        if sum(value['migrationsExecuted'] for value in migrations) != FROZEN_MIGRATION_COUNT: raise AuditFailure('MigrationExecutionCountMismatch')
+        if sum(value['migrationsExecuted'] for value in migrations) != len(sources): raise AuditFailure('MigrationExecutionCountMismatch')
         report['migrations'] = migrations
         roles.runner({**base, 'command': 'sql', 'sql': "INSERT INTO system.system_config(config_key,config_value,description) VALUES ('audit.deploy-gate." + run_id + "','unchanged sentinel','disposable gate acceptance only')"})
         snapshot = roles.runner({**base, 'command': 'inventory'}); roles.check_owned_inventory(snapshot)
@@ -386,7 +385,7 @@ def acceptance(output=None):
             raise AuditFailure('PositiveRecordBindingMismatch')
         report['positiveRecordSha256'] = hashlib.sha256(record.read_bytes()).hexdigest()
         report['databaseIdentity'] = admitted['databaseIdentity']
-        report['checks'].append({'case': 'positive-116-sources-11-images-live-receipt-compose-identity', 'exitCode': code, 'passed': True, 'observedCalls': observation})
+        report['checks'].append({'case': 'positive-current-sources-11-images-live-receipt-compose-identity', 'exitCode': code, 'passed': True, 'migrationSourceCount': len(sources), 'observedCalls': observation})
         if fingerprint(base, cid, env) != baseline: raise AuditFailure('PositiveGateMutatedDatabase')
 
         def negative(name, *, case_manifest=manifest_file, case_receipt=receipt_file, case_model=None, case_env=None, before_live=False):

@@ -39,6 +39,7 @@ public class FlinkStreamReconciler {
                 FROM workflow.execution_attempt ea
                 JOIN workflow.task_instance ti ON ti.id=ea.instance_id
                 WHERE ea.task_type='flink' AND ea.flink_mode='streaming'
+                  AND ea.manifest_sealed_at IS NULL
                   AND ti.active_attempt_id=ea.id
                   AND (ea.status IN ('running','cancel_requested')
                        OR (ea.status='unknown' AND ea.flink_job_id IS NULL))

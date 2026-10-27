@@ -40,6 +40,10 @@ class AuthProfileControllerTest {
         AuthUserResponse body = assertInstanceOf(AuthUserResponse.class, response.getBody());
         assertEquals("alice", body.username());
         assertEquals("viewer", body.role());
+        var json = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules()
+                .convertValue(body, Map.class);
+        assertEquals(0, ((Number) json.get("accessVersion")).intValue());
+        assertEquals(0, ((Number) json.get("permissionVersion")).intValue());
     }
 
     @Test
@@ -172,7 +176,7 @@ class AuthProfileControllerTest {
             user.setStatus("active");
             when(userService.getOne(any(Wrapper.class))).thenReturn(user);
             when(userService.update(any(AuthUser.class), any(Wrapper.class))).thenReturn(true);
-            controller = new AuthProfileController(userService, encoder);
+            controller = new AuthProfileController(userService, encoder, mock(com.aetheris.auth.service.PermissionVersionService.class));
         }
     }
 }

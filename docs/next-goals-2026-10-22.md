@@ -1,5 +1,7 @@
 # Aetheris 下一阶段目标与执行计划
 
+> 2026-10-26 接续入口：[新版执行目标](next-goals-2026-10-26.md)与[全项目复核](reviews/2026-10-26-project-gap-review.md)。下文保留 2026-10-22 的计划和执行记录，不代表当前整体验收已通过。
+
 > 计划日期：2026-10-22  
 > 依据：[当前功能支持报告](current-feature-report-2026-10-21.md) 和 [审查整改台账](remediation/2026-10-18-audit-plan.md)。
 

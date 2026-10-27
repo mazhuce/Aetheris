@@ -1,234 +1,146 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  Progress,
-  Row,
-  Space,
-  Statistic,
-  Table,
-  Tag,
-  Typography
-} from 'antd'
+import { useEffect, useMemo, useState } from 'react'
+import { Alert, Button, Card, Col, Empty, Progress, Row, Space, Statistic, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { CheckCircleOutlined, CloudServerOutlined, DatabaseOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons'
+import { CheckCircleOutlined, CloudServerOutlined, DatabaseOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { listDataSources, type DataSource } from '@/api/metadata'
-import { getControlPlaneAcceptance, getPlatformReleaseAcceptance, type ControlPlaneAcceptanceSummary, type PlatformReleaseAcceptanceSummary } from '@/api/acceptance'
+import {
+  AcceptanceContractError, acceptanceAtTime, getAcceptanceHistory, getCurrentAcceptance,
+  type AcceptanceGateName, type AcceptanceState, type CurrentAcceptance, type HistoricalAcceptance,
+} from '@/api/acceptance'
 import { getFlinkHealth, getSparkHealth, listTasks, type FlinkGatewayHealth, type SparkRunnerHealth, type TaskView } from '@/api/workflow'
+import { useSerializedPolling } from '@/hooks/useSerializedPolling'
 import { effectiveConnectionStatus } from '@/pages/datasource/connectionHealth'
 
-type Milestone = {
-  code: string
-  title: string
-  summary: string
-  evidence: string
-  evidenceGeneratedAtUtc?: string
-  status: '已通过' | '待核对' | '待重跑'
-}
-
-type AcceptanceSource = {
-  type: string
-  label: string
-  acceptance: string
-}
-
-const milestones: Milestone[] = [
-  { code: 'R1', title: '实时湖仓兼容矩阵', summary: 'Flink 写入、Spark 与 Trino 读取同一 Iceberg v2 表，支持空环境重建。', evidence: 'r1-fixture/acceptance-manifest.json', status: '已通过' },
-  { code: 'R2', title: 'Flink CDC 最小闭环', summary: 'PostgreSQL / MySQL 快照、增量、checkpoint、重启恢复与一致性校验。', evidence: 'r1-fixture/r2-cdc-acceptance-report.json', status: '已通过' },
-  { code: 'R3', title: '受管流任务生命周期', summary: 'Job ID、checkpoint、savepoint、暂停、恢复、升级、失联对账与 reconciler。', evidence: 'r3-ha/r3-ha-lifecycle-report.json', status: '已通过' },
-  { code: 'R4', title: 'Schema 演进与实时质量', summary: '事件时间、迟到数据、质量规则、死信和 Gold 发布阻断。', evidence: 'r4-event-time/r4-event-time-quality-report.json', status: '已通过' },
-  { code: 'R5', title: '湖仓表控制面', summary: '快照、维护 Runner、幂等请求、过期和结果核验。', evidence: 'r5-maintenance-runner/r5-maintenance-runtime-report.json', status: '已通过' }
+const milestones: { code: string; title: string; summary: string; gates: AcceptanceGateName[] }[] = [
+  { code: 'R1', title: '实时湖仓兼容矩阵', summary: '跨引擎读写与空环境重建', gates: ['r1-empty-rebuild'] },
+  { code: 'R2', title: 'Flink CDC 最小闭环', summary: '快照、增量、checkpoint 与重启恢复', gates: ['r2-cdc'] },
+  { code: 'R3', title: '受管流任务生命周期', summary: '生命周期、失联对账及隔离 HA 运行证据', gates: ['r3-managed-lifecycle', 'r3-ha-runtime'] },
+  { code: 'R4', title: 'Schema 演进与实时质量', summary: '事件时间、质量及控制面门禁', gates: ['r4-event-time-quality', 'r4-r5-control-plane'] },
+  { code: 'R5', title: '湖仓表控制面', summary: '真实维护执行、结果回查与控制面门禁', gates: ['r5-maintenance-runner', 'r4-r5-control-plane'] },
 ]
-
+interface AcceptanceSource { type: string; label: string; supplementary?: boolean }
 const acceptanceSources: AcceptanceSource[] = [
-  { type: 'postgresql', label: 'PostgreSQL', acceptance: 'CDC + JDBC smoke' },
-  { type: 'mysql', label: 'MySQL', acceptance: 'CDC + JDBC smoke' },
-  { type: 'mariadb', label: 'MariaDB', acceptance: 'JDBC smoke' },
-  { type: 'hive2', label: 'HiveServer2', acceptance: '外部环境验收' },
-  { type: 'sqlserver', label: 'SQL Server', acceptance: '外部环境验收' },
-  { type: 'oracle', label: 'Oracle', acceptance: '外部环境验收' },
-  { type: 'clickhouse', label: 'ClickHouse', acceptance: 'JDBC smoke' },
-  { type: 'trino', label: 'Trino', acceptance: 'JDBC smoke' },
-  { type: 'sqlite', label: 'SQLite', acceptance: 'JDBC smoke' },
-  { type: 'cockroachdb', label: 'CockroachDB', acceptance: 'JDBC smoke' },
-  { type: 'h2', label: 'H2', acceptance: 'JDBC smoke' },
-  { type: 'derby', label: 'Apache Derby', acceptance: 'JDBC smoke' }
+  { type: 'postgresql', label: 'PostgreSQL' }, { type: 'mysql', label: 'MySQL' }, { type: 'mariadb', label: 'MariaDB' },
+  { type: 'clickhouse', label: 'ClickHouse' }, { type: 'trino', label: 'Trino' }, { type: 'sqlite', label: 'SQLite' },
+  { type: 'cockroachdb', label: 'CockroachDB' }, { type: 'h2', label: 'H2' }, { type: 'derby', label: 'Apache Derby' },
+  { type: 'hive2', label: 'HiveServer2', supplementary: true }, { type: 'sqlserver', label: 'SQL Server', supplementary: true },
+  { type: 'oracle', label: 'Oracle', supplementary: true },
 ]
-
-const requiredAcceptanceSources = acceptanceSources.filter((item) => item.acceptance !== '外部环境验收')
-
+const requiredSources = acceptanceSources.filter((item) => !item.supplementary)
+const stateText: Record<AcceptanceState, string> = {
+  verified: '当前冻结版本验收通过', failed: '当前验收未通过', missing: '当前验收证据缺失', expired: '当前验收证据已过期',
+  mismatch: '当前验收证据与运行版本不一致', invalid: '当前验收证据无法校验', unavailable: '当前验收未验证',
+}
+function failureText(error: unknown): string {
+  if (error instanceof AcceptanceContractError) return '验证响应不满足当前证据契约，不能判为通过。'
+  const status = (error as { response?: { status?: number } } | null)?.response?.status
+  if (status === 404) return '当前验收验证接口尚未接入，不能确认本版本通过。'
+  if (status === 403) return '没有读取当前验收证据的权限。'
+  if (status === 503) return '当前验收验证服务暂不可用，请稍后重试。'
+  return '无法取得当前版本的完整验证结果，请稍后重试。'
+}
+function serviceLabel(status?: string) {
+  return status === 'UP' ? { label: '在线', tone: 'success' as const } : { label: status || '未探测', tone: 'warning' as const }
+}
 function healthLabel(status?: string) {
   if (status === 'available') return { label: '可用', tone: 'success' as const }
-  if (status === 'checking') return { label: '探测中', tone: 'info' as const }
   if (status === 'unavailable') return { label: '不可用', tone: 'danger' as const }
-  return { label: '未知', tone: 'warning' as const }
+  return { label: status === 'checking' ? '探测中' : '未知', tone: 'warning' as const }
 }
 
-function serviceLabel(status?: string) {
-  return status === 'UP'
-    ? { label: '在线', tone: 'success' as const }
-    : { label: status || '未探测', tone: 'danger' as const }
-}
-
-function schemaPolicyLabel(status?: string) {
-  if (status === 'approved') return '审批通过，可生成计划'
-  if (status === 'rejected') return '已拒绝，计划已阻断'
-  if (status === 'isolated') return '已隔离，计划已阻断'
-  return status || '未知'
-}
-
-function externalDatasourceLabel(status?: string) {
-  if (status === 'passed') return '已通过真实连接'
-  if (status === 'manual_review_required') return '待提供真实实例和凭据'
-  if (status === 'failed') return '连接失败，需修复'
-  return '状态未知'
-}
-
-function datasourceRuntimeLabel(status?: string) {
-  if (status === 'passed') return { label: '通过', tone: 'success' as const }
-  if (status === 'failed') return { label: '失败', tone: 'danger' as const }
-  if (status === 'manual_review_required') return { label: '待人工核对', tone: 'warning' as const }
-  return { label: '未验收', tone: 'neutral' as const }
-}
 export default function AcceptanceProgressPage() {
-  const [sources, setSources] = useState<DataSource[]>([])
-  const [tasks, setTasks] = useState<TaskView[]>([])
-  const [flink, setFlink] = useState<FlinkGatewayHealth | null>(null)
-  const [spark, setSpark] = useState<SparkRunnerHealth | null>(null)
-  const [controlPlane, setControlPlane] = useState<ControlPlaneAcceptanceSummary | null>(null)
-  const [platformRelease, setPlatformRelease] = useState<PlatformReleaseAcceptanceSummary | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
+  const [sources, setSources] = useState<DataSource[]>([]), [sourceReady, setSourceReady] = useState(false)
+  const [tasks, setTasks] = useState<TaskView[]>([]), [tasksReady, setTasksReady] = useState(false)
+  const [flink, setFlink] = useState<FlinkGatewayHealth | null>(null), [spark, setSpark] = useState<SparkRunnerHealth | null>(null)
+  const [current, setCurrent] = useState<CurrentAcceptance | null>(null), [currentIssue, setCurrentIssue] = useState('正在核验当前版本。')
+  const [history, setHistory] = useState<HistoricalAcceptance[]>([])
+  const [loading, setLoading] = useState(false), [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [errorCount, setErrorCount] = useState(0)
-
-  const refresh = useCallback(async () => {
+  const refresh = useSerializedPolling((signal) => {
     setLoading(true)
-    const results = await Promise.allSettled([listDataSources(), listTasks(), getFlinkHealth(), getSparkHealth(), getControlPlaneAcceptance(), getPlatformReleaseAcceptance()])
-    const [sourceResult, taskResult, flinkResult, sparkResult, controlPlaneResult, platformReleaseResult] = results
-    if (sourceResult.status === 'fulfilled') setSources(sourceResult.value)
-    if (taskResult.status === 'fulfilled') setTasks(taskResult.value)
-    if (flinkResult.status === 'fulfilled') setFlink(flinkResult.value)
-    else setFlink({ status: 'DOWN', message: 'Flink SQL Gateway 不可达' })
-    if (sparkResult.status === 'fulfilled') setSpark(sparkResult.value)
-    else setSpark({ status: 'DOWN', activeJobs: 0, maxConcurrency: 0, message: 'Spark Runner 不可达' })
-    if (controlPlaneResult.status === 'fulfilled') setControlPlane(controlPlaneResult.value)
-    else setControlPlane(null)
-    if (platformReleaseResult.status === 'fulfilled') setPlatformRelease(platformReleaseResult.value)
-    else setPlatformRelease(null)
-    setErrorCount(results.filter((item) => item.status === 'rejected').length)
-    setLastRefresh(new Date())
-    setLoading(false)
-  }, [])
+    return Promise.allSettled([listDataSources(), listTasks(signal), getFlinkHealth(signal), getSparkHealth(signal), getCurrentAcceptance(signal), getAcceptanceHistory(signal)])
+  }, ([sourceResult, taskResult, flinkResult, sparkResult, currentResult, historyResult]) => {
+    setSourceReady(sourceResult.status === 'fulfilled'); setSources(sourceResult.status === 'fulfilled' ? sourceResult.value : [])
+    setTasksReady(taskResult.status === 'fulfilled'); setTasks(taskResult.status === 'fulfilled' ? taskResult.value : [])
+    setFlink(flinkResult.status === 'fulfilled' ? flinkResult.value : null)
+    setSpark(sparkResult.status === 'fulfilled' ? sparkResult.value : null)
+    setCurrent(currentResult.status === 'fulfilled' ? acceptanceAtTime(currentResult.value) : null)
+    setCurrentIssue(currentResult.status === 'fulfilled' ? '' : failureText(currentResult.reason))
+    setHistory(historyResult.status === 'fulfilled' ? historyResult.value : [])
+    setErrorCount([sourceResult, taskResult, flinkResult, sparkResult, currentResult, historyResult].filter((item) => item.status === 'rejected').length)
+    setLastRefresh(new Date()); setLoading(false)
+  }, 10000)
 
   useEffect(() => {
-    void refresh()
-    const timer = window.setInterval(() => void refresh(), 10000)
-    return () => window.clearInterval(timer)
-  }, [refresh])
+    if (current?.state !== 'verified') return
+    const remaining = Date.parse(current.validUntilUtc) - Date.now()
+    const expire = () => setCurrent((value) => value === current ? acceptanceAtTime(value) : value)
+    if (remaining <= 0) { expire(); return }
+    const timer = window.setTimeout(expire, remaining + 1)
+    return () => window.clearTimeout(timer)
+  }, [current])
 
-  const sourceStats = useMemo(() => {
-    const tracked = requiredAcceptanceSources.map((item) => sources.filter((source) => source.type === item.type))
-    const configured = tracked.filter((items) => items.length > 0).length
-    const available = tracked.filter((items) => items.some((source) => effectiveConnectionStatus(source.connectionHealth) === 'available')).length
-    return { configured, available, requiredCount: requiredAcceptanceSources.length }
-  }, [sources])
-
-  const milestoneRows = useMemo<Milestone[]>(() => milestones.map((milestone) => {
-    const evidence = platformRelease?.milestones.find((item) => item.code === milestone.code)
-    const status = evidence?.status
-    return { ...milestone, evidence: evidence?.evidence || milestone.evidence, evidenceGeneratedAtUtc: evidence?.evidenceGeneratedAtUtc || undefined, status: status === 'passed' ? '已通过' : status ? '待核对' : '待核对' }
-  }), [platformRelease])
-
-  const milestonePassed = milestoneRows.filter((milestone) => milestone.status === '已通过').length
+  const effectiveCurrent = current ? acceptanceAtTime(current) : null
+  const verified = effectiveCurrent?.state === 'verified' && effectiveCurrent.evidence !== null
+  const evidence = verified ? effectiveCurrent.evidence : null
+  const milestoneRows = milestones.map((milestone) => ({ ...milestone, passed: Boolean(evidence && milestone.gates.every((name) => evidence.gates.some((gate) => gate.name === name && gate.status === 'passed'))) }))
+  const milestonePassed = milestoneRows.filter((item) => item.passed).length
+  const sourceStats = useMemo(() => ({
+    configured: requiredSources.filter((item) => sources.some((source) => source.type === item.type)).length,
+    available: requiredSources.filter((item) => sources.some((source) => source.type === item.type && effectiveConnectionStatus(source.connectionHealth) === 'available')).length,
+  }), [sources])
   const taskStats = useMemo(() => ({
     running: tasks.filter((view) => view.lastStatus === 'running' || view.lastStatus === 'submitting').length,
     unknown: tasks.filter((view) => view.lastStatus === 'unknown').length,
-    failed: tasks.filter((view) => view.lastStatus === 'failed' || view.lastStatus === 'timed_out').length
+    failed: tasks.filter((view) => view.lastStatus === 'failed' || view.lastStatus === 'timed_out').length,
   }), [tasks])
-
-  const sourceColumns = useMemo<TableColumnsType<AcceptanceSource>>(() => [
-    { title: '数据源', dataIndex: 'label', key: 'label', width: 150, render: (value: string, source) => <Space><DatabaseOutlined /><span>{value}</span><Tag>{source.type}</Tag></Space> },
-    { title: '当前配置', key: 'configured', width: 110, render: (_, source) => sources.some((item) => item.type === source.type) ? <StatusBadge tone="success" dot={false}>已配置</StatusBadge> : <StatusBadge tone="neutral" dot={false}>未配置</StatusBadge> },
-    { title: '最近连接健康', key: 'health', width: 150, render: (_, source) => { const item = sources.find((candidate) => candidate.type === source.type); const meta = healthLabel(effectiveConnectionStatus(item?.connectionHealth)); return <StatusBadge tone={meta.tone} dot={false}>{meta.label}</StatusBadge> } },
-    { title: '验收路径', dataIndex: 'acceptance', key: 'acceptance', width: 180 },
-    { title: '真实运行验收', key: 'runtime', width: 130, render: (_, source) => { const status = platformRelease?.datasourceRuntimeResults?.find((item) => item.type === source.type)?.status; const meta = datasourceRuntimeLabel(status); return <StatusBadge tone={meta.tone} dot={false}>{meta.label}</StatusBadge> } },
-    { title: '说明', key: 'description', render: (_, source) => source.acceptance === '外部环境验收' ? <Typography.Text type="secondary">目录已实现，本机未伪造实例</Typography.Text> : <Typography.Text type="secondary">配置健康不等于完整运行门禁</Typography.Text> }
-  ], [sources, platformRelease])
-
-  const milestoneColumns = useMemo<TableColumnsType<Milestone>>(() => [
-    { title: '阶段', dataIndex: 'code', key: 'code', width: 70, render: (value: string) => <Tag color="blue">{value}</Tag> },
-    { title: '能力', dataIndex: 'title', key: 'title', width: 180 },
-    { title: '当前进度', key: 'status', width: 100, render: (_, row) => <StatusBadge tone={row.status === '已通过' ? 'success' : 'warning'} dot={false}>{row.status}</StatusBadge> },
+  const sourceColumns: TableColumnsType<AcceptanceSource> = [
+    { title: '数据源', dataIndex: 'label', key: 'label', render: (value: string, row) => <Space><DatabaseOutlined />{value}<Tag>{row.type}</Tag></Space> },
+    { title: '当前配置', key: 'configured', render: (_, row) => !sourceReady ? '未知' : sources.some((source) => source.type === row.type) ? '已配置' : '未配置' },
+    { title: '最近连接健康', key: 'health', render: (_, row) => { const meta = healthLabel(effectiveConnectionStatus(sources.find((source) => source.type === row.type)?.connectionHealth)); return <StatusBadge tone={meta.tone} dot={false}>{meta.label}</StatusBadge> } },
+    { title: '当前运行证据', key: 'runtime', render: (_, row) => row.supplementary ? <Tag>补充环境待核验</Tag> : evidence?.datasourceResults.some((item) => item.type === row.type && item.status === 'passed') ? <Tag color="success">当前通过</Tag> : <Tag>未验证</Tag> },
+    { title: '范围', key: 'scope', render: (_, row) => row.supplementary ? '需对应真实环境的独立证据' : '连接健康不能替代业务运行证据' },
+  ]
+  const milestoneColumns: TableColumnsType<typeof milestoneRows[number]> = [
+    { title: '阶段', dataIndex: 'code', key: 'code', width: 70 }, { title: '能力', dataIndex: 'title', key: 'title', width: 190 },
+    { title: '当前结果', key: 'status', width: 110, render: (_, row) => <StatusBadge tone={row.passed ? 'success' : 'warning'} dot={false}>{row.passed ? '已通过' : '未验证'}</StatusBadge> },
     { title: '验证内容', dataIndex: 'summary', key: 'summary' },
-    { title: '证据', dataIndex: 'evidence', key: 'evidence', width: 280, render: (value: string, row) => <Space direction='vertical' size={0}><Typography.Text code>{value}</Typography.Text>{row.evidenceGeneratedAtUtc && <Typography.Text type='secondary'>生成于 {new Date(row.evidenceGeneratedAtUtc).toLocaleString()}</Typography.Text>}</Space> }
-  ], [])
+  ]
+  const state = effectiveCurrent?.state ?? 'unavailable'
+  const description = verified && effectiveCurrent?.currentBinding
+    ? `运行 ${effectiveCurrent.currentBinding.runId} · 源码 ${effectiveCurrent.currentBinding.source.commit.slice(0, 12)} · 迁移 ${effectiveCurrent.currentBinding.migrationCount} 份；有效至 ${new Date(effectiveCurrent.validUntilUtc).toLocaleString()}`
+    : currentIssue || '缺失、失败、过期或不匹配的证据均不能计作当前通过。请查看服务端验证结果并重试。'
 
-  return (
-    <div className="workflow-list-page">
-      <PageHeader
-        description="统一跟踪 R1-R5 验收、实时服务状态、流任务运行态和九类本机真实数据源与外部扩展数据源进度。页面每 10 秒刷新一次，未知状态保持为未知。"
-        extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>}
-      />
-
-      {errorCount > 0 && <Alert type="warning" showIcon message="部分实时接口暂时不可用" description="页面保留已知状态，并将无法取得的新状态显示为未知；不会把请求失败当作成功。" className="form-section-space" />}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 验收" value={milestonePassed} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={Math.round((milestonePassed / milestones.length) * 100)} status={milestonePassed === milestones.length ? 'success' : 'active'} showInfo={false} /></Card></Col>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceStats.available} suffix={`/ ${sourceStats.requiredCount}`} prefix={<DatabaseOutlined />} /><Progress percent={Math.round((sourceStats.available / sourceStats.requiredCount) * 100)} showInfo={false} /></Card></Col>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="流任务运行中" value={taskStats.running} prefix={<CloudServerOutlined />} /><Typography.Text type="secondary">未知 {taskStats.unknown} · 失败 {taskStats.failed}</Typography.Text></Card></Col>
-        <Col xs={24} sm={12} lg={6}><Card><Statistic title="最近刷新" value={lastRefresh ? lastRefresh.toLocaleTimeString() : '—'} prefix={<ReloadOutlined />} /><Typography.Text type="secondary">每 10 秒自动刷新</Typography.Text></Card></Col>
-      </Row>
-
-      <Row gutter={[16, 16]} className="form-section-space">
-        <Col xs={24} md={12}><Card title="Flink SQL Gateway" size="small"><Space><StatusBadge tone={serviceLabel(flink?.status).tone} dot={false}>{serviceLabel(flink?.status).label}</StatusBadge><Typography.Text>{flink?.version ? `Flink ${flink.version}` : flink?.message || '等待探测'}</Typography.Text></Space></Card></Col>
-        <Col xs={24} md={12}><Card title="Spark Runner" size="small"><Space><StatusBadge tone={serviceLabel(spark?.status).tone} dot={false}>{serviceLabel(spark?.status).label}</StatusBadge><Typography.Text>{spark ? `活动任务 ${spark.activeJobs} / 并发上限 ${spark.maxConcurrency}` : '等待探测'}</Typography.Text></Space></Card></Col>
-      </Row>
-
-      <Alert
-        type="success"
-        showIcon
-        icon={<WarningOutlined />}
-        className="form-section-space"
-        message="Datasource 本机九类运行门禁最近一次已通过"
-        description="最近一次真实报告已通过九类 SELECT 1 探测并完成数据源行清理：PostgreSQL、MySQL、Trino、MariaDB、ClickHouse、CockroachDB、SQLite、H2、Apache Derby。证据：artifacts/datasource-smoke/runtime-acceptance-report.json"
-      />
-
-      <Alert
-        type="warning"
-        showIcon
-        className="form-section-space"
-        message="三类外部数据源作为补充环境验收"
-        description={`HiveServer2、SQL Server、Oracle 已纳入目录与验收清单；当前状态：${externalDatasourceLabel(platformRelease?.externalDatasourceStatus)}。缺失只影响 supplementary evidence，不影响本机九类真实运行门禁。`}
-      />
-
-      {controlPlane ? (
-        <Alert
-          type={controlPlane.status === 'passed' ? 'success' : 'error'}
-          showIcon
-          className="form-section-space"
-          message={`Schema policy 运行证据 · ${controlPlane.status === 'passed' ? '已通过' : '需核对'}`}
-          description={`重命名：${schemaPolicyLabel(controlPlane.schemaPolicy.rename.status)}；删除：${schemaPolicyLabel(controlPlane.schemaPolicy.drop.status)}；缩窄类型：${schemaPolicyLabel(controlPlane.schemaPolicy.narrow.status)}。质量门禁：${controlPlane.quality.blockedOnFailure && controlPlane.quality.reopenedAfterPass ? '先阻断、后恢复' : '证据不完整'}。生成于 ${new Date(controlPlane.generatedAtUtc).toLocaleString()}`}
-        />
-      ) : (
-        <Alert
-          type="warning"
-          showIcon
-          className="form-section-space"
-          message="Schema policy 运行证据暂不可用"
-          description="前端不会把报告缺失误显示为通过；请重新运行 R4/R5 控制面验收。"
-        />
-      )}
-      <DataSurface label="R1-R5 阶段进度">
-        <Table<Milestone> rowKey="code" size="small" columns={milestoneColumns} dataSource={milestoneRows} pagination={false} scroll={{ x: 980 }} />
-      </DataSurface>
-
-      <DataSurface label={`九类必需 + 三类补充 · 已配置 ${sourceStats.configured} / ${sourceStats.requiredCount} 必需`}>
-        <Table<AcceptanceSource> rowKey="type" size="small" columns={sourceColumns} dataSource={acceptanceSources} pagination={false} scroll={{ x: 900 }} />
-      </DataSurface>
-    </div>
-  )
+  return <div className="workflow-list-page">
+    <PageHeader description="当前验收由服务端核对冻结版本及完整证据；历史记录单独展示，不计作当前通过。每 10 秒串行刷新。"
+      extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>} />
+    <Alert className="form-section-space" showIcon type={verified ? 'success' : state === 'failed' || state === 'mismatch' || state === 'invalid' ? 'error' : 'warning'} message={stateText[state]} description={description} />
+    {errorCount > 0 && <Alert className="form-section-space" showIcon type="warning" message="部分接口暂时不可用，未取得的新状态保持未知" />}
+    <Row gutter={[16, 16]}>
+      <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 当前验收" value={milestonePassed} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={milestonePassed * 20} status={verified ? 'success' : 'normal'} showInfo={false} /></Card></Col>
+      <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceReady ? sourceStats.available : '—'} suffix="/ 9" prefix={<DatabaseOutlined />} /><Typography.Text type="secondary">仅为连接健康</Typography.Text></Card></Col>
+      <Col xs={24} sm={12} lg={6}><Card><Statistic title="流任务运行中" value={tasksReady ? taskStats.running : '—'} prefix={<CloudServerOutlined />} /><Typography.Text type="secondary">{tasksReady ? `未知 ${taskStats.unknown} · 失败 ${taskStats.failed}` : '运行状态暂不可用'}</Typography.Text></Card></Col>
+      <Col xs={24} sm={12} lg={6}><Card><Statistic title="最近刷新" value={lastRefresh?.toLocaleTimeString() ?? '—'} prefix={<ReloadOutlined />} /></Card></Col>
+    </Row>
+    <Row gutter={[16, 16]} className="form-section-space">
+      <Col xs={24} md={12}><Card title="Flink SQL Gateway" size="small"><StatusBadge tone={serviceLabel(flink?.status).tone} dot={false}>{serviceLabel(flink?.status).label}</StatusBadge></Card></Col>
+      <Col xs={24} md={12}><Card title="Spark Runner" size="small"><StatusBadge tone={serviceLabel(spark?.status).tone} dot={false}>{serviceLabel(spark?.status).label}</StatusBadge></Card></Col>
+    </Row>
+    <Alert className="form-section-space" showIcon type={verified ? 'success' : 'warning'}
+      message={verified ? '九类必需数据源的当前业务运行证据已通过' : '九类必需数据源尚未取得当前完整验证'}
+      description={verified ? '服务端已核对同一上下文中的具体数据源断言和必要附件；不使用连接探测或历史摘要替代。' : '历史成功、HTTP 200、服务在线或数据源可连接，均不能作为本版本已通过的结论。'} />
+    <DataSurface label="R1-R5 当前阶段进度"><Table rowKey="code" size="small" columns={milestoneColumns} dataSource={milestoneRows} pagination={false} scroll={{ x: 750 }} /></DataSurface>
+    <DataSurface label={`九类必需 + 三类补充 · 已配置 ${sourceReady ? sourceStats.configured : '未知'} / 9 必需`}><Table rowKey="type" size="small" columns={sourceColumns} dataSource={acceptanceSources} pagination={false} scroll={{ x: 900 }} /></DataSurface>
+    <DataSurface title="历史运行记录（不计当前验收）" description="旧 schema1/schema2 摘要仅供追溯。它们没有建立当前运行版本与完整附件的验证关系。">
+      {history.length === 0 ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无可读取的历史摘要" /> : history.map((item) => <Card key={item.kind} size="small" className="form-section-space">
+        <Space direction="vertical" size={4}><Typography.Text strong>{item.kind === 'platform' ? '平台验收历史' : 'Schema/质量控制面历史'}</Typography.Text>
+          <Tag>历史结果：{item.status === 'passed' ? '通过' : item.status === 'failed' ? '失败' : '未完成'}（未作当前核验）</Tag>
+          <Typography.Text type="secondary">生成于 {new Date(item.generatedAtUtc).toLocaleString()} · schema {item.schemaVersion}</Typography.Text>
+          <Typography.Text code>{item.source}</Typography.Text></Space>
+      </Card>)}
+    </DataSurface>
+  </div>
 }

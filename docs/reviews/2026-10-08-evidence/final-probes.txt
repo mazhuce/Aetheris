@@ -1,0 +1,6 @@
+FLINK_HEALTH_LOOPBACK_HTTP_STATUS=200
+FLINK_HEALTH_LOOPBACK_REQUEST=/v1/info
+FLINK_HEALTH_LOOPBACK_BODY=GatewayHealth[status=UP, version=review-only, endpoint=http://127.0.0.1:59522]
+NOTE=direct controller invocation, not an authenticated full HTTP stack test
+RELEASE_SELECTED_PATH=old-passed.json
+RELEASE_SELECTED_STATUS=passed

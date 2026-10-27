@@ -17,7 +17,7 @@ public class QualityFixedExecutionFacade {
     public QualityCheckResult manual(long id,TrustedUser user){return execute(store.claimManual(id,QualityActor.manual(user),null));}
     public QualityCheckResult scheduled(long id,long generation,String key){return execute(store.claimScheduled(id,generation,key));}
     private void safeNotify(Long id,String level,String title,String message){try{notifications.notifyAdmin(id,level,title,message);}catch(RuntimeException unavailable){/* Never repeat or reclassify an execution because notification delivery failed. */}}
-    private QualityCheckResult execute(QualityExecutionStore.Claim claim){
+    public QualityCheckResult execute(QualityExecutionStore.Claim claim){
         if(claim.reused())return claim.result();var result=claim.result();
         try {
             var response=client.execute(claim.submission(),receipt->store.bindReceipt(result.getId(),receipt));

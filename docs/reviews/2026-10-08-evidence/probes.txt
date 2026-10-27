@@ -1,0 +1,40 @@
+C:\Users\yafei\AppData\Local\Temp\opencode\AetherisReviewProbe.java:85: 警告: [unchecked] 方法调用未经过检查: 将接口 IService中的方法 list应用到给定的类型
+    when(tables.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(List.of(a,b));
+                    ^
+  需要: Wrapper<T>
+  找到:    Wrapper
+  其中, T是类型变量:
+    T扩展已在接口 IService中声明的Object
+C:\Users\yafei\AppData\Local\Temp\opencode\AetherisReviewProbe.java:85: 警告: [unchecked] 未经检查的转换
+    when(tables.list(any(com.baomidou.mybatisplus.core.conditions.Wrapper.class))).thenReturn(List.of(a,b));
+                        ^
+  需要: Wrapper<T>
+  找到:    Wrapper
+  其中, T是类型变量:
+    T扩展已在接口 IService中声明的Object
+2 个警告
+READ_GUARD REJECTED: SELECT pg_sleep(1)
+READ_GUARD ACCEPTED: SELECT\npg_sleep(1)
+READ_GUARD ACCEPTED: EXPLAIN ANALYZE\nDELETE FROM review_probe
+READ_GUARD ACCEPTED: SELECT 1 INTO OUTFILE '/tmp/review-not-executed'
+WRITE_GUARD REJECTED: INSERT INTO t SELECT pg_sleep(1)
+WRITE_GUARD ACCEPTED: INSERT INTO t\nSELECT pg_sleep(1)
+ACTUAL JdbcService.query ROWS_AFTER_DELETE=0
+H2 INIT URL ACCEPTED
+00:23:24.879 [main] INFO org.flywaydb.core.FlywayExecutor -- Database: jdbc:h2:mem:aetheris_review_flyway (H2 2.2)
+FLYWAY_INFO FAILED: Found more than one migration with version 3
+Offenders:
+-> C:\Users\yafei\RA1NL0VE\Aetheris\services\serving\src\main\resources\db\migration\V3__semantic_dataset.sql (SQL)
+-> C:\Users\yafei\RA1NL0VE\Aetheris\services\serving\src\main\resources\db\migration\V3__service_api_keys.sql (SQL)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\yafei\.m2\repository\net\bytebuddy\byte-buddy-agent\1.15.11\byte-buddy-agent-1.15.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+Java HotSpot(TM) 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+BEFORE_REVOKE_OTHER_TABLE_ALLOWED=false
+AFTER_REVOKE_OTHER_TABLE_ALLOWED=true
+DOMAIN_CODE_VISIBILITY=Visibility[mode=IDS, ids=[]]
+DOMAIN_CODE_SINGLE_CHECK=true
+GENERATED_URL_DANGEROUS_PARAMETER=jdbc:postgresql://127.0.0.1:5432/review?socketFactory=review.not.executed.Factory
+SYNC_SCHEMA_A_CHANGED_UNSCANNED_SCHEMA_B_STATUS=stale

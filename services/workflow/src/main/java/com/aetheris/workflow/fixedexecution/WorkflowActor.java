@@ -13,6 +13,9 @@ public final class WorkflowActor {
         this.kind=kind;this.uid=uid;this.username=username;this.accessVersion=av;this.requestId=requestId;
     }
     public static WorkflowActor manual(TrustedUser user){if(user==null||!"workflow".equals(user.proof().audience()))throw new IllegalStateException("需要已验签执行主体");var p=user.proof();return new WorkflowActor("manual",p.uid(),p.username(),p.accessVersion(),p.requestId());}
+    public static WorkflowActor pipeline(TrustedUser user){return manual(user).forPipeline();}
+    static WorkflowActor pipeline(JsonNode n){FixedJson.fields(n,"kind","uid","username","accessVersion","requestId");if(!"pipeline".equals(FixedJson.text(n,"kind")))throw FixedJson.invalid();return new WorkflowActor("pipeline",FixedJson.number(n,"uid",1),FixedJson.text(n,"username"),FixedJson.number(n,"accessVersion",0),FixedJson.text(n,"requestId"));}
+    private WorkflowActor forPipeline(){return new WorkflowActor("pipeline",uid,username,accessVersion,requestId);}
     static WorkflowActor cron(JsonNode n){FixedJson.fields(n,"kind","uid","username","accessVersion","requestId");if(!"cron".equals(FixedJson.text(n,"kind")))throw FixedJson.invalid();return new WorkflowActor("cron",FixedJson.number(n,"uid",1),FixedJson.text(n,"username"),FixedJson.number(n,"accessVersion",0),FixedJson.text(n,"requestId"));}
     public WorkflowActor forCron(){return new WorkflowActor("cron",uid,username,accessVersion,requestId);}
     public ObjectNode json(){return FixedJson.JSON.createObjectNode().put("kind",kind).put("uid",uid).put("username",username).put("accessVersion",accessVersion).put("requestId",requestId);}

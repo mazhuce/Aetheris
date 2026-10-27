@@ -23,7 +23,7 @@ function renderAt(path: string) {
 
 describe('RequireAuth', () => {
   it('已登录时渲染子内容', () => {
-    setAuthenticated({ username: 'alice', role: 'viewer' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
     renderAt('/system/users')
     expect(screen.getByText('protected-content')).toBeInTheDocument()
   })

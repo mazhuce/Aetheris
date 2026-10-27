@@ -188,6 +188,8 @@ services:
       AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
       # 定时质量任务的服务主体；生产环境应改成专用只读账号。
       AETHERIS_QUALITY_SERVICE_PRINCIPAL: ${AETHERIS_QUALITY_SERVICE_PRINCIPAL:-admin}
+      WORKFLOW_SERVICE_HOST: workflow-service
+      WORKFLOW_SERVICE_PORT: "8088"
       AUTH_SERVICE_HOST: auth-service
       AUTH_SERVICE_PORT: "8087"
       # 检查失败时写通知（我的待办）。

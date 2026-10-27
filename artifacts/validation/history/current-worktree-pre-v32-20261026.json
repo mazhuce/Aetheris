@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-worktree-validation-record",
+  "recordedAtUtc": "2026-10-25T15:38:20.688080+00:00",
+  "status": "partial",
+  "releaseEligible": false,
+  "source": {
+    "commit": "8610de063d51a76d97f65d4d003f8b2ec93d307c",
+    "worktreeSha256": "3517964ecd1727f4099950bc03af9d5988bc8dd7bd4e76414e54e25292109d39"
+  },
+  "configurationFiles": {
+    "docker-compose.yml": "3b67ecd2ace64ff2d81f0a61f76bcea5e3180c023d148a732e4bf7651b47b410",
+    "docker-compose.database-roles.yml": "0f15c28610a539a7f573cdbfc94b165d8728d32adb9b2f089365372aab5e2701",
+    ".env.example": "2a951fa50c47dda57be4a853457536c69918b22997ed7f143c81ebee586fed37",
+    ".github/workflows/base-image-inventory.json": "febcf6c72c579503c9dd661c7a6834a8e211ba9e4c71cdbff8587472c87b40e5"
+  },
+  "migrations": {
+    "count": 119,
+    "manifestSha256": "3ecb04208f97cfb2cb71533a872c51dac8ce02d41bf0a89d194f4f2d1f33bc9f",
+    "added": "services/workflow/src/main/resources/db/migration/V31__trusted_pipeline_sql_sources.sql",
+    "addedSha256": "21696ab9487297f56f51ccdd6b29be20a87c207bcaf430f12f005ea54a6f42d3"
+  },
+  "sourceCompatibility": {
+    "previousWorktreeSha256": "c8625769e766b8393a49e3651867b769237c537be313f27058dede7931e0d8d7",
+    "previousRecordArchive": "artifacts/validation/history/current-worktree-pre-v31-20261025.json",
+    "previousRecordSha256": "83ca79395d414a34bcb9bf5490249a3d672a2a31b687f6863e20af9d8a96a179",
+    "earlierPreV30Baseline": {
+      "previousWorktreeSha256": "95835bcb22c2c1dc43d7f5f6f2d1e84ce1da799e23b16d1f6af530f66e6c681b",
+      "previousRecordArchive": "artifacts/validation/history/current-worktree-pre-v30-20261025.json",
+      "previousRecordSha256": "C4B3BCF93881D2720953B9E61A3A64C5AB6C93B01C1EE60345F01E3922CE53B1",
+      "previousRealApplicationSegments": "All PreV30 segments below retain their original 117-migration and source scope; they do not validate the current 118-migration worktree."
+    },
+    "historicalScope": "Every PreV30/PreV31/intermediate report retains its original source, migrations and artifacts. A later record fingerprint never rebinds an earlier producer."
+  },
+  "independentCleanup": {
+    "checkedLabels": [
+      "aetheris.pipeline-authority.audit",
+      "aetheris.workflow-sql-chain.audit",
+      "aetheris.execution-uncertainty.audit",
+      "aetheris.database.deploy-gate.audit"
+    ],
+    "containersRemaining": 0,
+    "networksRemaining": 0,
+    "volumesRemaining": 0,
+    "auditPrivateKeyDirectoriesRemaining": 0,
+    "databaseGatePrivateFixtureDirectoriesRemaining": 0,
+    "ownedWorkflowMetadataTestJavaProcessesRemaining": 0,
+    "scope": "Read-only independent Docker/CIM/private-directory inventory after all owned runs ended; unrelated environment untouched."
+  },
+  "evidence": {
+    "scriptRegression": {
+      "path": "output/audit-seed-script-package/v2-run-20261024T103012Z-e6c9c59f/report.json",
+      "sha256": "749f3cb67d58b5639552f507a9ad93a88bd97a7b02854cf7caa918fc2390778e",
+      "previousRecordedSha256": "749f3cb67d58b5639552f507a9ad93a88bd97a7b02854cf7caa918fc2390778",
+      "digestCorrection": "Previous summary digest had 63 hex characters. The original report is unchanged; the full 64-character digest was measured during the 2026-10-25 closeout. The original erroneous record remains in the pre-V30 archive.",
+      "countsTowardCurrentAcceptance": false,
+      "result": "Historical suite summary: 332 total, 5 skipped; not current acceptance",
+      "scope": "historical PS5.1/PS7 mock only; no API, database or Docker execution; digest correction does not rebind source, run or attachments"
+    },
+    "frontend": {
+      "testCommand": "npm.cmd run test -- --maxWorkers=1 --minWorkers=1",
+      "tests": "48 files / 163 tests passed",
+      "typeCheck": "passed",
+      "lint": "passed",
+      "build": "passed with chunk warnings",
+      "distDirectorySha256": "9d54339a23de7eadbc15a87af761d9fce6e139656b70b004711d68923f8d2e6d",
+      "distFileCount": 111,
+      "scope": "Historical 2026-10-24 frontend-only validation; source-specific component evidence, not current authenticated browser or frozen release acceptance."
+    },
+    "browserLocalPreview": {
+      "url": "http://127.0.0.1:4173/",
+      "servedBuild": "apps/web/dist via vite preview",
+      "initialRoute": "/login",
+      "initialConsoleErrors": 0,
+      "negativeLogin": {
+        "fakeCredentials": true,
+        "httpStatus": 403,
+        "routeRemained": "/login"
+      },
+      "twoTabsReload": "both tabs remained on /login after independent navigation",
+      "snapshot": ".playwright-mcp/page-2026-10-24T11-39-06-205Z.yml",
+      "negativeScreenshot": ".playwright-mcp/login-negative-20261024.png",
+      "scope": "frontend route and negative authentication presentation only; no authenticated backend or cross-service browser acceptance"
+    },
+    "p03ListVisibilityRegression": {
+      "command": "mvn.cmd -q -Dtest=MetadataListVisibilityRegressionTest test",
+      "workingDirectory": "services/metadata",
+      "result": "13 tests passed, 0 failures, 0 errors, 0 skipped",
+      "report": "services/metadata/target/surefire-reports/com.aetheris.metadata.security.MetadataListVisibilityRegressionTest.txt",
+      "reportSha256": "C286257AE815CA179A7041FA9EB27E39985702C817A7829756520EA73FC40A04",
+      "xmlReportSha256": "C9D57751A2066211FB0FDA4E122837FE44477525DB09BFF8120112022489080E",
+      "fixture": "isolated H2 plus loopback signed permission peer",
+      "scope": "P03 pagination, >1000 rows, bounded permission batches, cursor consistency and fail-closed cases; not full metadata service deployment"
+    },
+    "staticGates": {
+      "workflowContract": "passed: 6 workflows",
+      "documentIntegrity": "passed: 78 Markdown files",
+      "flywayMigrationValidation": "passed: 119 migrations across 9 services",
+      "composeConfig": "passed",
+      "baseImageInventory": {
+        "exitCode": 1,
+        "unresolvedLocks": 2,
+        "status": "blocked"
+      }
+    },
+    "auditUnitTests": {
+      "command": "PYTHONPATH=scripts py -3 -B -m unittest discover -s scripts/tests -p test_*audit.py",
+      "result": "90 audit-tool tests passed; 12 deploy-gate tool tests and 18 database-role contract/behavior tests separately passed",
+      "exitCode": 0,
+      "protocolHostPrerequisite": "Current JDK21 security-protocol unit run: 8 suites / 160 tests / zero failures, errors or skips, fresh unit marker",
+      "preservedPreconditionFailure": "the first post-build audit run failed only because clean/package had removed the required security-protocol Surefire reports; reports were regenerated under JDK 21 before the final 84-test pass"
+    },
+    "databaseDeployGatePreV30": {
+      "path": "output/audit-database-deploy-gate/run-20261024-current/report.json",
+      "runId": "0823f69cd0a14f8fb6df4bb560194166",
+      "sha256": "815E63D4B97B515CB7A0A5E5610DE508C2B9D28707655A50FC26B0C6E94C8EEA",
+      "status": "passed",
+      "positive": "117 migrations across 9 schemas with live receipt and compose database identity",
+      "negativeCases": 23,
+      "negativeCasesPassed": 23,
+      "databaseUnchanged": true,
+      "sourceHashesMatchAtEnd": true,
+      "migrationCredentialsRetired": true,
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "databaseIdentity": {
+        "database": "aetheris_deploy_gate_audit",
+        "systemIdentifier": "7700193744790523939",
+        "databaseOid": "16384"
+      },
+      "scope": "isolated disposable PostgreSQL gate; not nine-service deployment or production acceptance"
+    },
+    "identityChainPreV30": {
+      "path": "output/audit-identity-chain/run-20261024-current/report.json",
+      "runId": "dc68ac21d56848ed8a0a2abc612f66e2",
+      "sha256": "2BE7BCB9A1CDE3E916DCCF04333AD1347BE205768A682852A4F66A2628920B15",
+      "status": "passed",
+      "checks": 34,
+      "failedChecks": 0,
+      "applications": [
+        "gateway",
+        "auth",
+        "system"
+      ],
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "Pre-V30 three-application identity segment with disposable PostgreSQL and Redis; not current 118-migration acceptance"
+    },
+    "apiKeyChainPreV30": {
+      "path": "output/audit-api-key-chain/run-20261025-current-v5/report.json",
+      "runId": "bf9b29e30e8d4aa0a8c5b1a38e6c26d3",
+      "sha256": "92882B50B05DBAA2C4487737191470F1ECAC72EA6165F6265516D636F5E76FDC",
+      "status": "passed",
+      "checks": 25,
+      "failedChecks": 0,
+      "applications": [
+        "gateway",
+        "auth",
+        "metadata",
+        "serving"
+      ],
+      "actualBusinessRowsPerSuccessfulQuery": 3,
+      "successfulQueryAuditsBoundToOwner": 5,
+      "unexpectedAuditSubjects": 0,
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "Pre-V30 four-application pure API-key segment with 117 migrations; not current 118-migration acceptance"
+    },
+    "apiKeyChainFailedRunsPreserved": [
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current/report.json",
+        "runId": "cbf8a64385ac473fb922147dbaf41fec",
+        "sha256": "D615B4F7AC9BD2B2EC279246D7DD244CFA857DD774D575A8BE2103945875981D",
+        "stage": "four-real-java-applications",
+        "failure": "stale fixture omitted required v2 security registry; auth failed closed before health"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v2/report.json",
+        "runId": "03ea223a09eb4fa3adb86a3360974a6f",
+        "sha256": "17AABAB1C47550E269A19E8298A2A8D09EBD95B2361541B0589DCA6D979842BE",
+        "stage": "real-http-fixture",
+        "failure": "stale fixture used table search limit 100 while the current contract rejects values above 50"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v3/report.json",
+        "runId": "7e81794712b04d658f947c7c581ec6d7",
+        "sha256": "9B99C5D5DD3A44F97F57BD3CE86BF67750E5A4B2526C3F0CA6F5530BD16F33CC",
+        "stage": "pure-api-key-cases",
+        "failure": "fixture issued keys as admin then downgraded the owner; accessVersion changed and current services correctly rejected the old keys"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v4/report.json",
+        "runId": "c482694f60114978b79227be62d936fa",
+        "sha256": "C41FB3CA744C3255B935FFE27DCB763A7E956CC5CED7C03146761437441399A7",
+        "stage": "pure-api-key-cases",
+        "failure": "24 of 25 checks passed; the fixture queried the historical table audit kind and table id instead of the current published_api asset id"
+      }
+    ],
+    "publishedKeyV2PreV30": {
+      "path": "output/audit-published-key-v2/run-20261025-current-v3/report.json",
+      "runId": "a5baa93b043e4c83b42c25489a9b7ff9",
+      "sha256": "AD73B15CE01FB2D265E1FA71C54375438451AC00B42EB3A2503CCD21C4F95438",
+      "status": "passed",
+      "checks": 102,
+      "uniqueCases": 102,
+      "failedChecks": 0,
+      "applications": [
+        "gateway",
+        "auth",
+        "system",
+        "metadata",
+        "serving"
+      ],
+      "migrations": 117,
+      "tableRows": 3,
+      "metricSum": 60,
+      "ownerAudit": {
+        "successfulPublishedQueries": 6,
+        "badOwnerBindings": 0,
+        "badDatasourceBindings": 0
+      },
+      "ordinaryAudit": {
+        "rows": 2,
+        "badProvenance": 0,
+        "badErrorDetail": 0,
+        "badQueryHash": 0
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "Pre-V30 five-application published table and metric key chain; not current 118-migration acceptance"
+    },
+    "publishedKeyV2FailedRunsPreserved": [
+      {
+        "path": "output/audit-published-key-v2/run-20261025-current/report.json",
+        "runId": "413b4128dc714863a3361f88e09420b8",
+        "sha256": "AE86B753DC8B1EDE0419AC38C0E976A5AB0E2D82C1DA9AB8F28B96476FBBF454",
+        "stage": "real-v2-published-key-business-query",
+        "checksBeforeFailure": 91,
+        "failure": "stale fixture expected QUERY_FAILED for a read-only SQL policy rejection; the current service correctly persisted SQL_POLICY_REJECTED"
+      },
+      {
+        "path": "output/audit-published-key-v2/run-20261025-current-v2/report.json",
+        "runId": "f5da3b7cb5e64c51b419678f538b0b1e",
+        "sha256": "275D87350F5F11749E51CA64F4D8532EC6532E181AEB528C885AE85FB0122420",
+        "stage": "start-5-real-applications",
+        "checksBeforeFailure": 0,
+        "failure": "environment failure: the reserved System port was occupied before the JVM could bind"
+      }
+    ],
+    "fixedExecutionChainPreV30": {
+      "path": "output/audit-fixed-execution-chain/run-20261025-current/report.json",
+      "runId": "98b63b3a21c6432cb828f554df50b1e2",
+      "sha256": "7EAB854E25DB470FE6CD10B99916E71EEBF6AD96D8B9510C3E6116E9B28EFC58",
+      "status": "passed",
+      "checks": 31,
+      "uniqueCases": 31,
+      "failedChecks": 0,
+      "applications": [
+        "auth",
+        "system",
+        "metadata",
+        "ingestion",
+        "quality",
+        "gateway"
+      ],
+      "migrations": 117,
+      "runBindings": {
+        "ingestionRunId": 1,
+        "qualityResultId": 1
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "Pre-V30 six-application approved transfer and quality execution segment; not current 118-migration acceptance"
+    },
+    "workflowSqlChainPreV30": {
+      "path": "output/audit-workflow-sql-chain/run-20261025-current/report.json",
+      "runId": "fd0fb9d8e3ab4916b74c71d935035b2b",
+      "sha256": "D7ADCDE15E09EB08091E34DB4225DFE6CAE2EA977DC62F766DD425642E715212",
+      "status": "passed",
+      "checks": 37,
+      "uniqueCases": 37,
+      "failedChecks": 0,
+      "applications": [
+        "auth",
+        "system",
+        "metadata",
+        "workflow",
+        "gateway"
+      ],
+      "migrations": 117,
+      "manualSqlWrite": "passed with approved definition and target writer",
+      "invalidBusinessDate": "HTTP 400 with zero attempts",
+      "quartzExecution": "one real successful trigger with sealed schedule and binding generations",
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "Pre-V30 five-application manual SQL and real Quartz cron segment; not current 118-migration acceptance"
+    },
+    "workflowUncertaintyPriorEvidence": [
+      {
+        "path": "output/audit-execution-uncertainty/run-20261025-current/red/report.json",
+        "sha256": "BA1454203BFBC404D4D6002C063C3A283AAF0418B25E6959B831EF213693C900",
+        "result": "6 meaningful regression failures, 0 errors, 0 skipped; prior sandbox attach error archived separately"
+      },
+      {
+        "path": "output/audit-execution-uncertainty/run-20261025-current/postgres-v1/report.json",
+        "runId": "76ecec151c484b838bc5ce9a8c36bb64",
+        "sha256": "D5F7B67A9FD247226D82A9F9BC70EA6770CF2AC58D0F0480F1D9DDB1ABE43D35",
+        "result": "3 passed and 1 real PostgreSQL error exposing the missing queued instance CHECK state; cleanup passed"
+      },
+      {
+        "path": "output/audit-execution-uncertainty/run-20261025-current/postgres-v2/report.json",
+        "runId": "7e32483a47a144458cc47a5aa6558b6a",
+        "sha256": "6A3F65F027576AE3F2C2E64AB77B65ED833E18D98F69155366D62606AE4A6772",
+        "result": "4 passed before the final dispatch-exception repair; retained with its earlier source scope"
+      }
+    ],
+    "databaseDeployGatePreV31": {
+      "path": "output/audit-database-deploy-gate/run-20261025-118/report.json",
+      "runId": "14fdcb2d198e438cb0a4946c0d7b9334",
+      "sha256": "FAA51431DB34741F616827B99EB977365C9CC53794F20B2A95E31A1BCAAD7BC6",
+      "status": "passed",
+      "migrations": 118,
+      "positiveCases": 1,
+      "negativeCases": 23,
+      "failedCases": 0,
+      "sourceHashesMatchAtEnd": true,
+      "databaseUnchanged": true,
+      "migrationCredentialsRetired": true,
+      "manifestIsUnsignedSyntheticFixture": true,
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "scope": "isolated PostgreSQL and Compose database admission gate with a synthetic manifest; no application deployment or release-producer acceptance Historical pre-V31 / 118-migration scope only; not current 119-migration acceptance."
+    },
+    "workflowUnitRegressionPreV31": {
+      "path": "output/audit-execution-uncertainty/run-20261025-current/unit-final/report.json",
+      "sha256": "72DC71B32025D588907057F07CCCE0B5A940D73E361E83AE07715FA85F365754",
+      "suites": 45,
+      "tests": 239,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "scope": "workflow unit/MVC and controlled peers only; no live-engine claim Historical pre-V31 / 118-migration scope only; not current 119-migration acceptance."
+    },
+    "workflowUncertaintyPreV31": {
+      "path": "output/audit-execution-uncertainty/run-20261025-current/postgres-v3/report.json",
+      "runId": "1a922bedf68947f9933dd7db2234c067",
+      "sha256": "6853F6F792B52BCF34CDEAC78EB2C742E6D4CFD152779393D2D94F067F63ADAB",
+      "status": "passed",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "migrations": 118,
+      "upgrade": "original workflow V1-V29 bytes rejected queued state; only V30 then applied, prior history checksums and success unchanged, zero pending",
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "scope": "real PostgreSQL runtime role, pipeline/attempt state and physical capacity accounting with controlled remote responses; no trusted pipeline actor chain, live Spark/Flink or release claim Historical pre-V31 / 118-migration scope only; not current 119-migration acceptance."
+    },
+    "pipelineAuthorityCurrent": {
+      "path": "output/audit-pipeline-authority/run-20261025-current-v6/report.json",
+      "sha256": "7411d59e0e8e4ab619ed5db9d8d72c227bf8a14da2b553de6d27672f9ab5717a",
+      "runId": "e7fd70d540f8479a97daaf6cd0d3ef1f",
+      "status": "passed",
+      "tests": {
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "migrations": 119,
+      "upgrade": {
+        "from": "workflow V30 / total 118 migrations",
+        "to": "workflow V31 / total 119 migrations",
+        "historyPreserved": true,
+        "migration": {
+          "validated": true,
+          "pending": 0,
+          "schema": "workflow",
+          "migrationsExecuted": 1
+        },
+        "historicalMigrationFileHashes": {
+          "V10__pipeline_unknown_reconciliation.sql": "7d3d1cdbf2e24499c7406c4345e7e420c21743b973859e1ed0e1bcd9f41f34e8",
+          "V11__execution_result_resolution.sql": "f30cf29f15cbaf9083a3f697da35c5aa4365a76a3114c249bbc6bf5e5f1b79be",
+          "V12__spark_runner_resource_queue.sql": "70aa9d76ab7e3a7ba1b04f470a3be3e94d3698ab871ca1718870f20b7401aef7",
+          "V13__git_source_revisions.sql": "69d65685e53f1e0b04ad4478a7a4ebf03bfbccc7891af80fa818911403a52a81",
+          "V14__protect_git_source_history.sql": "e46ca2bfc1583aad8aa743057fb2ad10d5c6e57eaa0ef49cedcf73e2aea12392",
+          "V15__git_source_verification.sql": "8da942a3a225b86a53b1e89343bbb7c9ed66ab3e6c9fa48b2eaa85cf73c6097d",
+          "V16__scheduler_sync_outbox.sql": "18feea26948e43836d9763b80fe473e0b11689c9b6373555dd98ed9a15098749",
+          "V17__flink_sql_tasks.sql": "3aa52ca8f8613fad57e1b3f5892949871e4e06d8e1ed401fae9831d32392c3ca",
+          "V18__spark_jar_artifacts.sql": "873bd2debed8e34f425ffb214003c17a5500fcd7dc34d82f6df87f6a994e4cb8",
+          "V19__spark_job_runner_binding.sql": "9bbafe94994d26928b6a1538effe6c45b9eec56da2309c66ce32fc0f84dd126b",
+          "V1__quartz_tables.sql": "ab92a70af1f3ab23154a4d263e8d49b042469b9cfe6736bb29241992532a9445",
+          "V20__flink_stream_lifecycle.sql": "0f6d3b6f23e40704d216a71d08fc80bf33ad32b8301d5ed82e416754e43db497",
+          "V21__flink_event_time_quality.sql": "595333bba94f41faeb01ca1a917f54db02d7d838c9925fdcbfde33c56cfbd254",
+          "V22__flink_job_lifecycle_evidence.sql": "0472d03c5041f2ffe910c4bf30de458bb0b328718a6787ffefbacb29cb467ce0",
+          "V23__flink_lifecycle_intent.sql": "ae89d7e3ebb70308ba77872936cee1d5aa9788f6a1ba959aa749f409c07188ed",
+          "V24__flink_upgrade_evidence.sql": "ea2ace2aa4ec3479b6458259c083a9b71fa31705e7b004fba907a4f12636d8b2",
+          "V25__task_definition_versions.sql": "31f8b9899298e46da74b2195adc150b848258ad9db05c05f2ae79f019fb799d9",
+          "V26__flink_resuming_lifecycle.sql": "e07adab2352bfbf8d4f2ea754c795f982797fb593d0226cdcb2e66cb3a5b36e6",
+          "V27__internal_request_nonce.sql": "5bd064d117304a4fb2853c7a173f876f1d02092f5424521878e384a5b8c0c5eb",
+          "V28__fixed_execution_identity.sql": "6cc48287761cd5f53f803c71db4f0854c1c39e23767cdfd078a795d8439878dd",
+          "V29__sql_source_approval_and_schedule_generation.sql": "3b013d38c8b95827e62c54a197370b40348b4f08ab5614d558ed2ead280ca36a",
+          "V2__task_tables.sql": "f20002f3c6597585f643cd33013082ea7f473a72da95e150a08cb0860f435d77",
+          "V30__queued_task_instance_status.sql": "b94f11872e05c90ce5d77d7548589ecc8295d52a2d0c2453588a0c2aaf3f459b",
+          "V3__release_record.sql": "6850c5819cd0a9feeef7c198fe94dc6b5b1c32d92366cee20bd7f6d685cf3d2f",
+          "V4__execution_attempts.sql": "bef6a9d974fe23c755a07f3c747e5cac4f0acc5dd7bd54f39d918be0ebeda137",
+          "V5__managed_spark_and_pipeline.sql": "95ba1f6f8162d85bb93c16c02ba5f20ec7bf7fa4c5d1c839873bba6172c373bc",
+          "V6__pipeline_execution_leases.sql": "eb816b6fcd8bb9e801ed8140e38013a05e5c53cd3b6c6567fbc02d7c23fbe1c7",
+          "V7__pipeline_node_cancellation.sql": "fcbcd1f793d1f434fb4f2ada6c888e9fdfe681cd1fe02d05b1689b7d3739b394",
+          "V8__pipeline_trigger_contract.sql": "6b1fcc87ca9d53cfb416dcb5abdad3f5796b14b82d32223d40c325c8af0152f9",
+          "V9__pipeline_controlled_retry.sql": "c72f42462183e0ca2c01243ec5b40c778e86fe915ceb482cac9fad11d11dcae4"
+        }
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "scope": "Real PostgreSQL runtime-role pipeline source/attempt/fence/dependency/parent-lock/upgrade constraints. Identities and receipts are controlled fixtures, not Auth/Metadata HTTP or actual business SQL."
+    },
+    "workflowSqlChainCurrent": {
+      "path": "output/audit-workflow-sql-chain/run-20261025-v31-pipeline-v2/report.json",
+      "sha256": "d0d417abaeffa52607aa658423ddea7cd2992ed6670a2b6691d60ea4cfed9e02",
+      "runId": "6622e51cc18041898f182594630fb7f9",
+      "status": "passed",
+      "cases": 61,
+      "migrations": 119,
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "scope": "Five real JARs: Auth/System/Metadata/Workflow/Gateway; actual manual/Quartz/approved SQL pipeline business writes, original UID and approver, real receipt/source authorization. Not mixed engines, all queued-revocation faults, browser, nine services or release acceptance."
+    },
+    "relatedModuleUnitRegression": {
+      "path": "output/audit-pipeline-authority/unit-a39a75c6f2e34af7b06421db9bcb53d0/report.json",
+      "sha256": "e13594e0cda9db3b6d05e7978fa1813b8460dbdad76cc1aa0cfda0515d366d8b",
+      "runId": "a39a75c6f2e34af7b06421db9bcb53d0",
+      "status": "passed",
+      "modules": {
+        "services/workflow": {
+          "exitCode": 0,
+          "suites": 45,
+          "tests": 241,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "services/metadata": {
+          "exitCode": 0,
+          "suites": 70,
+          "tests": 440,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "libs/security-protocol": {
+          "exitCode": 0,
+          "suites": 8,
+          "tests": 160,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "sourceHashesMatchAtEnd": true,
+      "scope": "workflow/metadata/security-protocol unit suites; no live database or engine",
+      "archivePolicy": "Preserve verdicts and failures; whitelist run/JDK properties; remove test stdout/stderr. Original report digests retained."
+    },
+    "workflowUncertaintyCurrent": {
+      "path": "output/audit-execution-uncertainty/run-20261025-v31-final/report.json",
+      "sha256": "6771c54d8505e2c7029d3782ef2515d44359323479ca2c5b0ef6318e45f40523",
+      "runId": "75b4627c5175482497cb0707e214a346",
+      "status": "passed",
+      "tests": {
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "migrations": 119,
+      "upgrade": {
+        "from": "workflow V29 / total 117 migrations",
+        "to": "workflow V31 / total 119 migrations",
+        "historyPreserved": true,
+        "migration": {
+          "schema": "workflow",
+          "pending": 0,
+          "validated": true,
+          "migrationsExecuted": 2
+        },
+        "historicalMigrationFileHashes": {
+          "V10__pipeline_unknown_reconciliation.sql": "7d3d1cdbf2e24499c7406c4345e7e420c21743b973859e1ed0e1bcd9f41f34e8",
+          "V11__execution_result_resolution.sql": "f30cf29f15cbaf9083a3f697da35c5aa4365a76a3114c249bbc6bf5e5f1b79be",
+          "V12__spark_runner_resource_queue.sql": "70aa9d76ab7e3a7ba1b04f470a3be3e94d3698ab871ca1718870f20b7401aef7",
+          "V13__git_source_revisions.sql": "69d65685e53f1e0b04ad4478a7a4ebf03bfbccc7891af80fa818911403a52a81",
+          "V14__protect_git_source_history.sql": "e46ca2bfc1583aad8aa743057fb2ad10d5c6e57eaa0ef49cedcf73e2aea12392",
+          "V15__git_source_verification.sql": "8da942a3a225b86a53b1e89343bbb7c9ed66ab3e6c9fa48b2eaa85cf73c6097d",
+          "V16__scheduler_sync_outbox.sql": "18feea26948e43836d9763b80fe473e0b11689c9b6373555dd98ed9a15098749",
+          "V17__flink_sql_tasks.sql": "3aa52ca8f8613fad57e1b3f5892949871e4e06d8e1ed401fae9831d32392c3ca",
+          "V18__spark_jar_artifacts.sql": "873bd2debed8e34f425ffb214003c17a5500fcd7dc34d82f6df87f6a994e4cb8",
+          "V19__spark_job_runner_binding.sql": "9bbafe94994d26928b6a1538effe6c45b9eec56da2309c66ce32fc0f84dd126b",
+          "V1__quartz_tables.sql": "ab92a70af1f3ab23154a4d263e8d49b042469b9cfe6736bb29241992532a9445",
+          "V20__flink_stream_lifecycle.sql": "0f6d3b6f23e40704d216a71d08fc80bf33ad32b8301d5ed82e416754e43db497",
+          "V21__flink_event_time_quality.sql": "595333bba94f41faeb01ca1a917f54db02d7d838c9925fdcbfde33c56cfbd254",
+          "V22__flink_job_lifecycle_evidence.sql": "0472d03c5041f2ffe910c4bf30de458bb0b328718a6787ffefbacb29cb467ce0",
+          "V23__flink_lifecycle_intent.sql": "ae89d7e3ebb70308ba77872936cee1d5aa9788f6a1ba959aa749f409c07188ed",
+          "V24__flink_upgrade_evidence.sql": "ea2ace2aa4ec3479b6458259c083a9b71fa31705e7b004fba907a4f12636d8b2",
+          "V25__task_definition_versions.sql": "31f8b9899298e46da74b2195adc150b848258ad9db05c05f2ae79f019fb799d9",
+          "V26__flink_resuming_lifecycle.sql": "e07adab2352bfbf8d4f2ea754c795f982797fb593d0226cdcb2e66cb3a5b36e6",
+          "V27__internal_request_nonce.sql": "5bd064d117304a4fb2853c7a173f876f1d02092f5424521878e384a5b8c0c5eb",
+          "V28__fixed_execution_identity.sql": "6cc48287761cd5f53f803c71db4f0854c1c39e23767cdfd078a795d8439878dd",
+          "V29__sql_source_approval_and_schedule_generation.sql": "3b013d38c8b95827e62c54a197370b40348b4f08ab5614d558ed2ead280ca36a",
+          "V2__task_tables.sql": "f20002f3c6597585f643cd33013082ea7f473a72da95e150a08cb0860f435d77",
+          "V3__release_record.sql": "6850c5819cd0a9feeef7c198fe94dc6b5b1c32d92366cee20bd7f6d685cf3d2f",
+          "V4__execution_attempts.sql": "bef6a9d974fe23c755a07f3c747e5cac4f0acc5dd7bd54f39d918be0ebeda137",
+          "V5__managed_spark_and_pipeline.sql": "95ba1f6f8162d85bb93c16c02ba5f20ec7bf7fa4c5d1c839873bba6172c373bc",
+          "V6__pipeline_execution_leases.sql": "eb816b6fcd8bb9e801ed8140e38013a05e5c53cd3b6c6567fbc02d7c23fbe1c7",
+          "V7__pipeline_node_cancellation.sql": "fcbcd1f793d1f434fb4f2ada6c888e9fdfe681cd1fe02d05b1689b7d3739b394",
+          "V8__pipeline_trigger_contract.sql": "6b1fcc87ca9d53cfb416dcb5abdad3f5796b14b82d32223d40c325c8af0152f9",
+          "V9__pipeline_controlled_retry.sql": "c72f42462183e0ca2c01243ec5b40c778e86fe915ceb482cac9fad11d11dcae4"
+        }
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "scope": "Real PostgreSQL quality evidence/waiver expiry and Spark physical capacity policy with controlled peers; no trusted mixed pipeline or live Spark/Flink claim."
+    },
+    "databaseDeployGateCurrent": {
+      "path": "output/audit-database-deploy-gate/run-20261025-119/report.json",
+      "sha256": "871edca94855a5baf47940fd1bd7b83702d0f1819b4ec0f6b21209cf7ee9d2a3",
+      "runId": "85c6950899a443ce9e9821913ff0e862",
+      "status": "passed",
+      "migrations": 119,
+      "positiveCases": 1,
+      "negativeCases": 23,
+      "failedCases": 0,
+      "sourceHashesMatchAtEnd": true,
+      "databaseUnchanged": true,
+      "migrationCredentialsRetired": true,
+      "manifestIsUnsignedSyntheticFixture": true,
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "scope": "Real isolated PostgreSQL/Compose admission with synthetic manifest; no actual eleven-image deployment or release producer acceptance."
+    },
+    "pipelineAuthorityPriorEvidence": [
+      {
+        "path": "output/audit-pipeline-authority/run-20261025-current-v1/report.json",
+        "sha256": "bd0cc663968a2fe36fe81bf7014919287e5840ed6c5f3004f711a5f0e96150bb",
+        "runId": "c4410dfef18d4a47a0669715e4e5a1be",
+        "status": "failed",
+        "tests": null,
+        "disposition": "Runtime-role preparation rejected the five unreviewed SQL INVOKER helpers; no business test ran. Exact schema/signatures subsequently reviewed and added in Python/Java.",
+        "countsTowardCurrentAcceptance": false,
+        "cleanup": {
+          "processes": true,
+          "containers": true,
+          "credentialsRetired": true,
+          "privateKeysRemoved": true,
+          "volumesAbsent": true
+        }
+      },
+      {
+        "path": "output/audit-pipeline-authority/run-20261025-current-v2/report.json",
+        "sha256": "b1d5333d9d9c74da3cf982b3bd599cfed2a3b8ee029ae88210d5cb10427692b7",
+        "runId": "36d9bdcc9c294f768d2b6b02dc5020aa",
+        "status": "failed",
+        "tests": {
+          "tests": 10,
+          "failures": 1,
+          "errors": 9,
+          "skipped": 0
+        },
+        "disposition": "Test fixture Java varargs cast Long to Object[]: 1 failure and 9 errors; not a meaningful business RED.",
+        "countsTowardCurrentAcceptance": false,
+        "cleanup": {
+          "processes": true,
+          "containers": true,
+          "credentialsRetired": true,
+          "privateKeysRemoved": true,
+          "volumesAbsent": true
+        }
+      },
+      {
+        "path": "output/audit-pipeline-authority/run-20261025-current-v3/report.json",
+        "sha256": "3f731b197d8ce45b7246846db312ce6a471ed5a32dd46acb5f4057b7d17dbae4",
+        "runId": "27bc6028ff574019a9a7fdec7bce03c8",
+        "status": "failed",
+        "tests": {
+          "tests": 10,
+          "failures": 5,
+          "errors": 0,
+          "skipped": 0
+        },
+        "disposition": "Code defect: logical success and physical succeeded status mapping caused 5 genuine assertion failures; original report retained.",
+        "countsTowardCurrentAcceptance": false,
+        "cleanup": {
+          "processes": true,
+          "containers": true,
+          "credentialsRetired": true,
+          "privateKeysRemoved": true,
+          "volumesAbsent": true
+        }
+      },
+      {
+        "path": "output/audit-pipeline-authority/run-20261025-current-v4/report.json",
+        "sha256": "acecfa26928fb5a26fd4b4a849e9cf0ad2f1c9c03714736cbb0b9ef13fa292b0",
+        "runId": "233cd9c0b5ef47e8acd46d23ee652f3e",
+        "status": "passed",
+        "tests": {
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "disposition": "10 passed before the final parent-run serialization lock; historical scope only, not the final 11-case suite.",
+        "countsTowardCurrentAcceptance": false,
+        "cleanup": {
+          "processes": true,
+          "containers": true,
+          "credentialsRetired": true,
+          "privateKeysRemoved": true,
+          "volumesAbsent": true
+        }
+      },
+      {
+        "path": "output/audit-pipeline-authority/run-20261025-current-v5/report.json",
+        "sha256": "74feb71573560eb50a0dc60ee8175816e39f10435bd3310e3a5235547ec84add",
+        "runId": "00d5e9729cb34e9fad883feddd407822",
+        "status": "failed",
+        "tests": {
+          "tests": 11,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "disposition": "11 cases, 1 failed observation: pg_stat_activity transaction snapshot was cached. Explicit snapshot refresh retained the real Lock/55000 assertions.",
+        "countsTowardCurrentAcceptance": false,
+        "cleanup": {
+          "processes": true,
+          "containers": true,
+          "credentialsRetired": true,
+          "privateKeysRemoved": true,
+          "volumesAbsent": true
+        }
+      }
+    ],
+    "workflowSqlPreFinalV31Evidence": {
+      "path": "output/audit-workflow-sql-chain/run-20261025-v31-pipeline-v1/report.json",
+      "sha256": "947de348b462ef261e6e779c57fdaf4ba7be5ae98c179c55fa616e9661de8912",
+      "runId": "5fb54f456cf74ad38bd10b6a5416d01e",
+      "status": "passed",
+      "cases": 61,
+      "countsTowardCurrentAcceptance": false,
+      "scope": "Passed before the final V31 parent-lock migration bytes; final v2 rebuilt and reran independently.",
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      }
+    },
+    "strictReleaseExisting": {
+      "path": "output/audit-pipeline-authority/closeout-20261025/strict-release.log",
+      "sha256": "9abbc10bb20e8208ee1957fdb8472b33b35f3ba19eb6ce4dc5905a1893aaf3fd",
+      "exitCode": 1,
+      "status": "blocked",
+      "scope": "Read-only validation of existing aggregate; not a new release run."
+    }
+  },
+  "blockingEvidence": [
+    "Two MinIO references remain unresolved; strict base-image check exits 1",
+    "platform-release-acceptance-strict -ValidateExisting exits 1; current necessary release producers and shared frozen release context are missing",
+    "Mixed Spark/Flink pipeline and workflow-child v2 authority remain incomplete; SQL pipeline success is not their acceptance",
+    "Authenticated browser concurrency, all queued-revocation/fault cases and final same-version nine-service/nine-source installation-upgrade-restore acceptance remain incomplete",
+    "The original Aetheris_mimo.md and Aetheris_deepseek.md attachments are absent from the current repository"
+  ],
+  "interpretation": "Partial 119-migration worktree evidence only. Current subreports bind their own relevant sources, JARs, configurations, run IDs, migration bytes, times and attachments. Distinct isolated runs are not a shared frozen release context. No historical or intermediate success, unit count or single chain is promoted to full release acceptance."
+}

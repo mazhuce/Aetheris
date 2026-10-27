@@ -13,13 +13,15 @@ class DatabaseRoleContractTests(unittest.TestCase):
     def helpers(self,schema):
         return [{'schema':schema,'name':name,'arguments':args,'resultType':result,'owner':'legacy_admin','securityDefiner':False,'acl':None}
             for name,args,result in [('execution_identity_valid','value jsonb','boolean'),('execution_actor_valid','value jsonb','boolean'),
-                ('execution_approval_valid','value jsonb, revision bigint, definition_hash text','boolean'),('execution_definition_projection','body jsonb','jsonb')]]
+                ('execution_approval_valid','value jsonb, revision bigint, definition_hash text','boolean'),('execution_definition_projection','body jsonb','jsonb')]] + (
+                [{'schema':schema,'name':name,'arguments':args,'resultType':result,'owner':'legacy_admin','securityDefiner':False,'acl':None}
+                 for name,(args,types,result) in contract.WORKFLOW_PIPELINE_HELPERS.items()] if schema=='workflow' else [])
 
     def test_exact_fixed_execution_helpers_get_only_local_execute(self):
         before=self.snapshot();before['functions']=[f for s in ('workflow','ingestion','quality') for f in self.helpers(s)]
         sql=contract.grants_sql(before)
         grants=[line for line in sql.splitlines() if line.startswith('GRANT EXECUTE')]
-        self.assertEqual(12,len(grants))
+        self.assertEqual(17,len(grants))
         for schema in ('workflow','ingestion','quality'):
             self.assertIn(f'GRANT EXECUTE ON FUNCTION "{schema}"."execution_approval_valid"(jsonb, bigint, text) TO "aetheris_{schema}";',grants)
             self.assertIn(f'GRANT EXECUTE ON FUNCTION "{schema}"."execution_definition_projection"(jsonb) TO "aetheris_{schema}";',grants)
@@ -36,6 +38,13 @@ class DatabaseRoleContractTests(unittest.TestCase):
             with self.subTest(key=key,value=value),self.assertRaises(ValueError):contract.grants_sql(before)
         before=self.snapshot();before['functions']=[{'schema':'auth','name':'unexpected_scalar','arguments':'','resultType':'integer','owner':'legacy_admin','securityDefiner':False,'acl':None}]
         with self.assertRaises(ValueError):contract.grants_sql(before)
+        for name,(args,types,result) in contract.WORKFLOW_PIPELINE_HELPERS.items():
+            helper={'schema':'workflow','name':name,'arguments':args,'resultType':result,'owner':'legacy_admin','securityDefiner':False,'acl':None}
+            before=self.snapshot();before['functions']=[helper]
+            self.assertIn('TO "aetheris_workflow"',contract.grants_sql(before))
+            for schema in ('ingestion','quality','auth'):
+                before['functions']=[{**helper,'schema':schema}]
+                with self.assertRaises(ValueError):contract.grants_sql(before)
 
     def snapshot(self):
         return {'database': 'aetheris', 'databaseOwner': 'legacy_admin', 'databaseAcl': None,

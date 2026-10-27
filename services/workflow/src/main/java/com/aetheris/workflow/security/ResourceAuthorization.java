@@ -41,6 +41,7 @@ public class ResourceAuthorization {
         var user=currentUser();if(auth==null||id<=0||!Set.of("query","write").contains(action))throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         if(!await(auth.check(user.compactProof(),"datasource",id,action,Map.of())).allowed())throw new ResponseStatusException(HttpStatus.FORBIDDEN,"没有数据源批准权限");
     }
+    public void requireQualityExecute(long id){var user=currentUser();if(auth==null||id<=0||!await(auth.check(user.compactProof(),"quality_rule",id,"execute",Map.of())).allowed())throw new ResponseStatusException(HttpStatus.FORBIDDEN,"没有质量规则执行批准权限");}
     public boolean mayManage(){return coarse(false);}
     public boolean mayMutate(){return coarse(true);}
     private boolean coarse(boolean mutate){

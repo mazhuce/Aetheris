@@ -23,7 +23,7 @@ public final class FixedSqlManifest {
         require(n.get("parent").isNull());var parameters=n.get("parameters");fields(parameters,"bizDate");String date=text(parameters,"bizDate",10);require(date.matches("[0-9]{4}-[0-9]{2}-[0-9]{2}"));
         try{var parsed=LocalDate.parse(date);require(parsed.getYear()>0&&parsed.toString().equals(date));}catch(DateTimeException bad){throw invalid();}
         var a=n.get("actor");fields(a,"kind","uid","username","accessVersion","requestId");String kind=text(a,"kind",32),name=text(a,"username",64),request=text(a,"requestId",128);username(name);
-        require(Set.of("manual","cron").contains(kind)&&number(a,"uid")>0&&number(a,"accessVersion")>=0&&request.matches("[A-Za-z0-9._:-]{1,128}"));
+        require(Set.of("manual","cron","pipeline").contains(kind)&&number(a,"uid")>0&&number(a,"accessVersion")>=0&&request.matches("[A-Za-z0-9._:-]{1,128}"));
         var actor=new FixedTransferManifest.Actor(kind,number(a,"uid"),name,number(a,"accessVersion"),request);
         var p=n.get("approval");fields(p,"uid","username","accessVersion","revision","definitionSha256");String approver=text(p,"username",64);username(approver);String definitionHash=hash(p,"definitionSha256");
         require(number(p,"uid")>0&&number(p,"accessVersion")>=0&&number(p,"revision")==revision&&definitionHash.equals(hash(n,"definitionSha256")));

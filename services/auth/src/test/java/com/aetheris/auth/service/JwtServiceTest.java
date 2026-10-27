@@ -3,93 +3,75 @@ package com.aetheris.auth.service;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
-
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.UUID;
+import static org.junit.jupiter.api.Assertions.*;
 
 class JwtServiceTest {
-
-    @Test
-    void accessRevocationVersionIsIndependentFromRefreshRotation() {
-        JwtService service = new JwtService(SECRET, 60_000);
-        var parser = Jwts.parser().verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).build();
-        var access = parser.parseSignedClaims(service.generateToken(42L, "alice", "viewer", 7L)).getPayload();
-        var refresh = parser.parseSignedClaims(service.generateRefreshToken(42L, "alice", 12L)).getPayload();
-        assertEquals(7L, access.get("av", Long.class));
-        assertEquals(12L, refresh.get("sv", Long.class));
-        assertEquals(null, refresh.get("av"));
-    }
-
     private static final String SECRET = "aetheris-test-secret-with-32-bytes";
-
-    @Test
-    void rejectsShortSecret() {
+    private static final javax.crypto.SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private final JwtService service = new JwtService(SECRET, 60_000);
+    private BrowserSessionService.Session session(Instant expiry) {
+        return new BrowserSessionService.Session(UUID.randomUUID(), 42, "alice", "viewer", null, 7, 12, expiry);
+    }
+    @Test void accessRevocationVersionIsIndependentFromRefreshRotation() {
+        var session = session(Instant.now().plusSeconds(600));
+        var parser = Jwts.parser().verifyWith(KEY).build();
+        var access = parser.parseSignedClaims(service.generateToken(session)).getPayload();
+        var refresh = service.parseRefreshToken(service.generateRefreshToken(session));
+        assertEquals(7L, access.get("av", Long.class)); assertEquals(7, refresh.accessVersion());
+        assertEquals(12, refresh.refreshVersion()); assertNull(access.get("rv"));
+        assertEquals(session.sid().toString(), access.get("sid")); assertEquals(session.sid(), refresh.sid());
+    }
+    @Test void rejectsShortSecretAndInvalidLifetimes() {
         assertThrows(IllegalStateException.class, () -> new JwtService("too-short", 60_000));
+        assertThrows(IllegalStateException.class, () -> new JwtService(SECRET, 0));
+        assertThrows(IllegalStateException.class, () -> new JwtService(SECRET, 60_000, -1));
     }
-
-    @Test
-    void generatesSignedTokenForUsername() {
-        JwtService service = new JwtService(SECRET, 60_000);
-
-        var claims = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                .build()
-                .parseSignedClaims(service.generateToken(42L, "alice", "admin"))
-                .getPayload();
-
-        assertEquals("alice", claims.getSubject());
-        assertEquals("admin", claims.get("role", String.class));
-        assertEquals(42L, claims.get("uid", Long.class));
-        assertEquals("access", claims.get("typ", String.class));
+    @Test void generatesSignedTokenForStableSubjectAndFamily() {
+        var session = session(Instant.now().plusSeconds(600));
+        var claims = Jwts.parser().verifyWith(KEY).build().parseSignedClaims(service.generateToken(session)).getPayload();
+        assertEquals("alice", claims.getSubject()); assertEquals("viewer", claims.get("role", String.class));
+        assertEquals(42L, claims.get("uid", Long.class)); assertEquals("access", claims.get("typ", String.class));
+        assertEquals(session.sid().toString(), claims.get("sid")); assertNotNull(claims.getId());
     }
-
-    @Test
-    void expiredTokenFailsValidation() {
-        // 构造一个过期 1 秒的 token —— 这是 JWT 安全性的基础保证。
-        JwtService service = new JwtService(SECRET, 60_000);
-        String token = Jwts.builder()
-                .subject("alice")
-                .claim("role", "admin")
-                .expiration(new Date(System.currentTimeMillis() - 1_000))
-                .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                .compact();
-
-        assertThrows(io.jsonwebtoken.ExpiredJwtException.class,
-                () -> Jwts.parser()
-                        .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                        .build()
-                        .parseSignedClaims(token));
+    @Test void noTokenOutlivesFixedFamilyHorizon() {
+        Instant horizon = Instant.now().plusSeconds(10).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        var session = session(horizon); var parser = Jwts.parser().verifyWith(KEY).build();
+        for (String token : java.util.List.of(service.generateToken(session), service.generateRefreshToken(session), service.generateLogoutToken(session)))
+            assertEquals(horizon, parser.parseSignedClaims(token).getPayload().getExpiration().toInstant());
     }
-
-    @Test
-    void tamperedTokenFailsValidation() {
-        JwtService service = new JwtService(SECRET, 60_000);
-        String token = service.generateToken(42L, "alice", "admin");
-        // 修改 token 中间部分（payload），最后一个字符改一下。
-        String tampered = token.substring(0, token.length() - 2) + "X";
-
-        assertThrows(io.jsonwebtoken.security.SignatureException.class,
-                () -> Jwts.parser()
-                        .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                        .build()
-                        .parseSignedClaims(tampered));
+    @Test void refreshAndLogoutCapabilitiesAreNotInterchangeable() {
+        var session = session(Instant.now().plusSeconds(600));
+        assertThrows(io.jsonwebtoken.JwtException.class, () -> service.parseRefreshToken(service.generateLogoutToken(session)));
+        assertThrows(io.jsonwebtoken.JwtException.class, () -> service.parseLogoutToken(service.generateRefreshToken(session)));
+        assertThrows(io.jsonwebtoken.JwtException.class, () -> service.parseLogoutToken(service.generateToken(session)));
+        assertEquals(session.sid(), service.parseLogoutToken(service.generateLogoutToken(session)).sid());
     }
-
-    @Test
-    void tokenContainsExpirationClaim() {
-        JwtService service = new JwtService(SECRET, 60_000);
-
-        var claims = Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8)))
-                .build()
-                .parseSignedClaims(service.generateToken(42L, "alice", "admin"))
-                .getPayload();
-
-        assertTrue(claims.getExpiration().after(new Date()),
-                "过期时间应在未来，否则 token 签发即过期");
+    @Test void legacyRefreshWithoutFamilyIsNeverUpgradedByUsername() {
+        String legacy = Jwts.builder().subject("alice").claim("uid", 42).claim("sv", 12).claim("typ", "refresh")
+                .expiration(Date.from(Instant.now().plusSeconds(600))).signWith(KEY).compact();
+        assertThrows(IllegalArgumentException.class, () -> service.parseRefreshToken(legacy));
+    }
+    @Test void nonIntegralOrStringSubjectClaimsAreRejected() {
+        for (Object uid : java.util.List.of("42", 42.5)) {
+            String token = Jwts.builder().subject("alice").claim("uid", uid).claim("av", 7).claim("rv", 12)
+                    .claim("sid", UUID.randomUUID().toString()).claim("typ", "refresh")
+                    .expiration(Date.from(Instant.now().plusSeconds(60))).signWith(KEY).compact();
+            assertThrows(IllegalArgumentException.class, () -> service.parseRefreshToken(token));
+        }
+    }
+    @Test void expiredTokenFailsValidation() {
+        var session = session(Instant.now().minusSeconds(5));
+        assertThrows(io.jsonwebtoken.ExpiredJwtException.class, () -> service.parseRefreshToken(service.generateRefreshToken(session)));
+        assertThrows(io.jsonwebtoken.ExpiredJwtException.class, () -> service.parseLogoutToken(service.generateLogoutToken(session)));
+    }
+    @Test void tamperedTokenFailsValidation() {
+        String token = service.generateRefreshToken(session(Instant.now().plusSeconds(600)));
+        String[] parts = token.split("[.]");
+        parts[1] = parts[1].substring(0, 5) + (parts[1].charAt(5) == 'A' ? 'B' : 'A') + parts[1].substring(6);
+        assertThrows(io.jsonwebtoken.JwtException.class, () -> service.parseRefreshToken(String.join(".", parts)));
     }
 }

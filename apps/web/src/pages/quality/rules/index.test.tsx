@@ -10,7 +10,7 @@ vi.mock('@/api/quality', () => ({ listRules: vi.fn(), runRule: vi.fn(), updateRu
 vi.mock('@/api/metadata', () => ({ listDataSources: vi.fn() }))
 beforeEach(() => {
   vi.clearAllMocks()
-  setAuthenticated({ username: 'operator', role: 'viewer' })
+  setAuthenticated({ id: 15, accessVersion: 0, permissionVersion: 0, username: 'operator', role: 'viewer' })
   vi.mocked(api.listRules).mockResolvedValue([1, 2].map((id) => ({ id, name: `规则${id}`, ruleType: 'sql', datasourceId: 3, expression: 'SELECT 0', targetTable: 'warehouse.t' })))
   vi.mocked(api.runRule).mockResolvedValue({ id: 8, ruleId: 1, status: 'passed', startedAt: '2026-10-18T00:00:00Z' })
 })

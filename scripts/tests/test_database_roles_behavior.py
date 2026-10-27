@@ -34,7 +34,7 @@ class DatabaseRoleBehaviorTests(unittest.TestCase):
     def owned_snapshot(self):
         return {'schemas':[{'name':s,'owner':contract.role(s,'_owner')} for s in contract.services().values()],
             'relations':[],'functions':[{'schema':s,'name':name,'arguments':args,'resultType':result,'owner':contract.role(s,'_owner'),'securityDefiner':False}
-                for s in ('workflow','ingestion','quality') for name,(args,types,result) in contract.FIXED_EXECUTION_HELPERS.items()],
+                for s in ('workflow','ingestion','quality') for name,(args,types,result) in {**contract.FIXED_EXECUTION_HELPERS,**(contract.WORKFLOW_PIPELINE_HELPERS if s=='workflow' else {})}.items()],
             'defaultAcls':[],'sourceValidation':{s:{'validationSuccessful':True,'scriptsMatch':True,'pending':0} for s in contract.services().values()}}
 
     def test_owned_inventory_accepts_only_exact_helper_contract(self):

@@ -7,6 +7,7 @@ from decimal import Decimal
 import hashlib
 import hmac
 import http.cookiejar
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -29,9 +30,14 @@ sys.path.insert(0,str(ROOT/'scripts/database'))
 import database_roles as database
 import contract as database_contract
 
+key_spec=importlib.util.spec_from_file_location('api_chain_keys',ROOT/'scripts/security/installation.py')
+keys_module=importlib.util.module_from_spec(key_spec);key_spec.loader.exec_module(keys_module)
+
 MODULES={'gateway':'apps/gateway','auth':'services/auth','metadata':'services/metadata','serving':'services/serving'}
 POSTGRES_IMAGE='postgres:16-alpine'
 REDIS_IMAGE='docker.1panel.live/library/redis:7.4-alpine'
+FLAGS=['-Djdk.httpclient.disableRetryConnect=true','-Djdk.httpclient.redirects.retrylimit=1']
+REQUIRED_CLEANUP=('processes','containers','credentialsRetired','privateKeysRemoved','volumesAbsent')
 
 
 class AuditFailure(RuntimeError):pass
@@ -75,7 +81,11 @@ def validate_output(path):
 
 
 def finalize_status(report):
-    if not report.get('sourceHashesMatchAtEnd') or not report.get('checks') or any(not item.get('passed') for item in report['checks']) or not all(report.get('cleanup',{}).values()):report['status']='failed'
+    cleanup=report.get('cleanup',{})
+    if (not report.get('sourceHashesMatchAtEnd') or not report.get('checks')
+            or any(not item.get('passed') for item in report['checks'])
+            or any(cleanup.get(name) is not True for name in REQUIRED_CLEANUP)):
+        report['status']='failed'
 
 
 class HttpClient:
@@ -107,8 +117,10 @@ class HttpClient:
 
 
 def source_hashes():
-    paths=[ROOT/'pom.xml',ROOT/'configs/database/services.json',Path(__file__).resolve()]
-    for module in MODULES.values():paths.extend([ROOT/module/'pom.xml',*(ROOT/module/'src/main').rglob('*')])
+    paths=[ROOT/'pom.xml',ROOT/'configs/database/services.json',Path(__file__).resolve(),
+           ROOT/'scripts/security/GenerateKeys.java',ROOT/'scripts/security/installation.py']
+    for module in [*MODULES.values(),'libs/security-protocol','libs/security-servlet']:
+        paths.extend([ROOT/module/'pom.xml',*(ROOT/module/'src/main').rglob('*')])
     paths.extend(ROOT.glob('services/*/src/main/resources/db/migration/*.sql'))
     for name in ['contract.py','database_roles.py','runner/pom.xml','runner/src/main/java/com/aetheris/database/DatabaseRunner.java']:
         paths.append(ROOT/'scripts/database'/name)
@@ -121,9 +133,16 @@ def clean_environment():
 
 
 def reserve_port():
-    sock=socket.socket()
-    if hasattr(socket,'SO_EXCLUSIVEADDRUSE'):sock.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)
-    sock.bind(('127.0.0.1',0));return sock,sock.getsockname()[1]
+    # Keep delayed Java listeners outside the default client ephemeral ranges.
+    # Port 0 can be immediately reused by an outbound connection after releasing the reservation.
+    for _ in range(100):
+        sock=socket.socket()
+        try:
+            if hasattr(socket,'SO_EXCLUSIVEADDRUSE'):sock.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)
+            sock.bind(('127.0.0.1',20000+secrets.randbelow(10000)))
+            return sock,sock.getsockname()[1]
+        except OSError:sock.close()
+    raise AuditFailure('NoOwnedLoopbackServerPortAvailable')
 
 
 def resolve_java21():
@@ -154,7 +173,8 @@ class Audit:
                 if not old_file.exists():old_file.parent.mkdir(parents=True,exist_ok=True);old_file.write_bytes(self.output.read_bytes())
         self.folder=self.output.parent/self.run_id;self.folder.mkdir(parents=True,exist_ok=False)
         self.containers=[];self.processes=[];self.secrets=[];self.reservations=[];self.base=None
-        self.report={'schemaVersion':1,'purpose':'isolated-four-service-api-key-chain','runId':self.run_id,'startedAtUtc':utc(),'status':'failed','checks':[],'cleanup':{'processes':False,'containers':False,'credentialsRetired':False}}
+        self.private_root=None;self.private_keys=None;self.key_manifest=None
+        self.report={'schemaVersion':1,'purpose':'isolated-four-service-api-key-chain','runId':self.run_id,'startedAtUtc':utc(),'status':'failed','checks':[],'cleanup':dict.fromkeys(REQUIRED_CLEANUP,False)}
 
     def checkpoint(self,stage):
         self.report['stage']=stage
@@ -246,6 +266,21 @@ class Audit:
             self.report['authMapperIntegration']['testSourceSha256']=hashlib.sha256((ROOT/'services/auth/src/test/java/com/aetheris/auth/mapper/ResourceGrantMapperPostgresIT.java').read_bytes()).hexdigest()
         if result.returncode:raise AuditFailure('Real PostgreSQL auth grant mapper integration failed')
 
+    def generate_keys(self):
+        self.checkpoint('fresh-ephemeral-v2-keys')
+        parent=keys_module.PRIVATE.resolve()
+        if ROOT.resolve() not in parent.parents:raise AuditFailure('Unsafe private fixture parent')
+        parent.mkdir(parents=True,exist_ok=True);owner=parent/('audit-api-key-'+self.run_id)
+        owner.mkdir(exist_ok=False);self.private_root=owner;self.private_keys=owner/'keys'
+        self.command([self.java,'--source','21',str(ROOT/'scripts/security/GenerateKeys.java'),str(self.private_keys)],env=clean_environment(),timeout=45)
+        manifest=json.loads((self.private_keys/'installation.json').read_text(encoding='utf-8'))
+        if manifest.get('status')!='generated-not-installed' or len(manifest.get('services',{}))!=10:
+            raise AuditFailure('Incomplete fresh key fixture')
+        registry=self.private_keys/'public-registry.json';actual=hashlib.sha256(registry.read_bytes()).hexdigest()
+        if actual!=manifest.get('registrySha256'):raise AuditFailure('Fresh registry digest mismatch')
+        self.key_manifest=manifest;self.report['publicRegistrySha256']=actual
+        self.report['keyPreparation']='fresh ephemeral test material; not installed or rotated'
+
     def start_apps(self,jars,redis_password):
         self.checkpoint('four-real-java-applications')
         slots={name:reserve_port() for name in [*MODULES,'unused']}
@@ -256,14 +291,17 @@ class Audit:
             DB_HOST='127.0.0.1',DB_PORT=str(self.report['ports']['postgres']),DB_NAME='aetheris_api_key_audit',
             REDIS_HOST='127.0.0.1',REDIS_PORT=str(self.report['ports']['redis']),REDIS_PASSWORD=redis_password,
             AUTH_SERVICE_HOST='127.0.0.1',AUTH_SERVICE_PORT=str(ports['auth']),METADATA_SERVICE_HOST='127.0.0.1',METADATA_SERVICE_PORT=str(ports['metadata']),SERVING_SERVICE_HOST='127.0.0.1',SERVING_SERVICE_PORT=str(ports['serving']),
-            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE='4',
-            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MIN_SPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',AETHERIS_SERVING_RATE_LIMIT_CAPACITY='1000',AETHERIS_OUTBOUND_ALLOWED_CIDRS='127.0.0.1/32')
+            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUMIDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE='4',
+            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MINSPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',AETHERIS_SERVING_RATE_LIMIT_CAPACITY='1000',AETHERIS_OUTBOUND_ALLOWED_CIDRS='127.0.0.1/32',
+            AETHERIS_SECURITY_REGISTRY_FILE=str(self.private_keys/'public-registry.json'))
         for service in ['SYSTEM_SERVICE','WORKFLOW_SERVICE','QUALITY_SERVICE','INGESTION_SERVICE','GOVERNANCE_SERVICE','AI_AGENT']:
             common[service+'_HOST']='127.0.0.1';common[service+'_PORT']=str(ports['unused'])
         self.admin_username='chain_admin_'+self.run_id[:8];self.admin_password=self.secret();common.update(INITIAL_ADMIN_USERNAME=self.admin_username,INITIAL_ADMIN_PASSWORD=self.admin_password)
         self.internal=internal
         for name in ['auth','metadata','serving','gateway']:
-            env=common.copy();env['SERVER_PORT']=str(ports[name])
+            env=common.copy();env['SERVER_PORT']=str(ports[name]);key=self.key_manifest['services'][name]
+            env.update(AETHERIS_SECURITY_WORKLOAD_KID=key['workloadKid'],AETHERIS_SECURITY_WORKLOAD_PRIVATE_FILE=str(self.private_keys/key['workloadPrivateFile']))
+            if name=='gateway':env.update(AETHERIS_SECURITY_USER_KID=key['userKid'],AETHERIS_SECURITY_USER_PRIVATE_FILE=str(self.private_keys/key['userPrivateFile']))
             if name!='gateway':env.update(DB_USER=database_contract.role(name),DB_PASSWORD=self.base['credentials'][name]['runtime'])
             else:env.pop('DB_HOST',None);env.pop('DB_PORT',None);env.pop('DB_NAME',None)
             if name!='metadata':env.pop('AETHERIS_DATASOURCE_MASTER_KEY',None)
@@ -275,7 +313,7 @@ class Audit:
             slots[name][0].close()
             log_path=self.folder/(name+'.log');log=log_path.open('wb')
             try:
-                process=subprocess.Popen([self.java,'-Xms32m','-Xmx'+('384m' if name=='metadata' else '256m'),'-XX:MaxMetaspaceSize=192m','-XX:ReservedCodeCacheSize=64m','-XX:ActiveProcessorCount=2','-XX:+ExitOnOutOfMemoryError','-jar',str(jars[name])],cwd=self.folder,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+                process=subprocess.Popen([self.java,*FLAGS,'-Xms32m','-Xmx'+('384m' if name=='metadata' else '256m'),'-XX:MaxMetaspaceSize=192m','-XX:ReservedCodeCacheSize=64m','-XX:ActiveProcessorCount=2','-XX:+ExitOnOutOfMemoryError','-jar',str(jars[name])],cwd=self.folder,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
             except BaseException:log.close();raise
             self.processes.append((name,process,log,log_path))
             record={'service':name,'pid':process.pid,'health':'starting','log':str(log_path.relative_to(ROOT)),'springPidMatched':False}
@@ -301,18 +339,18 @@ class Audit:
         status,body=admin.request('POST','/api/auth/login',{'username':self.admin_username,'password':self.admin_password});require_status(status,{200},'bootstrap-admin-login')
         if not admin.jar or not list(admin.jar) or 'token' in body:raise AuditFailure('Expected real HttpOnly cookie login without token body')
         owner='key_owner_'+self.run_id[:8];owner_password=self.secret()
-        status,body=admin.request('POST','/api/auth/users',{'username':owner,'password':owner_password,'nickname':'Isolated API key owner','role':'admin','status':'active'});require_status(status,{201},'create-second-admin-owner');owner_id=body['id']
+        status,body=admin.request('POST','/api/auth/users',{'username':owner,'password':owner_password,'nickname':'Isolated API key owner','role':'viewer','status':'active'});require_status(status,{201},'create-viewer-owner');owner_id=body['id']
         owner_session=HttpClient(base,cookies=True,secret_registry=self.secrets)
-        status,_=owner_session.request('POST','/api/auth/login',{'username':owner,'password':owner_password});require_status(status,{200},'owner-admin-login')
+        status,_=owner_session.request('POST','/api/auth/login',{'username':owner,'password':owner_password});require_status(status,{200},'owner-viewer-login')
         keys={}
         for name,quota in [('main',100),('revoked',100),('expired',100),('quota',1)]:
-            status,issued=owner_session.request('POST','/api/serving/api-keys',{'name':'chain-'+name,'quotaPerMinute':quota});require_status(status,{200},'issue-owner-key-'+name)
+            status,application=owner_session.request('POST','/api/serving/api-key-applications',{'name':'chain-'+name,'justification':'Isolated pure API key acceptance','quotaPerMinute':quota});require_status(status,{200},'request-owner-key-'+name)
+            status,issued=admin.request('POST','/api/serving/api-key-applications/'+str(application['id'])+'/approve');require_status(status,{200},'approve-owner-key-'+name)
             keys[name]=issued;self.secrets.append(issued['secret'])
-        status,_=admin.request('PUT','/api/auth/users/'+str(owner_id),{'role':'viewer','status':'active','nickname':'Isolated API key owner'});require_status(status,{200},'downgrade-key-owner')
         status,source=admin.request('POST','/api/metadata/datasources',{'name':'chain-business-reader','type':'postgresql','host':'127.0.0.1','port':self.report['ports']['postgres'],'databaseName':'aetheris_api_key_audit','username':'audit_business_reader','password':reader_password,'status':'active'});require_status(status,{200},'register-business-reader-datasource');source_id=source['id']
         status,sync=admin.request('POST','/api/metadata/tables/sync',{'datasourceId':source_id,'schemaName':'business'});require_status(status,{200},'sync-real-business-table')
         if isinstance(sync,dict) and sync.get('failures'):raise AuditFailure('Business table sync returned partial failure')
-        status,tables=admin.request('GET','/api/metadata/tables/search?keyword=orders&limit=100');require_status(status,{200},'search-synced-table')
+        status,tables=admin.request('GET','/api/metadata/tables/search?keyword=orders&limit=50');require_status(status,{200},'search-synced-table')
         selected=[t for t in tables if t.get('datasourceId')==source_id and t.get('schemaName')=='business' and t.get('tableName')=='orders']
         if len(selected)!=1:raise AuditFailure('Synced business table not uniquely found')
         table_id=selected[0]['id'];assets={}
@@ -327,12 +365,13 @@ class Audit:
             require_status(status,{200,201},'grant-only-'+kind+'-'+action);grants[kind]=grant['id']
         self.report['fixture']={'ownerUsername':owner,'ownerRole':'viewer','ownerId':owner_id,'datasourceId':source_id,'tableId':table_id,'apiAssets':{k:{'id':v['id'],'assetCode':v['assetCode']} for k,v in assets.items()},'explicitGrants':[{'resourceType':'data_service','resourceId':assets['allowed']['id'],'actions':['execute']},{'resourceType':'table','resourceId':table_id,'actions':['query']}],'datasourceQueryGrant':False}
         stored=self.sql("SELECT coalesce(json_agg(json_build_object('resourceType',resource_type,'resourceId',resource_id,'actions',actions,'dataScope',data_scope) ORDER BY id),'[]'::json) FROM auth.resource_grant WHERE grantee_type='user' AND grantee_id="+str(owner_id)+" AND enabled",json_result=True)
-        decisions=[];auth_client=HttpClient('http://127.0.0.1:'+str(ports['auth']))
+        legacy_attempts=[];auth_client=HttpClient('http://127.0.0.1:'+str(ports['auth']))
         for resource,rid,action in [('data_service',assets['allowed']['id'],'execute'),('table',table_id,'query')]:
-            status,decision=auth_client.request('POST','/internal/permissions/check',{'username':owner,'resourceType':resource,'resourceId':rid,'action':action,'ctx':{}},headers={'X-Internal-Token':self.internal})
-            decisions.append({'resourceType':resource,'httpStatus':status,'allowed':bool(status==200 and decision.get('allowed'))})
-        self.report['fixture']['storedGrants']=stored;self.report['fixture']['realAuthDecisions']=decisions
-        self.report['checks'].append({'case':'explicit-narrow-grants-decoded-by-real-auth','passed':len(stored)==2 and all(item['allowed'] for item in decisions)})
+            status,_=auth_client.request('POST','/internal/permissions/check',{'username':owner,'resourceType':resource,'resourceId':rid,'action':action,'ctx':{}},headers={'X-Internal-Token':self.internal})
+            legacy_attempts.append({'resourceType':resource,'httpStatus':status,'rejected':status in (400,401,403)})
+        self.report['fixture']['storedGrants']=stored;self.report['fixture']['legacyInternalTokenAttempts']=legacy_attempts
+        self.report['checks'].append({'case':'explicit-narrow-grants-stored-and-legacy-direct-auth-denied',
+                                      'passed':len(stored)==2 and all(item['rejected'] for item in legacy_attempts)})
         # Every key call uses this separate opener with no cookie processor.
         return admin,HttpClient(base),owner,owner_id,keys,assets,grants,table_id
 
@@ -375,7 +414,7 @@ class Audit:
             self.case('restore-'+resource+'-only-recovers',key_client,'POST',path('allowed'),{200},body=body,key=key,rows=True)
         status,_=admin.request('PUT','/api/auth/users/'+str(owner_id),{'role':'viewer','status':'disabled'});require_status(status,{200},'disable-key-owner-http')
         self.case('disabled-owner-key-rejected',key_client,'POST',path('allowed'),{403},body=body,key=key)
-        audit=self.sql("SELECT json_build_object('ownerSuccess',count(*) FILTER(WHERE username='"+owner+"' AND status='success' AND row_count=3),'unexpectedSubject',count(*) FILTER(WHERE username<>'"+owner+"')) FROM metadata.semantic_query_audit WHERE query_kind='table' AND asset_id="+str(table_id),json_result=True)
+        audit=self.sql("SELECT json_build_object('ownerSuccess',count(*) FILTER(WHERE username='"+owner+"' AND status='success' AND row_count=3),'unexpectedSubject',count(*) FILTER(WHERE username<>'"+owner+"')) FROM metadata.semantic_query_audit WHERE query_kind='published_api' AND asset_id="+str(assets['allowed']['id']),json_result=True)
         expected=sum(1 for item in self.report['checks'] if item.get('actualBusinessRows')==3 and item['passed'])
         audit_ok=audit['ownerSuccess']==expected and audit['unexpectedSubject']==0 and expected>=3
         self.report['checks'].append({'case':'metadata-query-audit-bound-to-key-owner','passed':audit_ok,'expectedSuccess':expected,**audit})
@@ -407,11 +446,13 @@ class Audit:
         if self.base:
             try:database.runner({**self.base,'command':'retire'});retired=True
             except Exception:pass
-        container_ok=True
+        container_ok=True;volumes_absent=True
         for cid in reversed(self.containers):
             try:
                 label=self.docker('inspect',cid,'--format','{{index .Config.Labels "aetheris.api-key-chain.audit"}}').strip()
                 if label!=self.run_id:raise AuditFailure('Container ownership label mismatch')
+                details=json.loads(self.docker('inspect',cid))[0]
+                if any(item.get('Type')=='volume' for item in details.get('Mounts',[])):volumes_absent=False
                 self.docker('rm','-f',cid)
             except Exception:container_ok=False
         if self.containers:
@@ -425,7 +466,27 @@ class Audit:
                 except OSError:
                     if time.monotonic()>deadline:process_ok=False;break
                     time.sleep(.2)
-        self.report['cleanup']={'processes':process_ok,'containers':container_ok,'credentialsRetired':retired}
+        removed=self.private_root is None
+        if self.private_root is not None:
+            try:
+                owner=self.private_root.resolve();parent=keys_module.PRIVATE.resolve()
+                if owner.parent!=parent or owner.name!='audit-api-key-'+self.run_id or self.private_root.is_symlink():raise ValueError('Private fixture ownership mismatch')
+                directory=owner/'keys'
+                expected={name+'.workload.pem' for name in ['gateway','auth','system','metadata','serving','quality','ingestion','governance','workflow','ai-agent']}
+                expected.update(('gateway.user.pem','public-registry.json','installation.json'))
+                if directory.exists():
+                    if directory.is_symlink():raise ValueError('Unsafe private fixture directory')
+                    actual={item.name for item in directory.iterdir()}
+                    if not actual.issubset(expected):raise ValueError('Unexpected private fixture file')
+                    for name in actual:
+                        item=directory/name
+                        if item.is_symlink() or item.resolve().parent!=directory:raise ValueError('Unsafe private fixture path')
+                        item.unlink()
+                    directory.rmdir()
+                owner.rmdir();removed=True
+            except Exception:removed=False
+        self.report['cleanup']={'processes':process_ok,'containers':container_ok,'credentialsRetired':retired,
+                                'privateKeysRemoved':removed,'volumesAbsent':volumes_absent}
         self.report['processCleanup']=details
         self.report['completedAtUtc']=utc();finalize_status(self.report)
         raw=json.dumps(self.report,ensure_ascii=False,indent=2)+'\n';(self.folder/'report.json').write_text(raw,encoding='utf-8');self.output.write_text(raw,encoding='utf-8')
@@ -434,7 +495,7 @@ class Audit:
         self.report['sourceHashes']=source_hashes();self.report['migrationSourceHashes']=database_contract.source_manifest()
         try:
             self.java=resolve_java21();self.report['jdk']={'executable':self.java,'specificationVersion':'21'}
-            redis_password=self.setup_containers();reader_password=self.setup_database();self.mapper_it();jars=self.build();ports=self.start_apps(jars,redis_password)
+            redis_password=self.setup_containers();reader_password=self.setup_database();self.mapper_it();self.generate_keys();jars=self.build();ports=self.start_apps(jars,redis_password)
             self.scenarios(ports,self.setup_http(ports,reader_password))
             if source_hashes()!=self.report['sourceHashes']:raise AuditFailure('Application/source changed during the audit')
             self.report['sourceHashesMatchAtEnd']=True

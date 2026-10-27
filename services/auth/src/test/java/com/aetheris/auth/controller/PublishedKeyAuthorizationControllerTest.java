@@ -80,6 +80,20 @@ class PublishedKeyAuthorizationControllerTest {
             assertEquals(2,out.get("checks").size());assertFalse(response.getResponse().getContentAsString().contains("private-grant"));
         }
     }
+    @Test void sameNameReplacementDuringPermissionLookupCannotAuthorizeTheOriginalKeyOwner()throws Exception{
+        for(String mutation:List.of("uid","av","disabled")){
+            owner.setId(7L);owner.setAccessVersion(2L);owner.setStatus("active");
+            doAnswer(invocation->{
+                if(mutation.equals("uid"))owner.setId(99L);
+                if(mutation.equals("av"))owner.setAccessVersion(3L);
+                if(mutation.equals("disabled"))owner.setStatus("disabled");
+                return PermissionDecisionService.Decision.ALLOWED;
+            }).when(decisions).check("key-owner","data_service",11L,"execute",Map.of());
+            var out=result(call(input("table").toString(),200));
+            assertFalse(out.path("allowed").booleanValue(),mutation);
+            assertEquals("SUBJECT_INACTIVE",out.path("reason").asText());
+        }
+    }
     @Test void uidNameDisabledAndAccessVersionCannotBeReboundByMetadataBody()throws Exception{
         for(String change:List.of("uid","username","accessVersion","disabled")){
             var n=input("table");var subject=(ObjectNode)n.get("owner");

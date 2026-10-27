@@ -7,7 +7,7 @@ import { useResourceActions } from './useResourceActions'
 vi.mock('@/api/resourcePermissions', () => ({ getMyResourcePermissions: vi.fn() }))
 beforeEach(() => {
   vi.resetAllMocks()
-  setAuthenticated({ username: 'alice', role: 'viewer' })
+  setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
 })
 
 it('shows exactly the granted action and denies failed or unrequested IDs', async () => {
@@ -33,7 +33,7 @@ it('drops stale permission results after switching subjects or refreshing the li
   vi.mocked(getMyResourcePermissions).mockImplementationOnce(() => old).mockResolvedValue([])
   const first = [{ id: 1 }]
   const { result, rerender } = renderHook(({ items }) => useResourceActions('workflow_task', items), { initialProps: { items: first } })
-  act(() => setAuthenticated({ username: 'bob', role: 'viewer' }))
+  act(() => setAuthenticated({ id: 12, accessVersion: 0, permissionVersion: 0, username: 'bob', role: 'viewer' }))
   await waitFor(() => expect(result.current.loading).toBe(false))
   await act(async () => { resolveOld([1]); await old })
   expect(result.current.can('execute', 1)).toBe(false)

@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { useEffect } from 'react'
+import { Fragment, useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { bootstrapSession } from '@/auth/session'
 import { useAuthSession } from '@/hooks/useAuthSession'
@@ -7,7 +7,7 @@ import { useAuthSession } from '@/hooks/useAuthSession'
 export default function RequireAuth({ children }: { children: ReactElement }) {
   const session = useAuthSession()
   useEffect(() => {
-    if (session.status === 'unknown') void bootstrapSession()
+    if (session.status === 'unknown') bootstrapSession().catch(() => undefined)
   }, [session.status])
 
   if (session.status === 'unknown' || session.status === 'loading') {
@@ -16,5 +16,5 @@ export default function RequireAuth({ children }: { children: ReactElement }) {
   if (session.status !== 'authenticated') {
     return <Navigate to="/login" replace />
   }
-  return children
+  return <Fragment key={session.generation}>{children}</Fragment>
 }

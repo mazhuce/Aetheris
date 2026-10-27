@@ -10,6 +10,8 @@ import java.util.concurrent.CompletableFuture;
 
 /** Auth's fixed v2 contracts. Explicit original USER proof, never a username substitute. */
 public final class AuthProtocolClient {
+    // Deliberately excluded from generic service clients' OPERATIONS capability set.
+    public static final String BROWSER_SESSION_OPERATION = "auth.browser-session.check";
     public static final Set<String> OPERATIONS = Set.of("auth.session.check", "auth.permission.check",
             "auth.permission.visibility", "auth.permission.batch", "auth.permission.manage",
             "auth.permission.mutate", "auth.permission.version");
@@ -31,6 +33,14 @@ public final class AuthProtocolClient {
         if (uid <= 0 || accessVersion < 0 || username == null || username.isBlank() || username.length() > 128) throw invalid();
         return post("sessions/check", "auth.session.check", Map.of("uid", uid, "username", username,
                 "accessVersion", accessVersion), null).thenApply(node -> {
+                    fields(node, Set.of("active")); return bool(node, "active");
+                });
+    }
+    public CompletableFuture<Boolean> browserSessionActive(long uid, String username, long accessVersion, String sid) {
+        if (uid <= 0 || accessVersion < 0 || username == null || username.isBlank() || username.length() > 64
+                || sid == null || !UUID.fromString(sid).toString().equals(sid)) throw invalid();
+        return post("browser-sessions/check", BROWSER_SESSION_OPERATION, Map.of("uid", uid, "username", username,
+                "accessVersion", accessVersion, "sid", sid), null).thenApply(node -> {
                     fields(node, Set.of("active")); return bool(node, "active");
                 });
     }

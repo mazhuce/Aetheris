@@ -10,13 +10,22 @@ import java.util.Objects;
 public class WorkflowSqlFacade {
     private final WorkflowExecutionStore store;private final SqlExecutionClient client;private final ExecutionClaimCoordinator coordinator;
     private final TaskLogService logs;private final NotificationClient notifications;
+    private WorkflowQualityFacade quality;
+    private WorkflowEngineFacade engines;
+    @org.springframework.beans.factory.annotation.Autowired public void installEngines(WorkflowEngineFacade engines){this.engines=Objects.requireNonNull(engines);}
+    @org.springframework.beans.factory.annotation.Autowired public void installQuality(WorkflowQualityFacade quality){this.quality=Objects.requireNonNull(quality);}
     public WorkflowSqlFacade(WorkflowExecutionStore store,SqlExecutionClient client,ExecutionClaimCoordinator coordinator,TaskLogService logs,NotificationClient notifications){
         this.store=Objects.requireNonNull(store);this.client=Objects.requireNonNull(client);this.coordinator=Objects.requireNonNull(coordinator);
         this.logs=Objects.requireNonNull(logs);this.notifications=Objects.requireNonNull(notifications);
     }
     public TaskInstance manual(long id,String date,WorkflowActor actor){return execute(store.claimManual(id,date,actor));}
     public TaskInstance scheduled(long id,String date,long generation){return execute(store.claimScheduled(id,date,generation));}
+    public TaskInstance pipeline(WorkflowExecutionStore.Claim claim){return execute(Objects.requireNonNull(claim));}
     private TaskInstance execute(WorkflowExecutionStore.Claim source){
+        String type=store.taskType(source);
+        if("spark".equals(type)||"flink".equals(type)){if(engines==null)throw new IllegalStateException("可信引擎执行器未配置");return engines.execute(source);}
+        if("quality".equals(type)){if(quality==null)throw new IllegalStateException("质量父子执行器未配置");return quality.execute(source);}
+        if(!"sql".equals(type))throw FixedJson.invalid();
         var claim=source.execution();if(!source.dependenciesReady()){log(claim,"warn","封存依赖尚未成功，未提交SQL");return coordinator.skip(claim,"封存依赖尚未成功，未提交SQL");}
         log(claim,"info","开始执行已批准的封存SQL attempt");
         try{

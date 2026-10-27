@@ -48,7 +48,7 @@ describe('http 请求拦截器', () => {
     let requestCount = 0
     const adapter = vi.fn((config: InternalAxiosRequestConfig) => {
       if (config.url === '/api/auth/refresh') {
-        return okAdapter({ ...config, data: { username: 'alice', role: 'viewer' } })
+        return Promise.resolve({ data: { id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config })
       }
       requestCount += 1
       if (requestCount === 1) return unauthorizedAdapter(config)
@@ -69,12 +69,12 @@ describe('http 请求拦截器', () => {
 describe('http 401 处理', () => {
   it('刷新竞争失败保留会话，并用另一个标签页更新的 Cookie 验证后重试', async () => {
     stubLocation('/workbench')
-    setAuthenticated({ username: 'alice', role: 'viewer' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
     let originalCalls = 0
     http.defaults.adapter = (config) => {
       if (config.url === '/api/auth/refresh') return unauthorizedAdapter(config)
       if (config.url === '/api/auth/me') return Promise.resolve({
-        data: { username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config
+        data: { id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config
       })
       return ++originalCalls === 1 ? unauthorizedAdapter(config) : okAdapter(config)
     }
@@ -85,7 +85,7 @@ describe('http 401 处理', () => {
 
   it('单独的 refresh 401 不主动清理另一个标签页的认证状态', async () => {
     stubLocation('/workbench')
-    setAuthenticated({ username: 'alice', role: 'viewer' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
     http.defaults.adapter = unauthorizedAdapter
     await expect(http.post('/api/auth/refresh')).rejects.toThrow('Unauthorized')
     expect(getAuthSnapshot().status).toBe('authenticated')
@@ -107,11 +107,12 @@ describe('http 401 处理', () => {
     let cookiesValid = false
     let rotations = 0
     const adapter = async (config: InternalAxiosRequestConfig) => {
+      if (config.url === '/api/auth/me') return { data: { id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config }
       if (config.url === '/api/auth/refresh') {
         rotations++
         await new Promise((resolve) => window.setTimeout(resolve, 10))
         cookiesValid = true
-        return { data: { username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config }
+        return { data: { id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' }, status: 200, statusText: 'OK', headers: {}, config }
       }
       return cookiesValid ? okAdapter(config) : unauthorizedAdapter(config)
     }
@@ -124,7 +125,7 @@ describe('http 401 处理', () => {
   })
   it('非登录页收到 401 时清除凭据并跳转 /login', async () => {
     stubLocation('/system/users')
-    setAuthenticated({ username: 'alice', role: 'admin' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'admin' })
     http.defaults.adapter = unauthorizedAdapter
 
     await expect(http.get('/ping')).rejects.toThrow('Unauthorized')
@@ -132,13 +133,13 @@ describe('http 401 处理', () => {
     expect(window.location.href).toBe('/login')
   })
 
-  it('登录页收到 401 时不清理凭据也不跳转', async () => {
+  it('登录页的会话也在 refresh 和 me 均拒绝后清理，但不重复跳转', async () => {
     stubLocation('/login')
-    setAuthenticated({ username: 'alice', role: 'admin' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'admin' })
     http.defaults.adapter = unauthorizedAdapter
 
     await expect(http.get('/ping')).rejects.toThrow('Unauthorized')
-    expect(getAuthSnapshot().status).toBe('authenticated')
+    expect(getAuthSnapshot().status).toBe('anonymous')
     expect(window.location.href).toBe('')
   })
 

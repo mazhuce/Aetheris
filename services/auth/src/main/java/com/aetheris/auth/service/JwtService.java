@@ -1,98 +1,89 @@
 package com.aetheris.auth.service;
 
-import io.jsonwebtoken.Jwts;
+import com.aetheris.auth.validation.UsernameRules;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 
 @Service
 public class JwtService {
-
     private final SecretKey key;
     private final long expirationMs;
     private final long refreshExpirationMs;
 
-    /** Compatibility constructor for focused unit tests and non-Spring callers. */
-    public JwtService(String secret, long expirationMs) {
-        this(secret, expirationMs, 604_800_000L);
-    }
+    public JwtService(String secret, long expirationMs) { this(secret, expirationMs, 604_800_000L); }
 
     @org.springframework.beans.factory.annotation.Autowired
-    public JwtService(
-            @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms:900000}") long expirationMs,
-            @Value("${jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs) {
+    public JwtService(@Value("${jwt.secret}") String secret,
+                      @Value("${jwt.expiration-ms:900000}") long expirationMs,
+                      @Value("${jwt.refresh-expiration-ms:604800000}") long refreshExpirationMs) {
         byte[] keyBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length < 32 || "change-me-to-a-long-random-secret".equals(secret)) {
+        if (keyBytes.length < 32 || "change-me-to-a-long-random-secret".equals(secret))
             throw new IllegalStateException("JWT_SECRET must be a unique random value of at least 32 UTF-8 bytes");
-        }
+        if (expirationMs < 1000 || refreshExpirationMs < 1000)
+            throw new IllegalStateException("Browser token lifetimes must be at least one second");
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
         this.refreshExpirationMs = refreshExpirationMs;
     }
 
-    /**
-     * 签发登录令牌：sub=username，uid=数据库主键 id。
-     * uid 是权限判定的稳定主体标识（决策引擎以数据库里的授权/角色/组为准），
-     * username 仅用于兼容展示；两者都由网关从同一签名的 JWT 解析后转发，
-     * 下游服务不得信任客户端自带的可伪造请求头。
-     */
-    public String generateToken(Long userId, String username, String role) {
-        return generateToken(userId, username, role, 0L);
+    public record BrowserCredential(UUID sid, long uid, String username, long accessVersion, long refreshVersion) { }
+
+    public String generateToken(BrowserSessionService.Session session) {
+        Instant accessExpiry = Instant.now().plusMillis(expirationMs);
+        if (session.expiresAt().isBefore(accessExpiry)) accessExpiry = session.expiresAt();
+        return token(session, "access", accessExpiry).claim("role", session.role() == null ? "viewer" : session.role())
+                .signWith(key).compact();
     }
 
-    public String generateToken(Long userId, String username, String role, long accessVersion) {
-        Date now = new Date();
-        return Jwts.builder()
-                .id(UUID.randomUUID().toString())
-                .subject(username)
-                .claim("uid", userId)
-                .claim("role", role)
-                .claim("av", accessVersion)
-                .claim("typ", "access")
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + expirationMs))
-                .signWith(key)
-                .compact();
+    public String generateRefreshToken(BrowserSessionService.Session session) {
+        return token(session, "refresh", session.expiresAt()).claim("rv", session.refreshVersion()).signWith(key).compact();
     }
 
-    public long getExpirationMs() {
-        return expirationMs;
+    /** Login-only capability. Rotation must never reissue it in a late refresh response. */
+    public String generateLogoutToken(BrowserSessionService.Session session) {
+        return token(session, "browser-logout", session.expiresAt()).signWith(key).compact();
     }
 
-    /** Refresh tokens are signed JWTs with a distinct type and session version.
-     * The auth service rotates the session version on every successful refresh,
-     * making a replayed refresh token fail closed without storing raw tokens. */
-    public String generateRefreshToken(Long userId, String username, long sessionVersion) {
-        Date now = new Date();
-        return Jwts.builder()
-                .id(UUID.randomUUID().toString())
-                .subject(username)
-                .claim("uid", userId)
-                .claim("sv", sessionVersion)
-                .claim("typ", "refresh")
-                .issuedAt(now)
-                .expiration(new Date(now.getTime() + refreshExpirationMs))
-                .signWith(key)
-                .compact();
+    public BrowserCredential parseRefreshToken(String token) { return credential(token, "refresh"); }
+    public BrowserCredential parseLogoutToken(String token) { return credential(token, "browser-logout"); }
+
+    private JwtBuilder token(BrowserSessionService.Session session, String type, Instant expiresAt) {
+        if (session.sid() == null || session.uid() <= 0 || session.accessVersion() < 0 || session.refreshVersion() < 0)
+            throw new IllegalArgumentException("Invalid browser session");
+        UsernameRules.requireValid(session.username());
+        return Jwts.builder().id(UUID.randomUUID().toString()).subject(session.username())
+                .claim("uid", session.uid()).claim("av", session.accessVersion()).claim("sid", session.sid().toString())
+                .claim("typ", type).issuedAt(new Date()).expiration(Date.from(expiresAt));
     }
 
-    public Claims parseRefreshToken(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .require("typ", "refresh")
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+    private BrowserCredential credential(String token, String type) {
+        Claims claims = Jwts.parser().verifyWith(key).require("typ", type).build().parseSignedClaims(token).getPayload();
+        String username = UsernameRules.requireValid(claims.getSubject());
+        String sid = claims.get("sid", String.class);
+        UUID family = sid == null ? null : UUID.fromString(sid);
+        if (family == null || !family.toString().equals(sid) || claims.getExpiration() == null)
+            throw new IllegalArgumentException("Invalid browser family");
+        long uid = integer(claims, "uid"), av = integer(claims, "av");
+        long version = "refresh".equals(type) ? integer(claims, "rv") : 0;
+        if (uid <= 0 || av < 0 || version < 0) throw new IllegalArgumentException("Invalid browser subject");
+        return new BrowserCredential(family, uid, username, av, version);
     }
 
-    public long getRefreshExpirationMs() {
-        return refreshExpirationMs;
+    private static long integer(Claims claims, String name) {
+        Object value = claims.get(name);
+        if (!(value instanceof Integer || value instanceof Long)) throw new IllegalArgumentException("Invalid browser claim");
+        return ((Number) value).longValue();
     }
+
+    public long getExpirationMs() { return expirationMs; }
+    public long getRefreshExpirationMs() { return refreshExpirationMs; }
 }

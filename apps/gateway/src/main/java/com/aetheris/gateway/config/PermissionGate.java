@@ -19,4 +19,8 @@ public interface PermissionGate {
     default Mono<Boolean> sessionActive(Long uid, String username, long accessVersion) {
         return Mono.just(false);
     }
+    /** Uncached browser family and live account admission; never fall back to account-only checks. */
+    default Mono<Boolean> browserSessionActive(Long uid, String username, long accessVersion, String sid) {
+        return Mono.just(false);
+    }
 }

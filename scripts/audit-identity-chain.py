@@ -95,6 +95,13 @@ class Audit(base.Audit):
                      'cleanup':{name:False for name in REQUIRED_CLEANUP},
                      'limits':'Gateway/auth/system segment only; no browser, metadata, fixed execution or API-key v2 acceptance'}
 
+    def checkpoint(self,stage):
+        self.report['stage']=stage
+        if self.report['status']=='failed':self.report['status']='running'
+        # Progress is mutable only inside this fresh run directory. The explicit output is published once.
+        raw=json.dumps(self.report,ensure_ascii=False,indent=2)+'\n'
+        (self.folder/'progress.json').write_text(raw,encoding='utf-8')
+
     def command(self,args,*,stdin=None,env=None,timeout=180):
         args=[str(arg) for arg in args]
         if Path(args[0]).name.lower() in ('mvn','mvn.cmd','mvn.bat'):
@@ -116,7 +123,17 @@ class Audit(base.Audit):
                 import signal
                 os.killpg(process.pid,signal.SIGKILL)
             process.communicate(timeout=15);raise base.AuditFailure('OwnedProcessDeadline') from None
-        if process.returncode:raise base.AuditFailure(Path(args[0]).name+' operation failed; potentially sensitive output withheld')
+        if process.returncode:
+            # Keep the actual failure diagnosable without leaking the private input/environment.
+            sanitized=base.redact(stdout+'\n'+stderr,self.secrets)
+            sanitized=re.sub(r'-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----',
+                             '[REDACTED_PRIVATE_KEY]',sanitized)
+            failures=self.report.setdefault('commandFailures',[])
+            path=self.folder/('command-failure-'+str(len(failures)+1)+'.log')
+            path.write_text(sanitized,encoding='utf-8')
+            failures.append({'executable':Path(args[0]).name,'exitCode':process.returncode,
+                'log':path.name,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+            raise base.AuditFailure(Path(args[0]).name+' operation failed; inspect sanitized command failure log')
         return stdout
 
     def setup_containers(self):
@@ -184,13 +201,13 @@ class Audit(base.Audit):
         return value
 
     def setup_database(self):
-        self.checkpoint('all-116-migrations-and-runtime-roles')
+        self.checkpoint('exact-current-migration-set-and-runtime-roles')
         self.prepare_database();self.runner({**self.base,'command':'provision-empty','sql':base.database.bootstrap()})
         migrations=[]
         for service,schema in base.database_contract.services().items():
             migrations.append(self.runner({**self.base,'command':'migrate','schema':schema,
                 'directory':str(ROOT/'services'/service/'src/main/resources/db/migration')}))
-        if sum(m['migrationsExecuted'] for m in migrations)!=116:raise base.AuditFailure('Expected116Migrations')
+        if sum(m['migrationsExecuted'] for m in migrations)!=len(self.report['migrationSourceHashes']):raise base.AuditFailure('ExpectedExactCurrentMigrations')
         self.report['migrations']=migrations
         snapshot=self.runner({**self.base,'command':'inventory'});base.database.check_owned_inventory(snapshot)
         self.runner({**self.base,'command':'sql','sql':'BEGIN;\n'+base.database_contract.grants_sql(snapshot)+'\nCOMMIT;'})
@@ -243,8 +260,8 @@ class Audit(base.Audit):
         common=clean_environment();common.update(SERVER_ADDRESS='127.0.0.1',DB_HOST='127.0.0.1',DB_PORT=str(self.report['ports']['postgres']),
             DB_NAME='aetheris_api_key_audit',JWT_SECRET=self.secret(),REDIS_HOST='127.0.0.1',REDIS_PORT=str(self.report['ports']['redis']),REDIS_PASSWORD=redis_password,
             AUTH_SERVICE_HOST='127.0.0.1',AUTH_SERVICE_PORT=str(ports['auth']),SYSTEM_SERVICE_HOST='127.0.0.1',SYSTEM_SERVICE_PORT=str(ports['system']),
-            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE='4',
-            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MIN_SPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',
+            SPRING_FLYWAY_ENABLED='false',SPRING_DATASOURCE_HIKARI_MINIMUMIDLE='1',SPRING_DATASOURCE_HIKARI_MAXIMUMPOOLSIZE='4',
+            SERVER_TOMCAT_THREADS_MAX='20',SERVER_TOMCAT_THREADS_MINSPARE='2',AETHERIS_RATE_LIMIT_CAPACITY='1000',
             AETHERIS_SECURITY_REGISTRY_FILE=str(self.private_keys/'public-registry.json'))
         for service in ['METADATA_SERVICE','SERVING_SERVICE','WORKFLOW_SERVICE','QUALITY_SERVICE','INGESTION_SERVICE','GOVERNANCE_SERVICE','AI_AGENT']:
             common[service+'_HOST']='127.0.0.1';common[service+'_PORT']=str(ports['unused'])
@@ -289,7 +306,7 @@ class Audit(base.Audit):
             'workloadFile':str(self.private_keys/key['workloadPrivateFile']),'userKid':key['userKid'],'userFile':str(self.private_keys/key['userPrivateFile']),
             'uid':uid,'username':username,'accessVersion':av,'audience':audience}
         result=self.command([self.java,'--class-path',cp,'--source','21',str(ROOT/'scripts/security/SignIsolatedUser.java')],stdin=json.dumps(body),env=clean_environment(),timeout=30).strip()
-        if not re.fullmatch('[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+',result):raise base.AuditFailure('InvalidFreshUserFixture')
+        if not re.fullmatch(r'[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+',result):raise base.AuditFailure('InvalidFreshUserFixture')
         self.secrets.append(result);return result
 
     def check(self,label,passed,**details):
@@ -422,7 +439,18 @@ class Audit(base.Audit):
         self.report['cleanup']={'processes':process_ok,'containers':container_ok,'credentialsRetired':retired,
                                 'privateKeysRemoved':removed,'volumesAbsent':volumes_absent}
         self.report['processCleanup']=details;self.report['completedAtUtc']=base.utc();finalize_status(self.report)
-        raw=json.dumps(self.report,ensure_ascii=False,indent=2)+'\n';(self.folder/'report.json').write_text(raw,encoding='utf-8');self.output.write_text(raw,encoding='utf-8')
+        try:
+            published=self.output.open('x',encoding='utf-8')
+        except FileExistsError:
+            self.report['status']='failed'
+            self.report['failure']={'type':'EvidenceOutputConflict','message':'Existing output preserved; inspect this run directory'}
+            published=None
+        raw=json.dumps(self.report,ensure_ascii=False,indent=2)+'\n'
+        try:
+            with (self.folder/'report.json').open('x',encoding='utf-8') as archived:archived.write(raw)
+            if published is not None:published.write(raw)
+        finally:
+            if published is not None:published.close()
 
     def run(self):
         self.report['sourceHashes']=source_hashes();self.report['migrationSourceHashes']=base.database_contract.source_manifest()

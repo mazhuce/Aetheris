@@ -4,11 +4,15 @@
 
 ## 结论与需要先冻结的接口
 
+2026-10-26接续：下文保留2026-10-18设计时的现状与建议。已批准SQL pipeline按workflow V31实现原UID/AV、完整批准计划、run/node/attempt/fence封存与来源回查；V32接入手动、cron及pipeline父任务的workflow-child quality，冻结子规则revision/hash，四项实时授权和原receipt对账见[子质量契约](workflow-quality-child-contract.md)。具体验证边界见[恢复契约](execution-recovery-contract.md)和[整改台账](2026-10-18-audit-plan.md)。自动恢复保留原actor；显式retry新建run并保存当前验签操作者，链接保留原run，不改写其invocation。下文“一概复制原actor”的早期建议由该明确新run规则替代；V33接入可信Spark/Flink来源，V34补齐引擎上游成功证据；真实Auth五应用92项与Spark→Flink→SQL链通过，引擎业务结果为受控HTTP响应。物理引擎IO隔离、全部四类同一pipeline及Flink新attempt生命周期仍未完成，见[引擎契约](workflow-engine-execution-contract.md)。
+
 复用现有 run/attempt 与 R03 unknown/租约，新增可信 actor、仅执行字段的 revision/批准、封存 manifest，再接 metadata submit/status/receipt。不能只替换 HTTP signer：旧请求没有任何 run/fence 引用；当前 auth 权限接口需要短期 USER，长任务、cron、worker 无法靠已过期 USER 检查资源权限。
 
 root 已认可提出 **仅 metadata caller 的 fixed-execution authorize 窄契约**，仍待最终字段冻结。metadata 必须先通过固定 URL 向正确来源作签名回查，核对持久化 actor/批准者/revision/fence/lease/实际执行参数，再向 auth 发结构化固定授权集合。auth 实时验证 UID/name/AV 和逐项资源权限，不能新增对任意 username 开放的 principal/check 或由来源随意 body.username 代替来源快照。
 
 cron 最小绑定按 root 本轮确认：显式审批/启用时绑定当前 `TrustedUser` 的 UID/name/AV；不得从 body 选择 admin、猜存量创建者或自动读取新 AV 延长授权。密码、禁用或降权导致 AV 变化即停止，须本人或管理员重新明确审批/启用。该 cron actor 与定义批准者是两个概念，分别保留。
+
+2026-10-26引擎接续：已单独实现workflow-only引擎窄授权并定点验证原UID/AV、批准者管理权限；Spark提交5xx/断线只向原runner核对，且提交后旧fence不释放容量。生产引擎来源与资源快照、Flink恢复和实际引擎仍未闭环，见[引擎执行契约](workflow-engine-execution-contract.md)；不能将接口/HTTP夹具通过当作这些入口已接通。
 
 ## 现有可复用证据与缺口
 

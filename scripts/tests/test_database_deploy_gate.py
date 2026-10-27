@@ -91,6 +91,8 @@ class DatabaseDeployGateTests(unittest.TestCase):
                    ('SPRING_DATASOURCE_HIKARI_USERNAME','admin'),('SPRING_DATASOURCE_HIKARI_PASSWORD','unverified'),
                    ('SPRING_CONFIG_LOCATION','file:/unreviewed/application.yml'),
                    ('SPRING_CONFIG_ADDITIONAL_LOCATION','file:/unreviewed/application.yml'),
+                   ('SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE','1'),
+                   ('SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE','4'),
                    ('JDK_JAVA_OPTIONS','-DDB_HOST=unverified'))
         for key,value in mutations:
             self.model=copy.deepcopy(original);item=self.model['services']['auth-service']

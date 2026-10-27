@@ -98,6 +98,22 @@ class FixedExecutionAuthorizationControllerTest {
         when(decisions.check("parent-approver","quality_rule",7L,"execute",Map.of())).thenReturn(PermissionDecisionService.Decision.denied("private detail"));
         assertEquals("PERMISSION_DENIED",result(call(child().toString(),200)).get("reason").textValue());
     }
+    @Test void identityReplacementDuringPermissionLookupCannotAuthorizeTheOldInvocation() throws Exception {
+        for(String part:List.of("actor","approval","parent"))for(String mutation:List.of("uid","av","disabled")) {
+            account(2,"operator");account(3,"approver");account(4,"parent-approver");
+            String name=part.equals("actor")?"operator":part.equals("approval")?"approver":"parent-approver";
+            String type=part.equals("parent")?"quality_rule":"workflow_task";
+            doAnswer(invocation->{var value=accounts.get(name);
+                if(mutation.equals("uid"))value.setId(99L);
+                if(mutation.equals("av"))value.setAccessVersion(1L);
+                if(mutation.equals("disabled"))value.setStatus("disabled");
+                return PermissionDecisionService.Decision.ALLOWED;
+            }).when(decisions).check("operator",type,7L,"execute",Map.of());
+            var out=result(call((part.equals("parent")?child():input("workflow")).toString(),200));
+            assertFalse(out.path("allowed").booleanValue(),part+":"+mutation);
+            assertEquals("SUBJECT_INACTIVE",out.path("reason").asText());
+        }
+    }
     @Test void actorApprovalAndParentTupleMismatchDisabledMissingOrAvChangeAreNotPermissions() throws Exception {
         for(String part:List.of("actor","approval","parent")) {
             var n=part.equals("parent")?child():input("workflow");ObjectNode subject=(ObjectNode)(part.equals("parent")?n.path("parent").path("approval"):n.get(part));

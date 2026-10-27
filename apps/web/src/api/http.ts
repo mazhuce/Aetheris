@@ -1,73 +1,103 @@
-import axios from 'axios'
-import { clearAuthenticated, setAuthenticated } from '@/auth/authState'
+import axios, { AxiosError, type AxiosRequestConfig } from 'axios'
+import {
+  captureSession, clearAuthenticated, isCurrentSession, parseSessionUser, sessionContextRevision, sessionIdentity,
+  setAuthenticated, type SessionStamp, type SessionUser
+} from '@/auth/authState'
 import { coordinateRefresh, sessionRevision, waitForConcurrentRefresh } from '@/auth/refreshCoordinator'
 
-type RetryableConfig = { _aetherisRetried?: boolean; _aetherisSessionProbe?: boolean; _aetherisRevision?: string }
-type SessionUser = { username: string; nickname?: string; role: 'admin' | 'viewer' }
+type RetryableConfig = {
+  _aetherisRetried?: boolean
+  _aetherisSessionProbe?: boolean
+  _aetherisRevision?: string
+  _aetherisSession?: SessionStamp
+}
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  timeout: 15000,
-  withCredentials: true
+  baseURL: import.meta.env.VITE_API_BASE_URL || '', timeout: 15_000, withCredentials: true
 })
 
-let refreshPromise: Promise<void> | null = null
+function sessionChanged(): AxiosError {
+  if (sessionContextRevision() === null) {
+    clearAuthenticated()
+    return new AxiosError('浏览器会话存储不可用，请允许本站存储后重新登录', 'SESSION_UNAVAILABLE')
+  }
+  return new AxiosError('会话或权限已变化，旧请求已取消，请重新操作', 'SESSION_CHANGED')
+}
+function isAuthEndpoint(url = ''): boolean {
+  return ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout'].includes(url.split('?')[0])
+}
+function stillCurrent(config: RetryableConfig): boolean {
+  return !!config._aetherisSession && isCurrentSession(config._aetherisSession)
+}
 
 http.interceptors.request.use((config) => {
   const state = config as typeof config & RetryableConfig
+  state._aetherisSession ??= captureSession()
   state._aetherisRevision ??= sessionRevision()
+  if (!stillCurrent(state)) throw sessionChanged()
   return config
 })
 
-function refreshSession(observed: string): Promise<void> {
+let refreshPromise: Promise<SessionUser> | null = null
+async function refreshSession(observed: string): Promise<SessionUser> {
   if (!refreshPromise) {
-    refreshPromise = coordinateRefresh(observed, async () => {
-      const response = await http.post<SessionUser>('/api/auth/refresh')
-      setAuthenticated(response.data)
-    }).finally(() => {
-      refreshPromise = null
-    })
+    refreshPromise = (async () => {
+      let refreshed: SessionUser | undefined
+      try {
+        await coordinateRefresh(observed, async () => {
+          const response = await http.post('/api/auth/refresh')
+          refreshed = parseSessionUser(response.data)
+        })
+      } catch (error) {
+        if (['SESSION_CHANGED', 'SESSION_UNAVAILABLE'].includes((error as AxiosError).code ?? '')) throw error
+        // A losing CAS never clears the winner's cookies. Verify them before any retry.
+        await waitForConcurrentRefresh(observed)
+      }
+      if (refreshed) return refreshed
+      const probe = await http.get('/api/auth/me', { _aetherisSessionProbe: true } as AxiosRequestConfig)
+      return parseSessionUser(probe.data)
+    })().finally(() => { refreshPromise = null })
   }
   return refreshPromise
 }
 
 http.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      const config = error.config as (typeof error.config & RetryableConfig) | undefined
-      const url = config?.url ?? ''
-      const isAuthEndpoint = url.includes('/api/auth/login') || url.includes('/api/auth/refresh') || url.includes('/api/auth/logout')
-      if (isAuthEndpoint || config?._aetherisSessionProbe) return Promise.reject(error)
-      if (config && !config._aetherisRetried && !isAuthEndpoint) {
-        config._aetherisRetried = true
-        try {
-          await refreshSession(config._aetherisRevision ?? '')
-          return http(config)
-        } catch {
-          // A rejected rotation must not immediately log out a different tab's
-          // newly valid session. The server leaves its cookies intact on 401.
-          await waitForConcurrentRefresh(config._aetherisRevision ?? '')
-          try {
-            const probe = await http.get<SessionUser>('/api/auth/me', {
-              _aetherisSessionProbe: true
-            } as Parameters<typeof http.get>[1] & RetryableConfig)
-            setAuthenticated(probe.data)
-            return http(config)
-          } catch (probeError) {
-            if ((probeError as { response?: { status?: number } }).response?.status !== 401) {
-              return Promise.reject(probeError)
-            }
-            // Both renewal and an independent signed identity check rejected authentication.
-          }
-        }
-      }
-      if (!window.location.pathname.startsWith('/login')) {
+  (response) => {
+    if (!stillCurrent(response.config as RetryableConfig)) throw sessionChanged()
+    return response
+  },
+  async (error: AxiosError) => {
+    const config = error.config as (AxiosRequestConfig & RetryableConfig) | undefined
+    if (config && !stillCurrent(config)) throw sessionChanged()
+    if (error.response?.status !== 401 || !config || isAuthEndpoint(config.url)
+        || config._aetherisSessionProbe || config._aetherisRetried) throw error
+
+    const original = config._aetherisSession!
+    let user: SessionUser
+    try {
+      user = await refreshSession(config._aetherisRevision ?? '')
+    } catch (refreshError) {
+      if (!isCurrentSession(original)) throw sessionChanged()
+      if ((refreshError as AxiosError).response?.status === 401) {
         clearAuthenticated()
-        window.location.href = '/login'
+        if (!window.location.pathname.startsWith('/login')) window.location.href = '/login'
       }
+      throw refreshError
     }
-    return Promise.reject(error)
+    if (!isCurrentSession(original)) throw sessionChanged()
+    setAuthenticated(user)
+    if (original.identity !== null && original.identity !== sessionIdentity(user)) throw sessionChanged()
+
+    // Even a nominally idempotent PUT/DELETE can carry stale user intent. Only safe
+    // reads are replayed; mutation/query POST callers must explicitly submit again.
+    if (!['get', 'head', 'options'].includes((config.method ?? 'get').toLowerCase())) {
+      throw new AxiosError('会话已刷新，本次修改未自动重试，请核对状态后重新操作',
+        'SESSION_RETRY_REQUIRED', error.config, error.request, error.response)
+    }
+    config._aetherisRetried = true
+    config._aetherisSession = captureSession()
+    config._aetherisRevision = sessionRevision()
+    return http(config)
   }
 )
 

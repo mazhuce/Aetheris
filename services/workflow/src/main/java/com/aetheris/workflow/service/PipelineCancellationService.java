@@ -129,7 +129,7 @@ public class PipelineCancellationService {
         List<Map<String, Object>> rows = jdbc.queryForList(
                 "SELECT * FROM workflow.pipeline_run WHERE id=?", runId);
         if (rows.isEmpty()) throw new IllegalArgumentException("流水线运行不存在");
-        return new HashMap<>(rows.getFirst());
+        return PipelineExecutionService.publicRun(rows.getFirst());
     }
 
     record ActiveNode(long id, Long instanceId, String taskType, String taskName) { }

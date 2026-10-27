@@ -2,6 +2,7 @@ package com.aetheris.workflow.service;
 
 import com.aetheris.workflow.entity.Task;
 import com.aetheris.workflow.entity.TaskInstance;
+import com.aetheris.workflow.fixedexecution.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.task.SyncTaskExecutor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -97,7 +98,7 @@ class PipelineExecutionServiceTest {
     }
 
     @Test
-    void executionFailureFinalizesCurrentAndPendingNodes() {
+    void dispatchExceptionSuspendsCurrentAndPendingNodesUntilReconciled() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         TaskService tasks = mock(TaskService.class);
         TaskExecutionService executions = mock(TaskExecutionService.class);
@@ -107,23 +108,18 @@ class PipelineExecutionServiceTest {
         failedTask.setTaskType("sql");
         failedTask.setStatus("enabled");
         when(tasks.getById(11L)).thenReturn(failedTask);
-        when(executions.execute(anyLong(), any(), any(), any()))
+        when(executions.executePipeline(any()))
                 .thenThrow(new IllegalStateException("执行依赖不可用"));
         doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
 
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, tasks, mock(TaskInstanceService.class), executions, new SyncTaskExecutor(), 120, 120);
+        var authority=trust(service,"2026-09-08","admin");
 
         service.executeRun(7L, "2026-09-08", "admin", List.of(11L, 12L));
 
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("status='failed'"),
-                org.mockito.ArgumentMatchers.eq("执行依赖不可用"),
-                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(11L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("status='skipped'"),
-                org.mockito.ArgumentMatchers.eq(7L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='failed',error_message=?"),
-                org.mockito.ArgumentMatchers.eq("执行依赖不可用"),
-                org.mockito.ArgumentMatchers.eq(7L));
+        verify(authority).finish(any(),eq("unknown"),eq(11L),org.mockito.ArgumentMatchers.contains("待核对"));
+        verify(authority,never()).prepare(any(),eq(12L));
     }
 
     @Test
@@ -135,12 +131,12 @@ class PipelineExecutionServiceTest {
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, tasks, mock(TaskInstanceService.class), mock(TaskExecutionService.class),
                 new SyncTaskExecutor(), 120, 120);
+        var authority=trust(service,"2026-09-09","alice");
 
         service.executeRun(7L, "2026-09-09", "alice", List.of(11L, 12L));
 
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("status IN ('queued','running')"),
-                org.mockito.ArgumentMatchers.contains("恢复后已停用"),
-                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(11L));
+        verify(authority).finish(any(),eq("failed"),eq(11L),org.mockito.ArgumentMatchers.contains("未提交"));
+        verify(authority,never()).prepare(any(),anyLong());
     }
 
     @Test
@@ -193,43 +189,28 @@ class PipelineExecutionServiceTest {
     }
 
     @Test
-    void reconciledSuccessfulTargetCompletesSuspendedPipeline() {
+    void recoveryDoesNotReadTheLatestInstanceOrReconstructAUsername() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.query(org.mockito.ArgumentMatchers.contains("SELECT task_id FROM"),
-                org.mockito.ArgumentMatchers.<org.springframework.jdbc.core.RowMapper<Long>>any(),
-                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(2)))
-                .thenReturn(List.of());
-        doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, mock(TaskService.class), mock(TaskInstanceService.class),
                 mock(TaskExecutionService.class), new SyncTaskExecutor(), 120, 120);
-
-        service.reconcileResolvedNode(new PipelineExecutionService.ResolvedUnknownNode(
-                7L, 9L, 2, "2026-09-09", "alice", "success", null));
-
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='succeeded',message="),
-                org.mockito.ArgumentMatchers.eq(9L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='succeeded',finished_at=now()"),
-                org.mockito.ArgumentMatchers.eq(7L));
+        var authority=mock(PipelineExecutionStore.class);service.installPipelineAuthority(authority);
+        when(authority.recover()).thenReturn(List.of());service.reconcileResolvedNodes();
+        verify(authority).recover();org.mockito.Mockito.verifyNoInteractions(jdbc);
     }
 
     @Test
-    void reconciledRemoteFailureMakesPipelineSafelyRetryable() {
+    void recoveredRunsAreOnlyDispatchedAfterTheRecoveryTransactionCommits() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
+        var executor=mock(org.springframework.core.task.TaskExecutor.class);
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, mock(TaskService.class), mock(TaskInstanceService.class),
-                mock(TaskExecutionService.class), new SyncTaskExecutor(), 120, 120);
-
-        service.reconcileResolvedNode(new PipelineExecutionService.ResolvedUnknownNode(
-                7L, 9L, 2, "2026-09-09", "alice", "failed", "远端确认失败"));
-
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status=?,error_message=?"),
-                org.mockito.ArgumentMatchers.eq("failed"), org.mockito.ArgumentMatchers.eq("远端确认失败"),
-                org.mockito.ArgumentMatchers.eq(7L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status=?,message=?"),
-                org.mockito.ArgumentMatchers.eq("failed"), org.mockito.ArgumentMatchers.eq("远端确认失败"),
-                org.mockito.ArgumentMatchers.eq(9L));
+                mock(TaskExecutionService.class), executor, 120, 120);
+        var authority=mock(PipelineExecutionStore.class);service.installPipelineAuthority(authority);when(authority.recover()).thenReturn(List.of(7L));
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        try{service.reconcileResolvedNodes();org.mockito.Mockito.verifyNoInteractions(executor);
+            var callbacks=org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations();assertEquals(1,callbacks.size());callbacks.getFirst().afterCommit();verify(executor).execute(any());
+        }finally{org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();}
     }
 
     @Test
@@ -266,23 +247,16 @@ class PipelineExecutionServiceTest {
         unknown.setFinishedAt(OffsetDateTime.now());
         unknown.setErrorMessage("远端结果无法确认");
         when(tasks.getById(11L)).thenReturn(spark);
-        when(executions.execute(11L, "2026-09-09", "pipeline", "admin")).thenReturn(unknown);
+        when(executions.executePipeline(any())).thenReturn(unknown);
         doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, tasks, mock(TaskInstanceService.class), executions,
                 new SyncTaskExecutor(), 120, 120);
-
+        var authority=trust(service,"2026-09-09","admin");
         service.executeRun(7L, "2026-09-09", "admin", List.of(11L, 12L));
-
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status=?,instance_id=?"),
-                org.mockito.ArgumentMatchers.eq("unknown"), org.mockito.ArgumentMatchers.eq(21L),
-                org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.eq("远端结果无法确认"),
-                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(11L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='unknown',error_message=?"),
-                org.mockito.ArgumentMatchers.contains("结果待核对"), org.mockito.ArgumentMatchers.eq(7L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='skipped'"),
-                org.mockito.ArgumentMatchers.eq(7L));
-        verify(executions, never()).execute(12L, "2026-09-09", "pipeline", "admin");
+        verify(authority).record(any(),eq(11L),any(),eq(unknown),eq("unknown"),org.mockito.ArgumentMatchers.isNull());
+        verify(authority).finish(any(),eq("unknown"),eq(11L),org.mockito.ArgumentMatchers.contains("待核对"));
+        verify(authority,never()).prepare(any(),eq(12L));
     }
 
     @Test
@@ -297,23 +271,35 @@ class PipelineExecutionServiceTest {
         cancelled.setStatus("cancelled");
         cancelled.setFinishedAt(OffsetDateTime.now());
         when(tasks.getById(11L)).thenReturn(spark);
-        when(executions.execute(11L, "2026-09-09", "pipeline", "admin")).thenReturn(cancelled);
+        when(executions.executePipeline(any())).thenReturn(cancelled);
         doReturn(1).when(jdbc).update(any(String.class), any(Object[].class));
         PipelineExecutionService service = new PipelineExecutionService(
                 jdbc, tasks, mock(TaskInstanceService.class), executions,
                 new SyncTaskExecutor(), 120, 120);
-
+        var authority=trust(service,"2026-09-09","admin");
         service.executeRun(7L, "2026-09-09", "admin", List.of(11L, 12L));
+        verify(authority).record(any(),eq(11L),any(),eq(cancelled),eq("cancelled"),org.mockito.ArgumentMatchers.isNull());
+        verify(authority).finish(any(),eq("cancelled"),eq(11L),org.mockito.ArgumentMatchers.contains("已确认取消"));
+        verify(authority,never()).prepare(any(),eq(12L));
+    }
 
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status=?,instance_id=?"),
-                org.mockito.ArgumentMatchers.eq("cancelled"), org.mockito.ArgumentMatchers.eq(21L),
-                org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
-                org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(11L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='cancelled',error_message=?"),
-                org.mockito.ArgumentMatchers.contains("已确认取消"), org.mockito.ArgumentMatchers.eq(7L));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("SET status='skipped'"),
-                org.mockito.ArgumentMatchers.eq(7L));
-        verify(executions, never()).execute(12L, "2026-09-09", "pipeline", "admin");
+    private static PipelineExecutionStore trust(PipelineExecutionService service,String date,String user){
+        var authority=mock(PipelineExecutionStore.class);service.installPipelineAuthority(authority);
+        when(authority.begin(7)).thenReturn(new PipelineExecutionStore.Dispatch(7,1,date,user,List.of(11L,12L)));
+        when(authority.prepare(any(),anyLong())).thenReturn(mock(WorkflowExecutionStore.Claim.class));
+        when(authority.record(any(),anyLong(),any(),any(),any(),any())).thenReturn(true);return authority;
+    }
+
+    @Test void publicPipelineResponsesDoNotExposeTheSealedSqlOrApprovalIdentity(){
+        var row=new java.util.HashMap<String,Object>();row.put("id",7L);row.put("plan_json","private SQL");row.put("invocation_json","private UID/AV");row.put("worker_id","private worker");row.put("plan_sha256","a".repeat(64));
+        assertEquals(java.util.Map.of("id",7L,"plan_sha256","a".repeat(64)),PipelineExecutionService.publicRun(row));
+        var node=new java.util.HashMap<String,Object>();node.put("id",9L);node.put("definition_json","private SQL");node.put("approval_json","private approver");node.put("dependency_evidence","private source");
+        assertEquals(java.util.Map.of("id",9L),PipelineExecutionService.publicNode(node));
+        assertTrue(row.containsKey("plan_json"));assertTrue(node.containsKey("definition_json"));
+    }
+    @Test void missingTrustedStoreCannotFallBackToTheOldUsernameBridge(){
+        var executions=mock(TaskExecutionService.class);var service=new PipelineExecutionService(mock(JdbcTemplate.class),mock(TaskService.class),mock(TaskInstanceService.class),executions,new SyncTaskExecutor(),120,120);
+        assertThrows(IllegalStateException.class,()->service.executeRun(7,"2026-10-25","admin",List.of(11L)));org.mockito.Mockito.verifyNoInteractions(executions);
     }
 
     private static Task task(long id, String name, String type, String status) {

@@ -18,4 +18,7 @@ public class AuthPermissionGate implements PermissionGate {
     public Mono<Boolean> sessionActive(Long uid, String username, long accessVersion) {
         return Mono.defer(() -> Mono.fromFuture(client.sessionActive(uid, username, accessVersion)));
     }
+    public Mono<Boolean> browserSessionActive(Long uid, String username, long accessVersion, String sid) {
+        return Mono.defer(() -> Mono.fromFuture(client.browserSessionActive(uid, username, accessVersion, sid)));
+    }
 }

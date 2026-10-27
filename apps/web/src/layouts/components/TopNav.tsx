@@ -72,11 +72,14 @@ export default function TopNav() {
   }, [modules.length])
 
   const handleLogout = async () => {
+    let logoutUnconfirmed = false
     try {
       await logout()
-    } catch {
+    } catch (error) {
+      if ((error as { code?: string })?.code === 'SESSION_CHANGED') return
+      logoutUnconfirmed = true
     }
-    navigate('/login', { replace: true })
+    navigate('/login', { replace: true, state: { logoutUnconfirmed } })
   }
 
   const visibleModules = modules.slice(0, overflowAt)

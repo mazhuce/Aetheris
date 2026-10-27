@@ -2,7 +2,23 @@
 
 日期：2026-10-18。本文描述本地修复的目标契约、保守边界与部署前审阅步骤；不是生产迁移执行记录。
 
+2026-10-26接续：fixed-execution、published-key及新增引擎窄授权在读取权限后、返回结果前，重新核对原UID/name/accessVersion。权限读取期间同名重建、禁用或AV变化不继承新主体权限。三条真实签名MVC受控竞态反例先失败后修复，当前应用回归及剩余边界以[整改台账](2026-10-18-audit-plan.md)为准；这不宣称所有数据库并发或浏览器时序已经验证。Spark/Flink生产来源仍按[引擎执行契约](workflow-engine-execution-contract.md)继续接通。
+
 ## 决策与资源模型
+
+### 2026-10-26 浏览器会话的独立边界（N23）
+
+Auth V11 新增 `auth.browser_session`，以随机规范 UUID `sid`、稳定 UID/name、签发时账号 AV/SV、独立 refresh CAS 版本、固定到期时间和撤销时间保存浏览器权限。密码登录新建 family；refresh 只能消费原版本一次，不能延长 family 的绝对有效期；logout 持久化撤销原 family，不递增账号 AV/SV。固定任务 USER proof、批准、cron/pipeline 的账号版本契约不依赖浏览器 sid。
+
+access、refresh、独立 `browser-logout` 凭证均签名绑定 sid/UID/name/AV，类型不能互换。每个受保护浏览器请求由 Gateway 使用专用 `auth.browser-session.check` V2 操作实时查询 Auth；该路由只接受 Gateway workload、禁止 USER proof，不加入其他服务的通用能力。无 sid 的旧 token 拒绝重新使用，不能按用户名补 family。
+
+Cookie 使用共享 `BrowserSessionCookies` 命名：HttpOnly `aetheris_session` 只选择当前 sid，本身不能授权；凭据分别为 `aetheris_access_<sid>`（`/`）、`aetheris_refresh_<sid>` 和 `aetheris_logout_<sid>`（`/api/auth`），均 SameSite=Lax，并沿用部署的 Secure 设置。只有成功密码登录写 selector；refresh/logout 只写或清除请求所属 family 的名称，不写 selector。selector 和同名凭据必须唯一、sid 必须规范且与签名内容一致，不回退到全局旧 Cookie 或其他 family。登录只清请求中精确识别的旧 family/legacy 凭据，保留无关 Cookie。
+
+该隔离不是单纯客户端缓存优化：真实 Chromium RED 已证明全局同名 Cookie 会让迟到 A refresh 把 B 的实际 `/me` 主体切回 A，旧 logout 的 204/401/503 均会清 B。Web Locks 仍协调正常客户端的登录、刷新和退出；family 命名用于隔离锁外旧请求/旧客户端迟到响应。新命名的完整浏览器 GREEN 以台账当前 run 为准，不能引用旧 Cookie 报告宣称完成。
+
+logout 使用独立、固定有效期且不随 refresh 轮换的能力，因此不依赖 access 未过期或 refresh 尚未消费。匹配原 family 的 access jti 黑名单继续保留；Redis 不可用不能阻止 Auth 的持久撤销。DB 撤销失败返回 503，保留原 family logout 能力供显式重试。客户端持久化“本地已退出、服务端未确认”，重载和失败登录不能抹去提示，也不能用幸存 Cookie 自动恢复；仅实际 204 可确认撤销。
+
+切换前先只读核实旧库 Flyway history，备份和审查 V11/runtime ACL。Auth 与所有 Gateway 作为一个兼容版本组切换，旧平面 Cookie 重新密码登录。不能回退到忽略 sid 撤销的旧 Gateway 来保持流量；故障时关闭浏览器入口并修复前进，或另行审查 JWT 密钥轮换及影响后恢复旧服务。此处没有授权操作现有数据库、执行真实密钥轮换或部署。隔离 V10→V11/12 项 PG 通过仅证明该明确升级路径；批准任务的实际执行、全产品冻结验收仍待完成。
 
 - 身份仍沿用现有网关签名；浏览器提交的 owner、triggeredBy、用户名或角色头不能授予权限。owner/创建人只是业务元数据。
 - mayMutate 是网关/服务的粗入口检查：某服务存在写授权才允许请求继续。它不能替代具体资源的 action 检查。

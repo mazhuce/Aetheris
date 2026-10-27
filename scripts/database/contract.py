@@ -53,6 +53,13 @@ FIXED_EXECUTION_HELPERS = {
     'execution_approval_valid': ('value jsonb, revision bigint, definition_hash text', 'jsonb, bigint, text', 'boolean'),
     'execution_definition_projection': ('body jsonb', 'jsonb', 'jsonb'),
 }
+WORKFLOW_PIPELINE_HELPERS = {
+    'pipeline_plan_current': ('body jsonb', 'jsonb', 'boolean'),
+    'pipeline_success_evidence': ('node_key bigint', 'bigint', 'boolean'),
+    'pipeline_retry_ancestor': ('run_key bigint, source_key bigint', 'bigint, bigint', 'boolean'),
+    'pipeline_dependencies_ready': ('run_key bigint, node_key bigint', 'bigint, bigint', 'boolean'),
+    'pipeline_binding_valid': ('value workflow.execution_attempt', 'workflow.execution_attempt', 'boolean'),
+}
 
 
 def function_policy(item):
@@ -68,6 +75,8 @@ def function_policy(item):
     if args == '' and item.get('resultType') == 'trigger':
         return '', False
     helper = FIXED_EXECUTION_HELPERS.get(item.get('name'))
+    if item['schema']=='workflow' and helper is None:
+        helper=WORKFLOW_PIPELINE_HELPERS.get(item.get('name'))
     if item['schema'] not in ('workflow', 'ingestion', 'quality') or helper is None:
         raise ValueError('Unreviewed database function')
     identity, types, result = helper
@@ -85,6 +94,7 @@ def check_function_inventory(functions):
             if key in seen: raise ValueError('Duplicate reviewed helper')
             seen.add(key)
     expected = {(schema, name) for schema in ('workflow', 'ingestion', 'quality') for name in FIXED_EXECUTION_HELPERS}
+    expected.update(('workflow',name) for name in WORKFLOW_PIPELINE_HELPERS)
     if seen != expected: raise ValueError('Missing fixed execution helper functions')
 
 

@@ -465,18 +465,20 @@ class JobRunner:
         return None
 
     def logs(self, job_id: str, offset: int, limit: int) -> dict[str, object]:
-        self._load(job_id)
+        state = self._load(job_id)
+        binding = {key: state[key] for key in ("id", "requestKey", "artifactDigest")}
         offset = max(0, offset)
         limit = max(1, min(limit, 65536))
         path = self._job_dir(job_id) / "job.log"
         if not path.exists():
-            return {"content": "", "nextOffset": 0, "eof": True}
+            return {**binding, "content": "", "nextOffset": max(0, offset), "eof": True}
         size = path.stat().st_size
         offset = min(offset, size)
         with path.open("rb") as stream:
             stream.seek(offset)
             content = stream.read(limit)
         return {
+            **binding,
             "content": content.decode("utf-8", errors="replace"),
             "nextOffset": offset + len(content),
             "eof": offset + len(content) >= size,

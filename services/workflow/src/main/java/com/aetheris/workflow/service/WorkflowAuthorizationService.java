@@ -55,4 +55,8 @@ public class WorkflowAuthorizationService {
     }
     private boolean checkTasks(String username,List<Long> ids,String action){return current(username)&&auth.allTasksAllowed(ids,action);}
     public boolean mayManage(String username){return current(username)&&auth.mayManage();}
+    public com.aetheris.workflow.fixedexecution.WorkflowActor pipelineActor(String username){
+        if(!current(username))throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN,"流水线主体不匹配");
+        return com.aetheris.workflow.fixedexecution.WorkflowActor.pipeline(auth.currentUser());
+    }
 }

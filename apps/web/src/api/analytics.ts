@@ -128,10 +128,11 @@ export function deleteAnalyticsDataset(id: number): Promise<void> {
   return http.delete(`/api/analytics/datasets/${id}`).then(() => undefined)
 }
 
-export function queryAnalyticsDataset(id: number, refresh = false): Promise<AnalyticsQueryResult> {
+export function queryAnalyticsDataset(id: number, refresh = false, signal?: AbortSignal): Promise<AnalyticsQueryResult> {
   return http
     .post<AnalyticsQueryResult>(`/api/analytics/datasets/${id}/query`, undefined, {
       params: { refresh },
+      signal,
       timeout: 50000
     })
     .then((response) => response.data)

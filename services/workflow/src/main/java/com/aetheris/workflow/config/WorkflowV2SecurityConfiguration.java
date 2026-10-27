@@ -21,7 +21,7 @@ import java.util.*;
 @Configuration(proxyBeanMethods=false)
 public class WorkflowV2SecurityConfiguration {
     private static final Set<String> AUTH_OPERATIONS=Set.of("auth.session.check","auth.permission.check",
-            "auth.permission.batch","auth.permission.manage","auth.permission.mutate");
+            "auth.permission.batch","auth.permission.manage","auth.permission.mutate","auth.engine-execution.authorize");
     @Bean public ProtocolInstallation workflowProtocolInstallation(Environment environment) {
         String context=environment.getProperty("server.servlet.context-path","");
         if(!context.isEmpty()&&!"/".equals(context))throw new IllegalStateException("Workflow v2 requires root context");
@@ -55,6 +55,13 @@ public class WorkflowV2SecurityConfiguration {
     @Bean public AuthProtocolClient workflowAuthClient(@Qualifier("workflowAuthTransport") SignedHttpClient transport) {
         return new AuthProtocolClient(transport);
     }
+    @Bean(name="workflowQualityTransport",destroyMethod="close")
+    public SignedHttpClient workflowQualityTransport(ProtocolInstallation installation,Environment env){
+        return new SignedHttpClient("workflow",installation.workloadSigner(),installation.verifier(),Clock.systemUTC(),TimePolicy.defaults(),
+            Map.of("quality",URI.create(env.getProperty("aetheris.quality.base-url","http://127.0.0.1:8083"))),
+            Map.of("quality",Set.of("quality.workflow-child.submit","quality.workflow-child.status","quality.workflow-child.definition")),
+            new SignedHttpClient.Limits(65536,65536,16,Duration.ofMillis(500),Duration.ofSeconds(2)));
+    }
     @Bean public SessionValidator workflowSessionValidator(AuthProtocolClient auth) {
         // No USER proof here: checking the raw tuple must not recurse through user authentication.
         return (uid,username,version)->{
@@ -70,8 +77,12 @@ public class WorkflowV2SecurityConfiguration {
         return (method,path)->path.equals("/api/workflow")||path.startsWith("/api/workflow/")||path.equals("/api/tasks")||path.startsWith("/api/tasks/")
                 ?DirectRoutePolicy.Decision.PROTECTED:DirectRoutePolicy.Decision.REJECT;
     }
-    public static RoutePolicy workloadRoutes(){return (method,path)->"POST".equals(method)&&"/internal/v2/executions/lookup".equals(path)
-        ?Optional.of(new RoutePolicy.Route("workflow.execution.lookup",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN)):Optional.empty();}
+    public static RoutePolicy workloadRoutes(){return (method,path)->{
+        if(!"POST".equals(method))return Optional.empty();
+        if("/internal/v2/executions/lookup".equals(path))return Optional.of(new RoutePolicy.Route("workflow.execution.lookup",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN));
+        if("/internal/v2/quality-parent/lookup".equals(path))return Optional.of(new RoutePolicy.Route("workflow.quality-parent.lookup",Set.of("metadata","quality"),RoutePolicy.UserMode.FORBIDDEN));
+        return Optional.empty();
+    };}
     @Bean public FilterRegistrationBean<WorkloadProofFilter> workflowWorkloadProofFilter(ProtocolInstallation installation,
             PostgresNonceStore nonces,SessionValidator sessions) {
         var filter=new WorkloadProofFilter("workflow",installation.verifier(),installation.workloadSigner(),

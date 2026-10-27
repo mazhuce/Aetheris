@@ -2,7 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { App as AntdApp } from 'antd'
 import { RouterProvider } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './auth/queryClient'
+import { startSessionSynchronization } from './auth/sessionSynchronization'
 import { router } from './router'
 import { PreferencesProvider } from './contexts/PreferencesContext'
 import { applyPreferences, readPreferences } from './utils/preferences'
@@ -12,15 +14,8 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import './styles/global.css'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 10_000,
-      retry: 1,
-      refetchOnWindowFocus: false
-    }
-  }
-})
+const stopSessionSynchronization = startSessionSynchronization()
+if (import.meta.hot) import.meta.hot.dispose(stopSessionSynchronization)
 
 // 在首屏渲染前恢复主题，避免已选择浅色时短暂闪现深色界面。
 applyPreferences(readPreferences())

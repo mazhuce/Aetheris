@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { App, Button, Card, Form, Input, Typography } from 'antd'
+import { Alert, App, Button, Card, Form, Input, Typography } from 'antd'
 import { ArrowRightOutlined, LockOutlined, UserOutlined } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
-import { login } from '@/api/auth'
-import { markLoggedIn } from '@/auth/session'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { login, logout } from '@/api/auth'
+import { logoutIntent } from '@/auth/authState'
+import { useAuthSession } from '@/hooks/useAuthSession'
 import BrandMark from '@/components/BrandMark'
 
 interface LoginForm {
@@ -14,17 +15,26 @@ interface LoginForm {
 export default function LoginPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
+  const location = useLocation()
   const [loading, setLoading] = useState(false)
+  const [retryingLogout, setRetryingLogout] = useState(false)
+  useAuthSession()
+  const revocation = logoutIntent()?.revocation
+  const logoutUnconfirmed = revocation !== 'confirmed' && (revocation === 'pending' || revocation === 'unconfirmed'
+    || (location.state as { logoutUnconfirmed?: boolean } | null)?.logoutUnconfirmed === true)
+
+  const retryLogout = async () => {
+    setRetryingLogout(true)
+    try { await logout() } catch { /* Persisted state keeps the unconfirmed warning visible. */ }
+    finally { setRetryingLogout(false) }
+  }
 
   const handleSubmit = async (values: LoginForm) => {
     setLoading(true)
     try {
-      const result = await login(values.username.trim(), values.password)
-      // The access and refresh tokens are HttpOnly cookies. Keep only the
-      // non-sensitive display identity in memory for this tab.
-      markLoggedIn(result)
-      message.success('登录成功')
-      navigate('/workbench', { replace: true })
+      await login(values.username, values.password)
+      message.success('登录成功').then(() => undefined, () => undefined)
+      await navigate('/workbench', { replace: true })
     } catch (error) {
       // 原实现把所有异常都报成「用户名或密码错误」，导致网络故障、服务未启动、
       // 账号被锁定等情况全部显示为凭据错误，排查时被误导。这里按实际状态码区分。
@@ -36,6 +46,7 @@ export default function LoginPage() {
 
   /** 把请求异常翻译成可操作的提示，而不是一律归咎于密码错误。 */
   function describeLoginFailure(error: unknown): string {
+    if ((error as { code?: string })?.code === 'SESSION_UNAVAILABLE') return (error as Error).message
     const response = (error as { response?: { status?: number; data?: { message?: string } } })
       ?.response
     if (!response) {
@@ -81,6 +92,10 @@ export default function LoginPage() {
           <div className="login-card-head">
             <Typography.Title level={2}>欢迎回来</Typography.Title>
           </div>
+          {logoutUnconfirmed && <Alert type="warning" showIcon
+            message="本地已退出，服务端会话撤销尚未确认"
+            description="服务恢复后可重试退出。确认前请勿将服务端会话视为已撤销。"
+            action={<Button loading={retryingLogout} disabled={loading} onClick={() => { retryLogout().catch(() => undefined) }}>重试退出</Button>} />}
           <Form layout="vertical" requiredMark={false} onFinish={(values) => void handleSubmit(values as LoginForm)}>
             <Form.Item label="用户名" name="username" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input prefix={<UserOutlined />} placeholder="name@company.com" size="large" autoComplete="username" />

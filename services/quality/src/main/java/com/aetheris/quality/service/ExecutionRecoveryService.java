@@ -79,6 +79,16 @@ public class ExecutionRecoveryService {
                     row.getString("failure_code"),row.getString("message"),row.getObject("started_at",java.time.OffsetDateTime.class),
                     row.getObject("finished_at",java.time.OffsetDateTime.class)),Math.clamp(limit,1,200));
     }
+    /** A signed original metadata receipt may resolve unknown without any new physical query. */
+    @Transactional
+    public boolean finishSealedReceipt(QualityCheckResult result,com.aetheris.quality.entity.QualityQuarantineRecord quarantine,long revision,String hash,long receipt){
+        var rows=jdbc.queryForList("SELECT id FROM quality.quality_check_result WHERE id=? AND status='unknown' AND execution_revision=? AND manifest_sha256=? AND metadata_receipt_id=? AND manifest_sealed_at IS NOT NULL FOR UPDATE",result.getId(),revision,hash,receipt);
+        if(rows.size()!=1)return false;
+        if(quarantine!=null&&jdbc.queryForObject("SELECT count(*) FROM quality.quality_quarantine_record WHERE result_id=?",Long.class,result.getId())==0)jdbc.update("INSERT INTO quality.quality_quarantine_record(result_id,rule_id,target_table,violation_count,threshold_value,reason,status) VALUES(?,?,?,?,?,?,'open')",quarantine.getResultId(),quarantine.getRuleId(),quarantine.getTargetTable(),quarantine.getViolationCount(),quarantine.getThresholdValue(),quarantine.getReason());
+        jdbc.update("UPDATE quality.quality_check_result SET status=?,violation_count=?,threshold_value=?,duration_ms=?,message=?,failure_code='METADATA_RECEIPT_RECONCILED',finished_at=clock_timestamp() WHERE id=? AND status='unknown'",result.getStatus(),result.getViolationCount(),result.getThresholdValue(),result.getDurationMs(),result.getMessage(),result.getId());
+        jdbc.update("INSERT INTO quality.execution_reconciliation_audit(run_id,rule_id,previous_status,resolved_status,actor,evidence) VALUES(?,?,'unknown',?,'system:metadata-receipt',?)",result.getId(),result.getRuleId(),result.getStatus(),"signed original receipt="+receipt+" manifest="+hash);
+        jdbc.update("UPDATE quality.quality_rule SET last_check_status=?,last_violation_count=?,last_error=?,last_checked_at=clock_timestamp() WHERE id=? AND NOT EXISTS(SELECT 1 FROM quality.quality_check_result WHERE rule_id=? AND id>?)",result.getStatus(),result.getViolationCount(),"error".equals(result.getStatus())?result.getMessage():null,result.getRuleId(),result.getRuleId(),result.getId());return true;
+    }
     public Definition detail(Long id) {
         var rows=jdbc.queryForList("SELECT id,status,execution_snapshot FROM quality.quality_check_result WHERE id=?",id);
         if(rows.isEmpty()) throw new IllegalArgumentException("检查记录不存在");
@@ -93,9 +103,10 @@ public class ExecutionRecoveryService {
         if(status==null || !Set.of("passed","failed","error").contains(status) || !confirmedRemoteStopped
                 || evidence==null || evidence.trim().length()<16 || evidence.length()>2000
                 || actor==null || actor.isBlank()) throw new IllegalArgumentException("请确认远端已结束并提供16至2000字的对账依据");
-        var rows=jdbc.queryForList("SELECT rule_id,status,threshold_value,manifest_sealed_at,execution_snapshot FROM quality.quality_check_result WHERE id=? FOR UPDATE",id);
+        var rows=jdbc.queryForList("SELECT rule_id,status,threshold_value,manifest_sealed_at,execution_snapshot,parent_origin FROM quality.quality_check_result WHERE id=? FOR UPDATE",id);
         if(rows.isEmpty()) throw new IllegalArgumentException("检查记录不存在");
         var result=rows.getFirst();
+        if("workflow".equals(result.get("parent_origin")))throw new IllegalStateException("封存子任务必须核对原metadata回执；人工摘要不能代替父子结果凭证");
         if(!"unknown".equals(result.get("status"))) throw new IllegalStateException("只有结果不确定的检查允许人工对账");
         long threshold=result.get("threshold_value") instanceof Number n ? n.longValue() : 0L;
         if((violations!=null && violations<0) || (!"error".equals(status) && (violations==null || "passed".equals(status)!=(violations<=threshold))))

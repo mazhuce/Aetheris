@@ -1,5 +1,6 @@
 package com.aetheris.gateway.config;
 
+import com.aetheris.security.protocol.BrowserSessionCookies;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,53 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JwtAuthFilterTest {
+    @Test void logoutReachesAuthWithIndependentProofWhenRedisIsUnavailable() {
+        var store = org.mockito.Mockito.mock(TokenRevocationStore.class);
+        org.mockito.Mockito.when(store.revoke(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(Mono.error(new IllegalStateException("redis fixture unavailable")));
+        var gate = org.mockito.Mockito.mock(PermissionGate.class);
+        var request = MockServerWebExchange.from(MockServerHttpRequest.post("/api/auth/logout")
+                .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, COOKIE_SID), token("alice", "viewer", 42L)).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, COOKIE_SID), logoutToken(COOKIE_SID)).build())
+                .header("X-Aetheris-Identity", "forged").build());
+        var forwarded = new AtomicReference<ServerWebExchange>();
+        new JwtAuthFilter(KEY, store, gate, GatewayTestKeys.identitySigner()).filter(request, next -> {
+            forwarded.set(next); return next.getResponse().setComplete();
+        }).block();
+        assertNotNull(forwarded.get());
+        assertNotNull(forwarded.get().getRequest().getCookies().getFirst(BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, COOKIE_SID)));
+        assertEquals(null, forwarded.get().getRequest().getHeaders().getFirst("X-Aetheris-Identity"));
+        org.mockito.Mockito.verifyNoInteractions(gate);
+        org.mockito.Mockito.verify(store, org.mockito.Mockito.never()).isRevoked(org.mockito.ArgumentMatchers.anyString());
+        org.mockito.Mockito.verify(store).revoke(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test void olderFamilyLogoutCannotBlacklistAccessFromANewerFamily() {
+        String access = token("alice", "viewer", 42);
+        String olderSid = java.util.UUID.randomUUID().toString();
+        var filter = filter(neverCalledGate());
+        var logout = MockServerWebExchange.from(MockServerHttpRequest.post("/api/auth/logout")
+                .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, COOKIE_SID), access).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, olderSid), logoutToken(olderSid)).build()).build());
+        filter.filter(logout, next -> next.getResponse().setComplete()).block();
+        var forwarded = new AtomicReference<ServerWebExchange>();
+        filter.filter(exchange("GET", "/api/metadata/tables", access), next -> {
+            forwarded.set(next); return next.getResponse().setComplete();
+        }).block();
+        assertNotNull(forwarded.get());
+    }
+
+    @Test void legacyAccessCannotBypassFamilyCheckEvenWhenAccountIsActive() {
+        String legacy = Jwts.builder().subject("alice").claim("uid", 42L).claim("av", 0).claim("typ", "access")
+                .expiration(new Date(System.currentTimeMillis() + 60_000)).signWith(KEY).compact();
+        var request = exchange("GET", "/api/metadata/tables", legacy);
+        new JwtAuthFilter(KEY, new TokenRevocationStore(), neverCalledGate(), GatewayTestKeys.identitySigner())
+                .filter(request, ignored -> { throw new AssertionError("Legacy token admitted"); }).block();
+        assertEquals(HttpStatus.UNAUTHORIZED, request.getResponse().getStatusCode());
+    }
+
     @Test void nonAuthDownstreamNeverReceivesBearerOrCookies() {
         for (String mode : java.util.List.of("user", "pure-key", "preflight")) {
             var builder = mode.equals("preflight") ? MockServerHttpRequest.options("/api/system/configs")
@@ -81,7 +129,7 @@ class JwtAuthFilterTest {
             PermissionGate gate = new PermissionGate() {
                 public Mono<Boolean> mayManage(String name) { throw new AssertionError(); }
                 public Mono<Boolean> mayMutate(String name, String service) { throw new AssertionError(); }
-                public Mono<Boolean> sessionActive(Long uid, String name, long version) {
+                public Mono<Boolean> browserSessionActive(Long uid, String name, long version, String sid) {
                     assertEquals(42L, uid); assertEquals("alice", name); assertEquals(0L, version);
                     return unavailable ? Mono.error(new IllegalStateException("auth down")) : Mono.just(false);
                 }
@@ -97,14 +145,14 @@ class JwtAuthFilterTest {
 
     @Test
     void forwardsAccessVersionToLiveAccountCheck() {
-        String access = Jwts.builder().subject("alice").claim("uid", 42L).claim("typ", "access")
+        String access = Jwts.builder().subject("alice").claim("uid", 42L).claim("typ", "access").claim("sid", "5628a5d4-778f-4f75-83d2-416c1cf2a269")
                 .claim("av", 7L).expiration(new Date(System.currentTimeMillis() + 60_000))
                 .signWith(KEY).compact();
         AtomicReference<Long> observed = new AtomicReference<>();
         PermissionGate gate = new PermissionGate() {
             public Mono<Boolean> mayManage(String name) { return Mono.just(false); }
             public Mono<Boolean> mayMutate(String name, String service) { return Mono.just(false); }
-            public Mono<Boolean> sessionActive(Long uid, String name, long version) {
+            public Mono<Boolean> browserSessionActive(Long uid, String name, long version, String sid) {
                 observed.set(version); return Mono.just(true);
             }
         };
@@ -177,11 +225,12 @@ class JwtAuthFilterTest {
 
     private static final String SECRET = "aetheris-test-secret-with-32-bytes";
     private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private static final String COOKIE_SID = "5628a5d4-778f-4f75-83d2-416c1cf2a269";
     private static final String INTERNAL_TOKEN = "internal-test-token-with-at-least-32-bytes";
 
     /** 决策门桩：admin 放行、其余拒绝；被探测调用时可选择抛错。 */
     private PermissionGate adminOnlyGate() {
-        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
+        return new PermissionGate() { public Mono<Boolean> browserSessionActive(Long uid, String username, long version, String sid) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 return Mono.just("admin".equals(GatewayTestKeys.user(username, "gateway").username()));
@@ -195,7 +244,7 @@ class JwtAuthFilterTest {
     }
 
     private PermissionGate failingGate() {
-        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
+        return new PermissionGate() { public Mono<Boolean> browserSessionActive(Long uid, String username, long version, String sid) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 return Mono.error(new IllegalStateException("auth down"));
@@ -209,7 +258,7 @@ class JwtAuthFilterTest {
     }
 
     private PermissionGate neverCalledGate() {
-        return new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
+        return new PermissionGate() { public Mono<Boolean> browserSessionActive(Long uid, String username, long version, String sid) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 throw new AssertionError("mayMutate must not be consulted");
@@ -334,7 +383,7 @@ class JwtAuthFilterTest {
 
     @Test
     void sensitiveSystemWritesRequireManagePermissionBeforeServiceMutationGate() {
-        PermissionGate mutateOnly = new PermissionGate() { public Mono<Boolean> sessionActive(Long uid, String username, long version) { return Mono.just(true); }
+        PermissionGate mutateOnly = new PermissionGate() { public Mono<Boolean> browserSessionActive(Long uid, String username, long version, String sid) { return Mono.just(true); }
             @Override
             public Mono<Boolean> mayMutate(String username, String service) {
                 return Mono.just(true);
@@ -516,7 +565,7 @@ class JwtAuthFilterTest {
                 {"DELETE","/api/metadata/api-assets/11"},{"POST","/api/metadata/api-assets/11/publish"},{"POST","/api/metadata/api-assets/11/deprecate"}}){
             AtomicReference<String> asked=new AtomicReference<>();AtomicReference<ServerWebExchange> forwarded=new AtomicReference<>();
             PermissionGate gate=new PermissionGate(){
-                public Mono<Boolean> sessionActive(Long uid,String name,long av){return Mono.just(uid==42&&name.equals("alice"));}
+                public Mono<Boolean> browserSessionActive(Long uid,String name,long av, String sid){return Mono.just(uid==42&&name.equals("alice"));}
                 public Mono<Boolean> mayMutate(String proof,String service){asked.set(service);return Mono.just("serving".equals(service));}
                 public Mono<Boolean> mayManage(String proof){return Mono.just(false);}
             };
@@ -525,7 +574,7 @@ class JwtAuthFilterTest {
             var user=GatewayTestKeys.user(forwarded.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER),"metadata");assertEquals(42,user.uid());
         }
         AtomicReference<String> asked=new AtomicReference<>();PermissionGate gate=new PermissionGate(){
-            public Mono<Boolean> sessionActive(Long uid,String name,long av){return Mono.just(uid==42&&name.equals("alice"));}
+            public Mono<Boolean> browserSessionActive(Long uid,String name,long av, String sid){return Mono.just(uid==42&&name.equals("alice"));}
             public Mono<Boolean> mayMutate(String proof,String service){asked.set(service);return Mono.just(false);}
             public Mono<Boolean> mayManage(String proof){return Mono.just(false);}
         };
@@ -573,7 +622,10 @@ class JwtAuthFilterTest {
     void logoutRevokesTokenForSubsequentRequests() {
         String token = token("alice", "viewer", 42L);
         JwtAuthFilter filter = filter(neverCalledGate());
-        MockServerWebExchange logout = exchange("POST", "/api/auth/logout", token);
+        MockServerWebExchange logout = MockServerWebExchange.from(MockServerHttpRequest.post("/api/auth/logout")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, COOKIE_SID), logoutToken(COOKIE_SID)).build()).build());
         filter.filter(logout, filtered -> filtered.getResponse().setComplete()).block();
 
         MockServerWebExchange subsequent = exchange("GET", "/api/quality/rules", token);
@@ -588,14 +640,26 @@ class JwtAuthFilterTest {
     void acceptsAccessCookieAndLogoutRevokesIt() {
         String token = token("alice", "viewer", 42L);
         JwtAuthFilter filter = filter(neverCalledGate());
+        MockServerWebExchange admitted = MockServerWebExchange.from(MockServerHttpRequest.get("/api/quality/rules")
+                .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, COOKIE_SID), token).build()).build());
+        var accepted = new AtomicReference<ServerWebExchange>();
+        filter.filter(admitted, next -> { accepted.set(next); return next.getResponse().setComplete(); }).block();
+        assertNotNull(accepted.get(), "规范 selector 和 family access 必须在登出前真正通过认证");
+        var user = GatewayTestKeys.user(accepted.get().getRequest().getHeaders().getFirst(IdentitySigner.IDENTITY_HEADER), "quality");
+        assertEquals(42L, user.uid());
+        assertEquals("alice", user.username());
         MockServerWebExchange logout = MockServerWebExchange.from(
                 MockServerHttpRequest.post("/api/auth/logout")
-                        .cookie(ResponseCookie.from("aetheris_access", token).build()).build());
+                        .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                        .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, COOKIE_SID), logoutToken(COOKIE_SID)).build())
+                        .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, COOKIE_SID), token).build()).build());
         filter.filter(logout, forwarded -> forwarded.getResponse().setComplete()).block();
 
         MockServerWebExchange subsequent = MockServerWebExchange.from(
                 MockServerHttpRequest.get("/api/quality/rules")
-                        .cookie(ResponseCookie.from("aetheris_access", token).build()).build());
+                        .cookie(ResponseCookie.from(BrowserSessionCookies.SELECTOR, COOKIE_SID).build())
+                        .cookie(ResponseCookie.from(BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, COOKIE_SID), token).build()).build());
         filter.filter(subsequent, ignored -> {
             throw new AssertionError("revoked cookie must not reach downstream");
         }).block();
@@ -615,8 +679,15 @@ class JwtAuthFilterTest {
                 .claim("uid", uid)
                 .claim("role", role)
                 .claim("typ", "access")
+                .claim("av", 0L)
+                .claim("sid", COOKIE_SID)
                 .expiration(new Date(System.currentTimeMillis() + 60_000))
                 .signWith(KEY)
                 .compact();
+    }
+    private String logoutToken(String sid) {
+        return Jwts.builder().subject("alice").claim("uid", 42L).claim("av", 0L).claim("sid", sid)
+                .claim("typ", "browser-logout").expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(KEY).compact();
     }
 }

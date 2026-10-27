@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Row, Select, Table, Tag, Typography } from 'antd'
+import { App, Button, Col, Row, Select, Space, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CheckCircleOutlined, CloseCircleOutlined, DashboardOutlined, FieldTimeOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -9,6 +9,7 @@ import DataSurface from '@/components/DataSurface'
 import { listAllInstances, listTasks, INSTANCE_STATUS_META, type TaskInstance, type TaskView } from '@/api/workflow'
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { summarizeTaskStatuses } from './taskStatistics'
 
 export default function TaskMonitorPage() {
   const { message } = App.useApp()
@@ -35,8 +36,8 @@ export default function TaskMonitorPage() {
   }, [message, status])
 
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    refresh().catch(() => { message.error('任务实例加载失败') })
+  }, [message, refresh])
 
   const taskName = useCallback(
     (taskId: number) => tasks.find((view) => view.task.id === taskId)?.task.name ?? `任务 ${taskId}`,
@@ -44,15 +45,11 @@ export default function TaskMonitorPage() {
   )
 
   const metrics = useMemo(() => {
-    const finished = instances.filter((item) => item.status === 'success' || item.status === 'failed')
-    const success = instances.filter((item) => item.status === 'success').length
-    const failed = instances.filter((item) => item.status === 'failed').length
-    const successRate = finished.length ? Math.round((success / finished.length) * 100) : 100
     const withDuration = instances.filter((item) => item.durationMs !== undefined && item.durationMs !== null)
     const averageDuration = withDuration.length
       ? Math.round(withDuration.reduce((total, item) => total + (item.durationMs ?? 0), 0) / withDuration.length)
       : 0
-    return { success, failed, successRate, averageDuration }
+    return { ...summarizeTaskStatuses(instances), averageDuration }
   }, [instances])
 
   const columns: TableColumnsType<TaskInstance> = [
@@ -110,16 +107,24 @@ export default function TaskMonitorPage() {
   return (
     <div className="task-monitor-page">
       <PageHeader
-        description="监控调度任务的运行状态、成功率与耗时，失败实例可查看错误信息并跳转处理。"
+        description="查看当前实例样本的运行状态、已知完成成功率与耗时，失败及超时实例可查看错误信息。"
         extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新数据</Button>}
       />
 
       <Row gutter={[16, 16]}>
-        <Col xs={12} lg={6}><StatCard title="成功实例" value={String(metrics.success)} icon={<CheckCircleOutlined />} footer="最近 100 次运行" tone="green" /></Col>
-        <Col xs={12} lg={6}><StatCard title="失败实例" value={String(metrics.failed)} icon={<CloseCircleOutlined />} footer="需要人工介入" tone="orange" /></Col>
-        <Col xs={12} lg={6}><StatCard title="成功率" value={`${metrics.successRate}%`} icon={<DashboardOutlined />} footer="仅统计已结束实例" tone="neutral" /></Col>
+        <Col xs={12} lg={6}><StatCard title="成功实例" value={String(metrics.success)} icon={<CheckCircleOutlined />} footer="当前列表（最多 100 条）" tone="green" /></Col>
+        <Col xs={12} lg={6}><StatCard title="失败及超时实例" value={String(metrics.failed + metrics.timedOut)} icon={<CloseCircleOutlined />} footer={`失败 ${metrics.failed} · 超时 ${metrics.timedOut}`} tone="orange" /></Col>
+        <Col xs={12} lg={6}><StatCard title="已知完成成功率" value={metrics.successRate === null ? '无样本' : `${metrics.successRate}%`} icon={<DashboardOutlined />} footer="成功 /（成功 + 失败 + 超时）" tone="neutral" /></Col>
         <Col xs={12} lg={6}><StatCard title="平均耗时" value={metrics.averageDuration >= 1000 ? `${(metrics.averageDuration / 1000).toFixed(1)} s` : `${metrics.averageDuration} ms`} icon={<FieldTimeOutlined />} footer="当前列表范围" tone="orange" /></Col>
       </Row>
+
+      <Space size={[8, 8]} wrap style={{ marginTop: 16 }} aria-label="不计入成功率的实例">
+        <Typography.Text type="secondary">不计入成功率：</Typography.Text>
+        <Tag>已取消 {metrics.cancelled}</Tag>
+        <Tag>已跳过 {metrics.skipped}</Tag>
+        <Tag color={metrics.unknown ? 'warning' : undefined}>结果待核对 {metrics.unknown}</Tag>
+        <Tag>处理中 {metrics.inProgress}</Tag>
+      </Space>
 
       <PageToolbar>
         <div className="filter-bar">
@@ -138,7 +143,7 @@ export default function TaskMonitorPage() {
         </div>
       </PageToolbar>
 
-      <DataSurface title="运行实例" description="最近 100 次任务运行" label="任务实例明细">
+      <DataSurface title="运行实例" description="当前筛选返回的最多 100 条可见实例" label="任务实例明细">
         <Table<TaskInstance>
           rowKey="id"
           columns={columns}

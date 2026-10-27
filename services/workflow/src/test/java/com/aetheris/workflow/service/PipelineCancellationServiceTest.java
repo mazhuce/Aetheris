@@ -33,6 +33,8 @@ class PipelineCancellationServiceTest {
             context.registerBean(JdbcTemplate.class, () -> mock(JdbcTemplate.class));
             context.registerBean(SparkBatchExecutionService.class,
                     () -> mock(SparkBatchExecutionService.class));
+            context.registerBean(com.aetheris.workflow.fixedexecution.WorkflowSparkExecutor.class,
+                    () -> mock(com.aetheris.workflow.fixedexecution.WorkflowSparkExecutor.class));
             context.registerBean(PlatformTransactionManager.class,
                     () -> mock(PlatformTransactionManager.class));
             context.register(PipelineCancellationService.class);

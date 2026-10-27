@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   App,
   Button,
@@ -15,12 +15,10 @@ import StatusBadge from '@/components/StatusBadge'
 import {
   changeMyPassword,
   getMyProfile,
-  logout,
   updateMyProfile,
   type AuthUser,
   type UpdateProfileInput
 } from '@/api/auth'
-import { markLoggedOut } from '@/auth/session'
 import { useNavigate } from 'react-router-dom'
 import { formatDateTime } from '@/utils/format'
 
@@ -47,8 +45,6 @@ interface PasswordFormValues {
 }
 
 export default function AccountPage() {
-  const reloginTimer = useRef<number>()
-  useEffect(() => () => window.clearTimeout(reloginTimer.current), [])
   const { message } = App.useApp()
   const navigate = useNavigate()
   const [profile, setProfile] = useState<AuthUser | null>(null)
@@ -99,16 +95,9 @@ export default function AccountPage() {
       const result = await changeMyPassword(values.currentPassword, values.newPassword)
       message.success(result.message)
       passwordForm.resetFields()
-      // 服务端已使旧会话失效，短暂展示成功反馈后转到登录页。
+      // API 层已同步隔离旧会话，避免延迟 logout 误伤后来登录的账号。
       if (result.reloginRequired) {
-        window.clearTimeout(reloginTimer.current)
-        reloginTimer.current = window.setTimeout(async () => {
-          // Clear the server-side refresh session as well as the in-memory
-          // identity; an HttpOnly cookie cannot be removed by JavaScript.
-          await logout().catch(() => undefined)
-          markLoggedOut()
-          navigate('/login', { replace: true })
-        }, 1200)
+        navigate('/login', { replace: true })
       }
     } catch (error) {
       const detail = (error as { response?: { data?: { message?: string } } })

@@ -18,7 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 OUTPUT=ROOT/'output/audit-protocol-runtime'
 IMAGE='docker.1panel.live/library/eclipse-temurin:21-jre'
 LABEL='aetheris.protocol.runtime.audit'
-EXPECTED=160
+EXPECTED=169
 
 
 class AuditFailure(RuntimeError): pass

@@ -54,8 +54,9 @@ function Invoke-FixtureRequest {
     if($path -eq '/api/auth/login'){
         if($global:Mode -eq 'login'){throw 'Fixture login failure'}
         $global:Session=$WebSession
-        $WebSession.Cookies.Add([uri]'http://127.0.0.1:1',(New-Object Net.Cookie('aetheris_access','fixture-access','/')))
-        $WebSession.Cookies.Add([uri]'http://127.0.0.1:1/api/auth/login',(New-Object Net.Cookie('aetheris_refresh','fixture-refresh','/api/auth')))
+        $WebSession.Cookies.Add([uri]'http://127.0.0.1:1',(New-Object Net.Cookie('aetheris_session','5628a5d4-778f-4f75-83d2-416c1cf2a269','/')))
+        $WebSession.Cookies.Add([uri]'http://127.0.0.1:1',(New-Object Net.Cookie('aetheris_access_5628a5d4-778f-4f75-83d2-416c1cf2a269','fixture-access','/')))
+        $WebSession.Cookies.Add([uri]'http://127.0.0.1:1/api/auth/login',(New-Object Net.Cookie('aetheris_refresh_5628a5d4-778f-4f75-83d2-416c1cf2a269','fixture-refresh','/api/auth')))
         return @{username=$(if($global:Mode -eq 'login-unicode-mismatch'){"e$([char]0x301)"}else{$env:SEED_FIXTURE_USERNAME});role='admin';expiresIn=$(if($global:Mode -like 'refresh*'){1}else{900000})}
     }
     if(-not [object]::ReferenceEquals($WebSession,$global:Session) -or $WebSession.Cookies.GetCookies([uri]$Uri).Count -lt 1){throw 'Session/cookie missing'}

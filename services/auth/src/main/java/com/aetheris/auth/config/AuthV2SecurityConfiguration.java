@@ -46,6 +46,7 @@ public class AuthV2SecurityConfiguration {
         // Durable worker execution still requires metadata's separate source-bound assertion.
         if(Set.of("ingestion","workflow").contains(caller) && "datasource".equals(resource) && Set.of("query","write").contains(action)) return true;
         if("quality".equals(caller) && "datasource".equals(resource) && "query".equals(action)) return true;
+        if("workflow".equals(caller) && "quality_rule".equals(resource) && "execute".equals(action)) return true;
         return "serving".equals(caller) && Set.of("metric","datasource","table").contains(resource) && "query".equals(action);
     }
     public static boolean mutationAllowed(String caller,String service) {
@@ -62,10 +63,14 @@ public class AuthV2SecurityConfiguration {
     }
     public static RoutePolicy workloadRoutes() {
         return (method, path) -> {
+            if ("POST".equals(method) && "/internal/v2/browser-sessions/check".equals(path))
+                return Optional.of(new RoutePolicy.Route("auth.browser-session.check", Set.of("gateway"), RoutePolicy.UserMode.FORBIDDEN));
             if ("POST".equals(method) && "/internal/v2/permissions/published-key-query-authorize".equals(path))
                 return Optional.of(new RoutePolicy.Route("auth.published-key-query.authorize",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN));
             if ("POST".equals(method) && "/internal/v2/permissions/fixed-execution-authorize".equals(path))
                 return Optional.of(new RoutePolicy.Route("auth.fixed-execution.authorize",Set.of("metadata"),RoutePolicy.UserMode.FORBIDDEN));
+            if ("POST".equals(method) && "/internal/v2/permissions/engine-execution-authorize".equals(path))
+                return Optional.of(new RoutePolicy.Route("auth.engine-execution.authorize",Set.of("workflow"),RoutePolicy.UserMode.FORBIDDEN));
             String operation = "POST".equals(method) ? OPERATIONS.get(path) : null;
             if (operation == null) return Optional.empty();
             boolean noUser = path.equals("/internal/v2/sessions/check") || path.equals("/internal/v2/permissions/version");

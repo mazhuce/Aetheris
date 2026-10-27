@@ -12,10 +12,16 @@ public record AuthUserResponse(
         String phone,
         String role,
         String status,
+        Long accessVersion,
+        Long permissionVersion,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt) {
 
     public static AuthUserResponse from(AuthUser user) {
+        return from(user, null);
+    }
+
+    public static AuthUserResponse from(AuthUser user, Long permissionVersion) {
         return new AuthUserResponse(
                 user.getId(),
                 user.getUsername(),
@@ -24,6 +30,8 @@ public record AuthUserResponse(
                 user.getPhone(),
                 user.getRole(),
                 user.getStatus(),
+                user.getAccessVersion(),
+                permissionVersion,
                 user.getCreatedAt(),
                 user.getUpdatedAt());
     }

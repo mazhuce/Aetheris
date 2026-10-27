@@ -23,13 +23,13 @@ function renderAt(path: string) {
 
 describe('RequireRole', () => {
   it('角色匹配时渲染子内容', () => {
-    setAuthenticated({ username: 'alice', role: 'admin' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'admin' })
     renderAt('/system/users')
     expect(screen.getByText('admin-content')).toBeInTheDocument()
   })
 
   it('角色不匹配时重定向到 /workbench', () => {
-    setAuthenticated({ username: 'alice', role: 'viewer' })
+    setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
     renderAt('/system/users')
     expect(screen.getByText('workbench-page')).toBeInTheDocument()
     expect(screen.queryByText('admin-content')).not.toBeInTheDocument()

@@ -23,6 +23,7 @@ public final class PublishedKeyAuthorizationService {
             var target=decisions.check(owner.username(),input.target().resourceType(),input.target().resourceId(),"query",input.target().context());
             if(asset==null||target==null)throw new IllegalStateException();
             var checks=List.of(new Check("owner","data_service",input.binding().assetId(),"execute",asset.allowed()),new Check("owner",input.target().resourceType(),input.target().resourceId(),"query",target.allowed()));
+            if(!sessions.isActive(owner.uid(),owner.username(),owner.accessVersion()))return denied(input,"SUBJECT_INACTIVE",List.of());
             return asset.allowed()&&target.allowed()?new Result(input.binding(),true,null,checks):denied(input,"PERMISSION_DENIED",checks);
         }catch(RuntimeException unavailable){throw new Unavailable();}
     }

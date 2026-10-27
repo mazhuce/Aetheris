@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, App, Button, Drawer, Input, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
+import { Alert, Button, Drawer, Input, Select, Space, Table, Tabs, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { DatabaseOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
@@ -8,8 +8,6 @@ import DataSurface from '@/components/DataSurface'
 import {
   listTablesPage,
   listTableCatalog,
-  previewDataSourceTable,
-  listDataSourceColumns,
   type MetadataTable,
   type DataSourceColumn,
   type TableCatalogGroup
@@ -17,6 +15,7 @@ import {
 import { formatDateTime } from '@/utils/format'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import { useVisibleListPage } from '@/hooks/useVisibleListPage'
+import { useTableDetail } from './useTableDetail'
 
 /** 数仓层级元数据：与 WarehouseLayerResolver 的约定一致。 */
 const layerMeta: Record<string, { label: string; color: string }> = {
@@ -27,13 +26,7 @@ const layerMeta: Record<string, { label: string; color: string }> = {
   dim: { label: 'DIM 维度层', color: 'gold' }
 }
 
-interface PreviewRow {
-  columns: string[]
-  rows: unknown[][]
-}
-
 export default function TableBrowserPage() {
-  const { message } = App.useApp()
   const [keyword, setKeyword] = useState('')
   const [layer, setLayer] = useState<string>()
   const [domain, setDomain] = useState<string | null>()
@@ -42,17 +35,18 @@ export default function TableBrowserPage() {
   const [catalogError, setCatalogError] = useState(false)
   const [catalogRevision, setCatalogRevision] = useState(0)
   // 抽屉：表详情（字段结构 + 数据预览）
-  const [active, setActive] = useState<MetadataTable>()
-  const [columns, setColumns] = useState<DataSourceColumn[]>([])
-  const [preview, setPreview] = useState<PreviewRow>()
-  const [detailLoading, setDetailLoading] = useState(false)
+  const { detail, open: openDetail, close: closeDetail, retry: retryDetail } = useTableDetail()
+  const active = detail?.table
+  const columns = detail?.columns.data ?? []
+  const preview = detail?.preview.data
   const pageSize = useResponsivePageSize()
   const domainValue = domain === undefined ? undefined : JSON.stringify(domain)
   const listing = useVisibleListPage((cursor, signal) => listTablesPage(
     { keyword, layer, domain: domain ?? undefined, unassigned: domain === null || undefined }, { cursor, size: pageSize, signal }),
     JSON.stringify([keyword, layer, domainValue, pageSize]))
 
-  const refresh = useCallback(() => { listing.refresh(); setCatalogRevision((value) => value + 1) }, [listing.refresh])
+  const { refresh: refreshListing } = listing
+  const refresh = useCallback(() => { refreshListing(); setCatalogRevision((value) => value + 1) }, [refreshListing])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -68,27 +62,6 @@ export default function TableBrowserPage() {
     () => Array.from(new Set(catalog.map((group) => group.domain))),
     [catalog]
   )
-
-  const openDetail = async (table: MetadataTable) => {
-    setActive(table)
-    setColumns([])
-    setPreview(undefined)
-    if (!table.datasourceId) return
-    setDetailLoading(true)
-    try {
-      const schema = table.schemaName ?? 'public'
-      const [columnList, previewData] = await Promise.all([
-        listDataSourceColumns(table.datasourceId, schema, table.tableName).catch(() => []),
-        previewDataSourceTable(table.datasourceId, schema, table.tableName).catch(() => undefined)
-      ])
-      setColumns(columnList)
-      setPreview(previewData)
-    } catch {
-      message.warning('字段结构与数据预览不可用（数据源可能已断开）')
-    } finally {
-      setDetailLoading(false)
-    }
-  }
 
   const columnsDef: TableColumnsType<MetadataTable> = [
     {
@@ -237,7 +210,7 @@ export default function TableBrowserPage() {
         placement="right"
         width={680}
         open={active !== undefined}
-        onClose={() => setActive(undefined)}
+        onClose={closeDetail}
       >
         {active && (
           <div>
@@ -245,7 +218,8 @@ export default function TableBrowserPage() {
               {active.tableComment || '（无表注释）'} · 数据源 {active.datasourceName}
               {active.schemaName ? ` / ${active.schemaName}` : ''}
             </Typography.Text>
-            <Tabs
+            {!active.datasourceId ? <Alert type="info" message="未关联数据源，无法加载详情" /> : <Tabs
+              key={detail?.requestId}
               className="table-detail-tabs"
               items={[
                 {
@@ -253,13 +227,18 @@ export default function TableBrowserPage() {
                   label: `字段结构${columns.length ? `（${columns.length}）` : ''}`,
                   children: (
                     <DataSurface label="字段列表">
+                      {detail?.columns.error ? <Alert
+                        type="error"
+                        message={detail.columns.error}
+                        action={<Button size="small" onClick={() => retryDetail('columns')}>重试字段结构</Button>}
+                      /> :
                       <Table<DataSourceColumn>
                         rowKey={(record) => record.name}
                         size="small"
                         pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 个字段` }}
-                        loading={detailLoading}
+                        loading={detail?.columns.loading}
                         dataSource={columns}
-                        locale={{ emptyText: '字段信息不可用或数据源未同步' }}
+                        locale={{ emptyText: detail?.columns.loading ? '加载中…' : '暂无字段' }}
                         columns={[
                           { title: '字段名', dataIndex: 'name', key: 'name' },
                           { title: '类型', dataIndex: 'type', key: 'type', width: 130 },
@@ -271,14 +250,18 @@ export default function TableBrowserPage() {
                             render: (value?: string) => value || '—'
                           }
                         ]}
-                      />
+                      />}
                     </DataSurface>
                   )
                 },
                 {
                   key: 'preview',
                   label: `数据预览${preview ? `（${preview.rows.length}）` : ''}`,
-                  children: preview ? (
+                  children: detail?.preview.error ? <Alert
+                    type="error"
+                    message={detail.preview.error}
+                    action={<Button size="small" onClick={() => retryDetail('preview')}>重试数据预览</Button>}
+                  /> : preview ? (
                     <DataSurface description="前 20 行样例" label="样例数据">
                       <Table
                         rowKey={(_, index) => String(index)}
@@ -286,6 +269,7 @@ export default function TableBrowserPage() {
                         pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 行` }}
                         scroll={{ x: true }}
                         dataSource={preview.rows.map((row) => ({ key: JSON.stringify(row), row }))}
+                        locale={{ emptyText: '暂无样例数据' }}
                         columns={preview.columns.map((column) => ({
                           title: column,
                           key: column,
@@ -298,11 +282,11 @@ export default function TableBrowserPage() {
                       />
                     </DataSurface>
                   ) : (
-                    <Typography.Text type="secondary">{detailLoading ? '加载中…' : '预览不可用'}</Typography.Text>
+                    <Typography.Text type="secondary">{detail?.preview.loading ? '加载中…' : '预览不可用'}</Typography.Text>
                   )
                 }
               ]}
-            />
+            />}
           </div>
         )}
       </Drawer>

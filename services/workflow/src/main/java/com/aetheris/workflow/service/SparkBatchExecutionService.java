@@ -36,6 +36,8 @@ public class SparkBatchExecutionService {
     private final TaskLogService logService;
     private final JdbcTemplate jdbc;
     private final LineageEvidenceClient lineage;
+    private com.aetheris.workflow.fixedexecution.WorkflowSparkExecutor sealedExecutor;
+    @org.springframework.beans.factory.annotation.Autowired public void installSealedExecutor(com.aetheris.workflow.fixedexecution.WorkflowSparkExecutor executor){this.sealedExecutor=java.util.Objects.requireNonNull(executor);}
 
     public SparkBatchExecutionService(ManagedSparkCatalogService catalog,
                                       SparkBatchExecutionAdapter adapter,
@@ -54,6 +56,7 @@ public class SparkBatchExecutionService {
     }
 
     public TaskInstance submit(Task task, ExecutionClaim claim) {
+        if(sealedExecutor!=null)throw new IllegalStateException("Spark必须经可信来源封存后派发");
         SparkJobView job = catalog.runnableJob(task.getJobDefinitionId());
         coordinator.prepareSparkAttempt(claim, task, job);
         resourceQueue.enqueue(claim, job);
@@ -112,11 +115,18 @@ public class SparkBatchExecutionService {
                 continue;
             }
             try {
-                dispatch(catalog.job(attempt.jobDefinitionId()), attempt.claim(), admission);
+                if(sealedExecutor!=null){
+                    if(sealedExecutor.sealed(admission.attemptId()))sealedExecutor.dispatch(sealedExecutor.claim(admission.attemptId()),admission);
+                    else coordinator.submissionUnknown(attempt.claim(),"历史Spark来源未封存，禁止自动重放；保留容量等待核对");
+                }else dispatch(catalog.job(attempt.jobDefinitionId()), attempt.claim(), admission);
             } catch (ExecutionClaimCoordinator.StaleExecutionException stale) {
-                resourceQueue.release(admission.attemptId(), "stale_attempt");
+                // The POST may have succeeded before the local fence changed.
+                // Keep the physical reservation until the original runner proves a terminal state.
+                log.warn("Queued Spark attempt {} changed after admission; capacity retained for remote reconciliation",
+                        admission.attemptId());
             } catch (RuntimeException error) {
-                log.warn("Queued Spark attempt {} dispatch failed: {}", admission.attemptId(), error.getMessage());
+                log.warn("Queued Spark attempt {} dispatch remains unconfirmed ({})",
+                        admission.attemptId(), error.getClass().getSimpleName());
             }
         }
     }
@@ -125,7 +135,8 @@ public class SparkBatchExecutionService {
     public void reconcileActiveAttempts() {
         for (TrackedAttempt attempt : activeAttempts()) {
             try {
-                reconcile(attempt);
+                if(sealedExecutor!=null&&sealedExecutor.sealed(attempt.claim().attemptId()))sealedExecutor.reconcile(sealedExecutor.claim(attempt.claim().attemptId()));
+                else reconcile(attempt);
             } catch (ExecutionClaimCoordinator.StaleExecutionException stale) {
                 log.debug("Spark attempt {} was superseded", attempt.claim().attemptId());
             } catch (RuntimeException error) {
@@ -137,6 +148,7 @@ public class SparkBatchExecutionService {
 
     public TaskInstance cancel(long instanceId) {
         TrackedAttempt attempt = tracked(instanceId);
+        if(attempt!=null&&sealedExecutor!=null&&sealedExecutor.sealed(attempt.claim().attemptId()))return sealedExecutor.cancel(sealedExecutor.claim(attempt.claim().attemptId()));
         if (attempt != null && "queued".equals(attempt.status()) && attempt.remoteHandle() == null) {
             TaskInstance cancelled = coordinator.completeRemote(attempt.claim(), new RemoteExecution(
                     null, "cancelled", null, null, null, null, Map.of(), OffsetDateTime.now().toString()));
@@ -151,7 +163,9 @@ public class SparkBatchExecutionService {
         syncLogs(attempt.withStatus("cancel_requested"));
         if (remote.terminal()) {
             TaskInstance completed = coordinator.completeRemote(attempt.claim(), remote);
-            resourceQueue.release(attempt.claim().attemptId(), remote.status());
+            if (!"unknown".equals(remote.status())) {
+                resourceQueue.release(attempt.claim().attemptId(), remote.status());
+            }
             return completed;
         }
         coordinator.heartbeat(attempt.claim(), remote.applicationId());
@@ -160,6 +174,7 @@ public class SparkBatchExecutionService {
 
     public LogPage remoteLogs(long instanceId, long offset, int limit) {
         TrackedAttempt attempt = tracked(instanceId);
+        if(attempt!=null&&sealedExecutor!=null&&sealedExecutor.sealed(attempt.claim().attemptId()))return sealedExecutor.logs(sealedExecutor.claim(attempt.claim().attemptId()),offset,limit);
         if (attempt == null || attempt.remoteHandle() == null) {
             throw new IllegalArgumentException("该实例没有 Spark 日志");
         }
@@ -216,6 +231,7 @@ public class SparkBatchExecutionService {
 
     private List<TrackedAttempt> activeAttempts() {
         return jdbc.query(selectTracked() + " WHERE attempt.task_type='spark' "
+                + "AND instance.active_attempt_id=attempt.id AND instance.fencing_token=attempt.fencing_token "
                 + "AND attempt.status IN ('submitting','running','cancel_requested','unknown') "
                 + "ORDER BY attempt.id", this::mapTracked);
     }

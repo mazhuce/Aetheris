@@ -1,0 +1,279 @@
+{
+  "schemaVersion": 1,
+  "kind": "current-worktree-validation-record",
+  "recordedAtUtc": "2026-10-25T13:51:55.4261387Z",
+  "status": "partial",
+  "releaseEligible": false,
+  "source": {
+    "commit": "8610de063d51a76d97f65d4d003f8b2ec93d307c",
+    "worktreeSha256": "95835bcb22c2c1dc43d7f5f6f2d1e84ce1da799e23b16d1f6af530f66e6c681b"
+  },
+  "configurationFiles": {
+    "docker-compose.yml": "3b67ecd2ace64ff2d81f0a61f76bcea5e3180c023d148a732e4bf7651b47b410",
+    "docker-compose.database-roles.yml": "0f15c28610a539a7f573cdbfc94b165d8728d32adb9b2f089365372aab5e2701",
+    ".env.example": "2a951fa50c47dda57be4a853457536c69918b22997ed7f143c81ebee586fed37",
+    ".github/workflows/base-image-inventory.json": "febcf6c72c579503c9dd661c7a6834a8e211ba9e4c71cdbff8587472c87b40e5"
+  },
+  "migrations": {
+    "count": 117,
+    "manifestSha256": "5a482c70aa353ba9e081168b1dffb6844fd6027e4654c9f011184fc3cae8089e"
+  },
+  "evidence": {
+    "scriptRegression": {
+      "path": "output/audit-seed-script-package/v2-run-20261024T103012Z-e6c9c59f/report.json",
+      "sha256": "749f3cb67d58b5639552f507a9ad93a88bd97a7b02854cf7caa918fc2390778",
+      "result": "332 tests passed; 5 skipped",
+      "scope": "PS5.1/PS7 mock only; no API, database or Docker execution"
+    },
+    "frontend": {
+      "testCommand": "npm.cmd run test -- --maxWorkers=1 --minWorkers=1",
+      "tests": "48 files / 163 tests passed",
+      "typeCheck": "passed",
+      "lint": "passed",
+      "build": "passed with chunk warnings",
+      "distDirectorySha256": "9d54339a23de7eadbc15a87af761d9fce6e139656b70b004711d68923f8d2e6d",
+      "distFileCount": 111
+    },
+    "browserLocalPreview": {
+      "url": "http://127.0.0.1:4173/",
+      "servedBuild": "apps/web/dist via vite preview",
+      "initialRoute": "/login",
+      "initialConsoleErrors": 0,
+      "negativeLogin": {
+        "fakeCredentials": true,
+        "httpStatus": 403,
+        "routeRemained": "/login"
+      },
+      "twoTabsReload": "both tabs remained on /login after independent navigation",
+      "snapshot": ".playwright-mcp/page-2026-10-24T11-39-06-205Z.yml",
+      "negativeScreenshot": ".playwright-mcp/login-negative-20261024.png",
+      "scope": "frontend route and negative authentication presentation only; no authenticated backend or cross-service browser acceptance"
+    },
+    "p03ListVisibilityRegression": {
+      "command": "mvn.cmd -q -Dtest=MetadataListVisibilityRegressionTest test",
+      "workingDirectory": "services/metadata",
+      "result": "13 tests passed, 0 failures, 0 errors, 0 skipped",
+      "report": "services/metadata/target/surefire-reports/com.aetheris.metadata.security.MetadataListVisibilityRegressionTest.txt",
+      "reportSha256": "C286257AE815CA179A7041FA9EB27E39985702C817A7829756520EA73FC40A04",
+      "xmlReportSha256": "C9D57751A2066211FB0FDA4E122837FE44477525DB09BFF8120112022489080E",
+      "fixture": "isolated H2 plus loopback signed permission peer",
+      "scope": "P03 pagination, >1000 rows, bounded permission batches, cursor consistency and fail-closed cases; not full metadata service deployment"
+    },
+    "staticGates": {
+      "workflowContract": "passed",
+      "documentIntegrity": "passed",
+      "flywayMigrationValidation": "passed",
+      "composeConfig": "passed"
+    },
+    "auditUnitTests": {
+      "command": "PYTHONPATH=scripts py -3 -B -m unittest discover -s scripts/tests -p test_*audit.py",
+      "result": "84 tests passed",
+      "exitCode": 0,
+      "protocolHostPrerequisite": "8 Surefire reports / 160 tests passed / 0 failures, errors or skips",
+      "preservedPreconditionFailure": "the first post-build audit run failed only because clean/package had removed the required security-protocol Surefire reports; reports were regenerated under JDK 21 before the final 84-test pass"
+    },
+    "databaseDeployGate": {
+      "path": "output/audit-database-deploy-gate/run-20261024-current/report.json",
+      "runId": "0823f69cd0a14f8fb6df4bb560194166",
+      "sha256": "815E63D4B97B515CB7A0A5E5610DE508C2B9D28707655A50FC26B0C6E94C8EEA",
+      "status": "passed",
+      "positive": "117 migrations across 9 schemas with live receipt and compose database identity",
+      "negativeCases": 23,
+      "negativeCasesPassed": 23,
+      "databaseUnchanged": true,
+      "sourceHashesMatchAtEnd": true,
+      "migrationCredentialsRetired": true,
+      "cleanup": {
+        "containersRemoved": true,
+        "networksRemoved": true,
+        "volumesAbsent": true,
+        "privateFixturesRemoved": true
+      },
+      "databaseIdentity": {
+        "database": "aetheris_deploy_gate_audit",
+        "systemIdentifier": "7700193744790523939",
+        "databaseOid": "16384"
+      },
+      "scope": "isolated disposable PostgreSQL gate; not nine-service deployment or production acceptance"
+    },
+    "identityChainCurrent": {
+      "path": "output/audit-identity-chain/run-20261024-current/report.json",
+      "runId": "dc68ac21d56848ed8a0a2abc612f66e2",
+      "sha256": "2BE7BCB9A1CDE3E916DCCF04333AD1347BE205768A682852A4F66A2628920B15",
+      "status": "passed",
+      "checks": 34,
+      "failedChecks": 0,
+      "applications": ["gateway", "auth", "system"],
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "current three-application identity segment with disposable PostgreSQL and Redis; not all services, browser or release acceptance"
+    },
+    "apiKeyChainCurrent": {
+      "path": "output/audit-api-key-chain/run-20261025-current-v5/report.json",
+      "runId": "bf9b29e30e8d4aa0a8c5b1a38e6c26d3",
+      "sha256": "92882B50B05DBAA2C4487737191470F1ECAC72EA6165F6265516D636F5E76FDC",
+      "status": "passed",
+      "checks": 25,
+      "failedChecks": 0,
+      "applications": ["gateway", "auth", "metadata", "serving"],
+      "actualBusinessRowsPerSuccessfulQuery": 3,
+      "successfulQueryAuditsBoundToOwner": 5,
+      "unexpectedAuditSubjects": 0,
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "current four-application pure API-key segment with 117 migrations; System audit delivery, browser, all services and release acceptance are outside this run"
+    },
+    "apiKeyChainFailedRunsPreserved": [
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current/report.json",
+        "runId": "cbf8a64385ac473fb922147dbaf41fec",
+        "sha256": "D615B4F7AC9BD2B2EC279246D7DD244CFA857DD774D575A8BE2103945875981D",
+        "stage": "four-real-java-applications",
+        "failure": "stale fixture omitted required v2 security registry; auth failed closed before health"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v2/report.json",
+        "runId": "03ea223a09eb4fa3adb86a3360974a6f",
+        "sha256": "17AABAB1C47550E269A19E8298A2A8D09EBD95B2361541B0589DCA6D979842BE",
+        "stage": "real-http-fixture",
+        "failure": "stale fixture used table search limit 100 while the current contract rejects values above 50"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v3/report.json",
+        "runId": "7e81794712b04d658f947c7c581ec6d7",
+        "sha256": "9B99C5D5DD3A44F97F57BD3CE86BF67750E5A4B2526C3F0CA6F5530BD16F33CC",
+        "stage": "pure-api-key-cases",
+        "failure": "fixture issued keys as admin then downgraded the owner; accessVersion changed and current services correctly rejected the old keys"
+      },
+      {
+        "path": "output/audit-api-key-chain/run-20261025-current-v4/report.json",
+        "runId": "c482694f60114978b79227be62d936fa",
+        "sha256": "C41FB3CA744C3255B935FFE27DCB763A7E956CC5CED7C03146761437441399A7",
+        "stage": "pure-api-key-cases",
+        "failure": "24 of 25 checks passed; the fixture queried the historical table audit kind and table id instead of the current published_api asset id"
+      }
+    ],
+    "publishedKeyV2Current": {
+      "path": "output/audit-published-key-v2/run-20261025-current-v3/report.json",
+      "runId": "a5baa93b043e4c83b42c25489a9b7ff9",
+      "sha256": "AD73B15CE01FB2D265E1FA71C54375438451AC00B42EB3A2503CCD21C4F95438",
+      "status": "passed",
+      "checks": 102,
+      "uniqueCases": 102,
+      "failedChecks": 0,
+      "applications": ["gateway", "auth", "system", "metadata", "serving"],
+      "migrations": 117,
+      "tableRows": 3,
+      "metricSum": 60,
+      "ownerAudit": {
+        "successfulPublishedQueries": 6,
+        "badOwnerBindings": 0,
+        "badDatasourceBindings": 0
+      },
+      "ordinaryAudit": {
+        "rows": 2,
+        "badProvenance": 0,
+        "badErrorDetail": 0,
+        "badQueryHash": 0
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "current five-application published table and metric key chain; not nine services, browser or release acceptance"
+    },
+    "publishedKeyV2FailedRunsPreserved": [
+      {
+        "path": "output/audit-published-key-v2/run-20261025-current/report.json",
+        "runId": "413b4128dc714863a3361f88e09420b8",
+        "sha256": "AE86B753DC8B1EDE0419AC38C0E976A5AB0E2D82C1DA9AB8F28B96476FBBF454",
+        "stage": "real-v2-published-key-business-query",
+        "checksBeforeFailure": 91,
+        "failure": "stale fixture expected QUERY_FAILED for a read-only SQL policy rejection; the current service correctly persisted SQL_POLICY_REJECTED"
+      },
+      {
+        "path": "output/audit-published-key-v2/run-20261025-current-v2/report.json",
+        "runId": "f5da3b7cb5e64c51b419678f538b0b1e",
+        "sha256": "275D87350F5F11749E51CA64F4D8532EC6532E181AEB528C885AE85FB0122420",
+        "stage": "start-5-real-applications",
+        "checksBeforeFailure": 0,
+        "failure": "environment failure: the reserved System port was occupied before the JVM could bind"
+      }
+    ],
+    "fixedExecutionChainCurrent": {
+      "path": "output/audit-fixed-execution-chain/run-20261025-current/report.json",
+      "runId": "98b63b3a21c6432cb828f554df50b1e2",
+      "sha256": "7EAB854E25DB470FE6CD10B99916E71EEBF6AD96D8B9510C3E6116E9B28EFC58",
+      "status": "passed",
+      "checks": 31,
+      "uniqueCases": 31,
+      "failedChecks": 0,
+      "applications": ["auth", "system", "metadata", "ingestion", "quality", "gateway"],
+      "migrations": 117,
+      "runBindings": {
+        "ingestionRunId": 1,
+        "qualityResultId": 1
+      },
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "current six-application approved transfer and quality execution segment; not workflow, pipeline, Spark/Flink, cron, browser or release acceptance"
+    },
+    "workflowSqlChainCurrent": {
+      "path": "output/audit-workflow-sql-chain/run-20261025-current/report.json",
+      "runId": "fd0fb9d8e3ab4916b74c71d935035b2b",
+      "sha256": "D7ADCDE15E09EB08091E34DB4225DFE6CAE2EA977DC62F766DD425642E715212",
+      "status": "passed",
+      "checks": 37,
+      "uniqueCases": 37,
+      "failedChecks": 0,
+      "applications": ["auth", "system", "metadata", "workflow", "gateway"],
+      "migrations": 117,
+      "manualSqlWrite": "passed with approved definition and target writer",
+      "invalidBusinessDate": "HTTP 400 with zero attempts",
+      "quartzExecution": "one real successful trigger with sealed schedule and binding generations",
+      "sourceHashesMatchAtEnd": true,
+      "cleanup": {
+        "processes": true,
+        "containers": true,
+        "credentialsRetired": true,
+        "privateKeysRemoved": true,
+        "volumesAbsent": true
+      },
+      "independentDockerLabelQueryEmpty": true,
+      "scope": "current five-application manual SQL and real Quartz cron segment; not pipeline, Spark/Flink, dual-instance, browser or release acceptance"
+    }
+  },
+  "blockingEvidence": [
+    "base-image-inventory reports 2 unresolved MinIO references; strict check exits non-zero",
+    "platform-release-acceptance-strict -ValidateExisting exits non-zero",
+    "Docker Desktop pipe is inaccessible in the default sandbox; the isolated database gate required approved elevated Docker access",
+    "the original Aetheris_mimo.md and Aetheris_deepseek.md attachments are absent from the current repository"
+  ],
+  "interpretation": "This record binds the current dirty worktree, configuration file hashes, migration manifest and local validation outputs. Current three-service identity, four-service API-key, five-service published-key, six-service fixed-execution and five-service workflow SQL/cron segments passed, while their stated scope limits and preceding failed runs remain part of the evidence. This is not a release acceptance record and does not prove nine-service, nine-producer, authenticated browser, upgrade, restore, image-signature or production acceptance."
+}

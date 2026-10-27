@@ -24,6 +24,9 @@ import java.util.Set;
 /** Executes the dependency closure of one target as a mixed SQL/Spark/quality DAG. */
 @Service
 public class PipelineExecutionService {
+    private com.aetheris.workflow.fixedexecution.PipelineExecutionStore authority;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void installPipelineAuthority(com.aetheris.workflow.fixedexecution.PipelineExecutionStore authority) { this.authority=java.util.Objects.requireNonNull(authority); }
     private WorkflowAuthorizationService authorization;
     @org.springframework.beans.factory.annotation.Autowired
     public void setAuthorization(WorkflowAuthorizationService authorization) { this.authorization = authorization; }
@@ -62,7 +65,7 @@ public class PipelineExecutionService {
         validateBizDate(bizDate);
         List<Long> order = topologicalOrder(targetTaskId);
         validateRunnableTasks(order);
-        return createRun(targetTaskId, bizDate, username, order, null, null);
+        return createRun(targetTaskId, bizDate, username, order, order, null, null);
     }
 
     /**
@@ -87,39 +90,24 @@ public class PipelineExecutionService {
         List<Long> fullOrder = topologicalOrder(targetTaskId);
         validateRunnableTasks(fullOrder);
         List<Long> resumeOrder = resumeOrder(fullOrder, downstreamOf(resumeTaskId), resumeTaskId);
-        String unmetDependency = executionService.findUnmetDependency(resumeTaskId, bizDate, "pipeline");
-        if (unmetDependency != null) {
-            throw new IllegalStateException("续跑前置条件不满足：" + unmetDependency);
-        }
-        return createRun(targetTaskId, bizDate, username, resumeOrder, sourceRunId, resumeTaskId);
+        return createRun(targetTaskId, bizDate, username, fullOrder, resumeOrder, sourceRunId, resumeTaskId);
     }
 
     private Map<String, Object> createRun(long targetTaskId, String bizDate, String username,
-                                           List<Long> order, Long retryOfRunId, Long resumeFromTaskId) {
+                                           List<Long> fullOrder,List<Long> order, Long retryOfRunId, Long resumeFromTaskId) {
         // Authorize the exact immutable node snapshot persisted and dispatched below.
         // Dependency changes after this point cannot add unvalidated execution nodes.
         order = List.copyOf(order);
-        if (authorization == null || !authorization.canExecuteTasks(username, order)) {
+        if (authorization == null || !authorization.canExecuteTasks(username, fullOrder)) {
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.FORBIDDEN, "流水线包含无权执行的任务");
         }
+        if(authority==null)throw new IllegalStateException("可信流水线存储未配置");
         Long runId;
         try {
-            runId = jdbc.queryForObject("""
-                    INSERT INTO workflow.pipeline_run
-                        (target_task_id,biz_date,status,triggered_by,heartbeat_at,lease_expires_at,
-                         retry_of_run_id,resume_from_task_id)
-                    VALUES (?,?,'queued',?,now(),now() + (? * interval '1 second'),?,?) RETURNING id
-                    """, Long.class, targetTaskId, bizDate, username, dispatchLeaseSeconds,
-                    retryOfRunId, resumeFromTaskId);
+            runId=authority.create(targetTaskId,bizDate,authorization.pipelineActor(username),fullOrder,order,retryOfRunId,resumeFromTaskId,dispatchLeaseSeconds);
         } catch (DuplicateKeyException duplicate) {
             throw new IllegalStateException("该目标在此业务日期已有运行中的流水线", duplicate);
-        }
-        for (int index = 0; index < order.size(); index++) {
-            jdbc.update("""
-                    INSERT INTO workflow.pipeline_node_run(pipeline_run_id,task_id,sequence_no)
-                    VALUES (?,?,?)
-                    """, runId, order.get(index), index + 1);
         }
         dispatchAfterCommit(runId, bizDate, username, order);
         return run(runId);
@@ -132,7 +120,7 @@ public class PipelineExecutionService {
                 try {
                     taskExecutor.execute(() -> executeRun(runId, bizDate, username, order));
                 } catch (RuntimeException rejected) {
-                    failRun(runId, null, "流水线执行器暂时不可用，请重新发起");
+                    authority.rejectQueued(runId);
                 }
             }
         });
@@ -146,13 +134,13 @@ public class PipelineExecutionService {
                     FROM workflow.pipeline_run run JOIN workflow.task task ON task.id=run.target_task_id
                     WHERE run.triggered_by=? OR task.owner=?
                     ORDER BY run.id DESC LIMIT ?
-                    """, username, username, boundedLimit);
+                    """, username, username, boundedLimit).stream().map(PipelineExecutionService::publicRun).toList();
         }
         return jdbc.queryForList("""
                 SELECT run.*, task.name target_task_name
                 FROM workflow.pipeline_run run JOIN workflow.task task ON task.id=run.target_task_id
                 ORDER BY run.id DESC LIMIT ?
-                """, boundedLimit);
+                """, boundedLimit).stream().map(PipelineExecutionService::publicRun).toList();
     }
 
     public Map<String, Object> detail(long id) {
@@ -162,7 +150,7 @@ public class PipelineExecutionService {
                 FROM workflow.pipeline_node_run node
                 JOIN workflow.task task ON task.id=node.task_id
                 WHERE node.pipeline_run_id=? ORDER BY node.sequence_no
-                """, id));
+                """, id).stream().map(PipelineExecutionService::publicNode).toList());
         return run;
     }
 
@@ -194,67 +182,51 @@ public class PipelineExecutionService {
     }
 
     void executeRun(long runId, String bizDate, String username, List<Long> order) {
-        int started = jdbc.update("""
-                UPDATE workflow.pipeline_run
-                SET status='running',started_at=COALESCE(started_at,now()),heartbeat_at=now(),updated_at=now()
-                WHERE id=? AND status='queued'
-                """, runId);
-        if (started != 1) return;
+        if(authority==null)throw new IllegalStateException("可信流水线存储未配置");
+        var dispatch=authority.begin(runId);if(dispatch==null)return;
+        bizDate=dispatch.bizDate();username=dispatch.username();order=dispatch.order();
         Long currentTaskId = null;
+        boolean dispatched=false;
         try {
             for (Long taskId : order) {
                 currentTaskId = taskId;
+                dispatched=false;
                 Task task = taskService.getById(taskId);
                 if (task == null) throw new IllegalStateException("流水线节点任务不存在：" + taskId);
                 validateRunnableTask(task);
-                long taskLease = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds())
-                        + leaseGraceSeconds;
-                if (!refreshLease(runId, taskLease)) return;
-                jdbc.update("""
-                        UPDATE workflow.pipeline_node_run SET status='running',started_at=now()
-                        WHERE pipeline_run_id=? AND task_id=?
-                        """, runId, taskId);
-                TaskInstance instance = executionService.execute(taskId, bizDate, "pipeline", username);
+                var claim=authority.prepare(dispatch,taskId);
+                dispatched=true;
+                TaskInstance instance=executionService.executePipeline(claim);
                 instance = awaitTerminal(task, instance);
-                String nodeStatus = switch (instance.getStatus()) {
+                String nodeStatus = switch (instance.getStatus() == null ? "unknown" : instance.getStatus()) {
                     case "success" -> "succeeded";
-                    case "unknown" -> "unknown";
                     case "cancelled" -> "cancelled";
-                    default -> "failed";
+                    case "failed", "timed_out", "skipped" -> "failed";
+                    default -> "unknown";
                 };
                 Long waiverId = null;
-                if ("quality".equals(task.getTaskType()) && !"success".equals(instance.getStatus())) {
+                if (QualityGateEvidence.confirmedFailure(jdbc, task, instance)) {
                     waiverId = activeWaiver(taskId, bizDate);
                     if (waiverId != null) nodeStatus = "waived";
                 }
-                jdbc.update("""
-                        UPDATE workflow.pipeline_node_run
-                        SET status=?,instance_id=?,waiver_id=?,finished_at=now(),message=?
-                        WHERE pipeline_run_id=? AND task_id=?
-                        """,
-                        nodeStatus, instance.getId(), waiverId,
-                        bounded(instance.getErrorMessage(), MAX_NODE_MESSAGE_LENGTH), runId, taskId);
+                if(!authority.record(dispatch,taskId,claim,instance,nodeStatus,waiverId))throw new IllegalStateException("节点结果绑定已变化");
                 if ("unknown".equals(nodeStatus)) {
-                    suspendRun(runId, "节点「" + task.getName() + "」结果待核对，流水线已停止");
+                    authority.finish(dispatch,"unknown",taskId,"节点结果待核对，禁止自动重放");
                     return;
                 }
                 if ("cancelled".equals(nodeStatus)) {
-                    cancelRun(runId, "节点「" + task.getName() + "」已确认取消");
+                    authority.finish(dispatch,"cancelled",taskId,"节点已确认取消");
                     return;
                 }
                 if (!"succeeded".equals(nodeStatus) && !"waived".equals(nodeStatus)) {
-                    throw new IllegalStateException("节点「" + task.getName() + "」执行失败");
+                    authority.finish(dispatch,"failed",taskId,"节点执行失败");return;
                 }
             }
-            jdbc.update("""
-                    UPDATE workflow.pipeline_run
-                    SET status='succeeded',finished_at=now(),heartbeat_at=now(),
-                        lease_expires_at=NULL,updated_at=now()
-                    WHERE id=? AND status='running'
-                    """, runId);
+            authority.finish(dispatch,"succeeded",null,null);
         } catch (RuntimeException error) {
-            failRun(runId, currentTaskId,
-                    error.getMessage() == null ? "流水线执行失败" : error.getMessage());
+            // Once a physical submit was possible, even a local persistence error remains uncertain.
+            authority.finish(dispatch,dispatched?"unknown":"failed",currentTaskId,
+                    dispatched?"节点执行调用或完成状态待核对，禁止自动重放":"节点批准版本、依赖或执行条件已变化，未提交该节点");
         }
     }
 
@@ -322,6 +294,7 @@ public class PipelineExecutionService {
 
     /** Releases stale active rows after a worker crash without guessing node outcomes. */
     @Scheduled(fixedDelayString = "${aetheris.pipeline.reconcile-interval-ms:30000}")
+    @Transactional
     public void reconcileStaleRuns() {
         List<Long> stale = jdbc.queryForList("""
                 UPDATE workflow.pipeline_run
@@ -351,79 +324,8 @@ public class PipelineExecutionService {
     @Scheduled(fixedDelayString = "${aetheris.pipeline.result-reconcile-interval-ms:5000}")
     @Transactional
     public void reconcileResolvedNodes() {
-        List<ResolvedUnknownNode> resolved = jdbc.query("""
-                SELECT run.id run_id,run.biz_date,run.triggered_by,
-                       node.id node_id,node.sequence_no,
-                       instance.status instance_status,instance.error_message
-                FROM workflow.pipeline_run run
-                JOIN workflow.pipeline_node_run node
-                  ON node.pipeline_run_id=run.id AND node.status='unknown'
-                JOIN workflow.task_instance instance ON instance.id=node.instance_id
-                WHERE run.status='unknown'
-                  AND instance.status IN ('success','failed','timed_out','cancelled')
-                ORDER BY run.id LIMIT 100
-                """, (rs, row) -> new ResolvedUnknownNode(
-                rs.getLong("run_id"), rs.getLong("node_id"), rs.getInt("sequence_no"),
-                rs.getString("biz_date"), rs.getString("triggered_by"),
-                rs.getString("instance_status"), rs.getString("error_message")));
-        for (ResolvedUnknownNode node : resolved) reconcileResolvedNode(node);
-    }
-
-    void reconcileResolvedNode(ResolvedUnknownNode node) {
-        String nodeStatus = reconciledNodeStatus(node.instanceStatus());
-        if ("succeeded".equals(nodeStatus)) {
-            List<Long> remaining = jdbc.query("""
-                    SELECT task_id FROM workflow.pipeline_node_run
-                    WHERE pipeline_run_id=? AND sequence_no>? AND status='skipped'
-                      AND message='上游结果待核对，节点未执行'
-                    ORDER BY sequence_no
-                    """, (rs, row) -> rs.getLong(1), node.runId(), node.sequenceNo());
-            int claimed = jdbc.update("""
-                    UPDATE workflow.pipeline_run
-                    SET status='queued',finished_at=NULL,error_message=NULL,heartbeat_at=now(),
-                        lease_expires_at=now() + (? * interval '1 second'),updated_at=now()
-                    WHERE id=? AND status='unknown'
-                    """, dispatchLeaseSeconds, node.runId());
-            if (claimed != 1) return;
-            jdbc.update("""
-                    UPDATE workflow.pipeline_node_run
-                    SET status='succeeded',message='远端执行结果已自动核对为成功'
-                    WHERE id=? AND status='unknown'
-                    """, node.nodeId());
-            if (remaining.isEmpty()) {
-                jdbc.update("""
-                        UPDATE workflow.pipeline_run
-                        SET status='succeeded',finished_at=now(),heartbeat_at=now(),
-                            lease_expires_at=NULL,updated_at=now()
-                        WHERE id=? AND status='queued'
-                        """, node.runId());
-                return;
-            }
-            jdbc.update("""
-                    UPDATE workflow.pipeline_node_run
-                    SET status='queued',started_at=NULL,finished_at=NULL,message=NULL
-                    WHERE pipeline_run_id=? AND sequence_no>? AND status='skipped'
-                      AND message='上游结果待核对，节点未执行'
-                    """, node.runId(), node.sequenceNo());
-            dispatchAfterCommit(node.runId(), node.bizDate(), node.username(), remaining);
-            return;
-        }
-
-        String reason = bounded(node.errorMessage() == null
-                ? "远端执行结果已核对为" + node.instanceStatus() : node.errorMessage(), MAX_RUN_ERROR_LENGTH);
-        String runStatus = "cancelled".equals(nodeStatus) ? "cancelled" : "failed";
-        int claimed = jdbc.update("""
-                UPDATE workflow.pipeline_run
-                SET status=?,error_message=?,finished_at=now(),heartbeat_at=now(),
-                    lease_expires_at=NULL,updated_at=now()
-                WHERE id=? AND status='unknown'
-                """, runStatus, reason, node.runId());
-        if (claimed != 1) return;
-        jdbc.update("""
-                UPDATE workflow.pipeline_node_run
-                SET status=?,message=?,finished_at=COALESCE(finished_at,now())
-                WHERE id=? AND status='unknown'
-                """, nodeStatus, bounded(reason, MAX_NODE_MESSAGE_LENGTH), node.nodeId());
+        if(authority==null)throw new IllegalStateException("可信流水线存储未配置");
+        for(long id:authority.recover())dispatchAfterCommit(id,null,null,List.of());
     }
 
     static String bounded(String value, int limit) {
@@ -463,26 +365,51 @@ public class PipelineExecutionService {
         };
     }
 
-    private TaskInstance awaitTerminal(Task task, TaskInstance initial) {
+    TaskInstance awaitTerminal(Task task, TaskInstance initial) {
+        if (initial == null) return uncertain(null, "执行入口没有返回可核对结果");
         if (!Set.of("spark", "flink").contains(task.getTaskType())) return initial;
         long timeout = Math.max(30, task.getTimeoutSeconds() == null ? 1800 : task.getTimeoutSeconds()) * 1000L + 60_000;
-        long deadline = System.currentTimeMillis() + timeout;
+        if(initial.getLeaseExpiresAt()!=null)timeout=Math.max(1,java.time.Duration.between(java.time.OffsetDateTime.now(),initial.getLeaseExpiresAt()).toMillis());
+        long started = remoteWaitNanos();
         TaskInstance current = initial;
         while (awaitingRemoteResult(current)
-                && System.currentTimeMillis() < deadline) {
-            try { Thread.sleep(1000); } catch (InterruptedException interrupted) {
+                && remoteWaitNanos() - started < java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeout)) {
+            try { pauseRemotePoll(); } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                throw new IllegalStateException("流水线等待被中断");
+                return uncertain(initial, "流水线等待被中断，远端结果待核对");
             }
-            current = instanceService.getById(initial.getId());
+            try { current = instanceService.getById(initial.getId()); }
+            catch (RuntimeException unavailable) { return uncertain(initial, "暂时无法读取远端执行结果"); }
+            if (current == null || !java.util.Objects.equals(initial.getId(), current.getId())
+                    || !java.util.Objects.equals(initial.getActiveAttemptId(), current.getActiveAttemptId())
+                    || !java.util.Objects.equals(initial.getFencingToken(), current.getFencingToken())) {
+                return uncertain(initial, "远端结果缺失或已切换到其他attempt");
+            }
         }
         if (awaitingRemoteResult(current)) {
-            throw new IllegalStateException(task.getTaskType() + " 节点状态在等待窗口内未能确认");
+            return uncertain(initial, "远端节点状态在等待窗口内未能确认");
         }
         return current;
     }
 
+    long remoteWaitNanos() { return System.nanoTime(); }
+    void pauseRemotePoll() throws InterruptedException { Thread.sleep(1000); }
+
+    /** A pipeline projection only: the physical attempt and its capacity remain owned. */
+    private static TaskInstance uncertain(TaskInstance original, String reason) {
+        TaskInstance result = new TaskInstance();
+        if (original != null) {
+            result.setId(original.getId());
+            result.setActiveAttemptId(original.getActiveAttemptId());
+            result.setFencingToken(original.getFencingToken());
+        }
+        result.setStatus("unknown");
+        result.setErrorMessage(reason);
+        return result;
+    }
+
     private static boolean awaitingRemoteResult(TaskInstance instance) {
+        if (instance.getStatus() == null) return false;
         return Set.of("queued", "submitting", "running", "cancel_requested").contains(instance.getStatus())
                 || ("unknown".equals(instance.getStatus()) && instance.getFinishedAt() == null);
     }
@@ -540,6 +467,7 @@ public class PipelineExecutionService {
 
     private void collect(long taskId, Map<Long, List<Long>> upstream, Set<Long> seen) {
         if (!seen.add(taskId)) return;
+        if(seen.size()>512)throw new IllegalArgumentException("流水线最多支持512个冻结节点");
         List<Long> parents = jdbc.query("""
                 SELECT upstream_task_id FROM workflow.task_dependency WHERE task_id=? ORDER BY upstream_task_id
                 """, (rs, row) -> rs.getLong(1), taskId);
@@ -558,13 +486,14 @@ public class PipelineExecutionService {
     private Map<String, Object> run(long id) {
         List<Map<String, Object>> rows = jdbc.queryForList("SELECT * FROM workflow.pipeline_run WHERE id=?", id);
         if (rows.isEmpty()) throw new IllegalArgumentException("流水线运行不存在");
-        return new HashMap<>(rows.getFirst());
+        return publicRun(rows.getFirst());
     }
+
+    static Map<String,Object> publicRun(Map<String,Object> row){var result=new HashMap<>(row);result.remove("invocation_json");result.remove("plan_json");result.remove("worker_id");return result;}
+    static Map<String,Object> publicNode(Map<String,Object> row){var result=new HashMap<>(row);result.remove("definition_json");result.remove("approval_json");result.remove("dependency_evidence");return result;}
 
     private static void validateBizDate(String value) {
         com.aetheris.workflow.config.BusinessCalendar.parseExact(value);
     }
 
-    record ResolvedUnknownNode(long runId, long nodeId, int sequenceNo, String bizDate,
-                               String username, String instanceStatus, String errorMessage) { }
 }

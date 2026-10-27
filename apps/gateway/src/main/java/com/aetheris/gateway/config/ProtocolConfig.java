@@ -23,7 +23,7 @@ public class ProtocolConfig {
     @Bean(destroyMethod = "close") SignedHttpClient gatewayAuthTransport(ProtocolInstallation installation, Environment env) {
         return new SignedHttpClient("gateway", installation.workloadSigner(), installation.verifier(), Clock.systemUTC(),
                 TimePolicy.defaults(), Map.of("auth", URI.create(env.getRequiredProperty("aetheris.auth.base-url"))),
-                Map.of("auth", java.util.Set.of("auth.session.check", "auth.permission.manage", "auth.permission.mutate")),
+                Map.of("auth", java.util.Set.of(AuthProtocolClient.BROWSER_SESSION_OPERATION, "auth.permission.manage", "auth.permission.mutate")),
                 new SignedHttpClient.Limits(1024 * 1024, 1024 * 1024, 32, Duration.ofMillis(500), Duration.ofSeconds(2)));
     }
     @Bean AuthProtocolClient authProtocolClient(@Qualifier("gatewayAuthTransport") SignedHttpClient gatewayAuthTransport) { return new AuthProtocolClient(gatewayAuthTransport); }

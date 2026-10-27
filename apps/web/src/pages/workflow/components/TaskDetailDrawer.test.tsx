@@ -12,7 +12,7 @@ vi.mock('@/api/workflow', () => ({
   INSTANCE_STATUS_META: {}, ATTEMPT_STATUS_META: {}
 }))
 it('ignores the old task response and hides mutation controls for a read-only viewer', async () => {
-  setAuthenticated({ username: 'reader', role: 'viewer' })
+  setAuthenticated({ id: 16, accessVersion: 0, permissionVersion: 0, username: 'reader', role: 'viewer' })
   let finishOld!: (view: TaskView) => void
   const old = new Promise<TaskView>((resolve) => { finishOld = resolve })
   const view = (id: number, name: string) => ({ task: { id, name, taskType: 'sql', taskSql: 'SELECT 1' } }) as TaskView

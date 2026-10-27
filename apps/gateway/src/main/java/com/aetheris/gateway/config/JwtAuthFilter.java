@@ -1,5 +1,6 @@
 package com.aetheris.gateway.config;
 
+import com.aetheris.security.protocol.BrowserSessionCookies;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.Keys;
@@ -171,11 +172,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         String authorization = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-        String rawToken = authorization != null && authorization.startsWith("Bearer ")
+        boolean bearer = authorization != null && authorization.startsWith("Bearer ");
+        String selected = uniqueCookie(exchange, BrowserSessionCookies.SELECTOR);
+        String rawToken = bearer
                 ? authorization.substring(7)
-                : exchange.getRequest().getCookies().getFirst("aetheris_access") == null
-                        ? null
-                        : exchange.getRequest().getCookies().getFirst("aetheris_access").getValue();
+                : BrowserSessionCookies.validSid(selected)
+                        ? uniqueCookie(exchange, BrowserSessionCookies.name(BrowserSessionCookies.ACCESS, selected)) : null;
+        if (method == HttpMethod.POST && "/api/auth/logout".equals(path)) {
+            return forwardLogout(exchange, chain, rawToken);
+        }
         if (rawToken == null || rawToken.isBlank()) {
             // Logout is idempotent and must clear cookies even when the access
             // token already expired. If a valid access cookie exists, the path
@@ -192,6 +197,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String jti;
         Instant expiresAt;
         long accessVersion;
+        String sid;
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(key)
@@ -208,15 +214,18 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             jti = claims.getId();
             expiresAt = claims.getExpiration() == null ? null : claims.getExpiration().toInstant();
             Long versionClaim = claims.get("av", Long.class);
-            accessVersion = versionClaim == null ? 0L : versionClaim;
-            if (accessVersion < 0) return unauthorized(exchange);
+            accessVersion = versionClaim == null ? -1L : versionClaim;
+            sid = claims.get("sid", String.class);
+            if (accessVersion < 0 || sid == null || !UUID.fromString(sid).toString().equals(sid))
+                throw new IllegalArgumentException("Browser family required");
+            if (!bearer && !sid.equals(selected)) return unauthorized(exchange);
             if (username == null || username.isBlank() || uid == null || uid <= 0 || expiresAt == null) {
                 return unauthorized(exchange);
             }
         } catch (Exception malformed) {
             // Logout remains idempotent when the short-lived access cookie has
             // expired or is malformed: auth-service must still clear and
-            // rotate the refresh session.
+            // revoke the family using the separate logout capability.
             return "/api/auth/logout".equals(path)
                     ? chain.filter(exchange)
                     : unauthorized(exchange);
@@ -226,7 +235,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         return revocationStore.isRevoked(revocationKey)
                 .flatMap(revoked -> revoked
                         ? "/api/auth/logout".equals(path) ? chain.filter(exchange) : unauthorized(exchange)
-                        : permissionGate.sessionActive(uid, username, accessVersion).defaultIfEmpty(false)
+                        : permissionGate.browserSessionActive(uid, username, accessVersion, sid).defaultIfEmpty(false)
                             .flatMap(active -> active
                                 ? continueAuthenticated(exchange, chain, path, method,
                                     username, uid, authenticatedRole, accessVersion, expiresAt, revocationKey)
@@ -240,10 +249,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             ServerWebExchange exchange, GatewayFilterChain chain, String path,
             HttpMethod method, String username, Long uid, String authenticatedRole,
             long accessVersion, Instant expiresAt, String revocationKey) {
-        Mono<Void> revoke = "/api/auth/logout".equals(path)
-                ? revocationStore.revoke(revocationKey, expiresAt)
-                : Mono.empty();
-
         exchange.getAttributes().put(AUTHENTICATED_USER_ATTRIBUTE, username);
         exchange.getAttributes().put(AUTHENTICATED_ROLE_ATTRIBUTE, authenticatedRole);
         exchange.getAttributes().put(AUTHENTICATED_UID_ATTRIBUTE, uid);
@@ -264,7 +269,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }).build();
         ServerWebExchange authenticated = exchange.mutate().request(mutated).build();
 
-        return revoke.then(Mono.defer(() -> {
+        return Mono.defer(() -> {
             String service = serviceOf(path, method);
             if (isSensitive(path)) {
                 return permissionGate.mayManage(gateProof)
@@ -281,7 +286,40 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .onErrorResume(error -> serviceUnavailable(exchange));
             }
             return chain.filter(authenticated);
-        }));
+        });
+    }
+
+    private Mono<Void> forwardLogout(ServerWebExchange exchange, GatewayFilterChain chain, String access) {
+        // Auth validates the independent logout capability and persists family revocation.
+        // Redis is an additional jti blacklist, not a prerequisite for this privilege-reducing route.
+        Mono<Void> blacklist = Mono.empty();
+        String selected = uniqueCookie(exchange, BrowserSessionCookies.SELECTOR);
+        String logoutCookie = BrowserSessionCookies.validSid(selected)
+                ? uniqueCookie(exchange, BrowserSessionCookies.name(BrowserSessionCookies.LOGOUT, selected)) : null;
+        if (access != null && !access.isBlank() && logoutCookie != null) {
+            try {
+                var claims = Jwts.parser().verifyWith(key).require("typ", "access").build().parseSignedClaims(access).getPayload();
+                var logout = Jwts.parser().verifyWith(key).require("typ", "browser-logout").build()
+                        .parseSignedClaims(logoutCookie).getPayload();
+                String sid = claims.get("sid", String.class);
+                Long uid = claims.get("uid", Long.class), av = claims.get("av", Long.class);
+                // An old family capability must not revoke the access jti of a newer login.
+                if (claims.getExpiration() != null && sid != null && sid.equals(selected) && sid.equals(logout.get("sid", String.class))
+                        && uid != null && uid > 0 && uid.equals(logout.get("uid", Long.class))
+                        && av != null && av >= 0 && av.equals(logout.get("av", Long.class))
+                        && claims.getSubject() != null && claims.getSubject().equals(logout.getSubject())) {
+                    String jti = claims.getId() == null ? TokenRevocationStore.fingerprint(access) : claims.getId();
+                    blacklist = Mono.defer(() -> revocationStore.revoke(jti, claims.getExpiration().toInstant()))
+                            .timeout(java.time.Duration.ofSeconds(1)).onErrorResume(unavailable -> Mono.empty());
+                }
+            } catch (Exception expiredOrMalformed) { /* The logout proof has its own signature and lifetime. */ }
+        }
+        return blacklist.then(Mono.defer(() -> chain.filter(exchange)));
+    }
+
+    private static String uniqueCookie(ServerWebExchange exchange, String name) {
+        var values = exchange.getRequest().getCookies().get(name);
+        return values != null && values.size() == 1 ? values.getFirst().getValue() : null;
     }
 
     static String audienceOf(String path) {

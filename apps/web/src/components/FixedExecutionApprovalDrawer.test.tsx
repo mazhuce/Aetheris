@@ -14,7 +14,7 @@ const task = { id: 1, name: '订单接入', sourceType: 'jdbc', sourceDatasource
 const rule = { id: 1, name: '订单金额检查', ruleType: 'range', datasourceId: 81, targetTable: 'ods.orders', expression: 'amount >= 0', threshold: 2, status: 'enabled', cronExpression: '0 0 2 * * ?' }
 const deferred = <T,>() => { let resolve!: (value: T) => void; let reject!: (error: unknown) => void; const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no }); return { promise, resolve, reject } }
 beforeEach(() => {
-  vi.clearAllMocks(); setAuthenticated({ username: 'reviewer', role: 'viewer' }); server = { ...state }
+  vi.clearAllMocks(); setAuthenticated({ id: 13, accessVersion: 0, permissionVersion: 0, username: 'reviewer', role: 'viewer' }); server = { ...state }
   vi.mocked(ingestion.getTaskApproval).mockImplementation(async () => ({ ...server })); vi.mocked(quality.getRuleApproval).mockImplementation(async () => ({ ...server }))
   vi.mocked(ingestion.getTask).mockResolvedValue(task); vi.mocked(quality.getRule).mockResolvedValue(rule)
   vi.mocked(ingestion.approveTask).mockImplementation(async () => (server = { ...server, approved: true, cronBound: false }))
@@ -77,7 +77,7 @@ describe('explicit source approval', () => {
   })
   it('does not apply a prior account mutation after an account switch', async () => {
     const old = deferred<ExecutionApproval>(); vi.mocked(ingestion.approveTask).mockReturnValue(old.promise); render(view()); await review(); fireEvent.click(screen.getByRole('button', { name: '批准当前版本' }))
-    await act(async () => { setAuthenticated({ username: 'another', role: 'viewer' }) }); await screen.findByText('未批准')
+    await act(async () => { setAuthenticated({ id: 14, accessVersion: 0, permissionVersion: 0, username: 'another', role: 'viewer' }) }); await screen.findByText('未批准')
     await act(async () => { old.resolve({ ...state, approved: true }) }); expect(screen.queryByText('已批准')).not.toBeInTheDocument(); expect(screen.getByText('未批准')).toBeInTheDocument()
   })
   it('ignores the original POST even when navigation returns to the same resource', async () => {

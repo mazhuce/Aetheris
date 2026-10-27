@@ -9,7 +9,7 @@ vi.mock('@/hooks/useResourceActions', () => ({ useResourceActions: () => ({ can:
 vi.mock('@/api/governance', () => ({ listPolicies: vi.fn(), updatePolicy: vi.fn(), createPolicy: vi.fn(), deletePolicy: vi.fn() }))
 
 it('allows a delegated rename while keeping the policy definition protected', async () => {
-  setAuthenticated({ username: 'operator', role: 'viewer' })
+  setAuthenticated({ id: 15, accessVersion: 0, permissionVersion: 0, username: 'operator', role: 'viewer' })
   vi.mocked(listPolicies).mockResolvedValue([1, 2].map((id) => ({ id, name: `策略${id}`, policyType: 'masking', targetTable: 'warehouse.orders', ruleExpression: 'phone', status: 'enabled' })))
   render(<App><GovernancePage /></App>)
   fireEvent.click(await screen.findByRole('button', { name: '更多操作' }))

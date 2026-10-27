@@ -22,6 +22,8 @@ public class FlinkJobManagerClient {
     private static final Pattern TARGET = Pattern.compile("(?:s3|file|hdfs)://[^\\s]{1,1024}");
 
     private final RestClient client;
+    private RestClient.Builder trustedBuilder;
+    private OutboundTargetPolicy trustedPolicy;
 
     @Autowired
     public FlinkJobManagerClient(
@@ -36,7 +38,8 @@ public class FlinkJobManagerClient {
                 .connectTimeout(connectTimeout).followRedirects(java.net.http.HttpClient.Redirect.NEVER).build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(readTimeout);
-        this.client = builder.clone().requestFactory(factory).baseUrl(targetPolicy.httpOrigin(baseUrl))
+        this.trustedPolicy=targetPolicy;
+        this.trustedBuilder=builder.clone().requestFactory(factory)
                 .requestInterceptor((request, body, execution) -> {
                     targetPolicy.requireHost(request.getURI().getHost());
                     var response = execution.execute(request, body);
@@ -45,13 +48,26 @@ public class FlinkJobManagerClient {
                         throw new IllegalArgumentException("计算引擎重定向被拒绝");
                     }
                     return response;
-                }).build();
+                });
+        this.client=trustedBuilder.clone().baseUrl(targetPolicy.httpOrigin(baseUrl)).build();
     }
 
     /** Package-private constructor keeps MockRestServiceServer able to inject its request factory. */
     FlinkJobManagerClient(RestClient client) {
         this.client = client;
     }
+    /** Sealed execution pins its original configured JobManager even after a configuration change. */
+    public JobStatus statusAt(String origin,String jobId){
+        String id=requireJobId(jobId);var body=trustedClient(origin).get().uri("/jobs/{jobId}",id).exchange((out,response)->{
+            if(!response.getStatusCode().is2xxSuccessful())throw new FlinkJobManagerException("原始Flink Job状态未确认");
+            return com.aetheris.workflow.fixedexecution.FixedJson.parse(response.getBody().readNBytes(1048577),1048576);
+        });
+        if(body==null||!body.isObject()||!id.equals(body.path("jid").textValue()))throw new FlinkJobManagerException("原始Flink Job身份未确认");
+        String state=body.path("state").textValue();if(state==null||!java.util.Set.of("INITIALIZING","CREATED","RUNNING","FAILING","FAILED","CANCELLING","CANCELED","FINISHED","RESTARTING","SUSPENDED","RECONCILING").contains(state))throw new FlinkJobManagerException("Flink Job状态无法核实");
+        return new JobStatus(id,state,null);
+    }
+    public void cancelAt(String origin,String jobId){trustedClient(origin).patch().uri("/jobs/{jobId}",requireJobId(jobId)).body(Map.of("state","CANCELED")).retrieve().toBodilessEntity();}
+    private RestClient trustedClient(String origin){if(trustedBuilder==null||trustedPolicy==null)throw new IllegalStateException("原始JobManager客户端未配置");return trustedBuilder.clone().baseUrl(trustedPolicy.httpOrigin(origin)).build();}
 
     public JobStatus status(String jobId) {
         String id = requireJobId(jobId);

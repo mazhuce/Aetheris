@@ -33,7 +33,8 @@ class AuthPermissionGateTest {
         server.createContext("/", exchange -> {
             try {
                 calls.incrementAndGet(); var path = exchange.getRequestURI().getRawPath(); observedPath.set(path);
-                String op = path.endsWith("sessions/check") ? "auth.session.check" : path.endsWith("may-manage") ? "auth.permission.manage" : "auth.permission.mutate";
+                String op = path.equals("/internal/v2/browser-sessions/check") ? AuthProtocolClient.BROWSER_SESSION_OPERATION
+                        : path.endsWith("sessions/check") ? "auth.session.check" : path.endsWith("may-manage") ? "auth.permission.manage" : "auth.permission.mutate";
                 byte[] body = exchange.getRequestBody().readAllBytes(); observedBody.set(new ObjectMapper().readTree(body));
                 String user = exchange.getRequestHeaders().getFirst(SignedHttpClient.USER_PROOF); observedUser.set(user);
                 assertNull(exchange.getRequestHeaders().getFirst("X-Internal-Token"));
@@ -47,9 +48,10 @@ class AuthPermissionGateTest {
             } catch (Throwable error) { serverFailure.compareAndSet(null, error); }
             finally { exchange.close(); }
         }); server.start();
+        var operations = new HashSet<>(AuthProtocolClient.OPERATIONS); operations.add(AuthProtocolClient.BROWSER_SESSION_OPERATION);
         transport = new SignedHttpClient("gateway", signer, verifier, clock, TimePolicy.defaults(),
                 Map.of("auth", URI.create("http://127.0.0.1:" + server.getAddress().getPort())),
-                Map.of("auth", AuthProtocolClient.OPERATIONS), new SignedHttpClient.Limits(4096, 4096, 4, Duration.ofSeconds(1), Duration.ofSeconds(3)));
+                Map.of("auth", operations), new SignedHttpClient.Limits(4096, 4096, 4, Duration.ofSeconds(1), Duration.ofSeconds(3)));
         gate = new AuthPermissionGate(new AuthProtocolClient(transport));
     }
     @AfterEach void close() throws Exception {
@@ -57,6 +59,15 @@ class AuthPermissionGateTest {
         if (serverFailure.get() != null) throw new AssertionError("Gateway auth fixture failed", serverFailure.get());
     }
     String proof() { return GatewayTestKeys.identitySigner().sign(42L, "alice", 7, "gateway", "gate-1", Instant.now().plusSeconds(60)); }
+    @Test void browserFamilyCheckUsesSeparateSignedGatewayCapabilityWithoutUserHeader() {
+        String sid = UUID.randomUUID().toString();
+        assertFalse(AuthProtocolClient.OPERATIONS.contains(AuthProtocolClient.BROWSER_SESSION_OPERATION));
+        assertTrue(gate.browserSessionActive(42L, "alice", 7, sid).block());
+        assertEquals("/internal/v2/browser-sessions/check", observedPath.get()); assertNull(observedUser.get());
+        assertEquals(sid, observedBody.get().get("sid").textValue()); assertEquals(4, observedBody.get().size());
+        answer.set("{\"active\":false}"); assertFalse(gate.browserSessionActive(42L, "alice", 7, sid).block());
+        unsigned.set(true); assertThrows(RuntimeException.class, () -> gate.browserSessionActive(42L, "alice", 7, sid).block());
+    }
     @Test void signedSessionChecksStableUserAndAccessVersion() {
         assertTrue(gate.sessionActive(42L, "alice", 7).block());
         assertEquals("/internal/v2/sessions/check", observedPath.get()); assertNull(observedUser.get());

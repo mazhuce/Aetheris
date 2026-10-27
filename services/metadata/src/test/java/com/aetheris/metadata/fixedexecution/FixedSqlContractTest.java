@@ -22,11 +22,21 @@ class FixedSqlContractTest {
             assertEquals(17,parse(m.canonical()).get("execution").size());assertEquals(14,parse(m.canonical()).size());assertEquals(1800,m.definition().timeoutSeconds());
             for(String mutation:List.of("actor","parent","parameter","bad-date","wrong-origin","wrong-type","hash","extra","unknown-template","select","update","delete","decimal","nested")){
                 var n=(ObjectNode)parse(m.canonical());var d=(ObjectNode)n.get("execution");
-                switch(mutation){case "actor"->((ObjectNode)n.get("actor")).put("kind","pipeline");case "parent"->n.putObject("parent");case "parameter"->((ObjectNode)n.get("parameters")).put("sql","SELECT 1");case "bad-date"->((ObjectNode)n.get("parameters")).put("bizDate","2026-02-30");case "wrong-origin"->n.put("origin","ingestion");case "wrong-type"->d.put("taskType","spark");case "hash"->n.put("definitionSha256","b".repeat(64));case "extra"->d.put("url","jdbc:invalid");case "unknown-template"->d.put("sql","INSERT INTO t SELECT '${biz_date}'");case "select"->d.put("sql","SELECT 1");case "update"->d.put("sql","UPDATE t SET x=1");case "delete"->d.put("sql","DELETE FROM t");case "decimal"->d.put("timeoutSeconds",1.5);case "nested"->d.putObject("dependencies").putArray("upstreamTaskIds").add("admin");}
+                switch(mutation){case "actor"->((ObjectNode)n.get("actor")).put("kind","workflow-child");case "parent"->n.putObject("parent");case "parameter"->((ObjectNode)n.get("parameters")).put("sql","SELECT 1");case "bad-date"->((ObjectNode)n.get("parameters")).put("bizDate","2026-02-30");case "wrong-origin"->n.put("origin","ingestion");case "wrong-type"->d.put("taskType","spark");case "hash"->n.put("definitionSha256","b".repeat(64));case "extra"->d.put("url","jdbc:invalid");case "unknown-template"->d.put("sql","INSERT INTO t SELECT '${biz_date}'");case "select"->d.put("sql","SELECT 1");case "update"->d.put("sql","UPDATE t SET x=1");case "delete"->d.put("sql","DELETE FROM t");case "decimal"->d.put("timeoutSeconds",1.5);case "nested"->d.putObject("dependencies").putArray("upstreamTaskIds").add("admin");}
                 if(!mutation.equals("extra")&&!mutation.equals("decimal")&&!mutation.equals("nested")){String dh=FixedSqlJsonb.hash(d);n.put("definitionSha256",dh);((ObjectNode)n.get("approval")).put("definitionSha256",dh);if(mutation.equals("hash"))n.put("definitionSha256","b".repeat(64));}
                 String raw=string(n),hash=BodyHash.sha256(raw.getBytes(StandardCharsets.UTF_8));var input=new FixedExecutionAdapter.Submission(11,111,3,2,hash);
                 assertThrows(IllegalArgumentException.class,()->FixedSqlManifest.parse(raw,hash,input),mutation);
             }
+        }
+    }
+    @Test void pipelineManifestRetainsItsOriginalKindForAuthorization() throws Exception {
+        try(var peers=new FixedSqlTestPeers()){
+            var original=peers.install(11,8,"INSERT INTO business.sql_output SELECT 1",1800,s->s);
+            var n=(ObjectNode)parse(original.canonical());((ObjectNode)n.get("actor")).put("kind","pipeline");
+            String raw=string(n),hash=BodyHash.sha256(raw.getBytes(StandardCharsets.UTF_8));
+            var manifest=FixedSqlManifest.parse(raw,hash,new FixedExecutionAdapter.Submission(11,111,3,2,hash));
+            assertEquals("pipeline",((FixedTransferManifest.Actor)manifest.authorizationRequest().get("actor")).kind());
+            assertNull(manifest.authorizationRequest().get("parent"));
         }
     }
     @Test void sqlResultAcceptsOnlyExplicitSuccessAndStrictIntegerCounts(){

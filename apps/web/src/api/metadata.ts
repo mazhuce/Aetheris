@@ -164,12 +164,12 @@ export function listDataSourceTables(id: number, schema: string): Promise<DataSo
   return http.get<DataSourceTable[]>(`/api/metadata/datasources/${id}/tables`, { params: { schema } }).then((res) => res.data)
 }
 
-export function listDataSourceColumns(id: number, schema: string, table: string): Promise<DataSourceColumn[]> {
-  return http.get<DataSourceColumn[]>(`/api/metadata/datasources/${id}/columns`, { params: { schema, table } }).then((res) => res.data)
+export function listDataSourceColumns(id: number, schema: string, table: string, options?: { signal?: AbortSignal }): Promise<DataSourceColumn[]> {
+  return http.get<DataSourceColumn[]>(`/api/metadata/datasources/${id}/columns`, { params: { schema, table }, ...(options?.signal ? { signal: options.signal } : {}) }).then((res) => res.data)
 }
 
-export function previewDataSourceTable(id: number, schema: string, table: string): Promise<QueryResult> {
-  return http.post<QueryResult>(`/api/metadata/datasources/${id}/preview`, { schema, table }, { timeout: 45000 }).then((res) => res.data)
+export function previewDataSourceTable(id: number, schema: string, table: string, options?: { signal?: AbortSignal }): Promise<QueryResult> {
+  return http.post<QueryResult>(`/api/metadata/datasources/${id}/preview`, { schema, table }, { timeout: 45000, ...(options?.signal ? { signal: options.signal } : {}) }).then((res) => res.data)
 }
 
 export function queryDataSource(id: number, sql: string): Promise<QueryResult> {
