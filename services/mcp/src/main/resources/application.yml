@@ -1,0 +1,53 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: mcp-server
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:aetheris}
+    username: ${DB_USER:aetheris}
+    password: ${DB_PASSWORD:aetheris}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${AETHERIS_DB_POOL_MAX_SIZE:8}
+      minimum-idle: ${AETHERIS_DB_POOL_MIN_IDLE:1}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: mcp
+    default-schema: mcp
+    create-schemas: true
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+info:
+  app:
+    version: 0.1.0
+
+aetheris:
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  metadata:
+    base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+  learning:
+    base-url: http://${LEARNING_SERVICE_HOST:localhost}:${LEARNING_SERVICE_PORT:8090}
+  mcp:
+    dev-mode: ${AETHERIS_MCP_DEV_MODE:false}
+    dev-user: ${AETHERIS_MCP_DEV_USER:dev-learner}
+    protocol-version: "2026-07-28"
+    max-result-chars: ${AETHERIS_MCP_MAX_RESULT_CHARS:12000}
+    rate-limit-capacity: ${AETHERIS_MCP_RATE_LIMIT:60}

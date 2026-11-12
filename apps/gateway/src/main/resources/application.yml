@@ -50,6 +50,14 @@ spring:
           uri: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
           predicates:
             - Path=/api/auth/**
+        - id: learning-service
+          uri: http://${LEARNING_SERVICE_HOST:localhost}:${LEARNING_SERVICE_PORT:8090}
+          predicates:
+            - Path=/api/learning/**
+        - id: mcp-server
+          uri: http://${MCP_SERVICE_HOST:localhost}:${MCP_SERVICE_PORT:8091}
+          predicates:
+            - Path=/api/mcp,/api/mcp/**
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
 

@@ -8,7 +8,7 @@ import java.util.*;
 
 /** One committed database claim across receiver replicas; no in-memory or availability fallback. */
 public final class PostgresNonceStore implements NonceStore {
-    private static final Set<String> SCHEMAS=Set.of("auth","system","metadata","quality","ingestion","governance","workflow","ai","serving");
+    private static final Set<String> SCHEMAS=Set.of("auth","system","metadata","quality","ingestion","governance","workflow","ai","serving","learning");
     private static final long RETENTION_SECONDS=86400;
     private final DataSource dataSource;
     private final Clock clock;

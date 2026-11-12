@@ -23,5 +23,7 @@
         <module>services/workflow</module>
         <module>services/ai-agent</module>
         <module>services/serving</module>
+        <module>services/learning</module>
+        <module>services/mcp</module>
     </modules>
 </project>

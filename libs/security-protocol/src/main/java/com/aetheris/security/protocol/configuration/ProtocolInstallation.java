@@ -18,7 +18,7 @@ import java.util.*;
 /** Explicit file installation. No shared-token, environment-key, or test-key fallback. */
 public final class ProtocolInstallation {
     public static final Set<String> SERVICES=Set.of("gateway","auth","system","metadata","serving","quality",
-            "ingestion","governance","workflow","ai-agent");
+            "ingestion","governance","workflow","ai-agent","learning","mcp");
     private static final ObjectMapper JSON=new ObjectMapper(JsonFactory.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .streamReadConstraints(StreamReadConstraints.builder().maxNestingDepth(5).maxStringLength(4096).maxNumberLength(20).build())

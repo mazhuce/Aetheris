@@ -1,0 +1,74 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: learning-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5433}/${DB_NAME:aetheris}
+    username: ${DB_USER:aetheris}
+    password: ${DB_PASSWORD:aetheris}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${AETHERIS_DB_POOL_MAX_SIZE:8}
+      minimum-idle: ${AETHERIS_DB_POOL_MIN_IDLE:1}
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    schemas: learning
+    default-schema: learning
+    create-schemas: true
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: Asia/Shanghai
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: ${AETHERIS_OPENAPI_ENABLED:false}
+
+info:
+  app:
+    version: 0.1.0
+
+aetheris:
+  internal-token: ${AETHERIS_INTERNAL_TOKEN:}
+  identity:
+    max-skew-ms: ${AETHERIS_IDENTITY_MAX_SKEW_MS:300000}
+  auth:
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
+  learning:
+    # 仅供本地演示：缺少 v2 密钥安装时可显式开启，生产必须保持 false。
+    dev-mode: ${AETHERIS_LEARNING_DEV_MODE:false}
+    dev-user: ${AETHERIS_LEARNING_DEV_USER:dev-learner}
+    admin-users: ${AETHERIS_LEARNING_ADMIN_USERS:admin}
+    sandbox:
+      ttl-hours: ${AETHERIS_LEARNING_SANDBOX_TTL_HOURS:24}
+      medium-concurrency: ${AETHERIS_LEARNING_MEDIUM_CONCURRENCY:2}
+      medium-statement-timeout-ms: ${AETHERIS_LEARNING_MEDIUM_TIMEOUT_MS:60000}
+      cleanup-interval-ms: ${AETHERIS_LEARNING_SANDBOX_CLEANUP_MS:600000}
+      max-active-per-user: ${AETHERIS_LEARNING_MAX_SANDBOX:3}
+    grading:
+      statement-timeout-ms: ${AETHERIS_LEARNING_GRADING_TIMEOUT_MS:8000}
+      max-sql-bytes: ${AETHERIS_LEARNING_MAX_SQL_BYTES:20000}
+      sample-rows: ${AETHERIS_LEARNING_SAMPLE_ROWS:20}
+    tutor:
+      max-hints-per-lab: ${AETHERIS_LEARNING_MAX_HINTS:6}
+    ai:
+      base-url: ${AETHERIS_AI_BASE_URL:https://api.deepseek.com}
+      api-key: ${AETHERIS_AI_API_KEY:}
+      model: ${AETHERIS_AI_MODEL:deepseek-chat}
+      timeout-ms: ${AETHERIS_AI_TIMEOUT_MS:15000}
+      max-tokens: ${AETHERIS_AI_MAX_TOKENS:700}

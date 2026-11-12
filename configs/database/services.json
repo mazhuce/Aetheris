@@ -9,7 +9,9 @@
     "ingestion": "ingestion",
     "quality": "quality",
     "governance": "governance",
-    "ai-agent": "ai"
+    "ai-agent": "ai",
+    "learning": "learning",
+    "mcp": "mcp"
   },
   "flywayVersion": "10.20.1",
   "postgresqlJdbcVersion": "42.7.13"

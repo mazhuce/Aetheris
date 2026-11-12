@@ -23,7 +23,7 @@ import java.util.*;
 @Configuration(proxyBeanMethods = false)
 public class AuthV2SecurityConfiguration {
     private static final Set<String> CALLERS = Set.of("gateway", "system", "metadata", "serving", "quality",
-            "ingestion", "governance", "workflow", "ai-agent");
+            "ingestion", "governance", "workflow", "ai-agent", "learning", "mcp");
     private static final Map<String, String> OPERATIONS = Map.of(
             "/internal/v2/sessions/check", "auth.session.check",
             "/internal/v2/permissions/check", "auth.permission.check",

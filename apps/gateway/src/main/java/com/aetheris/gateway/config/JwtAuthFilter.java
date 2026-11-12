@@ -323,8 +323,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     }
 
     static String audienceOf(String path) {
-        for (String service : List.of("auth", "system", "metadata", "quality", "ingestion", "governance", "workflow", "serving"))
-            if (path.startsWith("/api/" + service + "/")) return service;
+        for (String service : List.of("auth", "system", "metadata", "quality", "ingestion", "governance", "workflow", "serving", "learning", "mcp"))
+            if (path.startsWith("/api/" + service + "/") || path.equals("/api/" + service)) return service;
         if (path.startsWith("/api/analytics/")) return "serving";
         if (path.startsWith("/api/ai/")) return "ai-agent";
         return null;

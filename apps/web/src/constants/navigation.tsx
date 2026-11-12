@@ -8,6 +8,7 @@ import {
   DatabaseOutlined,
   FolderOpenOutlined,
   PartitionOutlined,
+  ReadOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
   SettingOutlined
@@ -43,6 +44,16 @@ export interface NavModule {
 }
 
 export const navModules: NavModule[] = [
+  {
+    key: 'learning',
+    label: '学习中心',
+    icon: <ReadOutlined />,
+    children: [
+      { key: 'learning-home', label: '任务中心', path: '/learning', status: 'available' },
+      { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available' },
+      { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available' }
+    ]
+  },
   {
     key: 'workbench',
     label: '工作台',

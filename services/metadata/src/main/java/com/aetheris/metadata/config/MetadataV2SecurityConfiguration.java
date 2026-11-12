@@ -26,12 +26,12 @@ public class MetadataV2SecurityConfiguration {
         return (method,path)->{
             if(!"POST".equals(method))return Optional.empty();
             return switch(path) {
-                case "/internal/v2/agent/tables/search" -> user("metadata.agent.search",Set.of("ai-agent"));
-                case "/internal/v2/agent/tables/describe" -> user("metadata.agent.describe",Set.of("ai-agent"));
-                case "/internal/v2/agent/query" -> user("metadata.user.sql-query",Set.of("ai-agent","serving"));
+                case "/internal/v2/agent/tables/search" -> user("metadata.agent.search",Set.of("ai-agent","mcp"));
+                case "/internal/v2/agent/tables/describe" -> user("metadata.agent.describe",Set.of("ai-agent","mcp"));
+                case "/internal/v2/agent/query" -> user("metadata.user.sql-query",Set.of("ai-agent","serving","mcp"));
                 case "/internal/v2/tables/query" -> user("metadata.user.table-query",Set.of("serving"));
-                case "/internal/v2/semantic/metrics/list" -> user("metadata.agent.metric-list",Set.of("ai-agent"));
-                case "/internal/v2/semantic/metrics/query" -> user("metadata.user.metric-query",Set.of("ai-agent","serving"));
+                case "/internal/v2/semantic/metrics/list" -> user("metadata.agent.metric-list",Set.of("ai-agent","mcp"));
+                case "/internal/v2/semantic/metrics/query" -> user("metadata.user.metric-query",Set.of("ai-agent","serving","mcp"));
                 case "/internal/v2/published-api-assets/resolve" -> Optional.of(new RoutePolicy.Route("metadata.published-asset.resolve",Set.of("serving"),RoutePolicy.UserMode.FORBIDDEN));
                 case "/internal/v2/published-api-assets/key-query" -> Optional.of(new RoutePolicy.Route("metadata.published-key.query",Set.of("serving"),RoutePolicy.UserMode.FORBIDDEN));
                 case "/internal/v2/executions/transfer/submit" -> fixed("metadata.fixed-transfer.submit");

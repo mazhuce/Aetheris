@@ -123,9 +123,13 @@ metadata 已持有数据源凭据、JDBC 驱动（含 hive-jdbc 的 12 处 exclu
 | `ingestion-service` | 8084 | 跨数据源批量接入、事务写入、并发互斥 |
 | `governance-service` | 8085 | 治理策略、分类分级、问题记录 |
 | `system-service` | 8081 | 平台配置、审计日志、失败待办 |
+| `learning-service` | 8090 | 学习路径、18 个 L1-L6 任务、3 个项目、Light/Medium 沙箱、三层判分、AI 导师、内容审核、进度与凭证 |
+| `mcp-server` | 8091 | MCP 2026-07-28 协议、11 个工具（只读 + 草稿/审批）、长任务、资源/提示词、调用审计 |
 | `web` | 5173 | React 18 + Ant Design 5 控制台 |
 
 业务服务默认仅开放在 Compose 内部网络，对外统一经过网关。
+
+> **学习中心（M2-M4）**：Web 控制台新增 `/learning` 学习路径、`/learning/labs/{code}` 任务工作区（含 AI 导师与提交时间线）、`/learning/projects/{code}` 项目页、`/learning/admin` 内容运营后台与 `/learning/mcp` MCP 调试台。课程覆盖 L1-L6，L6 任务运行在带并发槽位的 Medium 沙箱。范围与限制见 [M2 实施说明](docs/m2-implementation-notes.md) 与 [M3/M4 实施说明](docs/m3-m4-implementation-notes.md)。
 
 ## 工程纪律
 

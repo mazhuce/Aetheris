@@ -8,7 +8,7 @@ import java.util.*;
 /** Fresh installation preparation only. Never reads/replaces installed keys. */
 public final class GenerateKeys {
     private static final List<String> SERVICES=List.of("gateway","auth","system","metadata","serving","quality",
-            "ingestion","governance","workflow","ai-agent");
+            "ingestion","governance","workflow","ai-agent","learning","mcp");
     private static String json(String text){return "\""+text.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r")+"\"";}
     private static String pem(Key key,String kind){return "-----BEGIN "+kind+"-----\n"+Base64.getEncoder().encodeToString(key.getEncoded())+"\n-----END "+kind+"-----\n";}
     private static boolean posix(){return FileSystems.getDefault().supportedFileAttributeViews().contains("posix");}

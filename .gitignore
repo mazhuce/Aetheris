@@ -106,3 +106,6 @@ scripts/tests/.postgres-test-*/
 /output/audit-*/
 /configs/database/private/
 /configs/security/private/
+
+# 本地全栈启动覆盖层（kid 与本机密钥绑定，需按环境重新生成）
+docker-compose.full-local.yml

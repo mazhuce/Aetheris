@@ -165,10 +165,15 @@ class JwtAuthFilterTest {
         assertEquals(7L, proof.accessVersion());assertEquals(42L, proof.uid());assertEquals("alice", proof.username());
     }
     @Test void signsOnlyTheServiceSelectedByTheActualRouteAndKeepsOneRequestId() {
-        for (var pair : java.util.Map.of("auth", "/api/auth/profile", "system", "/api/system/activity",
-                "metadata", "/api/metadata/tables", "quality", "/api/quality/rules", "ingestion", "/api/ingestion/tasks",
-                "governance", "/api/governance/policies", "workflow", "/api/workflow/tasks", "serving", "/api/analytics/datasets",
-                "ai-agent", "/api/ai/chat/conversations").entrySet()) {
+        for (var pair : java.util.Map.ofEntries(java.util.Map.entry("auth", "/api/auth/profile"),
+                java.util.Map.entry("system", "/api/system/activity"),
+                java.util.Map.entry("metadata", "/api/metadata/tables"), java.util.Map.entry("quality", "/api/quality/rules"),
+                java.util.Map.entry("ingestion", "/api/ingestion/tasks"),
+                java.util.Map.entry("governance", "/api/governance/policies"), java.util.Map.entry("workflow", "/api/workflow/tasks"),
+                java.util.Map.entry("serving", "/api/analytics/datasets"),
+                java.util.Map.entry("ai-agent", "/api/ai/chat/conversations"),
+                java.util.Map.entry("learning", "/api/learning/paths"),
+                java.util.Map.entry("mcp", "/api/mcp")).entrySet()) {
             var exchange = exchange("GET", pair.getValue(), token("alice", "viewer", 42L));
             AtomicReference<ServerWebExchange> forwarded = new AtomicReference<>();
             filter(neverCalledGate()).filter(exchange, next -> {forwarded.set(next);return next.getResponse().setComplete();}).block();

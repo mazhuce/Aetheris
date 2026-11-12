@@ -168,6 +168,63 @@ services:
       metadata-service:
         condition: service_healthy
 
+  learning-service:
+    <<: *java-runtime
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-learning:${AETHERIS_IMAGE_TAG:-security-20260908}
+    build:
+      context: .
+      dockerfile: services/learning/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *database-pool
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
+      AETHERIS_LEARNING_SANDBOX_TTL_HOURS: ${AETHERIS_LEARNING_SANDBOX_TTL_HOURS:-24}
+      AETHERIS_AI_BASE_URL: ${AETHERIS_AI_BASE_URL:-https://api.deepseek.com}
+      AETHERIS_AI_API_KEY: ${AETHERIS_AI_API_KEY:-}
+      AETHERIS_AI_MODEL: ${AETHERIS_AI_MODEL:-deepseek-chat}
+      # 仅供本地演示；生产必须配置 aetheris.security.* v2 密钥安装。
+      AETHERIS_LEARNING_DEV_MODE: ${AETHERIS_LEARNING_DEV_MODE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  mcp-server:
+    <<: *java-runtime
+    image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-mcp:${AETHERIS_IMAGE_TAG:-security-20260908}
+    build:
+      context: .
+      dockerfile: services/mcp/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *database-pool
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: ${DB_NAME:-aetheris}
+      DB_USER: ${DB_USER:-aetheris}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
+      AETHERIS_INTERNAL_TOKEN: ${AETHERIS_INTERNAL_TOKEN:?AETHERIS_INTERNAL_TOKEN must be set}
+      AETHERIS_IDENTITY_MAX_SKEW_MS: ${AETHERIS_IDENTITY_MAX_SKEW_MS:-300000}
+      AUTH_SERVICE_HOST: auth-service
+      AUTH_SERVICE_PORT: "8087"
+      METADATA_SERVICE_HOST: metadata-service
+      METADATA_SERVICE_PORT: "8082"
+      LEARNING_SERVICE_HOST: learning-service
+      LEARNING_SERVICE_PORT: "8090"
+      AETHERIS_MCP_DEV_MODE: ${AETHERIS_MCP_DEV_MODE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      learning-service:
+        condition: service_healthy
+
   quality-service:
     <<: *java-runtime
     image: ${AETHERIS_IMAGE_PREFIX:-aetheris-local}-quality:${AETHERIS_IMAGE_TAG:-security-20260908}
@@ -412,6 +469,10 @@ services:
       AUTH_SERVICE_PORT: "8087"
       SERVING_SERVICE_HOST: serving-service
       SERVING_SERVICE_PORT: "8089"
+      LEARNING_SERVICE_HOST: learning-service
+      LEARNING_SERVICE_PORT: "8090"
+      MCP_SERVICE_HOST: mcp-server
+      MCP_SERVICE_PORT: "8091"
     depends_on:
       system-service:
         condition: service_healthy
@@ -430,6 +491,10 @@ services:
       auth-service:
         condition: service_healthy
       serving-service:
+        condition: service_healthy
+      learning-service:
+        condition: service_healthy
+      mcp-server:
         condition: service_healthy
       redis:
         condition: service_healthy

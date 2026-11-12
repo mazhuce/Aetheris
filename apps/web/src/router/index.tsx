@@ -71,6 +71,11 @@ const ReleasePage = lazy(() => import('@/pages/development/releases'))
 const WorkflowGraphPage = lazy(() => import('@/pages/development/workflows'))
 const SubscriptionPage = lazy(() => import('@/pages/services/subscriptions'))
 const ServiceAuthorizationPage = lazy(() => import('@/pages/services/authorization'))
+const LearningCenterPage = lazy(() => import('@/pages/learning'))
+const LearningLabPage = lazy(() => import('@/pages/learning/lab'))
+const LearningProjectPage = lazy(() => import('@/pages/learning/project'))
+const LearningAdminPage = lazy(() => import('@/pages/learning/admin'))
+const LearningMcpPage = lazy(() => import('@/pages/learning/mcp'))
 
 function Deferred({ children }: { children: ReactNode }) {
   return <Suspense fallback={<div className="route-loading">页面加载中…</div>}>{children}</Suspense>
@@ -110,6 +115,13 @@ export const router = createBrowserRouter([
     errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <HomeRedirect /> },
+
+      // 学习中心
+      { path: 'learning', element: <LearningCenterPage /> },
+      { path: 'learning/labs/:code', element: <LearningLabPage /> },
+      { path: 'learning/projects/:code', element: <LearningProjectPage /> },
+      { path: 'learning/admin', element: <LearningAdminPage /> },
+      { path: 'learning/mcp', element: <LearningMcpPage /> },
 
       // 工作台
       { path: 'workbench', element: <Dashboard /> },
