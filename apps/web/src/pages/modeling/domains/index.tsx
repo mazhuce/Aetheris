@@ -40,7 +40,7 @@ export default function DomainPage() {
       const [nextDomains, nextTables] = await Promise.all([listBusinessDomains(), listTables()])
       setDomains(nextDomains)
       setTables(nextTables)
-    } catch { message.error('业务域加载失败') } finally { setLoading(false) }
+    } catch { message.error({ content: '业务域加载失败', key: 'domain-load-error' }) } finally { setLoading(false) }
   }, [message])
 
   useEffect(() => { void refresh() }, [refresh])

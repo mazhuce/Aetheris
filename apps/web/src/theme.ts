@@ -44,7 +44,6 @@ export function getAppTheme(mode: ColorMode): ThemeConfig {
         fillTertiary: 'rgba(255,255,255,.035)',
         selected: 'rgba(255,255,255,.09)',
         focus: 'rgba(255,255,255,.14)',
-        progressTrack: '#24252b',
         shadow: '0 10px 28px rgba(0,0,0,.28)',
         shadowLarge: '0 18px 48px rgba(0,0,0,.38)'
       }
@@ -80,7 +79,6 @@ export function getAppTheme(mode: ColorMode): ThemeConfig {
         fillTertiary: 'rgba(15,23,42,.035)',
         selected: 'rgba(15,23,42,.08)',
         focus: 'rgba(15,23,42,.15)',
-        progressTrack: '#e6e8ec',
         shadow: '0 10px 28px rgba(15,23,42,.12)',
         shadowLarge: '0 18px 48px rgba(15,23,42,.16)'
       }
@@ -202,8 +200,7 @@ export function getAppTheme(mode: ColorMode): ThemeConfig {
         defaultColor: palette.textSecondary
       },
       Progress: {
-        defaultColor: palette.primary,
-        remainingColor: palette.progressTrack
+        defaultColor: palette.primary
       },
       Tooltip: {
         colorBgSpotlight: palette.spotlight

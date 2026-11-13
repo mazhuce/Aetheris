@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, Button, Card, Col, Empty, Progress, Row, Space, Statistic, Table, Tag, Typography } from 'antd'
+import { Alert, Button, Card, Col, Empty, Progress, Row, Space, Table, Tag, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CheckCircleOutlined, CloudServerOutlined, DatabaseOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
+import StatCard from '@/components/StatCard'
 import StatusBadge from '@/components/StatusBadge'
 import { listDataSources, type DataSource } from '@/api/metadata'
 import {
@@ -119,11 +120,39 @@ export default function AcceptanceProgressPage() {
       extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>} />
     <Alert className="form-section-space" showIcon type={verified ? 'success' : state === 'failed' || state === 'mismatch' || state === 'invalid' ? 'error' : 'warning'} message={stateText[state]} description={description} />
     {errorCount > 0 && <Alert className="form-section-space" showIcon type="warning" message="部分接口暂时不可用，未取得的新状态保持未知" />}
-    <Row gutter={[16, 16]}>
-      <Col xs={24} sm={12} lg={6}><Card><Statistic title="R1-R5 当前验收" value={milestonePassed} suffix="/ 5" prefix={<CheckCircleOutlined />} /><Progress percent={milestonePassed * 20} status={verified ? 'success' : 'normal'} showInfo={false} /></Card></Col>
-      <Col xs={24} sm={12} lg={6}><Card><Statistic title="数据源当前可探测" value={sourceReady ? sourceStats.available : '—'} suffix="/ 9" prefix={<DatabaseOutlined />} /><Typography.Text type="secondary">仅为连接健康</Typography.Text></Card></Col>
-      <Col xs={24} sm={12} lg={6}><Card><Statistic title="流任务运行中" value={tasksReady ? taskStats.running : '—'} prefix={<CloudServerOutlined />} /><Typography.Text type="secondary">{tasksReady ? `未知 ${taskStats.unknown} · 失败 ${taskStats.failed}` : '运行状态暂不可用'}</Typography.Text></Card></Col>
-      <Col xs={24} sm={12} lg={6}><Card><Statistic title="最近刷新" value={lastRefresh?.toLocaleTimeString() ?? '—'} prefix={<ReloadOutlined />} /></Card></Col>
+    <Row gutter={12} className="stat-row">
+      <Col xs={12} lg={6}>
+        <StatCard
+          title="R1-R5 当前验收"
+          value={`${milestonePassed} / 5`}
+          icon={<CheckCircleOutlined />}
+          tone={verified ? 'green' : 'neutral'}
+          footer={<Progress percent={milestonePassed * 20} status={verified ? 'success' : 'normal'} showInfo={false} size="small" style={{ margin: 0 }} />}
+        />
+      </Col>
+      <Col xs={12} lg={6}>
+        <StatCard
+          title="数据源当前可探测"
+          value={`${sourceReady ? sourceStats.available : '—'} / 9`}
+          icon={<DatabaseOutlined />}
+          footer="仅为连接健康"
+        />
+      </Col>
+      <Col xs={12} lg={6}>
+        <StatCard
+          title="流任务运行中"
+          value={String(tasksReady ? taskStats.running : '—')}
+          icon={<CloudServerOutlined />}
+          footer={tasksReady ? `未知 ${taskStats.unknown} · 失败 ${taskStats.failed}` : '运行状态暂不可用'}
+        />
+      </Col>
+      <Col xs={12} lg={6}>
+        <StatCard
+          title="最近刷新"
+          value={lastRefresh?.toLocaleTimeString() ?? '—'}
+          icon={<ReloadOutlined />}
+        />
+      </Col>
     </Row>
     <Row gutter={[16, 16]} className="form-section-space">
       <Col xs={24} md={12}><Card title="Flink SQL Gateway" size="small"><StatusBadge tone={serviceLabel(flink?.status).tone} dot={false}>{serviceLabel(flink?.status).label}</StatusBadge></Card></Col>

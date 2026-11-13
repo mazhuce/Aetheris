@@ -423,35 +423,8 @@
 }
 
 /* Data source and compact metrics */
-.datasource-overview {
-  margin-bottom: var(--space-4);
-}
-
-.datasource-overview .ant-card {
-  height: 100%;
-}
-
-.datasource-overview .ant-card-body {
-  padding: var(--space-4);
-}
-
-.datasource-overview .ant-statistic-title {
-  margin-bottom: var(--space-1);
-  color: var(--text-tertiary);
-  font-size: var(--font-meta);
-}
-
-.datasource-overview .ant-statistic-content {
-  color: var(--text-primary);
-  font-size: var(--font-lead);
-  font-weight: var(--weight-semibold);
-}
-
-.datasource-overview .ant-statistic-content-prefix {
-  margin-right: var(--space-2);
-  color: var(--text-tertiary);
-  font-size: var(--font-body);
-}
+/* 这里原先为 antd Statistic 单独调了一套字号和内边距；
+   改用共享的 StatCard 后不再需要，留着会和 .stat-card 的规则打架。 */
 
 .datasource-preset-panel,
 .datasource-browser-selectors {
@@ -986,10 +959,12 @@
   gap: var(--space-1);
 }
 
+/* 字段标签用 medium 而不是 semibold：卡片标题是 14/600，两者只差 1px，
+   同字重会让"卡片标题"和"卡片里的字段名"看起来一样重。 */
 .setting-copy strong {
   color: var(--text-primary);
   font-size: var(--font-body);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
 }
 
 .setting-copy span,
@@ -1816,4 +1791,318 @@
 
 .nav-config-table .ant-table-tbody > tr > td {
   vertical-align: middle;
+}
+
+/* —— 学习中心 ——
+   这一页不再用 antd Card 堆叠，而是和其余数据页共用 DataSurface / StatCard /
+   PageHeader 三件套，字号一律走排版标度：区块标题 14、正文 13、表格级 12、
+   辅助说明 11；数值统一 600 字重 + 等宽数字，避免和正文同样字重而发虚。 */
+
+/* 四块等宽分列，进度条只占自己那一列；用 flex 时进度块会吃掉剩余宽度，
+   条子被拉到四五百像素长，四个块的大小关系就乱了。 */
+.learn-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4) var(--space-5);
+  align-items: end;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.learn-meta-item {
+  display: grid;
+  gap: 2px;
+  min-width: 110px;
+}
+
+.learn-meta-item > span,
+.learn-meta-progress > span {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+  line-height: var(--leading-tight);
+}
+
+.learn-meta-item > strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-medium);
+}
+
+.learn-meta-progress {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px var(--space-3);
+}
+
+.learn-meta-progress > strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.learn-meta-progress > .ant-progress {
+  grid-column: 1 / -1;
+  margin: 0;
+  line-height: 1;
+}
+
+.learn-modules {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.learn-module-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+}
+
+.learn-module-head h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-section);
+  font-weight: var(--weight-semibold);
+}
+
+.learn-module-count {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learn-module-objective {
+  margin: var(--space-1) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
+}
+
+.learn-lab-list {
+  margin-top: var(--space-2);
+}
+
+/* 任务行做成扁平行 + 分隔线，不再在区块里嵌套卡片：
+   两层边框会让"区块 / 任务"的层级看起来一样重。 */
+.learn-lab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-3);
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--motion-fast) ease;
+}
+
+.learn-lab-list > .learn-lab:first-child {
+  border-top: 0;
+}
+
+.learn-lab:hover {
+  background: var(--nav-hover);
+}
+
+.learn-lab:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: -2px;
+}
+
+.learn-lab-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.learn-lab-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.learn-lab-title strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+}
+
+.learn-lab-summary {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
+}
+
+.learn-lab-meta {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  white-space: nowrap;
+}
+
+.learn-lab-score {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.learn-lab-arrow {
+  color: var(--text-disabled);
+  font-size: var(--icon-sm);
+}
+
+/* 能力项用分隔线串成一列，而不是靠 16px 空隙分开：
+   空隙分块会让六项看起来是六张独立的小卡，读不成一张"能力清单"。 */
+.learn-skills {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.learn-skill {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.learn-skills > .learn-skill:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.learn-skills > .learn-skill:last-child {
+  padding-bottom: 0;
+}
+
+.learn-skill-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.learn-skill-head strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-medium);
+}
+
+.learn-skill-score {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.learn-skill-meta {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learn-credentials {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.learn-credential {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.learn-credential-icon {
+  color: var(--success);
+  font-size: var(--icon-lg);
+}
+
+.learn-credential-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.learn-credential-copy strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-medium);
+}
+
+.learn-credential-copy span {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learn-empty-copy {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
+}
+
+.learn-project {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--motion-fast) ease, background var(--motion-fast) ease;
+}
+
+.learn-project:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.learn-project:focus-visible {
+  outline: 2px solid var(--accent-border);
+  outline-offset: -2px;
+}
+
+.learn-project-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.learn-project-head strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
+}
+
+.learn-project-summary {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
+}
+
+.learn-project-meta {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
 }

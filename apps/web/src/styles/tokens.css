@@ -74,7 +74,7 @@
   --font-section: 14px;
   /* 区块标题、Tab、按钮 */
   --font-title: 16px;
-  /* 卡片与面板标题 */
+  /* 浮层标题：弹窗、抽屉、气泡卡片；页内区块标题用 --font-section */
   --font-page: 18px;
   /* 页面标题 */
   --font-lead: 20px;

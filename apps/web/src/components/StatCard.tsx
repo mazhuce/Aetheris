@@ -6,7 +6,8 @@ interface StatCardProps {
   value: string
   icon: ReactNode
   trend?: number
-  footer?: string
+  /** 卡底补充说明；放得下进度条这类节点，不只是文字。 */
+  footer?: ReactNode
   tone?: 'neutral' | 'green' | 'orange'
 }
 

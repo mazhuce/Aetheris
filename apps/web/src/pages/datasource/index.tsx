@@ -3,7 +3,6 @@ import {
   App,
   Alert,
   Button,
-  Card,
   Col,
   DatePicker,
   Input,
@@ -11,7 +10,6 @@ import {
   Row,
   Select,
   Space,
-  Statistic,
   Table,
   Tag,
   Tooltip
@@ -20,6 +18,7 @@ import type { TableColumnsType } from 'antd'
 import type { Dayjs } from 'dayjs'
 import {
   ApiOutlined,
+  AppstoreOutlined,
   ClusterOutlined,
   DatabaseOutlined,
   PlusOutlined,
@@ -28,6 +27,7 @@ import {
 } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
 import PageToolbar from '@/components/PageToolbar'
+import StatCard from '@/components/StatCard'
 import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import RowActions from '@/components/RowActions'
@@ -319,11 +319,11 @@ export default function DataSourcePage() {
         ) : <Tag>只读访问</Tag>}
       />
 
-      <Row gutter={[16, 16]} className="datasource-overview">
-        <Col xs={12} lg={6}><Card><Statistic title="已接入数据源" value={overview.total} prefix={<DatabaseOutlined />} /></Card></Col>
-        <Col xs={12} lg={6}><Card><Statistic title="配置已启用" value={overview.active} prefix={<ApiOutlined />} /></Card></Col>
-        <Col xs={12} lg={6}><Card><Statistic title="Hive / 湖仓" value={overview.lakehouse} prefix={<ClusterOutlined />} /></Card></Col>
-        <Col xs={12} lg={6}><Card><Statistic title="已覆盖类型" value={overview.types} suffix={`/ ${dataSourceCatalog.length}`} prefix={<ApiOutlined />} /></Card></Col>
+      <Row gutter={12} className="stat-row">
+        <Col xs={12} lg={6}><StatCard title="已接入数据源" value={String(overview.total)} icon={<DatabaseOutlined />} /></Col>
+        <Col xs={12} lg={6}><StatCard title="配置已启用" value={String(overview.active)} icon={<ApiOutlined />} tone="green" /></Col>
+        <Col xs={12} lg={6}><StatCard title="Hive / 湖仓" value={String(overview.lakehouse)} icon={<ClusterOutlined />} /></Col>
+        <Col xs={12} lg={6}><StatCard title="已覆盖类型" value={`${overview.types} / ${dataSourceCatalog.length}`} icon={<AppstoreOutlined />} /></Col>
       </Row>
 
       <Alert
@@ -395,7 +395,7 @@ export default function DataSourcePage() {
         </div>
       </PageToolbar>
 
-      <DataSurface label="数据源列表">
+      <DataSurface title="数据源列表" description="配置启用不等于连接可用；连接健康需手动探测" label="数据源列表">
         <Table<DataSource>
           size="small"
           rowKey="id"

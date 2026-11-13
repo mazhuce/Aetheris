@@ -538,6 +538,16 @@
   font-size: var(--icon-md);
 }
 
+/* tone 之前只在组件里传，没有任何样式接住，等于没写。
+   只在图标上做状态着色，不动卡片底色，避免整页出现彩色块。 */
+.stat-card-green .stat-icon {
+  color: var(--success);
+}
+
+.stat-card-orange .stat-icon {
+  color: var(--warning);
+}
+
 .stat-trend,
 .stat-footer {
   margin-top: var(--space-1);

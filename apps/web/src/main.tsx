@@ -25,7 +25,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PreferencesProvider>
       <NavigationProvider>
-        <AntdApp>
+        {/* 开发模式下 StrictMode 会把首屏的数据请求跑两遍，同一句错误提示会
+            并排叠两条红条，看起来像两个不同的问题。这里限制开发环境只留一条；
+            生产没有双调用，保持多条以便同时暴露不同接口的失败。 */}
+        <AntdApp message={{ maxCount: import.meta.env.DEV ? 1 : 3 }}>
           <QueryClientProvider client={queryClient}>
             <RouterProvider router={router} />
           </QueryClientProvider>

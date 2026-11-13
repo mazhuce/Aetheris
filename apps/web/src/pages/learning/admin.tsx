@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  App, Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space, Statistic,
+  App, Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space,
   Table, Tabs, Tag, Typography
 } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { CheckOutlined, EditOutlined, PlusOutlined, ReloadOutlined, StopOutlined, CloseOutlined } from '@ant-design/icons'
+import {
+  CheckCircleOutlined, CheckOutlined, ClockCircleOutlined, CloudServerOutlined, EditOutlined,
+  PlusOutlined, ReloadOutlined, SendOutlined, StopOutlined, CloseOutlined, TeamOutlined, TrophyOutlined
+} from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import StatCard from '@/components/StatCard'
 import {
   createLab, decideApproval, getAdminAnalytics, listAdminLabs, listApprovals, publishLab, reviewLab, unpublishLab,
   updateLab, type AdminOverview, type ApprovalView, type LabAdminView, type LabAnalytics
@@ -224,19 +228,19 @@ export default function LearningAdminPage() {
   const pending = useMemo(() => approvals.filter((item) => item.status === 'pending').length, [approvals])
 
   return (
-    <div className="workflow-list-page">
+    <>
       <PageHeader
         description="草稿、审核、发布与 MCP 审批都在这里闭环。发布前必须通过内容审核，MCP 只能发起审批、不能直接写内容。"
         extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={() => void refresh()}>刷新</Button>}
       />
 
-      <Row gutter={16} className="form-section-space">
-        <Col span={4}><Card><Statistic title="已发布任务" value={overview?.publishedLabs ?? 0} /></Card></Col>
-        <Col span={4}><Card><Statistic title="总提交" value={overview?.submissions ?? 0} /></Card></Col>
-        <Col span={4}><Card><Statistic title="学员数" value={overview?.learners ?? 0} /></Card></Col>
-        <Col span={4}><Card><Statistic title="整体通过率" value={overview?.passRate ?? 0} suffix="%" /></Card></Col>
-        <Col span={4}><Card><Statistic title="待审批" value={pending} /></Card></Col>
-        <Col span={4}><Card><Statistic title="活跃沙箱" value={overview?.activeSandboxes ?? 0} /></Card></Col>
+      <Row gutter={12} className="stat-row">
+        <Col span={4}><StatCard title="已发布任务" value={String(overview?.publishedLabs ?? 0)} icon={<CheckCircleOutlined />} tone="green" /></Col>
+        <Col span={4}><StatCard title="总提交" value={String(overview?.submissions ?? 0)} icon={<SendOutlined />} /></Col>
+        <Col span={4}><StatCard title="学员数" value={String(overview?.learners ?? 0)} icon={<TeamOutlined />} /></Col>
+        <Col span={4}><StatCard title="整体通过率" value={`${overview?.passRate ?? 0}%`} icon={<TrophyOutlined />} tone="green" /></Col>
+        <Col span={4}><StatCard title="待审批" value={String(pending)} icon={<ClockCircleOutlined />} tone="orange" /></Col>
+        <Col span={4}><StatCard title="活跃沙箱" value={String(overview?.activeSandboxes ?? 0)} icon={<CloudServerOutlined />} /></Col>
       </Row>
 
       <Tabs
@@ -310,6 +314,6 @@ export default function LearningAdminPage() {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   )
 }

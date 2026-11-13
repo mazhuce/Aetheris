@@ -23,11 +23,12 @@
   border-bottom-color: var(--border-subtle);
 }
 
-/* 卡片标题走 --font-title(16)，与正文 13、表格 12 拉开明确落差；
-   14 会和卡内 13/600 的字段标签只差 1px，标题感就没了。 */
+/* 卡片标题与 DataSurface 的 .section-header-copy h2 必须同级：
+   两者都是"页内区块标题"，尺寸不一致会让相邻两页的卡片看着不像一个系统。
+   浮层（弹窗/抽屉）才用 --font-title(16)，因为它脱离页面网格单独出现。 */
 .ant-card .ant-card-head-title {
   color: var(--text-primary);
-  font-size: var(--font-title);
+  font-size: var(--font-section);
   font-weight: var(--weight-semibold);
 }
 
@@ -403,8 +404,10 @@
   border-bottom-color: var(--border-subtle);
 }
 
+/* 轨道用边框色而不是 --bg-raised：后者和卡片底色只差一档，
+   进度为 0 时整条轨道看不见，一列进度项会显得参差不齐。 */
 .ant-progress .ant-progress-inner {
-  background: var(--bg-raised);
+  background: var(--border-default);
 }
 
 .ant-skeleton .ant-skeleton-input,
