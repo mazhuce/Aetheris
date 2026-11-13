@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Empty, Progress, Row, Skeleton, Space, Tag } from 'antd'
+import { App, Button, Col, Empty, Progress, Row, Segmented, Skeleton, Space, Tag } from 'antd'
 import {
   CheckCircleOutlined,
   PlayCircleOutlined,
@@ -35,21 +35,28 @@ export default function LearningCenterPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const [paths, setPaths] = useState<LearningPathSummary[]>([])
+  const [activePathCode, setActivePathCode] = useState('')
   const [detail, setDetail] = useState<LearningPathDetail | null>(null)
   const [progress, setProgress] = useState<ProgressView | null>(null)
   const [projects, setProjects] = useState<ProjectView[]>([])
   const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const list = await listLearningPaths()
+      const [list, progressData, projectList] = await Promise.all([
+        listLearningPaths(),
+        getProgress(),
+        listProjects()
+      ])
       setPaths(list)
-      if (list.length > 0) {
-        setDetail(await getLearningPath(list[0].code))
-      }
-      setProgress(await getProgress())
-      setProjects(await listProjects())
+      setProgress(progressData)
+      setProjects(projectList)
+      // 首次进入或当前路径已下线时，回落到第一条路径。
+      setActivePathCode((current) =>
+        current && list.some((item) => item.code === current) ? current : list[0]?.code ?? ''
+      )
     } catch {
       // 固定 key：开发模式下 StrictMode 会把 effect 跑两遍，
       // 不加 key 就会在顶部叠两条一模一样的红条。
@@ -63,9 +70,24 @@ export default function LearningCenterPage() {
     void refresh()
   }, [refresh])
 
-  const activePath = paths[0]
+  const activePath = paths.find((item) => item.code === activePathCode) ?? paths[0]
+  const activeCode = activePath?.code ?? ''
   const skills = progress?.skills ?? []
   const modules = detail?.modules ?? []
+
+  // 路径详情跟随选中的路径；StrictMode 下用固定 key 防重复提示。
+  useEffect(() => {
+    if (!activeCode) return
+    let active = true
+    setDetailLoading(true)
+    getLearningPath(activeCode)
+      .then((data) => { if (active) setDetail(data) })
+      .catch(() => {
+        if (active) message.error({ content: '路径详情加载失败', key: 'learning-path-detail-error' })
+      })
+      .finally(() => { if (active) setDetailLoading(false) })
+    return () => { active = false }
+  }, [activeCode, message])
 
   /** 继续学习：跳到第一个还没通过的任务，全部通过时回到第一个任务复习。 */
   const nextLab = useMemo(() => {
@@ -92,6 +114,16 @@ export default function LearningCenterPage() {
           </Space>
         )}
       />
+
+      {/* 多条学习路径时提供切换；单条路径不占版面。 */}
+      {paths.length > 1 && (
+        <Segmented
+          className="learn-path-switch"
+          value={activeCode}
+          onChange={(value) => setActivePathCode(value)}
+          options={paths.map((item) => ({ value: item.code, label: `${item.title} · ${item.level}` }))}
+        />
+      )}
 
       <Row gutter={12} className="stat-row">
         <Col span={8}>
@@ -129,7 +161,7 @@ export default function LearningCenterPage() {
             extra={activePath ? <Tag>{activePath.level}</Tag> : null}
             label="学习路径详情"
           >
-            {loading && !detail ? (
+            {(loading || detailLoading) && !detail ? (
               <Skeleton active />
             ) : !activePath ? (
               <Empty description="还没有已发布的学习路径" />
@@ -162,6 +194,11 @@ export default function LearningCenterPage() {
                         <h3>{module.title}</h3>
                         <Tag>{module.level}</Tag>
                         <span className="learn-module-count">{module.labs.length} 个任务</span>
+                        {module.relatedFeatures?.length ? (
+                          <span className="learn-module-features">
+                            对应系统功能：{module.relatedFeatures.join(' · ')}
+                          </span>
+                        ) : null}
                       </header>
                       {module.objective && <p className="learn-module-objective">{module.objective}</p>}
                       <div className="learn-lab-list">

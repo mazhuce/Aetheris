@@ -2135,3 +2135,46 @@
   margin-right: auto;
   background: var(--accent-subtle);
 }
+
+/* 路径切换与知识点 */
+.learn-path-switch {
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.learn-module-features {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learn-meta-features {
+  color: var(--text-secondary);
+  font-size: var(--font-table);
+}
+
+.learn-knowledge {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding-left: var(--space-4);
+  list-style: disc;
+}
+
+.learn-knowledge li {
+  display: grid;
+  gap: 2px;
+}
+
+.learn-knowledge strong {
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  font-weight: var(--weight-medium);
+}
+
+.learn-knowledge span {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
+}

@@ -205,6 +205,16 @@ export default function LearningLabPage() {
               items={lab.steps.map((step) => ({ title: step.title, description: step.detail }))}
             />
             <Divider style={{ margin: '12px 0' }} />
+            <Typography.Paragraph style={{ marginBottom: 8 }}><strong>知识点</strong></Typography.Paragraph>
+            <ul className="learn-knowledge">
+              {(lab.knowledge ?? []).map((item) => (
+                <li key={item.title}>
+                  <strong>{item.title}</strong>
+                  <span>{item.detail}</span>
+                </li>
+              ))}
+            </ul>
+            <Divider style={{ margin: '12px 0' }} />
             <Descriptions size="small" column={1}>
               <Descriptions.Item label="数据表">
                 {lab.tableRefs.map((table) => <Tag key={table}>{table}</Tag>)}
@@ -212,6 +222,11 @@ export default function LearningLabPage() {
               <Descriptions.Item label="评分维度">
                 {lab.rubric.map((item) => <Tag key={item.key}>{item.name} {item.weight}%</Tag>)}
               </Descriptions.Item>
+              {lab.relatedFeatures?.length ? (
+                <Descriptions.Item label="对应系统功能">
+                  <span className="learn-meta-features">{lab.relatedFeatures.join(' · ')}</span>
+                </Descriptions.Item>
+              ) : null}
               <Descriptions.Item label="课程版本">v{lab.version}</Descriptions.Item>
             </Descriptions>
           </DataSurface>

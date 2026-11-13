@@ -31,6 +31,8 @@ export interface ModuleView {
   title: string
   objective?: string
   level: string
+  /** 本模块对应平台里的功能页面，例如「SQL开发 · 元数据管理」。 */
+  relatedFeatures?: string[]
   labs: LabCard[]
 }
 
@@ -89,6 +91,15 @@ export interface LabDetail {
   bestScore?: number
   passed: boolean
   lastStatus: string
+  /** 本任务对应平台里的功能页面。 */
+  relatedFeatures?: string[]
+  /** 随任务讲解的知识点（SQL 基础、数仓环节概念等）。 */
+  knowledge?: LabKnowledge[]
+}
+
+export interface LabKnowledge {
+  title: string
+  detail: string
 }
 
 export interface SandboxInfo {
