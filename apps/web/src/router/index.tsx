@@ -34,6 +34,7 @@ const GrantPage = lazy(() => import('@/pages/system/grants'))
 const AuditLogPage = lazy(() => import('@/pages/system/audit'))
 const AccountPage = lazy(() => import('@/pages/account'))
 const SettingsPage = lazy(() => import('@/pages/settings'))
+const NavigationConfigPage = lazy(() => import('@/pages/settings/navigation'))
 const AnalyticsDatasetPage = lazy(() => import('@/pages/analytics/datasets'))
 const AdhocQueryPage = lazy(() => import('@/pages/analytics/query'))
 const TaskMonitorPage = lazy(() => import('@/pages/operations/tasks'))
@@ -144,7 +145,7 @@ export const router = createBrowserRouter([
       { path: 'governance/quality-trend', element: <QualityTrendPage /> },
       { path: 'governance/lineage', element: <LineagePage /> },
       { path: 'governance/field-lineage', element: <FieldLineagePage /> },
-      { path: 'governance/dependencies', element: <SemanticDependencyPage /> },
+      { path: 'modeling/dependencies', element: <SemanticDependencyPage /> },
       { path: 'governance/classification', element: <GovernancePage /> },
 
       // 智能中心
@@ -165,13 +166,13 @@ export const router = createBrowserRouter([
       { path: 'operations/alerts', element: <AlertCenterPage /> },
       { path: 'operations/services', element: <ServiceMonitorPage /> },
       { path: 'analytics/history', element: <QueryHistoryPage /> },
-      { path: 'analytics/query-audit', element: <QueryAuditPage /> },
+      { path: 'operations/query-audit', element: <QueryAuditPage /> },
       { path: 'assets/tables', element: <TableBrowserPage /> },
       { path: 'integration/sync', element: <DataSyncPage /> },
       { path: 'development/sql', element: <SqlDevelopmentPage /> },
       { path: 'development/spark', element: <SparkDevelopmentPage /> },
       { path: 'development/flink', element: <FlinkDevelopmentPage /> },
-      { path: 'development/acceptance', element: <AcceptanceProgressPage /> },
+      { path: 'operations/acceptance', element: <AcceptanceProgressPage /> },
       { path: 'assets/catalog', element: <AssetCatalogPage /> },
       { path: 'modeling/domains', element: <DomainPage /> },
       { path: 'governance/issues', element: <GovernanceIssuesPage /> },
@@ -187,9 +188,9 @@ export const router = createBrowserRouter([
       { path: 'governance/standards', element: <DataStandardPage /> },
       { path: 'development/releases', element: <ReleasePage /> },
       { path: 'development/workflows', element: <WorkflowGraphPage /> },
-      { path: 'services/subscriptions', element: <SubscriptionPage /> },
-      { path: 'services/authorization', element: <ServiceAuthorizationPage /> },
-      { path: 'workbench/operations', element: <OperationsOverviewPage /> },
+      { path: 'assets/subscriptions', element: <SubscriptionPage /> },
+      { path: 'assets/authorization', element: <ServiceAuthorizationPage /> },
+      { path: 'operations/overview', element: <OperationsOverviewPage /> },
       {
         path: 'operations/audit',
         element: (
@@ -260,6 +261,7 @@ export const router = createBrowserRouter([
 
       // 系统与账户偏好（头部下拉进入，不进导航）
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'settings/navigation', element: <NavigationConfigPage /> },
       { path: 'account', element: <AccountPage /> },
 
       // 一级模块根路径重定向；未交付模块不注册入口。
@@ -282,6 +284,14 @@ export const router = createBrowserRouter([
       { path: 'system/users', element: <Navigate to="/admin/users" replace /> },
       { path: 'system/config', element: <Navigate to="/admin/settings" replace /> },
       { path: 'system/audit', element: <Navigate to="/operations/audit" replace /> },
+
+      // 菜单归属调整后的旧路径兼容（2026-11 信息架构重构）
+      { path: 'workbench/operations', element: <Navigate to="/operations/overview" replace /> },
+      { path: 'development/acceptance', element: <Navigate to="/operations/acceptance" replace /> },
+      { path: 'analytics/query-audit', element: <Navigate to="/operations/query-audit" replace /> },
+      { path: 'governance/dependencies', element: <Navigate to="/modeling/dependencies" replace /> },
+      { path: 'services/subscriptions', element: <Navigate to="/assets/subscriptions" replace /> },
+      { path: 'services/authorization', element: <Navigate to="/assets/authorization" replace /> },
 
       // 未知路径兜底
       { path: '*', element: <Navigate to="/workbench" replace /> }

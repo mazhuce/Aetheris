@@ -2,23 +2,30 @@ import { App, Button, Card, Col, Row, Segmented, Select, Switch } from 'antd'
 import {
   BulbOutlined,
   DashboardOutlined,
+  DeploymentUnitOutlined,
   MoonOutlined,
+  RightOutlined,
   ReloadOutlined,
   SunOutlined
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import PageHeader from '@/components/PageHeader'
 import { usePreferences } from '@/contexts/PreferencesContext'
+import { useNavigationConfig } from '@/contexts/NavigationContext'
+import { isItemVisible, isModuleVisible, navModules } from '@/constants/navigation'
 import type { ColorMode } from '@/utils/preferences'
 
 const HOME_OPTIONS = [
+  { value: '/learning', label: '学习路径' },
   { value: '/workbench', label: '数据概览' },
-  { value: '/workbench/operations', label: '运行概览' },
+  { value: '/operations/overview', label: '运行概览' },
   { value: '/workbench/todos', label: '我的待办' },
   { value: '/workbench/recent', label: '最近访问' }
 ]
 
 export default function SettingsPage() {
   const { message } = App.useApp()
+  const navigate = useNavigate()
   const {
     colorMode,
     reduceMotion,
@@ -26,6 +33,12 @@ export default function SettingsPage() {
     updatePreferences,
     resetPreferences
   } = usePreferences()
+  const { config } = useNavigationConfig()
+
+  const visibleModuleCount = navModules.filter((module) => isModuleVisible(module.key, config)).length
+  const visibleItemCount = navModules
+    .flatMap((module) => module.children)
+    .filter((child) => child.status === 'available' && isItemVisible(child.key, config)).length
 
   const handleReset = () => {
     resetPreferences()
@@ -107,8 +120,25 @@ export default function SettingsPage() {
 
             <div className="settings-reset">
               <Button icon={<ReloadOutlined />} onClick={handleReset}>恢复默认设置</Button>
-              <span>恢复为深色主题、标准动态效果和数据概览首页。</span>
+              <span>恢复为深色主题、标准动态效果和学习路径首页。</span>
             </div>
+          </Card>
+
+          <Card
+            className="settings-card settings-nav-entry"
+            title="菜单配置"
+            extra={<DeploymentUnitOutlined />}
+          >
+            <div className="setting-copy">
+              <strong>自定义顶栏与二级菜单</strong>
+              <span>
+                当前展示 {visibleModuleCount} 个一级菜单、{visibleItemCount} 个二级菜单。
+                可以隐藏任意入口、调整二级菜单归属与顺序，修改后立即生效。
+              </span>
+            </div>
+            <Button className="settings-nav-button" type="primary" onClick={() => navigate('/settings/navigation')}>
+              进入菜单配置 <RightOutlined />
+            </Button>
           </Card>
         </Col>
       </Row>

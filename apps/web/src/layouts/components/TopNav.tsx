@@ -2,7 +2,8 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Avatar, Button, Dropdown } from 'antd'
 import { DownOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { availableNavModules, firstAvailablePath, findModule } from '@/constants/navigation'
+import { firstAvailablePath } from '@/constants/navigation'
+import { useNavigation } from '@/contexts/NavigationContext'
 import GlobalSearch from '@/components/GlobalSearch'
 import BrandMark from '@/components/BrandMark'
 import { logout } from '@/api/auth'
@@ -16,16 +17,15 @@ export default function TopNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const session = useAuthSession()
-  const role = session.status === 'authenticated' ? session.user.role : 'viewer'
   const { homePath } = usePreferences()
-  const modules = useMemo(() => availableNavModules(role), [role])
+  const { modules, role, findModule } = useNavigation()
   const username = session.status === 'authenticated' ? session.user.username : '用户'
 
   const navRef = useRef<HTMLElement>(null)
   const itemRefs = useRef<(HTMLSpanElement | null)[]>([])
   const [overflowAt, setOverflowAt] = useState(modules.length)
 
-  const activeKey = findModule(location.pathname)?.key
+  const activeKey = useMemo(() => findModule(location.pathname)?.key, [findModule, location.pathname])
 
   // 依据可用宽度计算能放下多少个模块，放不下的收进「更多」。
   useLayoutEffect(() => {
@@ -170,7 +170,7 @@ export default function TopNav() {
               items: [
                 { key: 'identity', label: `${username} · ${role === 'admin' ? '管理员' : '只读用户'}`, disabled: true },
                 { type: 'divider' },
-                { key: 'settings', label: '系统设置' },
+                { key: 'settings', label: '个人偏好' },
                 { key: 'profile', label: '账户设置' },
                 { type: 'divider' },
                 { key: 'logout', label: '退出登录', danger: true }

@@ -27,8 +27,8 @@
   margin: 0;
   color: var(--text-primary);
   font-size: var(--font-page);
-  font-weight: 640;
-  letter-spacing: -0.02em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .dashboard-intro-actions {
@@ -114,23 +114,23 @@
 .health-heading > span {
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 560;
+  font-weight: var(--weight-semibold);
 }
 
 .health-heading strong {
   color: var(--text-primary);
-  font-size: 34px;
-  font-weight: 620;
+  font-size: var(--font-hero);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.04em;
+  letter-spacing: var(--tracking-tight);
   line-height: 1;
 }
 
 .health-heading small {
   margin-left: 2px;
   color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--font-body);
+  font-weight: var(--weight-medium);
 }
 
 .health-summary > p {
@@ -182,9 +182,9 @@
 .availability-heading span,
 .panel-heading > div > span {
   color: var(--text-disabled);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: var(--font-meta);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
 }
 
 .availability-heading strong,
@@ -192,13 +192,13 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--font-section);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .availability-heading > small,
 .panel-count {
   color: var(--text-disabled);
-  font-size: 10px;
+  font-size: var(--font-meta);
   font-variant-numeric: tabular-nums;
 }
 
@@ -217,13 +217,13 @@
 }
 
 .availability-empty > .anticon {
-  font-size: 16px;
+  font-size: var(--icon-lg);
 }
 
 .availability-empty strong {
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 560;
+  font-weight: var(--weight-semibold);
 }
 
 .availability-empty span,
@@ -261,7 +261,7 @@
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   background: var(--bg-subtle);
-  font-size: 12px;
+  font-size: var(--icon-sm);
 }
 
 .metric-item > div:nth-child(2) {
@@ -278,10 +278,10 @@
 .metric-item strong {
   margin: 2px 0;
   color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 620;
+  font-size: var(--font-lead);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .metric-spark {
@@ -356,7 +356,7 @@
   overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 560;
+  font-weight: var(--weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -443,14 +443,14 @@
 
 .datasource-overview .ant-statistic-content {
   color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 620;
+  font-size: var(--font-lead);
+  font-weight: var(--weight-semibold);
 }
 
 .datasource-overview .ant-statistic-content-prefix {
   margin-right: var(--space-2);
   color: var(--text-tertiary);
-  font-size: 13px;
+  font-size: var(--font-body);
 }
 
 .datasource-preset-panel,
@@ -532,10 +532,10 @@
 .warehouse-layer-count {
   margin-top: var(--space-3);
   color: var(--text-primary);
-  font-size: 24px;
-  font-weight: 620;
+  font-size: var(--font-lead);
+  font-weight: var(--weight-semibold);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-tight);
 }
 
 .warehouse-layer-unit,
@@ -558,7 +558,7 @@
   z-index: 2;
   right: -10px;
   color: var(--text-disabled);
-  font-size: 10px;
+  font-size: var(--font-meta);
 }
 
 /* Assistant */
@@ -604,7 +604,7 @@
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 560;
+  font-weight: var(--weight-semibold);
 }
 
 .conversation-heading small {
@@ -643,7 +643,7 @@
   overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 540;
+  font-weight: var(--weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -655,7 +655,7 @@
 .conversation-time {
   margin-top: 2px;
   color: var(--text-disabled);
-  font-size: 10px;
+  font-size: var(--font-meta);
 }
 
 .assistant-main {
@@ -692,7 +692,7 @@
   border-radius: var(--radius-md);
   color: var(--accent-hover);
   background: var(--bg-subtle);
-  font-size: 13px;
+  font-size: var(--font-body);
 }
 
 .assistant-identity > div,
@@ -704,13 +704,13 @@
 .assistant-mode strong {
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 560;
+  font-weight: var(--weight-semibold);
 }
 
 .assistant-identity small,
 .assistant-mode small {
   color: var(--text-disabled);
-  font-size: 10px;
+  font-size: var(--font-meta);
 }
 
 .assistant-mode {
@@ -756,7 +756,7 @@
   margin: var(--space-4) 0 var(--space-1);
   color: var(--text-secondary);
   font-size: var(--font-section);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .assistant-empty p {
@@ -834,7 +834,7 @@
   color: var(--text-secondary);
   background: var(--bg-subtle);
   font-size: var(--font-body);
-  line-height: 1.68;
+  line-height: var(--leading-normal);
 }
 
 .chat-msg:not(.user) .chat-bubble {
@@ -909,7 +909,7 @@
   bottom: 20px;
   left: 28px;
   color: var(--text-disabled);
-  font-size: 10px;
+  font-size: var(--font-meta);
   pointer-events: none;
 }
 
@@ -927,7 +927,7 @@
 
 /* Account and settings */
 .account-grid {
-  max-width: 1120px;
+  width: 100%;
 }
 
 .account-card {
@@ -948,11 +948,12 @@
 
 .settings-page {
   width: 100%;
-  max-width: 1180px;
 }
 
+/* 两张卡各自按内容高度收尾：右栏是上下叠放的两块，强制等高会把
+   每张卡都拉到整栏高度，底部留出大片空白。 */
 .settings-card {
-  height: 100%;
+  height: auto;
 }
 
 .settings-card .ant-card-head-extra {
@@ -988,14 +989,14 @@
 .setting-copy strong {
   color: var(--text-primary);
   font-size: var(--font-body);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .setting-copy span,
 .settings-reset > span {
   color: var(--text-tertiary);
-  font-size: var(--font-meta);
-  line-height: 1.55;
+  font-size: var(--font-table);
+  line-height: var(--leading-normal);
 }
 
 .theme-mode-control {
@@ -1140,14 +1141,14 @@
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
   background: var(--bg-subtle);
-  font-size: 15px;
+  font-size: var(--icon-lg);
 }
 
 .coming-soon-body h2 {
   margin: 0;
   color: var(--text-secondary);
   font-size: var(--font-section);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .coming-soon-body p {
@@ -1155,7 +1156,7 @@
   margin: var(--space-2) 0 var(--space-5);
   color: var(--text-tertiary);
   font-size: var(--font-table);
-  line-height: 1.6;
+  line-height: var(--leading-normal);
 }
 
 /* Login */
@@ -1206,9 +1207,9 @@
 .login-brand strong {
   color: var(--text-primary);
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 680;
-  letter-spacing: -0.02em;
+  font-size: var(--font-page);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
 }
 
 .login-legal,
@@ -1232,10 +1233,10 @@
 .login-copy h1 {
   margin: 0 0 var(--space-5);
   color: var(--text-primary);
-  font-size: clamp(32px, 3.5vw, 50px);
-  font-weight: 640;
-  letter-spacing: -0.045em;
-  line-height: 1.14;
+  font-size: clamp(32px, 3.5vw, 50px); /* 例外：登录页主标题为响应式展示字，随视口缩放 */
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
 }
 
 .login-copy h1 em {
@@ -1247,8 +1248,8 @@
   max-width: 590px;
   margin: 0;
   color: var(--text-tertiary);
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: var(--font-section);
+  line-height: var(--leading-normal);
 }
 
 .login-proof {
@@ -1277,7 +1278,7 @@
 .login-proof strong {
   color: var(--text-secondary);
   font-size: var(--font-body);
-  font-weight: 580;
+  font-weight: var(--weight-semibold);
 }
 
 .login-proof em {
@@ -1327,8 +1328,8 @@
 
 .login-card-head h2.ant-typography {
   color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 620;
+  font-size: var(--font-lead);
+  font-weight: var(--weight-semibold);
 }
 
 .login-submit.ant-btn {
@@ -1402,8 +1403,8 @@
   gap: var(--space-3);
   min-width: 0;
   color: currentColor;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--font-section);
+  font-weight: var(--weight-semibold);
 }
 
 .recent-visit-title .ant-tag {
@@ -1414,7 +1415,7 @@
   display: block;
   overflow: hidden;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--font-table);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1497,8 +1498,8 @@
 }
 
 .dag-node-name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--font-body);
+  font-weight: var(--weight-semibold);
   color: var(--text-primary);
   max-width: 100%;
   overflow: hidden;
@@ -1507,7 +1508,7 @@
 }
 
 .dag-node-meta {
-  font-size: 11px;
+  font-size: var(--font-meta);
   color: var(--text-tertiary);
   max-width: 100%;
   overflow: hidden;
@@ -1631,8 +1632,8 @@
 }
 
 .permission-group-header {
-  font-weight: 600;
-  font-size: 12px;
+  font-weight: var(--weight-semibold);
+  font-size: var(--font-table);
   color: var(--text-secondary, #616161);
   margin-bottom: var(--space-2);
 }
@@ -1648,13 +1649,13 @@
 }
 
 .permission-option-code {
-  font-size: 11px;
+  font-size: var(--font-meta);
   color: var(--text-secondary, #616161);
   font-family: var(--font-mono, Consolas, monospace);
 }
 
 .permission-note {
-  font-size: 12px;
+  font-size: var(--font-table);
   color: var(--text-secondary, #616161);
   margin-bottom: var(--space-3);
 }
@@ -1666,6 +1667,146 @@
 }
 
 .grant-actions-hint {
-  font-size: 11px;
+  font-size: var(--font-meta);
   color: var(--text-secondary, #616161);
+}
+
+/* ------------------------------------------------------------------ *
+ * 菜单配置（系统设置 → 菜单配置）
+ * ------------------------------------------------------------------ */
+
+.nav-config-page {
+  width: 100%;
+}
+
+.nav-config-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nav-config-hint {
+  margin-bottom: var(--page-section-gap);
+}
+
+.nav-config-card {
+  margin-bottom: var(--page-section-gap);
+}
+
+.nav-config-card:last-child {
+  margin-bottom: 0;
+}
+
+/* 与「使用偏好」同栏叠放，所以不参与等高拉伸，只保留与上卡的间距。 */
+.settings-nav-entry {
+  height: auto;
+  margin-top: var(--page-section-gap);
+}
+
+.settings-nav-button {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.nav-config-module,
+.nav-config-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.nav-config-item {
+  gap: var(--space-2);
+}
+
+.nav-config-icon {
+  display: inline-flex;
+  color: var(--text-tertiary);
+  font-size: var(--icon-lg);
+}
+
+.nav-config-title {
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.nav-config-count {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+  font-variant-numeric: tabular-nums;
+}
+
+.nav-config-children {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.nav-config-child-chip {
+  max-width: 140px;
+  overflow: hidden;
+  padding: 1px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-table);
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-config-children-more {
+  color: var(--text-tertiary);
+  font-size: var(--font-table);
+}
+
+.nav-config-key,
+.nav-config-path {
+  padding: 1px 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--font-meta);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.nav-config-path {
+  color: var(--text-secondary);
+}
+
+.nav-config-move {
+  display: flex;
+  gap: 2px;
+}
+
+.nav-config-select {
+  width: 100%;
+}
+
+.nav-config-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nav-config-search {
+  width: 200px;
+}
+
+.nav-config-filter {
+  width: 150px;
+}
+
+.nav-config-table .ant-table-thead > tr > th {
+  font-weight: var(--weight-medium);
+}
+
+.nav-config-table .ant-table-tbody > tr > td {
+  vertical-align: middle;
 }

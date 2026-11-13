@@ -108,7 +108,7 @@ export default function TagAssetsPage() {
       title: '表',
       key: 'tableName',
       render: (row: TagTableRow) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>{row.tableName}</Typography.Text>
+        <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{row.tableName}</Typography.Text>
       )
     },
     { title: '打标人', dataIndex: 'createdBy', key: 'createdBy', width: 110, render: (v?: string) => v ? <Typography.Text code>{v}</Typography.Text> : '—' },

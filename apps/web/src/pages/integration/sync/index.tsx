@@ -59,7 +59,7 @@ export default function DataSyncPage() {
       dataIndex: 'taskName',
       key: 'taskName',
       width: 200,
-      render: (value: string) => <Typography.Text strong style={{ fontSize: 13 }}>{value}</Typography.Text>
+      render: (value: string) => <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{value}</Typography.Text>
     },
     {
       title: '状态',
@@ -115,7 +115,7 @@ export default function DataSyncPage() {
       key: 'errorMessage',
       ellipsis: true,
       render: (value?: string) => value
-        ? <Typography.Text type="danger" style={{ fontSize: 12 }}>{value}</Typography.Text>
+        ? <Typography.Text type="danger" style={{ fontSize: 'var(--font-table)' }}>{value}</Typography.Text>
         : '—'
     }
   ]

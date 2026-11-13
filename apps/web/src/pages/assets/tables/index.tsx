@@ -71,9 +71,9 @@ export default function TableBrowserPage() {
       width: 260,
       render: (value: string, record) => (
         <div>
-          <Typography.Text strong style={{ fontSize: 13 }}>{value}</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{value}</Typography.Text>
           {record.tableComment && (
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{record.tableComment}</div>
+            <div style={{ fontSize: 'var(--font-table)', color: 'var(--text-tertiary)' }}>{record.tableComment}</div>
           )}
         </div>
       )

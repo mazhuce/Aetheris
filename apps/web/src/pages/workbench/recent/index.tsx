@@ -7,7 +7,7 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { useAuthSession } from '@/hooks/useAuthSession'
 import { clearRecentVisits, readRecentVisits, type RecentVisit } from '@/utils/recentVisits'
-import { flattenNavItems } from '@/constants/navigation'
+import { useNavigation } from '@/contexts/NavigationContext'
 
 const PAGE_SIZE = 12
 
@@ -27,6 +27,7 @@ export default function RecentVisitsPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const session = useAuthSession()
+  const { items: navItems } = useNavigation()
   const username = session.status === 'authenticated' ? session.user.username : undefined
   const [visits, setVisits] = useState<RecentVisit[]>([])
   const [page, setPage] = useState(1)
@@ -47,7 +48,7 @@ export default function RecentVisitsPage() {
   }
 
   // 仍可用的页面才允许点击跳转；功能下线后显示为普通文本
-  const availablePaths = new Set(flattenNavItems().map((item) => item.path))
+  const availablePaths = new Set(navItems.map((item) => item.path))
   const todayCount = visits.filter((visit) => Date.now() - visit.visitedAt < 86_400_000).length
   const pageVisits = visits.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 

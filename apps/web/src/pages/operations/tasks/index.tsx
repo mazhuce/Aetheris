@@ -100,7 +100,7 @@ export default function TaskMonitorPage() {
       key: 'errorMessage',
       ellipsis: true,
       render: (value?: string) =>
-        value ? <Typography.Text type="danger" style={{ fontSize: 13 }}>{value}</Typography.Text> : '—'
+        value ? <Typography.Text type="danger" style={{ fontSize: 'var(--font-body)' }}>{value}</Typography.Text> : '—'
     }
   ]
 

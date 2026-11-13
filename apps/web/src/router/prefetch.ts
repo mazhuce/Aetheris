@@ -10,7 +10,7 @@ const loaders: Array<[string, () => Promise<unknown>]> = [
   ['/modeling/metrics', () => import('@/pages/modeling/metrics')],
   ['/assets/metrics', () => import('@/pages/assets/metrics')],
   ['/analytics/query', () => import('@/pages/analytics/query')],
-  ['/analytics/query-audit', () => import('@/pages/analytics/query-audit')],
+  ['/operations/query-audit', () => import('@/pages/analytics/query-audit')],
   ['/ai/assistant', () => import('@/pages/ai/chat')],
   ['/ai/chatbi', () => import('@/pages/ai/chatbi')]
 ]

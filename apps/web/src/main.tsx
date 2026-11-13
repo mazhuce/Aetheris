@@ -7,6 +7,7 @@ import { queryClient } from './auth/queryClient'
 import { startSessionSynchronization } from './auth/sessionSynchronization'
 import { router } from './router'
 import { PreferencesProvider } from './contexts/PreferencesContext'
+import { NavigationProvider } from './contexts/NavigationContext'
 import { applyPreferences, readPreferences } from './utils/preferences'
 import '@fontsource-variable/dm-sans/wght.css'
 import '@fontsource-variable/host-grotesk/wght.css'
@@ -23,11 +24,13 @@ applyPreferences(readPreferences())
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <PreferencesProvider>
-      <AntdApp>
-        <QueryClientProvider client={queryClient}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </AntdApp>
+      <NavigationProvider>
+        <AntdApp>
+          <QueryClientProvider client={queryClient}>
+            <RouterProvider router={router} />
+          </QueryClientProvider>
+        </AntdApp>
+      </NavigationProvider>
     </PreferencesProvider>
   </React.StrictMode>
 )

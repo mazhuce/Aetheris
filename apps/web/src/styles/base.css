@@ -96,7 +96,7 @@ code {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   background: var(--bg-subtle);
-  font-size: 0.92em;
+  font-size: 0.92em; /* 例外：行内 code 跟随父级字号等比缩放，不占标度 */
 }
 
 .numeric,

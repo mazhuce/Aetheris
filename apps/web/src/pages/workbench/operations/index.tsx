@@ -203,7 +203,7 @@ export default function OperationsOverviewPage() {
             />
             {failedCount > 0 && (
               <div style={{ marginTop: 12 }}>
-                <Typography.Text type="warning" style={{ fontSize: 12 }}>
+                <Typography.Text type="warning" style={{ fontSize: 'var(--font-table)' }}>
                   <ExclamationCircleOutlined /> 有 {failedCount} 次任务执行失败，建议前往任务监控排查。
                 </Typography.Text>
               </div>

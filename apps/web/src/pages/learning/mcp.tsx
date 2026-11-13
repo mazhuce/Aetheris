@@ -169,7 +169,7 @@ export default function LearningMcpPage() {
                   value={args}
                   spellCheck={false}
                   onChange={(event) => setArgs(event.target.value)}
-                  style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13 }}
+                  style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 'var(--font-body)' }}
                 />
                 <Space>
                   <Button type="primary" icon={<PlayCircleOutlined />} loading={calling} onClick={() => void handleCall()}>
@@ -186,7 +186,7 @@ export default function LearningMcpPage() {
                     <Typography.Text strong>响应</Typography.Text>
                     <pre style={{
                       background: 'var(--bg-secondary, #fafafa)', padding: 12, borderRadius: 8, maxHeight: 420,
-                      overflow: 'auto', fontSize: 12, margin: 0
+                      overflow: 'auto', fontSize: 'var(--font-table)', margin: 0
                     }}>
                       {JSON.stringify(response.result, null, 2)}
                     </pre>

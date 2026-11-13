@@ -104,9 +104,9 @@ export default function GovernanceIssuesPage() {
       key: 'content',
       render: (_, record) => (
         <div>
-          <Typography.Text strong style={{ fontSize: 13 }}>{record.title}</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{record.title}</Typography.Text>
           {record.message && (
-            <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 2, fontSize: 12 }} ellipsis={{ rows: 2, expandable: true }}>
+            <Typography.Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 2, fontSize: 'var(--font-table)' }} ellipsis={{ rows: 2, expandable: true }}>
               {record.message}
             </Typography.Paragraph>
           )}

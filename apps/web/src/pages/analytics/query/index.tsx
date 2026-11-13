@@ -174,5 +174,5 @@ export default function AdhocQueryPage() {
 
 function renderCell(value: unknown) {
   if (value === null || value === undefined) return <Typography.Text type="secondary">NULL</Typography.Text>
-  return <Typography.Text style={{ fontSize: 13 }}>{String(value)}</Typography.Text>
+  return <Typography.Text style={{ fontSize: 'var(--font-body)' }}>{String(value)}</Typography.Text>
 }

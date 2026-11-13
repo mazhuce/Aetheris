@@ -59,15 +59,52 @@
   --stage-header-bg: rgba(19, 20, 23, 0.94);
   --stage-glow: rgba(255, 255, 255, 0.04);
 
-  /* Typography */
+  /* Typography — 全站唯一字号标度。
+     新增界面只从这里取，不要再写裸 px；确需例外时在同一行注释原因。 */
   --font-sans: "DM Sans Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-display: "Host Grotesk Variable", "Noto Sans SC Variable", "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  --font-page: 18px;
-  --font-section: 14px;
-  --font-body: 13px;
-  --font-table: 12px;
+
   --font-meta: 11px;
+  /* 徽标、图表刻度、辅助说明 */
+  --font-table: 12px;
+  /* 表格单元格、密集数据 */
+  --font-body: 13px;
+  /* 正文默认 */
+  --font-section: 14px;
+  /* 区块标题、Tab、按钮 */
+  --font-title: 16px;
+  /* 卡片与面板标题 */
+  --font-page: 18px;
+  /* 页面标题 */
+  --font-lead: 20px;
+  /* 关键数值、次级大标题 */
+  --font-hero: 28px;
+  /* 首屏与仪表盘主数值 */
+
+  /* Icon glyph scale — 图标与文字分开管理，避免图标跟着正文字号漂移。
+     icon-xs 用于下拉箭头等方向标记，icon-xl 用于空状态/入口卡片的主图标。 */
+  --icon-xs: 8px;
+  --icon-sm: 12px;
+  --icon-md: 14px;
+  --icon-lg: 16px;
+  --icon-xl: 18px;
+  --icon-2xl: 20px;
+
+  /* 字重只保留三档，避免同层级标题忽粗忽细 */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* 行高三档；徽标、单行数值可单独用 line-height: 1 覆盖 */
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.6;
+
+  /* 字间距：中文标题收紧，全大写小标签放宽 */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-caps: 0.06em;
 
   /* Spacing */
   --space-1: 4px;
@@ -101,6 +138,9 @@
   --input-area-min-h: 160px;
 
   /* Geometry and motion */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --shadow-float: 0 10px 28px rgba(0, 0, 0, 0.28);
   --shadow-dialog: 0 18px 48px rgba(0, 0, 0, 0.38);
   --motion-fast: 140ms;

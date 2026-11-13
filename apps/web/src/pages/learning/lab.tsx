@@ -239,7 +239,7 @@ export default function LearningLabPage() {
               onChange={(event) => setSql(event.target.value)}
               rows={14}
               spellCheck={false}
-              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 13 }}
+              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 'var(--font-body)' }}
               placeholder="-- 从 SELECT 开始，逐步加入过滤、去重或聚合"
             />
             <Space style={{ marginTop: 12 }} wrap>
@@ -274,8 +274,8 @@ export default function LearningLabPage() {
                     <List.Item>
                       <Space align="start">
                         {item.passed
-                          ? <CheckCircleFilled style={{ color: '#52c41a', marginTop: 3 }} />
-                          : <CloseCircleFilled style={{ color: '#ff4d4f', marginTop: 3 }} />}
+                          ? <CheckCircleFilled style={{ color: 'var(--success)', marginTop: 3 }} />
+                          : <CloseCircleFilled style={{ color: 'var(--danger)', marginTop: 3 }} />}
                         <Space direction="vertical" size={0}>
                           <span>{item.name}（权重 {item.weight}%）</span>
                           <Typography.Text type="secondary">{item.detail}</Typography.Text>
@@ -348,7 +348,7 @@ export default function LearningLabPage() {
                     padding: 10, borderRadius: 8, marginLeft: item.role === 'user' ? 32 : 0,
                     marginRight: item.role === 'assistant' ? 24 : 0
                   }}>
-                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
                       {item.role === 'user' ? '我' : item.model || '导师'}
                     </Typography.Text>
                     <div style={{ whiteSpace: 'pre-wrap' }}>{item.content}</div>

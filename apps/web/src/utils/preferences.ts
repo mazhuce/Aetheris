@@ -11,14 +11,15 @@ export const PREFERENCES_KEY = 'aetheris-system-preferences'
 export const DEFAULT_PREFERENCES: AppPreferences = {
   colorMode: 'dark',
   reduceMotion: false,
-  homePath: '/workbench'
+  homePath: '/learning'
 }
 
 const ALLOWED_HOME_PATHS = new Set([
+  '/learning',
   '/workbench',
-  '/workbench/operations',
   '/workbench/todos',
-  '/workbench/recent'
+  '/workbench/recent',
+  '/operations/overview'
 ])
 
 export function readPreferences(): AppPreferences {

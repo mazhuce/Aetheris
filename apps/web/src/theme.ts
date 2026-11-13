@@ -86,7 +86,11 @@ export function getAppTheme(mode: ColorMode): ThemeConfig {
       }
 
   return {
-    algorithm: [dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm, antdTheme.compactAlgorithm],
+    // 只用明暗算法，不用 compactAlgorithm：
+    // compact 会把 fontSizeSM 当作基准重算整条字号阶梯，fontSize:13 会被派生成 10px，
+    // 反而比 fontSizeSM 更小，与 styles/tokens.css 的固定标度对不上。
+    // 密度改由 controlHeight、Table 内边距等显式令牌控制（见下方 components）。
+    algorithm: [dark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm],
     token: {
       colorPrimary: palette.primary,
       colorPrimaryHover: palette.primaryHover,
@@ -118,9 +122,15 @@ export function getAppTheme(mode: ColorMode): ThemeConfig {
       controlHeightSM: 28,
       fontSize: 13,
       fontSizeSM: 12,
+      fontSizeLG: 16,
+      fontSizeXL: 20,
+      fontSizeIcon: 14,
       fontFamily,
       fontFamilyCode,
-      lineHeight: 1.5,
+      lineHeight: 1.6,
+      lineHeightSM: 1.4,
+      lineHeightLG: 1.5,
+      fontWeightStrong: 600,
       lineWidth: 1,
       motionDurationFast: '0.14s',
       motionDurationMid: '0.18s',

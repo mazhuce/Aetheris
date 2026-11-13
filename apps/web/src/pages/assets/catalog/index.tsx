@@ -77,9 +77,9 @@ export default function AssetCatalogPage() {
       key: 'tableName',
       render: (value: string, record) => (
         <div>
-          <Typography.Text strong style={{ fontSize: 13 }}>{value}</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{value}</Typography.Text>
           {record.tableComment && (
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{record.tableComment}</div>
+            <div style={{ fontSize: 'var(--font-table)', color: 'var(--text-tertiary)' }}>{record.tableComment}</div>
           )}
         </div>
       )
@@ -141,9 +141,9 @@ export default function AssetCatalogPage() {
                   style={{
                     textAlign: 'left',
                     padding: '10px 12px',
-                    borderRadius: 8,
-                    border: `1px solid ${active ? 'var(--brand-primary, #1677ff)' : 'transparent'}`,
-                    background: active ? 'rgba(22, 119, 255, 0.08)' : 'transparent',
+                    borderRadius: 'var(--radius-lg)',
+                    border: `1px solid ${active ? 'var(--accent-border)' : 'transparent'}`,
+                    background: active ? 'var(--accent-subtle)' : 'transparent',
                     cursor: 'pointer',
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -151,11 +151,11 @@ export default function AssetCatalogPage() {
                     width: '100%'
                   }}
                 >
-                  <span style={{ fontSize: 13, fontWeight: active ? 600 : 400 }}>
+                  <span style={{ fontSize: 'var(--font-body)', fontWeight: active ? 600 : 400 }}>
                     <FolderOpenOutlined style={{ marginRight: 8, color: 'var(--text-tertiary)' }} />
                     {entry.domain}
                   </span>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>{entry.total} 表</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>{entry.total} 表</Typography.Text>
                 </button>
               )
             })}

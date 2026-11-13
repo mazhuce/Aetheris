@@ -100,15 +100,15 @@ export default function QueryHistoryPage() {
       key: 'sqlText',
       render: (value: string, record) => (
         <div>
-          <Typography.Text code style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+          <Typography.Text code style={{ fontSize: 'var(--font-table)', display: 'block', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
             {value.length > 160 ? `${value.slice(0, 160)}…` : value}
           </Typography.Text>
           {record.errorMessage && (
-            <Typography.Text type="danger" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>
+            <Typography.Text type="danger" style={{ fontSize: 'var(--font-table)', display: 'block', marginTop: 2 }}>
               {record.errorMessage}
             </Typography.Text>
           )}
-          {record.requestId && <Typography.Text type="secondary" style={{ fontSize: 12 }}>请求编号：{record.requestId}</Typography.Text>}
+          {record.requestId && <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>请求编号：{record.requestId}</Typography.Text>}
         </div>
       )
     },

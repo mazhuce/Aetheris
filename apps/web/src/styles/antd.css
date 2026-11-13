@@ -23,10 +23,12 @@
   border-bottom-color: var(--border-subtle);
 }
 
+/* 卡片标题走 --font-title(16)，与正文 13、表格 12 拉开明确落差；
+   14 会和卡内 13/600 的字段标签只差 1px，标题感就没了。 */
 .ant-card .ant-card-head-title {
-  color: var(--text-secondary);
-  font-size: var(--font-table);
-  font-weight: 600;
+  color: var(--text-primary);
+  font-size: var(--font-title);
+  font-weight: var(--weight-semibold);
 }
 
 .ant-card .ant-card-body {
@@ -35,7 +37,7 @@
 
 .ant-btn {
   border-radius: var(--radius-md);
-  font-weight: 520;
+  font-weight: var(--weight-medium);
   box-shadow: none;
   transition: color var(--motion-fast) ease, border-color var(--motion-fast) ease, background var(--motion-fast) ease;
 }
@@ -115,7 +117,7 @@
 }
 
 .ant-input-textarea textarea {
-  line-height: 1.6;
+  line-height: var(--leading-normal);
 }
 
 .ant-form-item {
@@ -129,7 +131,7 @@
 .ant-form-item-label > label {
   color: var(--text-secondary);
   font-size: var(--font-table);
-  font-weight: 540;
+  font-weight: var(--weight-medium);
 }
 
 .ant-form-item-extra,
@@ -137,7 +139,7 @@
   margin-top: var(--space-1);
   color: var(--text-tertiary);
   font-size: var(--font-meta);
-  line-height: 1.5;
+  line-height: var(--leading-normal);
 }
 
 .ant-table-wrapper .ant-table {
@@ -158,8 +160,8 @@
   color: var(--text-tertiary);
   background: var(--bg-subtle);
   font-size: var(--font-meta);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
   white-space: nowrap;
 }
 
@@ -314,8 +316,8 @@
 .ant-modal .ant-modal-title,
 .ant-drawer .ant-drawer-title {
   color: var(--text-primary);
-  font-size: var(--font-section);
-  font-weight: 620;
+  font-size: var(--font-title);
+  font-weight: var(--weight-semibold);
 }
 
 .ant-modal .ant-modal-footer {

@@ -111,6 +111,7 @@ export default function AccountPage() {
   return (
     <>
       <PageHeader
+        title="账户设置"
         description="维护个人资料与登录密码；用户名、角色与状态由管理员统一管理。"
       />
 

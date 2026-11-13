@@ -7,9 +7,8 @@ import {
   SearchOutlined
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
-import { flattenNavItems } from '@/constants/navigation'
+import { useNavigation } from '@/contexts/NavigationContext'
 import { searchTables, warehouseLayerLabel, type MetadataTable } from '@/api/metadata'
-import { getCurrentRole } from '@/utils/access'
 
 interface NavResult {
   kind: 'nav'
@@ -38,7 +37,7 @@ type Result = NavResult | TableResult
  */
 export default function GlobalSearch() {
   const navigate = useNavigate()
-  const role = getCurrentRole()
+  const { role, items: navItems } = useNavigation()
   const [open, setOpen] = useState(false)
   const [keyword, setKeyword] = useState('')
   const [tables, setTables] = useState<MetadataTable[]>([])
@@ -116,7 +115,7 @@ export default function GlobalSearch() {
   const navResults = useMemo<NavResult[]>(() => {
     const trimmed = keyword.trim().toLowerCase()
     const matches: NavResult[] = []
-    for (const item of flattenNavItems()) {
+    for (const item of navItems) {
       if (item.requiredRole && item.requiredRole !== role) continue
       if (!trimmed || item.label.toLowerCase().includes(trimmed) || item.moduleLabel.toLowerCase().includes(trimmed)) {
         matches.push({
@@ -129,7 +128,7 @@ export default function GlobalSearch() {
       }
     }
     return matches
-  }, [keyword, role])
+  }, [keyword, navItems, role])
 
   const results = useMemo<Result[]>(() => {
     const tableResults: TableResult[] = tables.map((table) => ({

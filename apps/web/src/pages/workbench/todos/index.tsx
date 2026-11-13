@@ -116,7 +116,7 @@ export default function TodosPage() {
                 ]}
               >
                 <List.Item.Meta
-                  avatar={<BellOutlined style={{ fontSize: 20, color: item.isRead ? 'var(--text-disabled)' : '#1677ff' }} />}
+                  avatar={<BellOutlined style={{ fontSize: 'var(--icon-2xl)', color: item.isRead ? 'var(--text-disabled)' : 'var(--accent)' }} />}
                   title={
                     <Space size={8} wrap>
                       {!item.isRead && <Badge status="processing" />}

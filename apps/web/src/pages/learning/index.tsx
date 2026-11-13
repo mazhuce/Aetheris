@@ -165,7 +165,7 @@ export default function LearningCenterPage() {
                         <Typography.Text type="secondary">{skill.bestScore} 分</Typography.Text>
                       </Space>
                       <Progress percent={percent} size="small" showInfo={false} />
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
                         {skill.passedLabs}/{skill.labs} 个任务通过
                       </Typography.Text>
                     </div>
@@ -180,10 +180,10 @@ export default function LearningCenterPage() {
               <Space direction="vertical" style={{ width: '100%' }}>
                 {progress.credentials.map((credential) => (
                   <Space key={credential.id}>
-                    <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                    <CheckCircleOutlined style={{ color: 'var(--success)' }} />
                     <Space direction="vertical" size={0}>
                       <span>{credential.title}</span>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
                         {new Date(credential.issuedAt).toLocaleString()}
                       </Typography.Text>
                     </Space>
@@ -213,7 +213,7 @@ export default function LearningCenterPage() {
                       </Space>
                       <Typography.Text type="secondary">{project.summary}</Typography.Text>
                       <Progress percent={percent} size="small" />
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
                         {project.passedLabs}/{project.labCount} 个任务通过 · 交付物 {project.deliverables.length} 项
                       </Typography.Text>
                     </Space>

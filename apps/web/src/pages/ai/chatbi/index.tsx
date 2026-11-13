@@ -147,7 +147,7 @@ export default function ChatBiPage() {
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.content}</ReactMarkdown>
           </div>
           {result.model && (
-            <Typography.Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 12 }}>
+            <Typography.Text type="secondary" style={{ display: 'block', marginTop: 12, fontSize: 'var(--font-table)' }}>
               <QuestionCircleOutlined /> 模型：{result.model}
             </Typography.Text>
           )}

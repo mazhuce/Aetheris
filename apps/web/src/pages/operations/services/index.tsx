@@ -45,7 +45,7 @@ export default function ServiceMonitorPage() {
       key: 'name',
       width: 200,
       render: (value: string) => (
-        <Typography.Text strong style={{ fontSize: 13 }}>
+        <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>
           <CloudServerOutlined style={{ marginRight: 8, color: 'var(--text-tertiary)' }} />
           {value}
         </Typography.Text>
@@ -65,7 +65,7 @@ export default function ServiceMonitorPage() {
       key: 'detail',
       ellipsis: true,
       render: (value?: string) => (
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>{value || '—'}</Typography.Text>
+        <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>{value || '—'}</Typography.Text>
       )
     },
     {
@@ -107,7 +107,7 @@ export default function ServiceMonitorPage() {
       </DataSurface>
 
       <div style={{ marginTop: 16 }}>
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
           说明：HTTP 服务探测 /actuator/health 端点；数据库探测 TCP 端口。4xx 响应视为服务在线（路由或认证问题，非宕机）。
         </Typography.Text>
       </div>

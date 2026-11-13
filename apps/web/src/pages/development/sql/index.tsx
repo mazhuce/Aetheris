@@ -84,7 +84,7 @@ export default function SqlDevelopmentPage() {
         render: (value: unknown) =>
           value === null || value === undefined
             ? <Typography.Text type="secondary">NULL</Typography.Text>
-            : <Typography.Text style={{ fontSize: 13 }}>{String(value)}</Typography.Text>
+            : <Typography.Text style={{ fontSize: 'var(--font-body)' }}>{String(value)}</Typography.Text>
       }))
     : []
 
