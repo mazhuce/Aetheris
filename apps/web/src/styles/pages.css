@@ -2106,3 +2106,32 @@
   color: var(--text-tertiary);
   font-size: var(--font-meta);
 }
+
+/* 任务详情 / AI 导师 */
+.learn-panel-note {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+/* 导师气泡：原实现引用了不存在的 --bg-secondary，回退到写死的浅灰，
+   深色主题下白字浅灰底基本不可读；助手侧还是一枚 antd 蓝色 rgba。
+   统一走主题令牌，两侧只靠背景与对齐区分。 */
+.tutor-bubble {
+  display: grid;
+  gap: 2px;
+  max-width: 86%;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  line-height: var(--leading-normal);
+}
+
+.tutor-bubble.is-user {
+  margin-left: auto;
+  background: var(--bg-subtle);
+}
+
+.tutor-bubble.is-assistant {
+  margin-right: auto;
+  background: var(--accent-subtle);
+}

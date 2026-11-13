@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { App, Button, Card, Col, Empty, List, Progress, Row, Skeleton, Space, Tag, Typography } from 'antd'
+import { App, Button, Col, Empty, List, Progress, Row, Skeleton, Space, Tag, Typography } from 'antd'
 import { ArrowLeftOutlined, ExperimentOutlined, RightOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { getProject, type ProjectDetail } from '@/api/learning'
 
@@ -28,13 +29,13 @@ export default function LearningProjectPage() {
     return () => { active = false }
   }, [code, message])
 
-  if (loading) return <div className="workflow-list-page"><Skeleton active paragraph={{ rows: 8 }} /></div>
-  if (!project) return <div className="workflow-list-page"><Empty description="项目不存在" /></div>
+  if (loading) return <Skeleton active paragraph={{ rows: 8 }} />
+  if (!project) return <Empty description="项目不存在" />
 
   const percent = project.labCount === 0 ? 0 : Math.round((project.passedLabs / project.labCount) * 100)
 
   return (
-    <div className="workflow-list-page">
+    <>
       <PageHeader
         title={project.title}
         description={project.summary}
@@ -43,22 +44,22 @@ export default function LearningProjectPage() {
           <StatusBadge tone={percent === 100 ? 'success' : 'warning'} dot={false}>{percent}% 完成</StatusBadge></Space>}
       />
 
-      <Row gutter={16}>
+      <Row gutter={16} align="top">
         <Col span={8}>
-          <Card title="项目背景" size="small">
+          <DataSurface title="项目背景" label="项目背景">
             <Typography.Paragraph type="secondary">{project.scenario}</Typography.Paragraph>
             <Typography.Text strong>交付物</Typography.Text>
             <Space direction="vertical" style={{ marginTop: 8, width: '100%' }}>
-              {project.deliverables.map((item) => <Tag key={item} color="blue">{item}</Tag>)}
+              {project.deliverables.map((item) => <Tag key={item}>{item}</Tag>)}
             </Space>
-          </Card>
-          <Card title="项目进度" size="small" style={{ marginTop: 16 }}>
+          </DataSurface>
+          <DataSurface title="项目进度" label="项目进度" style={{ marginTop: 16 }}>
             <Progress percent={percent} status="active" />
             <Typography.Text type="secondary">{project.passedLabs}/{project.labCount} 个任务已通过</Typography.Text>
-          </Card>
+          </DataSurface>
         </Col>
         <Col span={16}>
-          <Card title="任务清单" size="small">
+          <DataSurface title="任务清单" label="任务清单">
             <List
               dataSource={project.labs}
               renderItem={(lab) => {
@@ -73,7 +74,7 @@ export default function LearningProjectPage() {
                   >
                     <List.Item.Meta
                       avatar={<ExperimentOutlined />}
-                      title={<Space>{lab.title}<Tag>{lab.level}</Tag>{lab.bestScore !== undefined && <Tag color="blue">{lab.bestScore} 分</Tag>}
+                      title={<Space>{lab.title}<Tag>{lab.level}</Tag>{lab.bestScore !== undefined && <span className="learn-lab-score">{lab.bestScore} 分</span>}
                         <StatusBadge tone={meta.tone} dot={false}>{meta.text}</StatusBadge></Space>}
                       description={<>{lab.summary} · 约 {lab.estimatedMinutes} 分钟</>}
                     />
@@ -81,9 +82,9 @@ export default function LearningProjectPage() {
                 )
               }}
             />
-          </Card>
+          </DataSurface>
         </Col>
       </Row>
-    </div>
+    </>
   )
 }

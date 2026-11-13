@@ -38,7 +38,7 @@ export default function MetricAssetsPage() {
     { title: '指标编码', dataIndex: 'metricCode', width: 160, render: (value) => <Typography.Text code>{value}</Typography.Text> },
     { title: '指标名称', dataIndex: 'metricName', width: 180, render: (value) => <Typography.Text strong>{value}</Typography.Text> },
     { title: '业务域', dataIndex: 'businessDomain', width: 120, render: (value) => value || '—' },
-    { title: '版本', dataIndex: 'version', width: 75, render: (value) => <Tag color="green">v{value}</Tag> },
+    { title: '版本', dataIndex: 'version', width: 75, render: (value) => <Tag>v{value}</Tag> },
     { title: '来源表', dataIndex: 'sourceTableId', width: 160, render: tableName },
     { title: '口径', width: 210, render: (_, row) => `${row.aggregation}${row.measureColumn ? `(${row.measureColumn})` : '(*)'}` },
     { title: '单位', dataIndex: 'unit', width: 70, render: (value) => value || '—' },

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  Alert, App, Button, Card, Col, Descriptions, Divider, Drawer, Empty, Input, List, Row, Skeleton, Space,
+  Alert, App, Button, Col, Descriptions, Divider, Drawer, Empty, Input, List, Row, Skeleton, Space,
   Steps, Table, Tag, Typography
 } from 'antd'
 import {
-  ArrowLeftOutlined, BulbOutlined, CheckCircleFilled, CloseCircleFilled, HistoryOutlined, PlayCircleOutlined,
+  ArrowLeftOutlined, BulbOutlined, CheckCircleFilled, CloseCircleFilled, PlayCircleOutlined,
   ReloadOutlined, RobotOutlined, SendOutlined
 } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import {
   chatWithTutor, getLab, getTutorHistory, listSubmissions, requestHint, resetLab, startLab, submitLab,
@@ -158,14 +159,14 @@ export default function LearningLabPage() {
   }, [result])
 
   if (loading && !lab) {
-    return <div className="workflow-list-page"><Skeleton active paragraph={{ rows: 12 }} /></div>
+    return <Skeleton active paragraph={{ rows: 12 }} />
   }
   if (!lab) {
-    return <div className="workflow-list-page"><Empty description="任务不存在或尚未发布" /></div>
+    return <Empty description="任务不存在或尚未发布" />
   }
 
   return (
-    <div className="workflow-list-page">
+    <>
       <PageHeader
         title={lab.title}
         description={lab.summary}
@@ -180,18 +181,19 @@ export default function LearningLabPage() {
             <Tag>{lab.level}</Tag>
             <Tag>{lab.difficulty}</Tag>
             <Tag>{lab.estimatedMinutes} 分钟</Tag>
-            <Tag color="blue">通过线 {lab.passScore}</Tag>
+            <Tag>通过线 {lab.passScore}</Tag>
             {lab.sandboxActive
               ? <StatusBadge tone="success" dot={false}>沙箱 {lab.sandboxSchema}</StatusBadge>
               : <StatusBadge tone="warning" dot={false}>沙箱未创建</StatusBadge>}
-            {lab.level === 'L6' && <Tag color="purple">Medium 沙箱（并发受限）</Tag>}
+            {lab.level === 'L6' && <Tag>Medium 沙箱（并发受限）</Tag>}
           </Space>
         }
       />
 
-      <Row gutter={16}>
+      {/* align="top"：DataSurface 自带 height:100%，两栏并排时不限制会被拉成等高。 */}
+      <Row gutter={16} align="top">
         <Col span={10}>
-          <Card title="任务卡" size="small">
+          <DataSurface title="任务卡" label="任务卡">
             <Typography.Paragraph><strong>业务场景</strong></Typography.Paragraph>
             <Typography.Paragraph type="secondary">{lab.scenario}</Typography.Paragraph>
             <Typography.Paragraph><strong>验收标准</strong></Typography.Paragraph>
@@ -212,21 +214,25 @@ export default function LearningLabPage() {
               </Descriptions.Item>
               <Descriptions.Item label="课程版本">v{lab.version}</Descriptions.Item>
             </Descriptions>
-          </Card>
+          </DataSurface>
 
           {hint && (
-            <Card size="small" style={{ marginTop: 16 }} title={<Space><BulbOutlined />{hint.title}</Space>}>
+            <DataSurface
+              title={<Space><BulbOutlined />{hint.title}</Space>}
+              label="提示"
+              style={{ marginTop: 16 }}
+            >
               <Typography.Paragraph style={{ marginBottom: 0 }}>{hint.message}</Typography.Paragraph>
               {hint.lastHint && <Typography.Text type="secondary">提示额度已用完，后续请依靠自查清单。</Typography.Text>}
-            </Card>
+            </DataSurface>
           )}
         </Col>
 
         <Col span={14}>
-          <Card
+          <DataSurface
             title="SQL 工作区"
-            size="small"
-            extra={<Typography.Text type="secondary">只读沙箱 · 单条语句</Typography.Text>}
+            extra={<span className="learn-panel-note">只读沙箱 · 单条语句</span>}
+            label="SQL 工作区"
           >
             <Alert
               type="info"
@@ -239,7 +245,7 @@ export default function LearningLabPage() {
               onChange={(event) => setSql(event.target.value)}
               rows={14}
               spellCheck={false}
-              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 'var(--font-body)' }}
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-body)' }}
               placeholder="-- 从 SELECT 开始，逐步加入过滤、去重或聚合"
             />
             <Space style={{ marginTop: 12 }} wrap>
@@ -256,10 +262,10 @@ export default function LearningLabPage() {
               <Button danger icon={<ReloadOutlined />} onClick={handleReset}>重置沙箱</Button>
               {lab.bestScore !== undefined && <Typography.Text type="secondary">历史最高 {lab.bestScore} 分</Typography.Text>}
             </Space>
-          </Card>
+          </DataSurface>
 
           {result?.result && (
-            <Card title="判分结果" size="small" style={{ marginTop: 16 }}>
+            <DataSurface title="判分结果" label="判分结果" style={{ marginTop: 16 }}>
               <Space direction="vertical" style={{ width: '100%' }} size={12}>
                 <Alert
                   type={result.result.passed ? 'success' : 'warning'}
@@ -307,10 +313,10 @@ export default function LearningLabPage() {
                   <Typography.Text type="secondary">提交时间：{formatDateTime(result.gradedAt)}</Typography.Text>
                 )}
               </Space>
-            </Card>
+            </DataSurface>
           )}
 
-          <Card title={<Space><HistoryOutlined />提交时间线</Space>} size="small" style={{ marginTop: 16 }}>
+          <DataSurface title="提交时间线" label="提交时间线" style={{ marginTop: 16 }}>
             {submissions.length === 0 ? <Typography.Text type="secondary">还没有提交记录。</Typography.Text> : (
               <List
                 size="small"
@@ -319,14 +325,16 @@ export default function LearningLabPage() {
                   <List.Item>
                     <Space>
                       <Tag>第 {item.attempt} 次</Tag>
-                      <span>得分 {item.score ?? '—'}</span>
-                      <Tag color={item.passed ? 'green' : 'orange'}>{item.passed ? '通过' : item.status}</Tag>
+                      <span className="learn-lab-score">得分 {item.score ?? '—'}</span>
+                      <StatusBadge tone={item.passed ? 'success' : 'warning'} dot={false}>
+                        {item.passed ? '通过' : item.status}
+                      </StatusBadge>
                     </Space>
                   </List.Item>
                 )}
               />
             )}
-          </Card>
+          </DataSurface>
         </Col>
       </Row>
 
@@ -343,11 +351,7 @@ export default function LearningLabPage() {
             {tutorMessages.length === 0 ? <Empty description="问一个具体问题，例如“为什么我的结果行数偏多？”" /> : (
               <Space direction="vertical" style={{ width: '100%' }} size={10}>
                 {tutorMessages.map((item, index) => (
-                  <div key={`${item.role}-${index}`} style={{
-                    background: item.role === 'user' ? 'var(--bg-secondary, #f5f5f5)' : 'rgba(22,119,255,0.08)',
-                    padding: 10, borderRadius: 8, marginLeft: item.role === 'user' ? 32 : 0,
-                    marginRight: item.role === 'assistant' ? 24 : 0
-                  }}>
+                  <div key={`${item.role}-${index}`} className={`tutor-bubble is-${item.role}`}>
                     <Typography.Text type="secondary" style={{ fontSize: 'var(--font-table)' }}>
                       {item.role === 'user' ? '我' : item.model || '导师'}
                     </Typography.Text>
@@ -368,6 +372,6 @@ export default function LearningLabPage() {
           </Button>
         </Space>
       </Drawer>
-    </div>
+    </>
   )
 }

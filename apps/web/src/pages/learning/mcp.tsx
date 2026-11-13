@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, App, Button, Card, Col, Descriptions, Empty, Input, List, Row, Select, Space, Tag, Typography } from 'antd'
+import { Alert, App, Button, Col, Descriptions, Empty, Input, List, Row, Select, Space, Tag, Typography } from 'antd'
 import { ApiOutlined, CopyOutlined, PlayCircleOutlined, ReloadOutlined } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import DataSurface from '@/components/DataSurface'
 import { callMcp, getMcpInfo, type JsonRpcResponse, type McpInfo, type McpToolInfo } from '@/api/mcp'
 
 function defaultArguments(tool: McpToolInfo | undefined): string {
@@ -93,7 +94,7 @@ export default function LearningMcpPage() {
   }
 
   return (
-    <div className="workflow-list-page">
+    <>
       <PageHeader
         description="M2 只开放只读工具：平台元数据、指标、只读 SQL 与学习进度。所有调用继承当前用户权限并写入审计。"
         extra={
@@ -106,7 +107,7 @@ export default function LearningMcpPage() {
 
       <Row gutter={16}>
         <Col span={8}>
-          <Card title="连接信息" size="small">
+          <DataSurface title="连接信息" label="连接信息">
             <Descriptions column={1} size="small">
               <Descriptions.Item label="协议版本">{info?.protocolVersion ?? '—'}</Descriptions.Item>
               <Descriptions.Item label="端点"><code>/api/mcp</code></Descriptions.Item>
@@ -114,18 +115,18 @@ export default function LearningMcpPage() {
               <Descriptions.Item label="限流">{info?.rateLimitPerMinute ?? '—'} 次/分钟</Descriptions.Item>
               <Descriptions.Item label="工具数">{info?.tools.length ?? 0}</Descriptions.Item>
             </Descriptions>
-          </Card>
+          </DataSurface>
 
-          <Card title="工具" size="small" style={{ marginTop: 16 }}>
+          <DataSurface title="工具" label="工具" style={{ marginTop: 16 }}>
             {info?.tools.length ? (
               <List
                 size="small"
                 dataSource={info.tools}
                 renderItem={(item) => (
                   <List.Item
-                    style={{ cursor: 'pointer', background: item.name === selected ? 'var(--bg-secondary, #f5f5f5)' : undefined }}
+                    style={{ cursor: 'pointer', background: item.name === selected ? 'var(--bg-hover)' : undefined }}
                     onClick={() => handleSelect(item.name)}
-                    actions={[<Tag key="risk" color={item.riskLevel === 0 ? 'green' : 'orange'}>L{item.riskLevel}</Tag>]}
+                    actions={[<Tag key="risk" color={item.riskLevel === 0 ? 'success' : 'warning'}>L{item.riskLevel}</Tag>]}
                   >
                     <List.Item.Meta
                       title={item.name}
@@ -137,9 +138,9 @@ export default function LearningMcpPage() {
             ) : (
               <Empty description="暂无工具" />
             )}
-          </Card>
+          </DataSurface>
 
-          <Card title="Prompts" size="small" style={{ marginTop: 16 }}>
+          <DataSurface title="Prompts" label="Prompts" style={{ marginTop: 16 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               {(info?.prompts ?? []).map((prompt) => (
                 <div key={prompt.name}>
@@ -150,13 +151,12 @@ export default function LearningMcpPage() {
                 </div>
               ))}
             </Space>
-          </Card>
+          </DataSurface>
         </Col>
 
         <Col span={16}>
-          <Card
+          <DataSurface
             title={<Space><ApiOutlined />调用工具</Space>}
-            size="small"
             extra={<Select style={{ width: 260 }} value={selected} onChange={handleSelect}
               options={(info?.tools ?? []).map((item) => ({ value: item.name, label: `${item.name} · ${item.title}` }))} />}
           >
@@ -169,7 +169,7 @@ export default function LearningMcpPage() {
                   value={args}
                   spellCheck={false}
                   onChange={(event) => setArgs(event.target.value)}
-                  style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 'var(--font-body)' }}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-body)' }}
                 />
                 <Space>
                   <Button type="primary" icon={<PlayCircleOutlined />} loading={calling} onClick={() => void handleCall()}>
@@ -196,9 +196,9 @@ export default function LearningMcpPage() {
             ) : (
               <Empty description="选择左侧工具开始调试" />
             )}
-          </Card>
+          </DataSurface>
 
-          <Card title="Resources" size="small" style={{ marginTop: 16 }}>
+          <DataSurface title="Resources" label="Resources" style={{ marginTop: 16 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               {(info?.resources ?? []).map((resource) => (
                 <Space key={resource.uri}>
@@ -208,14 +208,14 @@ export default function LearningMcpPage() {
               ))}
               {(info?.resourceTemplates ?? []).map((template) => (
                 <Space key={template.uriTemplate}>
-                  <Tag color="blue">模板</Tag>
+                  <Tag>模板</Tag>
                   <code>{template.uriTemplate}</code>
                 </Space>
               ))}
             </Space>
-          </Card>
+          </DataSurface>
         </Col>
       </Row>
-    </div>
+    </>
   )
 }

@@ -65,7 +65,7 @@ export default function ChatBiPage() {
         description="用自然语言直接问数：AI 自动检索表结构、执行只读查询并给出结论、口径与 SQL。无需了解数仓细节。"
         extra={
           <Tooltip title="AI 生成的 SQL 受平台只读守卫约束，仅能执行 SELECT 类语句">
-            <Tag color="green"><DatabaseOutlined /> 只读查询</Tag>
+            <Tag><DatabaseOutlined /> 只读查询</Tag>
           </Tooltip>
         }
       />

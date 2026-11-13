@@ -147,7 +147,7 @@ export default function RolePage() {
       render: (value: string, record) => (
         <Space>
           <span>{value}</span>
-          {record.isSystem && <Tag color="blue">系统角色</Tag>}
+          {record.isSystem && <Tag>系统角色</Tag>}
         </Space>
       )
     },

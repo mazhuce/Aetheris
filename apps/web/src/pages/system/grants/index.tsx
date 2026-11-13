@@ -213,7 +213,7 @@ export default function GrantPage() {
         if (!record.dataScope || record.dataScope.values.length === 0) return <span>不限定</span>
         return (
           <Space direction="vertical" size={0}>
-            <Tag color="blue">{record.dataScope.kind}</Tag>
+            <Tag>{record.dataScope.kind}</Tag>
             <span className="permission-option-code">{record.dataScope.values.join(', ')}</span>
           </Space>
         )

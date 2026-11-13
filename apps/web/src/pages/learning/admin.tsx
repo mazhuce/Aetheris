@@ -162,7 +162,7 @@ export default function LearningAdminPage() {
     { title: '编码', dataIndex: 'code', width: 190 },
     { title: '标题', dataIndex: 'title' },
     { title: '层级', dataIndex: 'level', width: 70 },
-    { title: '状态', key: 'status', width: 100, render: (_, row) => row.status === 'published' ? <Tag color="green">已发布</Tag> : <Tag>草稿</Tag> },
+    { title: '状态', key: 'status', width: 100, render: (_, row) => row.status === 'published' ? <Tag color="success">已发布</Tag> : <Tag>草稿</Tag> },
     {
       title: '审核', key: 'review', width: 100,
       render: (_, row) => <Tag color={reviewMeta[row.reviewStatus]?.color}>{reviewMeta[row.reviewStatus]?.text ?? row.reviewStatus}</Tag>
