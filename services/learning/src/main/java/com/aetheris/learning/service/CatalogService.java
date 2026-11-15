@@ -48,7 +48,7 @@ public class CatalogService {
                     .map(lab -> toCard(lab, attempts.get(lab.code())))
                     .toList();
             modules.add(new LearningModels.ModuleView(module.code(), module.title(), module.objective(),
-                    module.level(), cards));
+                    module.level(), module.relatedFeatures(), cards));
         }
 
         List<String> labCodes = labs.stream().map(LearningModels.LabRecord::code).toList();
@@ -109,7 +109,9 @@ public class CatalogService {
                 sandbox != null && sandbox.expiresAt().isAfter(java.time.Instant.now()),
                 attempt == null ? null : attempt.bestScore(),
                 attempt != null && attempt.passed(),
-                attempt == null ? "not_started" : attempt.status());
+                attempt == null ? "not_started" : attempt.status(),
+                lab.relatedFeatures(),
+                lab.knowledge());
     }
 
     public LearningModels.SandboxInfo startLab(String code, long uid, String username) {

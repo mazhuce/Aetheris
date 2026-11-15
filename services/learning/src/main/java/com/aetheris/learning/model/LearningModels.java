@@ -28,7 +28,8 @@ public final class LearningModels {
                                 List<String> deliverables, List<LabCard> labs) {
     }
 
-    public record ModuleView(String code, String title, String objective, String level, List<LabCard> labs) {
+    public record ModuleView(String code, String title, String objective, String level,
+                            List<String> relatedFeatures, List<LabCard> labs) {
     }
 
     public record LabCard(String code, String title, String level, String difficulty, String summary,
@@ -43,7 +44,8 @@ public final class LearningModels {
                             String summary, String scenario, String objective, List<Step> steps, List<String> tableRefs,
                             String starterSql, int passScore, int estimatedMinutes, int version, String projectCode,
                             List<RubricItem> rubric, String sandboxSchema, boolean sandboxActive,
-                            Integer bestScore, boolean passed, String lastStatus) {
+                            Integer bestScore, boolean passed, String lastStatus,
+                            List<String> relatedFeatures, List<LabKnowledge> knowledge) {
     }
 
     public record Step(String title, String detail) {
@@ -52,11 +54,15 @@ public final class LearningModels {
     public record RubricItem(String key, String name, int weight) {
     }
 
+    public record LabKnowledge(String title, String detail) {
+    }
+
     public record LabRecord(long id, String code, String moduleCode, String title, String level, String difficulty,
                             String taskType, String summary, String scenario, String objective, List<Step> steps,
                             List<String> tableRefs, String starterSql, String expectedSql, JsonNode staticPolicy,
                             List<RubricItem> rubric, int passScore, int estimatedMinutes, String status, int version,
-                            int orderNo, String sandboxTier) {
+                            int orderNo, String sandboxTier, List<String> relatedFeatures,
+                            List<LabKnowledge> knowledge) {
     }
 
     public record SandboxInfo(String schemaName, String status, String tier, Instant expiresAt, Instant createdAt,

@@ -39,7 +39,8 @@ class TutorServiceTest {
                 "scenario", "objective", List.of(new LearningModels.Step("清洗", "先去重")),
                 List.of("teach.orders_raw"), "SELECT 1", "SELECT 2",
                 com.aetheris.learning.support.Json.readTree("{}"),
-                List.of(new LearningModels.RubricItem("result", "结果", 100)), 70, 30, "published", 1, 1, "light");
+                List.of(new LearningModels.RubricItem("result", "结果", 100)), 70, 30, "published", 1, 1, "light",
+                List.of(), List.of());
         when(repository.findLab("l3-rfm")).thenReturn(Optional.of(lab));
         when(repository.latestSubmissionSql(anyLong(), anyString())).thenReturn(Optional.of("SELECT order_id FROM orders_raw"));
         when(aiTutorClient.enabled()).thenReturn(false);

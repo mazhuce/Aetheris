@@ -146,6 +146,7 @@ public class LearningAdminService {
                         """),
                 rubric, request.passScore() == null ? 70 : request.passScore(),
                 request.estimatedMinutes() == null ? 30 : request.estimatedMinutes(),
-                "draft", 1, request.orderNo() == null ? 99 : request.orderNo(), "light");
+                "draft", 1, request.orderNo() == null ? 99 : request.orderNo(), "light",
+                List.of(), List.of());
     }
 }

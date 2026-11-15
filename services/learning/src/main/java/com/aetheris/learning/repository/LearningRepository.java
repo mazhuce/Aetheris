@@ -35,7 +35,8 @@ public class LearningRepository {
     public record SkillRow(String code, String title, String level, String knowledgePointsJson, String outcome) {
     }
 
-    public record ModuleRow(String code, String title, String objective, String level, int orderNo) {
+    public record ModuleRow(String code, String title, String objective, String level, int orderNo,
+                            List<String> relatedFeatures) {
     }
 
     public record AttemptRow(String labCode, int bestScore, boolean passed, String status) {
@@ -88,13 +89,15 @@ public class LearningRepository {
 
     public List<ModuleRow> listModules(String pathCode) {
         return jdbc.query("""
-                SELECT m.code, m.title, m.objective, m.level, m.order_no
+                SELECT m.code, m.title, m.objective, m.level, m.order_no,
+                       m.related_features::text AS related_features
                   FROM learning.course_module m
                   JOIN learning.course c ON c.code = m.course_code
                  WHERE c.path_code = ?
                  ORDER BY m.order_no, m.id
                 """, (rs, index) -> new ModuleRow(rs.getString("code"), rs.getString("title"),
-                rs.getString("objective"), rs.getString("level"), rs.getInt("order_no")), pathCode);
+                rs.getString("objective"), rs.getString("level"), rs.getInt("order_no"),
+                Json.readStringList(rs.getString("related_features"))), pathCode);
     }
 
     public List<LearningModels.LabRecord> listLabs(String pathCode) {
@@ -118,7 +121,8 @@ public class LearningRepository {
                        l.scenario, l.objective, l.steps::text AS steps, l.table_refs::text AS table_refs,
                        l.starter_sql, l.expected_sql, l.static_policy::text AS static_policy,
                        l.rubric::text AS rubric, l.pass_score, l.estimated_minutes, l.status, l.version,
-                       l.order_no, COALESCE(l.sandbox_tier, 'light') AS sandbox_tier
+                       l.order_no, COALESCE(l.sandbox_tier, 'light') AS sandbox_tier,
+                       l.related_features::text AS related_features, l.knowledge::text AS knowledge
                   FROM learning.lab l
                   JOIN learning.course_module m ON m.code = l.module_code
                   JOIN learning.course c ON c.code = m.course_code
@@ -145,7 +149,10 @@ public class LearningRepository {
                 }),
                 rs.getInt("pass_score"), rs.getInt("estimated_minutes"), rs.getString("status"),
                 rs.getInt("version"), rs.getInt("order_no"),
-                rs.getString("sandbox_tier") == null ? "light" : rs.getString("sandbox_tier"));
+                rs.getString("sandbox_tier") == null ? "light" : rs.getString("sandbox_tier"),
+                Json.readStringList(rs.getString("related_features")),
+                Json.readList(rs.getString("knowledge"), new TypeReference<List<LearningModels.LabKnowledge>>() {
+                }));
     }
 
     public List<String> listLabSkills(String pathCode) {

@@ -37,7 +37,7 @@ class GradingEngineTest {
                 List.of(new LearningModels.RubricItem("safety", "SQL 安全边界", 20),
                         new LearningModels.RubricItem("static", "过滤条件完整性", 30),
                         new LearningModels.RubricItem("result", "结果正确性", 50)),
-                70, 20, "published", 1, 1, "light");
+                70, 20, "published", 1, 1, "light", List.of(), List.of());
     }
 
     @Test
