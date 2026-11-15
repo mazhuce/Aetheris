@@ -310,7 +310,7 @@ export default function LearningAdminPage() {
           <Form.Item name="summary" label="简介"><Input.TextArea rows={2} /></Form.Item>
           <Form.Item name="objective" label="验收标准"><Input.TextArea rows={2} /></Form.Item>
           <Form.Item name="expectedSql" label="标准答案（仅管理员可见）" rules={[{ required: true, message: '审核前必须提供标准答案' }]}>
-            <Input.TextArea rows={6} style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: 'var(--font-table)' }} />
+            <Input.TextArea rows={6} style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--font-table)' }} />
           </Form.Item>
         </Form>
       </Modal>

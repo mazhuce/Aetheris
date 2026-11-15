@@ -161,8 +161,8 @@ export default function AnalyticsDatasetPage() {
         <div className="dataset-name-cell"><strong>{value}</strong><span>{record.description || '暂无描述'}</span></div>
       )
     },
-    { title: '来源类型', dataIndex: 'sourceType', width: 100, render: (value) => <Tag color={value === 'metric' ? 'purple' : 'default'}>{value === 'metric' ? '语义指标' : '只读 SQL'}</Tag> },
-    { title: '状态', dataIndex: 'status', width: 100, render: (value: AnalyticsDataset['status']) => <Tag color={value === 'published' ? 'green' : value === 'draft' ? 'gold' : 'default'}>{value === 'published' ? '已发布' : value === 'draft' ? '草稿' : '已废弃'}</Tag> },
+    { title: '来源类型', dataIndex: 'sourceType', width: 100, render: (value) => <Tag>{value === 'metric' ? '语义指标' : '只读 SQL'}</Tag> },
+    { title: '状态', dataIndex: 'status', width: 100, render: (value: AnalyticsDataset['status']) => <Tag color={value === 'published' ? 'success' : value === 'draft' ? 'warning' : 'default'}>{value === 'published' ? '已发布' : value === 'draft' ? '草稿' : '已废弃'}</Tag> },
     { title: '数据来源', width: 190, render: (_, row) => row.sourceType === 'metric' ? <Typography.Text code>{row.metricCode}</Typography.Text> : row.datasourceName || '—' },
     {
       title: '字段',

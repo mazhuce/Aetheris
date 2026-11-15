@@ -76,27 +76,26 @@ CREATE TABLE IF NOT EXISTS teach.payments (
 INSERT INTO teach.payments (pay_no, order_id, user_id, amount, pay_status, dt)
 SELECT * FROM (VALUES
     (7001, 1001, 501, 398.00, 'SUCCESS', DATE '2026-08-01'),
-    (7002, 1001, 501, 398.00, 'SUCCESS', DATE '2026-08-01'),
-    (7003, 1002, 502, 59.90, 'SUCCESS', DATE '2026-08-01'),
-    (7004, 1004, 504, 899.00, 'SUCCESS', DATE '2026-08-02'),
-    (7005, 1005, NULL, 45.00, 'SUCCESS', DATE '2026-08-02'),
-    (7006, 1010, 510, 176.00, 'SUCCESS', DATE '2026-08-04'),
-    (7007, 1011, 511, 300.00, 'SUCCESS', DATE '2026-08-04'),
-    (7008, 1013, 513, 499.00, 'SUCCESS', DATE '2026-08-05'),
-    (7009, 1014, 514, 60.00, 'SUCCESS', DATE '2026-08-05'),
-    (7010, 1015, 515, 0.00, 'FAIL', DATE '2026-08-05'),
-    (7011, 1016, 516, 99.00, 'SUCCESS', DATE '2026-08-06'),
-    (7012, 1018, 518, 210.00, 'SUCCESS', DATE '2026-08-06'),
-    (7013, 1020, 520, 35.00, 'SUCCESS', DATE '2026-08-07'),
-    (7014, 1021, 521, 2599.00, 'SUCCESS', DATE '2026-08-07'),
-    (7015, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
-    (7016, 1025, 525, 140.00, 'SUCCESS', DATE '2026-08-09'),
-    (7017, 1001, 501, 398.00, 'SUCCESS', DATE '2026-08-01'),
+    (7002, 1002, 502, 59.90, 'SUCCESS', DATE '2026-08-01'),
+    (7003, 1004, 504, 899.00, 'SUCCESS', DATE '2026-08-02'),
+    (7004, 1005, NULL, 45.00, 'SUCCESS', DATE '2026-08-02'),
+    (7005, 1010, 510, 176.00, 'SUCCESS', DATE '2026-08-04'),
+    (7006, 1011, 511, 300.00, 'SUCCESS', DATE '2026-08-04'),
+    (7007, 1013, 513, 499.00, 'SUCCESS', DATE '2026-08-05'),
+    (7008, 1014, 514, 60.00, 'SUCCESS', DATE '2026-08-05'),
+    (7009, 1015, 515, 0.00, 'FAIL', DATE '2026-08-05'),
+    (7010, 1016, 516, 99.00, 'SUCCESS', DATE '2026-08-06'),
+    (7011, 1018, 518, 210.00, 'SUCCESS', DATE '2026-08-06'),
+    (7012, 1020, 520, 35.00, 'SUCCESS', DATE '2026-08-07'),
+    (7013, 1021, 521, 2599.00, 'SUCCESS', DATE '2026-08-07'),
+    (7014, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
+    (7015, 1025, 525, 140.00, 'SUCCESS', DATE '2026-08-09'),
+    (7016, 1001, 501, 398.00, 'SUCCESS', DATE '2026-08-01'),
+    (7017, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
     (7018, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
     (7019, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
     (7020, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
-    (7021, 1023, 523, 780.00, 'SUCCESS', DATE '2026-08-08'),
-    (7022, 9999, NULL, 500.00, 'SUCCESS', DATE '2026-08-08')
+    (7021, 9999, NULL, 500.00, 'SUCCESS', DATE '2026-08-08')
 ) AS seed(pay_no, order_id, user_id, amount, pay_status, dt)
 WHERE NOT EXISTS (SELECT 1 FROM teach.payments);
 
@@ -125,6 +124,10 @@ INSERT INTO learning.learning_path (code, title, description, target_role, level
     ('dg-basic', '数据治理工程师入门', '质量核查、元数据与血缘、分类分级：让"数据对不对、谁在用、能不能改"变成可查询的事实，对应平台的数据治理功能。', '数据治理专员', 'L2-L3', 1, 'published', 30, 3),
     ('ops-basic', '数据管道与运维入门', '任务编排、发布验收、监控排障：从跑通一条 SQL 到对生产链路负责，对应平台的工作流、调度与运维中心功能。', '数据平台运维工程师', 'L2-L4', 1, 'published', 30, 4)
 ON CONFLICT (code) DO NOTHING;
+
+-- 旧的 de-foundation 路径与新的 de-basic 内容重叠（都从 SQL 基础讲到 DWD 清洗），
+-- 归档后不再出现在路径列表里（listPaths 只取 published），已产生的提交与进度不受影响。
+UPDATE learning.learning_path SET status = 'archived' WHERE code = 'de-foundation';
 
 INSERT INTO learning.skill_node (path_code, code, parent_code, title, level, knowledge_points, outcome, order_no) VALUES
     ('de-basic', 'de-sql-basics', NULL, 'SQL 查询与过滤', 'L1', $j$["SELECT 投影","WHERE","NULL 三值逻辑","排序与行数限制"]$j$, '能写出列裁剪、口径明确的只读查询', 1),
