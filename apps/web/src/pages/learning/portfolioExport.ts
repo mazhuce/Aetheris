@@ -1,8 +1,17 @@
 import type { ProgressView, ProjectView } from '@/api/learning'
 
+export interface LabEvidence {
+  pathTitle: string
+  code: string
+  title: string
+  level: string
+  score: number
+}
+
 export interface PortfolioSnapshot {
   progress: ProgressView
   projects: ProjectView[]
+  labEvidence?: LabEvidence[]
   username?: string
   generatedAt?: Date
 }
@@ -10,6 +19,7 @@ export interface PortfolioSnapshot {
 export function buildPortfolioMarkdown({
   progress,
   projects,
+  labEvidence = [],
   username,
   generatedAt = new Date()
 }: PortfolioSnapshot): string {
@@ -25,6 +35,15 @@ export function buildPortfolioMarkdown({
   } else {
     for (const skill of progress.skills) {
       lines.push(`| ${skill.title} | ${skill.level} | ${skill.passedLabs}/${skill.labs} | ${skill.bestScore} |`)
+    }
+  }
+  lines.push('', '## 已完成任务', '')
+  if (labEvidence.length === 0) {
+    lines.push('- （暂无已完成任务）')
+  } else {
+    lines.push('| 路径 | 任务 | 等级 | 最佳得分 |', '| --- | --- | --- | --- |')
+    for (const lab of labEvidence) {
+      lines.push(`| ${lab.pathTitle} | ${lab.title} | ${lab.level} | ${lab.score} |`)
     }
   }
   lines.push('', '## 项目与交付物', '')

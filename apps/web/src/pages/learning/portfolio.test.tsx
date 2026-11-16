@@ -4,7 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '@/api/learning'
 import LearningPortfolioPage from './portfolio'
 
-vi.mock('@/api/learning', () => ({ getProgress: vi.fn(), listProjects: vi.fn() }))
+vi.mock('@/api/learning', () => ({
+  getProgress: vi.fn(),
+  listProjects: vi.fn(),
+  listLearningPaths: vi.fn(),
+  getLearningPath: vi.fn()
+}))
 vi.mock('@/hooks/useAuthSession', () => ({
   useAuthSession: () => ({ status: 'authenticated', user: { username: 'alice', role: 'viewer' } })
 }))
@@ -34,6 +39,22 @@ const projects: api.ProjectView[] = [
   }
 ]
 
+const paths: api.LearningPathSummary[] = [
+  { code: 'da-basic', title: '数据分析师入门', level: 'L1-L2', version: 1, estimatedHours: 36,
+    labCount: 6, completedLabs: 1, progressPercent: 17 }
+]
+
+const pathDetail: api.LearningPathDetail = {
+  code: 'da-basic', title: '数据分析师入门', level: 'L1-L2', estimatedHours: 36, skills: [],
+  modules: [{
+    code: 'da-m1', title: '指标口径', level: 'L1',
+    labs: [{
+      code: 'da-l1-01', title: '支付成功率日报', level: 'L1', difficulty: 'easy',
+      estimatedMinutes: 15, orderNo: 1, status: 'passed', bestScore: 90, passed: true
+    }]
+  }]
+}
+
 function page() {
   return render(
     <MemoryRouter>
@@ -43,14 +64,20 @@ function page() {
 }
 
 describe('learning portfolio page', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listLearningPaths).mockResolvedValue([])
+  })
 
   it('renders real progress, skills, projects and credentials', async () => {
     vi.mocked(api.getProgress).mockResolvedValue(progress)
     vi.mocked(api.listProjects).mockResolvedValue(projects)
+    vi.mocked(api.listLearningPaths).mockResolvedValue(paths)
+    vi.mocked(api.getLearningPath).mockResolvedValue(pathDetail)
     page()
 
     expect(await screen.findByText('SQL 基础')).toBeInTheDocument()
+    expect(await screen.findByText('支付成功率日报')).toBeInTheDocument()
     expect(screen.getByText('3/8')).toBeInTheDocument()
     expect(screen.getByText('订单分析项目')).toBeInTheDocument()
     expect(screen.getByText('SQL 数据分析入门')).toBeInTheDocument()
@@ -68,6 +95,8 @@ describe('learning portfolio page', () => {
   it('exports a markdown evidence bundle without secrets', async () => {
     vi.mocked(api.getProgress).mockResolvedValue(progress)
     vi.mocked(api.listProjects).mockResolvedValue(projects)
+    vi.mocked(api.listLearningPaths).mockResolvedValue(paths)
+    vi.mocked(api.getLearningPath).mockResolvedValue(pathDetail)
     const create = vi.fn((_blob: Blob) => 'blob:mock')
     const revoke = vi.fn()
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: create })
@@ -87,6 +116,7 @@ describe('learning portfolio page', () => {
     })
     expect(text).toContain('# Aetheris 学习与求职证据包')
     expect(text).toContain('不代表企业部署、第三方认证或雇佣承诺')
+    expect(text).toContain('| 数据分析师入门 | 支付成功率日报 | L1 | 90 |')
     expect(text).not.toMatch(/password|token|cookie/i)
     click.mockRestore()
   })
@@ -98,6 +128,7 @@ describe('learning portfolio page', () => {
     page()
 
     expect(await screen.findByText('完成第一个任务后生成能力画像。')).toBeInTheDocument()
+    expect(screen.getByText('暂无已完成任务。')).toBeInTheDocument()
     expect(screen.getByText('暂无项目。')).toBeInTheDocument()
     expect(screen.getByText('暂无凭证。')).toBeInTheDocument()
   })

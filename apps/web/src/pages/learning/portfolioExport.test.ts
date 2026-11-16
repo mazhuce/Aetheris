@@ -32,6 +32,7 @@ describe('portfolio export', () => {
     const markdown = buildPortfolioMarkdown({
       progress,
       projects,
+      labEvidence: [{ pathTitle: '数据分析师入门', code: 'da-l1-01', title: '支付成功率日报', level: 'L1', score: 90 }],
       username: 'alice',
       generatedAt: new Date('2026-11-17T10:00:00Z')
     })
@@ -40,6 +41,7 @@ describe('portfolio export', () => {
     expect(markdown).toContain('学员：alice')
     expect(markdown).toContain('完成进度：3/8（38%）')
     expect(markdown).toContain('| SQL 基础 | L1 | 2/2 | 92 |')
+    expect(markdown).toContain('| 数据分析师入门 | 支付成功率日报 | L1 | 90 |')
     expect(markdown).toContain('订单分析项目')
     expect(markdown).toContain('交付物：结业看板、口径说明')
     expect(markdown).toContain('SQL 数据分析入门')

@@ -6,14 +6,15 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { ErrorState, LoadingState } from '@/components/FeedbackState'
-import { getProgress, listProjects, type ProgressView, type ProjectView } from '@/api/learning'
+import { getLearningPath, getProgress, listLearningPaths, listProjects, type LearningPathSummary, type ProgressView, type ProjectView } from '@/api/learning'
 import { useAuthSession } from '@/hooks/useAuthSession'
-import { buildPortfolioMarkdown } from './portfolioExport'
+import { buildPortfolioMarkdown, type LabEvidence } from './portfolioExport'
 
 export default function LearningPortfolioPage() {
   const session = useAuthSession()
   const [progress, setProgress] = useState<ProgressView | null>(null)
   const [projects, setProjects] = useState<ProjectView[]>([])
+  const [labEvidence, setLabEvidence] = useState<LabEvidence[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
 
@@ -21,10 +22,24 @@ export default function LearningPortfolioPage() {
     setLoading(true)
     setError(undefined)
     try {
-      const [nextProgress, nextProjects] = await Promise.all([getProgress(), listProjects()])
+      const [nextProgress, nextProjects, paths] = await Promise.all([
+        getProgress(), listProjects(), listLearningPaths()
+      ])
       if (signal?.aborted) return
       setProgress(nextProgress)
       setProjects(nextProjects)
+      const details = await Promise.all(paths.map(async (path: LearningPathSummary) => ({
+        path,
+        detail: await getLearningPath(path.code).catch(() => null)
+      })))
+      if (signal?.aborted) return
+      setLabEvidence(details.flatMap(({ path, detail }) =>
+        (detail?.modules ?? []).flatMap((module) =>
+          module.labs
+            .filter((lab) => lab.passed)
+            .map((lab) => ({ pathTitle: path.title, code: lab.code, title: lab.title, level: lab.level, score: lab.bestScore ?? 0 }))
+        )
+      ))
     } catch {
       if (!signal?.aborted) setError('求职证据加载失败，请确认 learning-service 已启动。')
     } finally {
@@ -41,7 +56,7 @@ export default function LearningPortfolioPage() {
   const exportMarkdown = () => {
     if (!progress) return
     const username = session.status === 'authenticated' ? session.user.username : undefined
-    const markdown = buildPortfolioMarkdown({ progress, projects, username })
+    const markdown = buildPortfolioMarkdown({ progress, projects, labEvidence, username })
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -66,6 +81,13 @@ export default function LearningPortfolioPage() {
       width: 100,
       render: (value: number) => <Typography.Text strong style={{ fontSize: 'var(--font-body)' }}>{value}</Typography.Text>
     }
+  ]
+
+  const labColumns: TableColumnsType<LabEvidence> = [
+    { title: '路径', dataIndex: 'pathTitle' },
+    { title: '任务', dataIndex: 'title' },
+    { title: '等级', dataIndex: 'level', width: 80 },
+    { title: '最佳得分', dataIndex: 'score', width: 100 }
   ]
 
   const projectColumns: TableColumnsType<ProjectView> = [
@@ -130,6 +152,17 @@ export default function LearningPortfolioPage() {
               dataSource={progress.skills}
               pagination={false}
               locale={{ emptyText: '完成第一个任务后生成能力画像。' }}
+            />
+          </DataSurface>
+
+          <DataSurface title="已完成任务" description="通过真实判分的任务与最佳得分，可作为技能证据。" label="已完成任务">
+            <Table
+              rowKey="code"
+              size="small"
+              columns={labColumns}
+              dataSource={labEvidence}
+              pagination={false}
+              locale={{ emptyText: '暂无已完成任务。' }}
             />
           </DataSurface>
 
