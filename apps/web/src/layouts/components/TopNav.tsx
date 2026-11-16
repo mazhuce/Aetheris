@@ -11,6 +11,9 @@ import { logout } from '@/api/auth'
 import { usePreferences } from '@/contexts/PreferencesContext'
 import { useAuthSession } from '@/hooks/useAuthSession'
 
+/** 构建期回滚开关：VITE_EXPERT_DRAWER=false 时图标恢复为返回首页。 */
+const EXPERT_DRAWER_ENABLED = import.meta.env.VITE_EXPERT_DRAWER !== 'false'
+
 /** 「更多」按钮预留宽度，用于计算一级模块能放下多少个。 */
 const MORE_RESERVE = 64
 
@@ -92,15 +95,21 @@ export default function TopNav() {
     <>
       <header className="topnav">
       <div className="topnav-brand">
-        <button
-          type="button"
-          className="topnav-logo"
-          aria-label="打开数据开发专家"
-          title="打开数据开发专家"
-          onClick={() => setExpertOpen(true)}
-        >
-          <BrandMark />
-        </button>
+        {EXPERT_DRAWER_ENABLED ? (
+          <button
+            type="button"
+            className="topnav-logo"
+            aria-label="打开数据开发专家"
+            title="打开数据开发专家"
+            onClick={() => setExpertOpen(true)}
+          >
+            <BrandMark />
+          </button>
+        ) : (
+          <Link to={homePath} className="topnav-logo" aria-label="返回默认首页">
+            <BrandMark />
+          </Link>
+        )}
         <Link to={homePath} className="topnav-wordmark" aria-label="返回默认首页">
           <strong>Aetheris</strong>
         </Link>
@@ -198,7 +207,7 @@ export default function TopNav() {
         </Dropdown>
       </div>
       </header>
-      <ExpertDrawer open={expertOpen} onClose={() => setExpertOpen(false)} />
+      {EXPERT_DRAWER_ENABLED && <ExpertDrawer open={expertOpen} onClose={() => setExpertOpen(false)} />}
     </>
   )
 }

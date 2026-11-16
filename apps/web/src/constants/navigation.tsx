@@ -240,6 +240,9 @@ function byOrder(keys: string[] | undefined) {
  * 2. 模块与二级项各自按配置顺序排序，未出现在顺序表里的保持原始相对次序。
  * 3. 过滤掉隐藏项、角色不可见项，以及没有任何可见二级项的模块。
  */
+/** 构建期回滚开关：VITE_LEARNER_IA=false 时退回企业全量菜单。 */
+const LEARNER_IA_ENABLED = import.meta.env.VITE_LEARNER_IA !== 'false'
+
 /** 学习者视图保留的一级菜单；其余企业职能折叠进「平台管理」。 */
 const LEARNER_MODULE_KEYS = new Set(['learning', 'development', 'assets', 'ai', 'career'])
 
@@ -272,7 +275,7 @@ export function resolveNavigation(role: UserRole, config: NavigationConfig): Nav
     .map((module) => ({ ...module, children: visibleChildren(module.key) }))
     .filter((module) => module.children.length > 0)
 
-  if (role === 'admin') return modules
+  if (role === 'admin' || !LEARNER_IA_ENABLED) return modules
 
   // 学习者视图：只保留学习闭环相关的一级菜单，企业职能收进「平台管理」，
   // 避免十一个一级菜单把学习入口淹没。隐藏不等于禁用，直接 URL 仍可达。

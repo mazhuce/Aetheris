@@ -323,6 +323,14 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 验证：导航与求职页测试 19/19；tsc/lint/build 通过；web 已重建，200。
 - 未完成：真实浏览器走查。
 
+### 2026-11-17 检查点 20：回滚开关与运行手册
+
+- 补齐目标文档承诺的两个构建期回滚开关：`VITE_LEARNER_IA=false` 退回企业全量菜单；`VITE_EXPERT_DRAWER=false` 图标恢复返回首页。开关默认开启，关闭后需重建 web。
+- 新增「运行与验证手册」：启动/重建、前后端检查、样例清单、漂移校验、服务端参数与证据位置。
+- 更新交付状态总表至检查点 20。
+- 验证：tsc/lint/build 通过；web 重建，200。
+- 未完成：真实浏览器走查。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。
@@ -356,14 +364,45 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 
 | 工作包 | 状态 | 证据 | 剩余 |
 | --- | --- | --- | --- |
-| L01 学习者默认 IA | 已完成（组件级） | `0b1bbe4`；导航测试 18/18；16 容器部署 | 真实浏览器走查 |
+| L01 学习者默认 IA | 已完成（组件级） | `0b1bbe4`、`576ac84`；导航测试 18/18；16 容器部署 | 真实浏览器走查 |
 | L02 专家抽屉 | 已完成（组件级） | `d0e3f00`、`a83ba26`；后端 13 项、组件 2 项测试 | 真实浏览器走查 |
 | L03 闭环可靠性 | 已完成（组件级） | `7dee2ef`、`06bc197`；沙箱测试 5/5；47 任务预期 SQL 全通过 | 真实浏览器提交判定 |
 | L04 岗位路径 | 已完成 | `24f92df`；V11；6 条标准 SQL 通过 | 真实浏览器走查 |
-| L05 求职证据包 | 已完成（组件级） | `cc94784`；页面 2/2、导出 1/1 | 真实浏览器导出验收 |
-| L06 学习适配 | 已完成（审计级） | `1d65336`；MCP 只读审计；导师预算测试 4/4；learning 单测 31/31 | 真实 PG 撤权/大规模场景 |
+| L05 求职证据包 | 已完成（组件级） | `cc94784`、`4990d89`；页面/导出 5/5 | 真实浏览器导出验收 |
+| L06 学习适配 | 已完成（审计级） | `1d65336`；MCP 只读审计；导师预算 4/4；learning 单测 31/31 | 真实 PG 撤权/大规模场景 |
 | L07 取舍表 | 已完成 | `4ddfd77` 第 12 节 | — |
-| L08 验收与证据 | 进行中 | 本稿检查点 1–9 | 浏览器证据与最终汇总 |
-| L09 真实样例扩展点 | 第一切片完成 | `2d6e689`、`7115c54`、`ef69395`；清单 9 条、53/53 任务绑定 | 真实脱敏样例数据本体 |
+| L08 验收与证据 | 进行中 | 本稿检查点 1–20 | 浏览器证据与最终汇总 |
+| L09 真实样例扩展点 | 第一切片完成 | `2d6e689`、`7115c54`、`ef69395`、`3ffe693`、`5fa17db`、`f884a7c`；清单 9 条、53/53 绑定、漂移校验 | 真实脱敏样例数据本体 |
 
 **未关闭的关键依赖**：测试账号（浏览器验收）、真实样例数据的来源与许可（L09 后续）、写任务沙箱（产品决策）。
+
+## 14. 运行与验证手册（sim 本机）
+
+```bash
+cd C:/Users/yafei/RA1NL0VE/Aetheris-sim
+
+# 启动 / 重建（.env 中的 COMPOSE_FILE 会自动带安全安装覆盖）
+docker compose up -d
+docker compose build learning-service web && docker compose up -d learning-service web
+
+# 前端检查
+cd apps/web && npm run type-check && npm run lint && npm run build
+
+# 后端学习服务单测
+mvn -s scripts/maven-mirror-settings.xml -f services/learning/pom.xml test
+
+# 数据样例清单
+docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
+  -c "SELECT code, version, row_count FROM learning.dataset_manifest ORDER BY code"
+```
+
+数据集漂移校验：登录内容运营 → 学习中心 → 内容运营 → 数据样例 → 「校验一致性」；或执行第 16 检查点中的等价 SQL。
+
+回滚开关（构建期，修改后需重建 web）：
+
+- `VITE_LEARNER_IA=false`：退回企业全量一级菜单（默认开启学习者 IA）。
+- `VITE_EXPERT_DRAWER=false`：左上角图标恢复为返回首页（默认为专家抽屉）。
+
+服务端可调参数：`AETHERIS_LEARNING_MAX_HINTS`（每任务提示额度，默认 6）、`AETHERIS_LEARNING_MAX_CHATS`（每任务 AI 导师提问上限，默认 20）。
+
+证据位置：本稿检查点 1–20；前端测试位于 `apps/web/src/**/*.test.ts(x)`；后端测试位于 `services/learning/src/test/java/**`。
