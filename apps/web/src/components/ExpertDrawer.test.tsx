@@ -55,5 +55,10 @@ describe('data expert drawer', () => {
     expect(screen.getByText(/模型服务未配置密钥或暂不可用/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /重\s*试/ })).toBeInTheDocument()
     await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(1))
+
+    vi.mocked(api.sendChat).mockResolvedValue({ role: 'assistant', content: '重试成功后的回答' })
+    fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }))
+    expect(await screen.findByText('重试成功后的回答')).toBeInTheDocument()
+    await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(2))
   })
 })
