@@ -17,6 +17,7 @@ import { sessionIdentity } from '@/auth/authState'
 interface DashboardWidgetContentProps {
   widget: DashboardWidget
   datasets: AnalyticsDataset[]
+  dashboardKey?: string | number
 }
 
 const chartPalettes = {
@@ -123,12 +124,13 @@ function buildChartOption(
   }
 }
 
-export default function DashboardWidgetContent({ widget, datasets }: DashboardWidgetContentProps) {
+export default function DashboardWidgetContent({ widget, datasets, dashboardKey }: DashboardWidgetContentProps) {
   const { colorMode, reduceMotion } = usePreferences()
   const session = useAuthSession()
   const dataset = datasets.find((item) => item.id === widget.datasetId)
   const query = useQuery({
-    queryKey: ['analytics-dataset-result', session.user ? sessionIdentity(session.user) : null, session.generation, widget.datasetId],
+    // 看板对象是响应边界的一部分；仅使用 datasetId 会让 A→B 切换复用旧对象的缓存。
+    queryKey: ['analytics-dataset-result', dashboardKey ?? null, widget.id, session.user ? sessionIdentity(session.user) : null, session.generation, widget.datasetId],
     queryFn: ({ signal }) => queryAnalyticsDataset(widget.datasetId!, false, signal),
     enabled: session.status === 'authenticated' && Boolean(widget.datasetId),
     retry: false,

@@ -29,6 +29,8 @@ import {
   type DashboardWidgetType
 } from '@/api/analytics'
 import DashboardCanvas from './components/DashboardCanvas'
+import { DashboardEmptyState, DashboardLoadError } from './DashboardRequestState'
+import { dashboardErrorMessage } from './dashboardErrors'
 import { canManagePlatform } from '@/utils/access'
 import { useResourceActions } from '@/hooks/useResourceActions'
 
@@ -74,6 +76,10 @@ export default function DashboardEditorPage() {
   const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null)
   const [datasets, setDatasets] = useState<AnalyticsDataset[]>([])
   const [spec, setSpec] = useState<DashboardSpec | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string>()
+  const [retryKey, setRetryKey] = useState(0)
+  const loadEpoch = useRef(0)
   const [selectedId, setSelectedId] = useState<string>()
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -82,14 +88,41 @@ export default function DashboardEditorPage() {
   const previewChannel = useRef<BroadcastChannel>()
 
   useEffect(() => {
-    Promise.all([getAnalyticsDashboard(dashboardId), listAnalyticsDatasets()])
+    const controller = new AbortController()
+    const epoch = ++loadEpoch.current
+    let active = true
+    setLoading(true)
+    setLoadError(undefined)
+    setDashboard(null)
+    setSpec(null)
+    setDatasets([])
+    setSaving(false)
+    setPublishing(false)
+    if (!Number.isSafeInteger(dashboardId) || dashboardId <= 0) {
+      setLoading(false)
+      setLoadError('看板地址无效，请从看板列表重新打开。')
+      return () => { active = false; controller.abort() }
+    }
+    Promise.all([getAnalyticsDashboard(dashboardId, controller.signal), listAnalyticsDatasets(controller.signal)])
       .then(([nextDashboard, nextDatasets]) => {
+        if (!active || loadEpoch.current !== epoch) return
         setDashboard(nextDashboard)
         setSpec(nextDashboard.draftSpec)
         setDatasets(nextDatasets.filter((dataset) => dataset.status === 'published'))
       })
-      .catch(() => message.error('看板编辑器加载失败'))
-  }, [dashboardId])
+      .catch((reason) => {
+        if (active && !controller.signal.aborted && loadEpoch.current === epoch) {
+          setLoadError(dashboardErrorMessage(reason, '看板编辑器加载失败，请稍后重试。'))
+        }
+      })
+      .finally(() => {
+        if (active && loadEpoch.current === epoch) setLoading(false)
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [dashboardId, retryKey])
 
   useEffect(() => {
     previewChannel.current = new BroadcastChannel(`aetheris-dashboard-${dashboardId}`)
@@ -180,46 +213,59 @@ export default function DashboardEditorPage() {
   }
 
   const save = async () => {
-    if (!dashboard || !spec || !canUpdate) return dashboard
+    if (!dashboard || !spec || !canUpdate) return undefined
+    const targetId = dashboard.id
+    const epoch = loadEpoch.current
     setSaving(true)
     try {
-      const saved = await updateAnalyticsDashboard(dashboard.id, {
+      const saved = await updateAnalyticsDashboard(targetId, {
         name: dashboard.name,
         description: dashboard.description,
         spec
       })
+      if (loadEpoch.current !== epoch || dashboardId !== targetId) return undefined
       setDashboard(saved)
       setDirty(false)
       return saved
-    } catch (error: any) {
-      message.error(error.response?.data?.message || '看板保存失败')
-      throw error
+    } catch (error) {
+      if (loadEpoch.current === epoch) message.error(dashboardErrorMessage(error, '看板保存失败，请稍后重试。'))
+      return undefined
     } finally {
-      setSaving(false)
+      if (loadEpoch.current === epoch) setSaving(false)
     }
   }
 
   const openPreview = async () => {
-    if (dirty && canUpdate) await save()
+    const epoch = loadEpoch.current
+    if (dirty && canUpdate && !(await save())) return
+    if (loadEpoch.current !== epoch) return
     window.open(`/analytics/dashboards/${dashboardId}/preview`, '_blank', 'noopener')
   }
 
   const publish = async () => {
     if (!canPublish) return
+    const targetId = dashboardId
+    const epoch = loadEpoch.current
     setPublishing(true)
     try {
-      if (dirty && canUpdate) await save()
-      const published = await publishAnalyticsDashboard(dashboardId)
+      if (dirty && canUpdate && !(await save())) return
+      if (loadEpoch.current !== epoch || dashboardId !== targetId) return
+      const published = await publishAnalyticsDashboard(targetId)
+      if (loadEpoch.current !== epoch || dashboardId !== targetId) return
       setDashboard(published)
       message.success(`看板已发布为 v${published.publishedVersion}`)
+    } catch (error) {
+      if (loadEpoch.current === epoch) message.error(dashboardErrorMessage(error, '看板发布失败，请稍后重试。'))
     } finally {
-      setPublishing(false)
+      if (loadEpoch.current === epoch) setPublishing(false)
     }
   }
 
-  if (!spec || !dashboard) {
+  if (loadError) return <DashboardLoadError message={loadError} onRetry={() => setRetryKey((value) => value + 1)} />
+  if (loading) {
     return <div className="dashboard-editor-loading"><Spin /><span>正在准备画布…</span></div>
   }
+  if (!spec || !dashboard) return <DashboardEmptyState message="该看板暂无草稿内容。" />
 
   if (permissions.loading && !canManagePlatform()) return <Spin />
   if (!canUpdate) return <Empty description="没有此看板的编辑权限，请从看板列表预览。" />
@@ -269,6 +315,7 @@ export default function DashboardEditorPage() {
           <DashboardCanvas
             spec={spec}
             datasets={datasets}
+            dashboardKey={`editor:${dashboard.id}:${dashboard.updatedAt}`}
             editable
             selectedWidgetId={selectedId}
             onSelect={setSelectedId}

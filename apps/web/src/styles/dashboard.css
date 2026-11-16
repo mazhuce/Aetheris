@@ -698,6 +698,19 @@
   font-size: 11px;
 }
 
+.dashboard-request-state {
+  display: grid;
+  width: 100%;
+  min-height: 50vh;
+  place-items: center;
+  align-content: center;
+  padding: var(--space-4);
+}
+
+.dashboard-request-state .ant-alert {
+  width: min(560px, 100%);
+}
+
 /* Full-screen preview and published runtime */
 .dashboard-stage-page {
   width: 100%;

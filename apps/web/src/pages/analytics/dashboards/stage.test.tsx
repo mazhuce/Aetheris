@@ -1,0 +1,55 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import * as api from '@/api/analytics'
+import { PublishedDashboardPage } from './stage'
+
+vi.mock('@/api/analytics', () => ({
+  getAnalyticsDashboard: vi.fn(),
+  getPublishedDashboard: vi.fn(),
+  listAnalyticsDatasets: vi.fn()
+}))
+vi.mock('./components/DashboardCanvas', () => ({
+  default: ({ dashboardKey }: { dashboardKey?: string | number }) => <div data-testid="dashboard-canvas">canvas:{dashboardKey}</div>
+}))
+
+const dashboard = {
+  id: 7,
+  name: '销售看板',
+  description: '',
+  slug: 'sales',
+  status: 'published' as const,
+  draftSpec: { schemaVersion: 1, theme: 'dark' as const, layouts: {}, widgets: [], globalFilters: [] },
+  publishedSpec: { schemaVersion: 1, theme: 'dark' as const, layouts: {}, widgets: [], globalFilters: [] },
+  publishedVersion: 3,
+  createdBy: 'owner',
+  updatedBy: 'owner',
+  createdAt: '',
+  updatedAt: ''
+}
+
+function page() {
+  return render(
+    <MemoryRouter initialEntries={['/d/sales']}>
+      <Routes><Route path="/d/:slug" element={<PublishedDashboardPage />} /></Routes>
+    </MemoryRouter>
+  )
+}
+
+describe('published dashboard request state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(api.listAnalyticsDatasets).mockResolvedValue([])
+  })
+
+  it('leaves loading on a 503 and retries the same dashboard', async () => {
+    vi.mocked(api.getPublishedDashboard)
+      .mockRejectedValueOnce({ response: { status: 503 } })
+      .mockResolvedValueOnce(dashboard)
+    page()
+    expect(await screen.findByRole('alert')).toHaveTextContent('503')
+    fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }))
+    expect(await screen.findByTestId('dashboard-canvas')).toHaveTextContent('published:7:3')
+    await waitFor(() => expect(api.getPublishedDashboard).toHaveBeenCalledTimes(2))
+  })
+})

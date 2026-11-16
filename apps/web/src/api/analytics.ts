@@ -108,8 +108,8 @@ export interface DashboardTemplate {
   sortOrder: number
 }
 
-export function listAnalyticsDatasets(): Promise<AnalyticsDataset[]> {
-  return http.get<AnalyticsDataset[]>('/api/analytics/datasets').then((response) => response.data)
+export function listAnalyticsDatasets(signal?: AbortSignal): Promise<AnalyticsDataset[]> {
+  return http.get<AnalyticsDataset[]>('/api/analytics/datasets', { signal }).then((response) => response.data)
 }
 
 export function createAnalyticsDataset(input: DatasetInput): Promise<AnalyticsDataset> {
@@ -146,12 +146,12 @@ export function listAnalyticsDashboards(): Promise<AnalyticsDashboard[]> {
   return http.get<AnalyticsDashboard[]>('/api/analytics/dashboards').then((response) => response.data)
 }
 
-export function getAnalyticsDashboard(id: number): Promise<AnalyticsDashboard> {
-  return http.get<AnalyticsDashboard>(`/api/analytics/dashboards/${id}`).then((response) => response.data)
+export function getAnalyticsDashboard(id: number, signal?: AbortSignal): Promise<AnalyticsDashboard> {
+  return http.get<AnalyticsDashboard>(`/api/analytics/dashboards/${id}`, { signal }).then((response) => response.data)
 }
 
-export function getPublishedDashboard(slug: string): Promise<AnalyticsDashboard> {
-  return http.get<AnalyticsDashboard>(`/api/analytics/dashboards/published/${slug}`).then((response) => response.data)
+export function getPublishedDashboard(slug: string, signal?: AbortSignal): Promise<AnalyticsDashboard> {
+  return http.get<AnalyticsDashboard>(`/api/analytics/dashboards/published/${slug}`, { signal }).then((response) => response.data)
 }
 
 export function createAnalyticsDashboard(input: {
@@ -164,13 +164,14 @@ export function createAnalyticsDashboard(input: {
 
 export function updateAnalyticsDashboard(
   id: number,
-  input: { name: string; description?: string; spec: DashboardSpec }
+  input: { name: string; description?: string; spec: DashboardSpec },
+  signal?: AbortSignal
 ): Promise<AnalyticsDashboard> {
-  return http.put<AnalyticsDashboard>(`/api/analytics/dashboards/${id}`, input).then((response) => response.data)
+  return http.put<AnalyticsDashboard>(`/api/analytics/dashboards/${id}`, input, { signal }).then((response) => response.data)
 }
 
-export function publishAnalyticsDashboard(id: number): Promise<AnalyticsDashboard> {
-  return http.post<AnalyticsDashboard>(`/api/analytics/dashboards/${id}/publish`).then((response) => response.data)
+export function publishAnalyticsDashboard(id: number, signal?: AbortSignal): Promise<AnalyticsDashboard> {
+  return http.post<AnalyticsDashboard>(`/api/analytics/dashboards/${id}/publish`, undefined, { signal }).then((response) => response.data)
 }
 
 export function deleteAnalyticsDashboard(id: number): Promise<void> {

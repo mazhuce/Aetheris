@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { App, Button, Input, Space, Spin, Tag, Tooltip, Typography } from 'antd'
 import { CopyOutlined, DatabaseOutlined, QuestionCircleOutlined, SendOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -27,24 +27,53 @@ export default function ChatBiPage() {
   const [result, setResult] = useState<ChatResult>()
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(false)
+  const requestEpoch = useRef(0)
+  const requestRef = useRef<{ epoch: number; controller: AbortController }>()
+
+  useEffect(() => () => {
+    requestEpoch.current += 1
+    requestRef.current?.controller.abort()
+    requestRef.current = undefined
+  }, [])
 
   const ask = async (text?: string) => {
+    // Enter、示例按钮和重复点击可能在同一事件循环内同时触发；
+    // 先用 ref 建立同步锁，不能只依赖异步 state 的 loading。
+    if (requestRef.current) return
     const q = (text ?? question).trim()
     if (!q) {
       message.warning('请输入问题')
       return
     }
+    const controller = new AbortController()
+    const epoch = ++requestEpoch.current
+    requestRef.current = { epoch, controller }
     setLoading(true)
     setError(undefined)
     setResult(undefined)
     try {
-      setResult(await askChatBi(q))
+      const next = await askChatBi(q, controller.signal)
+      if (requestEpoch.current === epoch && !controller.signal.aborted) setResult(next)
     } catch (err) {
+      if (controller.signal.aborted || requestEpoch.current !== epoch) return
       const detail = (err as { response?: { data?: { content?: string } } })?.response?.data?.content
       setError(detail || '智能问数暂时不可用，请稍后重试')
     } finally {
-      setLoading(false)
+      if (requestEpoch.current === epoch) {
+        requestRef.current = undefined
+        setLoading(false)
+      }
     }
+  }
+
+  const cancelAsk = () => {
+    const current = requestRef.current
+    if (!current) return
+    requestEpoch.current += 1
+    current.controller.abort()
+    requestRef.current = undefined
+    setLoading(false)
+    setError(undefined)
   }
 
   const sql = result ? extractSql(result.content) : undefined
@@ -96,11 +125,13 @@ export default function ChatBiPage() {
             >
               提问
             </Button>
+            {loading && <Button danger onClick={cancelAsk}>取消</Button>}
             {EXAMPLES.map((example) => (
               <Button
                 key={example}
                 type="text"
                 size="small"
+                disabled={loading}
                 onClick={() => {
                   setQuestion(example)
                   void ask(example)
@@ -118,7 +149,7 @@ export default function ChatBiPage() {
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
             <Spin />
             <Typography.Text type="secondary">
-              AI 正在检索表结构并执行查询，通常需要 10-60 秒，请勿重复提交。
+              AI 正在检索表结构并执行查询，通常需要 10-60 秒；请求已锁定，可取消后重新提问。
             </Typography.Text>
           </Space>
         </DataSurface>
