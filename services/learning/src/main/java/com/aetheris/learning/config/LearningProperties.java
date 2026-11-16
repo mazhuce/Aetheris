@@ -67,9 +67,13 @@ public class LearningProperties {
 
     public static class Tutor {
         private int maxHintsPerLab = 6;
+        /** 单个任务允许的 AI 导师提问条数；超出后自动降级规则导师，防止模型预算失控。 */
+        private int maxChatsPerLab = 20;
 
         public int getMaxHintsPerLab() { return maxHintsPerLab; }
         public void setMaxHintsPerLab(int maxHintsPerLab) { this.maxHintsPerLab = maxHintsPerLab; }
+        public int getMaxChatsPerLab() { return maxChatsPerLab; }
+        public void setMaxChatsPerLab(int maxChatsPerLab) { this.maxChatsPerLab = maxChatsPerLab; }
     }
 
     public static class Ai {

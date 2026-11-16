@@ -703,6 +703,13 @@ public class LearningRepository {
 
     // ------------------------------------------------------------------ tutor
 
+    public int countTutorUserMessages(long uid, String labCode) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM learning.tutor_message WHERE learner_uid = ? AND lab_code = ? AND role = 'user'",
+                Integer.class, uid, labCode);
+        return count == null ? 0 : count;
+    }
+
     public void insertTutorMessage(long uid, String labCode, String role, String content, String model) {
         jdbc.update("""
                 INSERT INTO learning.tutor_message (learner_uid, lab_code, role, content, model)

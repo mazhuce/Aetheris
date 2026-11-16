@@ -66,6 +66,7 @@ aetheris:
       sample-rows: ${AETHERIS_LEARNING_SAMPLE_ROWS:20}
     tutor:
       max-hints-per-lab: ${AETHERIS_LEARNING_MAX_HINTS:6}
+      max-chats-per-lab: ${AETHERIS_LEARNING_MAX_CHATS:20}
     ai:
       base-url: ${AETHERIS_AI_BASE_URL:https://api.deepseek.com}
       api-key: ${AETHERIS_AI_API_KEY:}

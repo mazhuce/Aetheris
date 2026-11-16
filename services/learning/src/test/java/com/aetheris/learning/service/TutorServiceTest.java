@@ -83,4 +83,20 @@ class TutorServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         verify(repository, never()).insertTutorMessage(anyLong(), anyString(), anyString(), anyString(), any());
     }
+    @Test
+    void fallsBackToRulesWhenChatQuotaExceeded() {
+        when(aiTutorClient.enabled()).thenReturn(true);
+        LearningProperties properties = new LearningProperties();
+        properties.getTutor().setMaxChatsPerLab(2);
+        tutorService = new TutorService(repository, submissionService, aiTutorClient, properties);
+        when(repository.countTutorUserMessages(1L, "l3-rfm")).thenReturn(2);
+        when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(null);
+
+        LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "再给点提示");
+
+        assertThat(chat.fallback()).isTrue();
+        assertThat(chat.model()).isEqualTo("rule-based");
+        assertThat(chat.reply()).contains("AI 导师对话已达到上限");
+        verify(aiTutorClient, never()).complete(anyString(), anyString());
+    }
 }

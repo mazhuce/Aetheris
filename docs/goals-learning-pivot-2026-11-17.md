@@ -218,6 +218,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 已知约束：新任务只使用 `teach` 教学表；后续新增任务必须同时写 `lab_skill`，并在等价 schema 中跑通 `expected_sql`。
 - 未完成：真实浏览器走查（缺测试账号）；真实样例集（L09）仅预留未实施。
 
+### 2026-11-17 检查点 5：L06 学习适配审计（MCP 边界、导师预算）
+
+- MCP 学习工具审计：当前只读工具（路径/任务/提交）与 `draft_lab_publish`、`get_approval_status` 等审批入口，未发现直写课程内容的通道；发布仍需管理员在内容运营审批。
+- AI 导师预算：新增单任务提问上限（默认 20，环境变量 `AETHERIS_LEARNING_MAX_CHATS`）；超限后不再调用模型，降级规则导师并在回复中明示。`TutorServiceTest` 4/4。
+- 判分凭证：提交、评分与执行证据按 submission 绑定，重复提交计为新 attempt，未发现跨提交复用通道，本轮不改。
+- 部署：learning-service 已重建；未完成真实浏览器走查。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

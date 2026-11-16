@@ -6,6 +6,7 @@ import com.aetheris.learning.repository.LearningRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * M2 的分级提示先走规则引擎：基于任务定义、静态策略与最近一次判分结果，
@@ -39,17 +40,26 @@ public class TutorService {
         if (question.length() > 2000) {
             throw new IllegalArgumentException("单次提问不能超过 2000 字");
         }
+        int used = repository.countTutorUserMessages(uid, labCode);
+        int quota = Math.max(1, properties.getTutor().getMaxChatsPerLab());
+        boolean quotaExceeded = used >= quota;
         repository.insertTutorMessage(uid, labCode, "user", question, null);
         LearningModels.GradingView last = submissionService.lastResult(uid, labCode);
         String lastSql = repository.latestSubmissionSql(uid, labCode).orElse("");
         String model = aiTutorClient.enabled() ? properties.getAi().getModel() : "rule-based";
         boolean fallback = true;
         String reply;
-        var answer = aiTutorClient.complete(systemPrompt(lab), userPrompt(question, lastSql, last));
+        var answer = quotaExceeded
+                ? Optional.<AiTutorClient.Answer>empty()
+                : aiTutorClient.complete(systemPrompt(lab), userPrompt(question, lastSql, last));
         if (answer.isPresent()) {
             reply = answer.get().content();
             model = answer.get().model();
             fallback = false;
+        } else if (quotaExceeded) {
+            model = "rule-based";
+            reply = "本任务的 AI 导师对话已达到上限（" + quota + " 条），已切换为规则导师。"
+                    + ruleReply(lab, last, question);
         } else {
             reply = ruleReply(lab, last, question);
         }
