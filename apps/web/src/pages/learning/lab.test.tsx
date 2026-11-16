@@ -41,4 +41,32 @@ describe('learning lab request state', () => {
     fireEvent.click(screen.getByRole('button', { name: /重新加载/ }))
     await waitFor(() => expect(api.getLab).toHaveBeenCalledTimes(2))
   })
+  it('shows the graded result after submitting the starter SQL', async () => {
+    vi.mocked(api.getLab).mockResolvedValue({
+      code: 'l1-sales', title: '销售查询', level: 'L1', difficulty: 'easy', taskType: 'SQL',
+      summary: '统计有效订单', objective: '只输出有效订单的金额',
+      steps: [], tableRefs: ['teach.orders_raw'], starterSql: 'SELECT order_id FROM orders_raw',
+      passScore: 60, estimatedMinutes: 15, version: 1, rubric: [],
+      sandboxSchema: 'sb_u1', sandboxActive: true, passed: false, lastStatus: 'not_started',
+      datasetRefs: ['teach.orders_raw@1'],
+      datasets: [{
+        code: 'teach.orders_raw', version: 1, tableName: 'teach.orders_raw', rowCount: 26,
+        license: 'internal-training', source: 'synthetic', piiReviewed: true
+      }]
+    })
+    vi.mocked(api.listSubmissions).mockResolvedValue([])
+    vi.mocked(api.submitLab).mockResolvedValue({
+      id: 1, labCode: 'l1-sales', attempt: 1, status: 'graded', score: 86, passed: true,
+      gradedAt: '2026-11-17T10:00:00Z',
+      result: { score: 86, passed: true, summary: '结果与标准答案一致', items: [],
+        sampleColumns: [], sampleRows: [], hints: [] }
+    })
+    page()
+
+    expect(await screen.findByText('销售查询')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /提交判分/ }))
+
+    expect(await screen.findByText(/得分 86 · 已通过/)).toBeInTheDocument()
+    expect(screen.getByText('结果与标准答案一致')).toBeInTheDocument()
+  })
 })

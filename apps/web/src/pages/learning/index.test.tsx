@@ -33,4 +33,23 @@ describe('learning center request state', () => {
     fireEvent.click(screen.getByRole('button', { name: /重新加载/ }))
     await waitFor(() => expect(api.listLearningPaths).toHaveBeenCalledTimes(2))
   })
+  it('renders the active path and progress from the learning service', async () => {
+    vi.mocked(api.listLearningPaths).mockResolvedValue([{
+      code: 'da-basic', title: '数据分析师入门', description: '从指标口径到趋势分析',
+      targetRole: '数据分析师', level: 'L1-L2', version: 1, estimatedHours: 36,
+      labCount: 6, completedLabs: 1, progressPercent: 17
+    }])
+    vi.mocked(api.getProgress).mockResolvedValue({
+      completed: 1, total: 6, percent: 17, averageScore: 90, skills: [], credentials: []
+    })
+    vi.mocked(api.listProjects).mockResolvedValue([])
+    vi.mocked(api.getLearningPath).mockResolvedValue({
+      code: 'da-basic', title: '数据分析师入门', description: '从指标口径到趋势分析',
+      targetRole: '数据分析师', level: 'L1-L2', estimatedHours: 36, modules: [], skills: []
+    })
+    page()
+
+    expect(await screen.findByText('数据分析师入门')).toBeInTheDocument()
+    expect(screen.getByText('1 / 6')).toBeInTheDocument()
+  })
 })
