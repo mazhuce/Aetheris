@@ -21,6 +21,16 @@ public interface LlmClient {
     LlmReply chat(List<LlmMessage> messages);
 
     /**
+     * 带系统提示的普通对话（不启用工具），用于专家模式等固定人格。
+     *
+     * @param messages     完整对话历史，末条必须是用户消息
+     * @param systemPrompt 系统提示；为空时等价于 {@link #chat(List)}
+     * @return 模型回复
+     * @throws LlmException 调用失败
+     */
+    LlmReply chat(List<LlmMessage> messages, String systemPrompt);
+
+    /**
      * 发起一轮带工具调用的对话。
      *
      * <p>模型可在回答前多次调用工具，由适配器逐轮检查预算，直到产出最终答复或达到限制。

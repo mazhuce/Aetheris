@@ -562,3 +562,80 @@
 .stat-trend.is-down {
   color: var(--danger);
 }
+
+/* 数据开发专家抽屉：复用全局令牌，不新增字号与颜色。 */
+.expert-drawer-body {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.expert-drawer-lead {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+  line-height: var(--leading-normal);
+}
+
+.expert-drawer-intro {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.expert-drawer-messages {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.expert-message {
+  display: flex;
+}
+
+.expert-message-user {
+  justify-content: flex-end;
+}
+
+.expert-message-bubble {
+  max-width: 92%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-size: var(--font-body);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+}
+
+.expert-message-user .expert-message-bubble {
+  background: var(--nav-hover);
+}
+
+.expert-message-bubble p {
+  margin: 0 0 var(--space-2);
+}
+
+.expert-message-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.expert-message-bubble pre {
+  overflow: auto;
+}
+
+.expert-offline {
+  margin: 0;
+}
+
+.expert-drawer-composer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.expert-drawer-toolbar {
+  display: flex;
+  justify-content: space-between;
+}
+
+.expert-drawer-footnote {
+  font-size: var(--font-meta);
+}

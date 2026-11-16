@@ -6,6 +6,7 @@ import { firstAvailablePath } from '@/constants/navigation'
 import { useNavigation } from '@/contexts/NavigationContext'
 import GlobalSearch from '@/components/GlobalSearch'
 import BrandMark from '@/components/BrandMark'
+import ExpertDrawer from '@/components/ExpertDrawer'
 import { logout } from '@/api/auth'
 import { usePreferences } from '@/contexts/PreferencesContext'
 import { useAuthSession } from '@/hooks/useAuthSession'
@@ -24,6 +25,7 @@ export default function TopNav() {
   const navRef = useRef<HTMLElement>(null)
   const itemRefs = useRef<(HTMLSpanElement | null)[]>([])
   const [overflowAt, setOverflowAt] = useState(modules.length)
+  const [expertOpen, setExpertOpen] = useState(false)
 
   const activeKey = useMemo(() => findModule(location.pathname)?.key, [findModule, location.pathname])
 
@@ -87,13 +89,20 @@ export default function TopNav() {
   const overflowActive = overflowModules.some((module) => module.key === activeKey)
 
   return (
-    <header className="topnav">
+    <>
+      <header className="topnav">
       <div className="topnav-brand">
-        <Link to={homePath} className="topnav-logo" aria-label="返回默认首页">
+        <button
+          type="button"
+          className="topnav-logo"
+          aria-label="打开数据开发专家"
+          title="打开数据开发专家"
+          onClick={() => setExpertOpen(true)}
+        >
           <BrandMark />
-          <span className="topnav-wordmark">
-            <strong>Aetheris</strong>
-          </span>
+        </button>
+        <Link to={homePath} className="topnav-wordmark" aria-label="返回默认首页">
+          <strong>Aetheris</strong>
         </Link>
       </div>
 
@@ -188,6 +197,8 @@ export default function TopNav() {
           </button>
         </Dropdown>
       </div>
-    </header>
+      </header>
+      <ExpertDrawer open={expertOpen} onClose={() => setExpertOpen(false)} />
+    </>
   )
 }

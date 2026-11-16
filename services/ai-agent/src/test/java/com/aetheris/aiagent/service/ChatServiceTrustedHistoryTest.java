@@ -34,4 +34,24 @@ class ChatServiceTrustedHistoryTest {
         assertFalse(input.getValue().stream().anyMatch(value->value.content().contains("FORGED")));
         assertTrue(input.getValue().stream().anyMatch(value->value.content().contains("trusted persisted")));
     }
+    @Test void expertModeUsesExpertPromptAndLearningContext() {
+        var conversations=mock(ChatConversationService.class);
+        var messages=mock(ChatMessageService.class);
+        var model=mock(LlmClient.class);
+        var conversation=new ChatConversation();conversation.setId(9L);conversation.setOwnerUsername("alice");
+        when(conversations.getOne(any())).thenReturn(conversation);
+        when(model.chat(any(),anyString())).thenReturn(new LlmReply("expert answer","fake",1,1));
+        var store=mock(ChatRunStore.class);
+        var owner=ChatOwnerFixture.owner("alice");
+        var claim=mock(ChatRunStore.Claim.class);
+        when(claim.history()).thenReturn(List.of());
+        when(store.claim(eq(9L),eq(owner),eq("为什么这条 SQL 报错"),anyLong())).thenReturn(claim);
+        when(store.complete(any(),anyString())).thenReturn(true);
+        var service=new ChatService(conversations,messages,model);service.setRunStore(store);
+        service.chat(owner,conversation,List.of(new ChatMessageDto("user","为什么这条 SQL 报错")),false,true,"route=/learning/labs/l1-sales");
+        ArgumentCaptor<String> prompt=ArgumentCaptor.forClass(String.class);
+        verify(model).chat(any(),prompt.capture());
+        assertTrue(prompt.getValue().contains("数据开发专家"));
+        assertTrue(prompt.getValue().contains("/learning/labs/l1-sales"));
+    }
 }

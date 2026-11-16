@@ -90,6 +90,7 @@ class ChatRunStorePostgresIT {
                 throw new com.aetheris.aiagent.llm.LlmException(com.aetheris.aiagent.llm.LlmException.Kind.UNAVAILABLE,"offline failure",null);
             }
             public com.aetheris.aiagent.llm.LlmReply chatWithTools(java.util.List<com.aetheris.aiagent.llm.LlmMessage> messages,String prompt){return chat(messages);}
+            public com.aetheris.aiagent.llm.LlmReply chat(java.util.List<com.aetheris.aiagent.llm.LlmMessage> messages,String systemPrompt){return chat(messages);}
         };
         var conversation=new com.aetheris.aiagent.entity.ChatConversation();conversation.setId(id);conversation.setOwnerUsername("alice");
         var service=new ChatService(org.mockito.Mockito.mock(ChatConversationService.class),org.mockito.Mockito.mock(ChatMessageService.class),model);

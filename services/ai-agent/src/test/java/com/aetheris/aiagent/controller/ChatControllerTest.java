@@ -127,7 +127,7 @@ class ChatControllerTest {
         ChatService chatService = mock(ChatService.class);
         when(chatService.findOwned(any(), any(ChatOwner.class))).thenReturn(new ChatConversation());
         when(chatService.validate(any())).thenReturn(null);
-        when(chatService.chat(any(), any(), any(), anyBoolean()))
+        when(chatService.chat(any(), any(), any(), anyBoolean(), anyBoolean(), any()))
                 .thenReturn(new LlmReply("你好，我能帮你查数据", "deepseek-chat", 12, 34));
         ChatController controller = new ChatController(chatService, permissiveLimiter());
 
@@ -160,7 +160,7 @@ class ChatControllerTest {
         ChatService chatService = mock(ChatService.class);
         when(chatService.findOwned(any(), any(ChatOwner.class))).thenReturn(new ChatConversation());
         when(chatService.validate(any())).thenReturn(null);
-        when(chatService.chat(any(), any(), any(), anyBoolean()))
+        when(chatService.chat(any(), any(), any(), anyBoolean(), anyBoolean(), any()))
                 .thenThrow(new LlmException(kind, "调用失败", null));
         ChatController controller = new ChatController(chatService, permissiveLimiter());
 

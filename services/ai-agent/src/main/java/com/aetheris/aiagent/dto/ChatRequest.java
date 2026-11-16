@@ -18,11 +18,22 @@ public record ChatRequest(
         @NotNull Long conversationId,
         @NotEmpty @jakarta.validation.constraints.Size(max=50) @jakarta.validation.Valid
         List<@NotNull ChatMessageDto> messages,
-        Boolean dataMode) {
+        Boolean dataMode,
+        String mode,
+        @jakarta.validation.constraints.Size(max=600) String context) {
+    public ChatRequest(Long conversationId, List<ChatMessageDto> messages, Boolean dataMode) {
+        this(conversationId, messages, dataMode, null, null);
+    }
+
     public ChatRequest { if(messages!=null)messages=java.util.Collections.unmodifiableList(new java.util.ArrayList<>(messages)); }
 
     /** 未显式指定时按关闭处理。 */
     public boolean isDataMode() {
         return Boolean.TRUE.equals(dataMode);
+    }
+
+    /** 专家模式：固定「数据开发专家」人格，并携带页面学习上下文。 */
+    public boolean isExpert() {
+        return "expert".equalsIgnoreCase(mode);
     }
 }

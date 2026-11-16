@@ -126,6 +126,12 @@ public class ChatService {
      */
     public LlmReply chat(
             ChatOwner owner, ChatConversation conversation, List<ChatMessageDto> messages, boolean dataMode) {
+        return chat(owner, conversation, messages, dataMode, false, null);
+    }
+
+    public LlmReply chat(
+            ChatOwner owner, ChatConversation conversation, List<ChatMessageDto> messages, boolean dataMode,
+            boolean expertMode, String context) {
         String invalid=validate(messages);
         if(invalid!=null)throw new IllegalArgumentException(invalid);
         if(runStore==null)throw new IllegalStateException("会话执行存储未配置");
@@ -146,7 +152,14 @@ public class ChatService {
         try {
             List<LlmMessage> history=new ArrayList<>(claim.history());
             history.add(new LlmMessage("user",lastUser.content()));
-            LlmReply reply = dataMode ? llmClient.chatWithTools(history,AgentPrompts.DATA_ANALYST) : llmClient.chat(history);
+            LlmReply reply;
+            if (expertMode) {
+                String prompt = AgentPrompts.DATA_EXPERT + (context == null || context.isBlank() ? ""
+                        : "\n\n## 当前学习上下文\n" + context.substring(0, Math.min(context.length(), 600)));
+                reply = dataMode ? llmClient.chatWithTools(history, prompt) : llmClient.chat(history, prompt);
+            } else {
+                reply = dataMode ? llmClient.chatWithTools(history, AgentPrompts.DATA_ANALYST) : llmClient.chat(history);
+            }
             return run.commit(()->{
                 if(!runStore.complete(claim,reply.content()))
                     throw new com.aetheris.aiagent.llm.LlmException(com.aetheris.aiagent.llm.LlmException.Kind.UNAVAILABLE,

@@ -388,3 +388,16 @@
   background: transparent;
   color: var(--text-primary);
 }
+
+/* 图标按钮触发专家抽屉；字标保留返回首页的链接语义。 */
+.topnav-logo {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.topnav-wordmark {
+  color: var(--text-primary);
+  text-decoration: none;
+}

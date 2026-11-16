@@ -62,6 +62,7 @@ public class SpringAiLlmClient implements LlmClient {
         this(model,configured,key,tools);this.limits=limits;
     }
     @Override public LlmReply chat(List<LlmMessage> messages){return execute(messages,null,false);}
+    @Override public LlmReply chat(List<LlmMessage> messages,String systemPrompt){return execute(messages,systemPrompt,false);}
     @Override public LlmReply chatWithTools(List<LlmMessage> messages,String systemPrompt){return execute(messages,systemPrompt,true);}
     private LlmReply execute(List<LlmMessage> messages,String systemPrompt,boolean toolsEnabled) {
         requireApiKey();

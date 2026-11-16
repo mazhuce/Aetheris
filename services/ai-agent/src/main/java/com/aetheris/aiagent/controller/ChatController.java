@@ -98,7 +98,7 @@ public class ChatController {
             HttpServletRequest servletRequest,
             @Valid @RequestBody ChatRequest request) {
         ChatOwner actor=owner(servletRequest);
-        ChatRequest snapshot=new ChatRequest(request.conversationId(),List.copyOf(request.messages()),request.dataMode());
+        ChatRequest snapshot=new ChatRequest(request.conversationId(),List.copyOf(request.messages()),request.dataMode(),request.mode(),request.context());
         return requestExecutor.submit(servletRequest,request.conversationId(),()->chat(actor,snapshot));
     }
 
@@ -119,7 +119,7 @@ public class ChatController {
         }
 
         try {
-            LlmReply reply = chatService.chat(owner, conversation, request.messages(), request.isDataMode());
+            LlmReply reply = chatService.chat(owner, conversation, request.messages(), request.isDataMode(), request.isExpert(), request.context());
             Map<String, Object> body = assistant(reply.content(), request.conversationId());
             body.put("model", reply.model());
             attachUsage(body,reply);

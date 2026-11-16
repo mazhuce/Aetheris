@@ -36,17 +36,31 @@ export function listMessages(conversationId: number): Promise<ChatMessage[]> {
   return http.get<ChatMessage[]>(`/api/ai/conversations/${conversationId}/messages`).then((res) => res.data)
 }
 
+export interface ChatSendOptions {
+  /** 固定「数据开发专家」人格；后端使用专用系统提示。 */
+  expert?: boolean
+  /** 当前页面/任务上下文，最多 600 字符，由后端附加到系统提示。 */
+  context?: string
+}
+
 export function sendChat(
   conversationId: number,
   messages: ChatMessage[],
-  dataMode = false
+  dataMode = false,
+  options?: ChatSendOptions
 ): Promise<ChatResult> {
   // 数据模式下 AI 需多轮调用工具（检索表 → 看结构 → 执行查询），
   // 耗时明显高于普通对话，因此单独放宽超时。
   return http
     .post<ChatResult>(
       '/api/ai/chat',
-      { conversationId, messages, dataMode },
+      {
+        conversationId,
+        messages,
+        dataMode,
+        mode: options?.expert ? 'expert' : undefined,
+        context: options?.context
+      },
       { timeout: dataMode ? 300000 : 70000 }
     )
     .then((res) => res.data)

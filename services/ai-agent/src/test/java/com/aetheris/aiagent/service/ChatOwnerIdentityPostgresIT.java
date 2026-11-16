@@ -209,6 +209,7 @@ class ChatOwnerIdentityPostgresIT {
     private static class RecordingModel implements LlmClient {
         private final List<List<LlmMessage>> inputs = new CopyOnWriteArrayList<>();
         public LlmReply chat(List<LlmMessage> messages) { inputs.add(List.copyOf(messages)); return new LlmReply("offline answer", "fixture", 1, 1); }
+        public LlmReply chat(List<LlmMessage> messages, String systemPrompt) { return chat(messages); }
         public LlmReply chatWithTools(List<LlmMessage> messages, String prompt) { return chat(messages); }
         public String model() { return "fixture"; }
     }
