@@ -69,6 +69,16 @@ export interface RubricItem {
   weight: number
 }
 
+export interface DatasetInfo {
+  code: string
+  version: number
+  tableName: string
+  rowCount: number
+  license: string
+  source: string
+  piiReviewed: boolean
+}
+
 export interface LabDetail {
   code: string
   title: string
@@ -97,6 +107,8 @@ export interface LabDetail {
   knowledge?: LabKnowledge[]
   /** 任务绑定的样例数据集引用（如 teach.orders_raw@1），多表任务会有多项。 */
   datasetRefs?: string[]
+  /** 样例数据集清单（许可、来源、行数、PII 复核）。 */
+  datasets?: DatasetInfo[]
 }
 
 export interface LabKnowledge {

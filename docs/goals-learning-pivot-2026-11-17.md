@@ -240,6 +240,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 任务详情展示多个「样例数据」引用；后端编译、前端 tsc/lint 通过；learning/web 重建 healthy，web 200。
 - 未完成：真实脱敏样例数据本体与真实浏览器走查。
 
+### 2026-11-17 检查点 8：样例数据来源在任务详情可见
+
+- 任务详情新增 `datasets` 清单：展示每个引用的 code@version、许可、来源行数与 PII 复核状态；`datasetRefs` 保留为兜底。
+- 后端编译、前端 tsc/lint 通过；learning/web 重建 healthy，web 200。
+- 未完成：真实脱敏样例数据本体与真实浏览器走查。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

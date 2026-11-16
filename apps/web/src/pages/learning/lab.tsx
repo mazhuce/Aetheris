@@ -219,7 +219,18 @@ export default function LearningLabPage() {
               <Descriptions.Item label="数据表">
                 {lab.tableRefs.map((table) => <Tag key={table}>{table}</Tag>)}
               </Descriptions.Item>
-              {lab.datasetRefs?.length ? (
+              {lab.datasets?.length ? (
+                <Descriptions.Item label="样例数据">
+                  <Space size={4} wrap>
+                    {lab.datasets.map((dataset) => (
+                      <Tag key={`${dataset.code}@${dataset.version}`}>
+                        {dataset.code}@{dataset.version} · {dataset.license} · {dataset.rowCount} 行
+                        {dataset.piiReviewed ? ' · 已复核 PII' : ''}
+                      </Tag>
+                    ))}
+                  </Space>
+                </Descriptions.Item>
+              ) : lab.datasetRefs?.length ? (
                 <Descriptions.Item label="样例数据">
                   {lab.datasetRefs.map((ref) => <Tag key={ref}>{ref}</Tag>)}
                 </Descriptions.Item>

@@ -107,6 +107,22 @@ public class LearningRepository {
                 """, labMapper(), pathCode);
     }
 
+    public java.util.List<LearningModels.DatasetInfo> datasetManifests(java.util.List<String> refs) {
+        if (refs == null || refs.isEmpty()) return java.util.List.of();
+        java.util.Map<String, LearningModels.DatasetInfo> byRef = new java.util.HashMap<>();
+        jdbc.query("""
+                SELECT code, version, table_name, row_count, license, source, pii_reviewed
+                  FROM learning.dataset_manifest
+                """, rs -> {
+            LearningModels.DatasetInfo info = new LearningModels.DatasetInfo(
+                    rs.getString("code"), rs.getInt("version"), rs.getString("table_name"),
+                    rs.getInt("row_count"), rs.getString("license"), rs.getString("source"),
+                    rs.getBoolean("pii_reviewed"));
+            byRef.put(info.code() + "@" + info.version(), info);
+        });
+        return refs.stream().map(byRef::get).filter(java.util.Objects::nonNull).toList();
+    }
+
     public java.util.List<String> datasetRefsOf(String labCode) {
         String value = jdbc.query("SELECT dataset_refs::text FROM learning.lab WHERE code = ?",
                 rs -> rs.next() ? rs.getString(1) : null, labCode);

@@ -100,6 +100,7 @@ public class CatalogService {
         LearningModels.SandboxInfo sandbox = repository.findActiveSandbox(uid)
                 .map(LearningModels.SandboxRow::toInfo).orElse(null);
         LearningRepository.AttemptRow attempt = repository.bestAttempts(uid, repository.pathOfLab(code)).get(code);
+        java.util.List<String> datasetRefs = repository.datasetRefsOf(code);
         return new LearningModels.LabDetail(lab.code(), lab.title(), lab.level(), lab.difficulty(), lab.taskType(),
                 lab.summary(), lab.scenario(), lab.objective(), lab.steps(), lab.tableRefs(), lab.starterSql(),
                 lab.passScore(), lab.estimatedMinutes(), lab.version(),
@@ -112,7 +113,8 @@ public class CatalogService {
                 attempt == null ? "not_started" : attempt.status(),
                 lab.relatedFeatures(),
                 lab.knowledge(),
-                repository.datasetRefsOf(code));
+                datasetRefs,
+                repository.datasetManifests(datasetRefs));
     }
 
     public LearningModels.SandboxInfo startLab(String code, long uid, String username) {
