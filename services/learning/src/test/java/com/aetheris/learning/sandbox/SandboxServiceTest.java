@@ -115,4 +115,17 @@ class SandboxServiceTest {
         verify(repository).insertSandbox(eq(8L), eq("learner"), eq("l1-valid-orders"), eq("sb_u8"),
                 eq("light"), any(Instant.class));
     }
+    @Test
+    void everyTeachingTableIsCopiedIntoTheSandbox() {
+        LearningModels.SandboxRow created = new LearningModels.SandboxRow(7L, 11L, "l1-valid-orders", "sb_u11",
+                "active", "light", Instant.now().plusSeconds(3600), Instant.now(), null);
+        when(repository.findActiveSandbox(11L)).thenReturn(Optional.empty()).thenReturn(Optional.of(created));
+
+        service.ensure(11L, "learner", "l1-valid-orders", "light");
+
+        for (String table : java.util.List.of("orders_raw", "order_status_dict", "shop_dim", "users",
+                "payments", "refunds", "metric_dict", "daily_arrival", "table_asset")) {
+            verify(jdbcTemplate).execute(org.mockito.ArgumentMatchers.contains("AS TABLE teach." + table));
+        }
+    }
 }

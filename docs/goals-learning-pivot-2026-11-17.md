@@ -204,6 +204,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 课程现状核对：真实库已有 4 条路径（de-basic 14 个任务、dg-basic 8、ops-basic 7、de-foundation 已归档），岗位映射已存在；L04 的剩余价值集中在补充「数据分析岗」路径与真实样例集，尚未开始。
 - 未完成：真实浏览器走查仍缺测试账号；L04/L06 未完成。
 
+### 2026-11-17 检查点 3：沙箱模板表覆盖修复（学习阻断）
+
+- 现状：沙箱只复制 `orders_raw` 与 `order_status_dict`，而 V9 中 7 个任务引用 `users / payments / refunds / shop_dim`，提交时会因缺表导致判分失败。
+- 修复：`TEMPLATE_TABLES` 扩到 teach 全部 9 张教学表，并新增覆盖测试；用真实库建立等价沙箱 schema，执行全部 47 个已发布任务的 `expected_sql`，结果 `ok=47 failed=0`。
+- 部署：learning-service 已重建部署；既有活跃沙箱在下一次 `ensure` 时自动补齐缺表。
+- 未完成：真实浏览器提交判定仍待测试账号；L04 数据分析岗路径与真实样例集尚未开始。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

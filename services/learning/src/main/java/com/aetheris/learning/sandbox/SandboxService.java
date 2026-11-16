@@ -27,7 +27,10 @@ import java.util.Optional;
 public class SandboxService {
 
     private static final Logger log = LoggerFactory.getLogger(SandboxService.class);
-    private static final List<String> TEMPLATE_TABLES = List.of("orders_raw", "order_status_dict");
+    /** 与 teach schema 的教学表保持一致；新增教学表时必须同步这里，否则任务会因缺表无法判分。 */
+    private static final List<String> TEMPLATE_TABLES = List.of(
+            "orders_raw", "order_status_dict", "shop_dim", "users", "payments", "refunds",
+            "metric_dict", "daily_arrival", "table_asset");
 
     private final LearningRepository repository;
     private final JdbcTemplate jdbcTemplate;
