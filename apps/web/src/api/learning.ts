@@ -69,6 +69,12 @@ export interface RubricItem {
   weight: number
 }
 
+export interface DatasetManifestView extends DatasetInfo {
+  checksum: string
+  status: string
+  note?: string
+}
+
 export interface DatasetInfo {
   code: string
   version: number
@@ -172,6 +178,9 @@ export interface HintView {
   message: string
   lastHint: boolean
 }
+
+export const listAdminDatasets = () =>
+  http.get<DatasetManifestView[]>('/api/learning/admin/datasets').then((res) => res.data)
 
 export const listLearningPaths = () => http.get<LearningPathSummary[]>('/api/learning/paths').then((res) => res.data)
 

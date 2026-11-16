@@ -12,8 +12,9 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import {
-  createLab, decideApproval, getAdminAnalytics, listAdminLabs, listApprovals, publishLab, reviewLab, unpublishLab,
-  updateLab, type AdminOverview, type ApprovalView, type LabAdminView, type LabAnalytics
+  createLab, decideApproval, getAdminAnalytics, listAdminDatasets, listAdminLabs, listApprovals, publishLab,
+  reviewLab, unpublishLab, updateLab, type AdminOverview, type ApprovalView, type DatasetManifestView,
+  type LabAdminView, type LabAnalytics
 } from '@/api/learning'
 import { formatDateTime } from '@/utils/format'
 
@@ -35,6 +36,7 @@ export default function LearningAdminPage() {
   const [labs, setLabs] = useState<LabAdminView[]>([])
   const [approvals, setApprovals] = useState<ApprovalView[]>([])
   const [analytics, setAnalytics] = useState<{ overview: AdminOverview; labs: LabAnalytics[] } | null>(null)
+  const [datasets, setDatasets] = useState<DatasetManifestView[]>([])
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<LabAdminView | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -45,12 +47,13 @@ export default function LearningAdminPage() {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const [labList, approvalList, stats] = await Promise.all([
-        listAdminLabs(), listApprovals(), getAdminAnalytics()
+      const [labList, approvalList, stats, datasetList] = await Promise.all([
+        listAdminLabs(), listApprovals(), getAdminAnalytics(), listAdminDatasets()
       ])
       setLabs(labList)
       setApprovals(approvalList)
       setAnalytics(stats)
+      setDatasets(datasetList)
     } catch {
       message.error('运营数据加载失败，请确认当前账号是内容管理员')
     } finally {
@@ -225,6 +228,18 @@ export default function LearningAdminPage() {
     { title: '主要失败类型', dataIndex: 'topFailure', width: 160, render: (value?: string) => value ?? '—' }
   ]
 
+  const datasetColumns: TableColumnsType<DatasetManifestView> = [
+    { title: '数据集', dataIndex: 'code' },
+    { title: '版本', dataIndex: 'version', width: 70 },
+    { title: '表', dataIndex: 'tableName', width: 190 },
+    { title: '行数', dataIndex: 'rowCount', width: 80 },
+    { title: '许可', dataIndex: 'license', width: 140 },
+    { title: '来源', dataIndex: 'source', width: 110 },
+    { title: 'PII 复核', dataIndex: 'piiReviewed', width: 100, render: (value: boolean) => value ? <Tag color="green">已复核</Tag> : <Tag color="orange">未复核</Tag> },
+    { title: '状态', dataIndex: 'status', width: 90 },
+    { title: '备注', dataIndex: 'note', ellipsis: true }
+  ]
+
   const overview = analytics?.overview
   const pending = useMemo(() => approvals.filter((item) => item.status === 'pending').length, [approvals])
 
@@ -288,6 +303,20 @@ export default function LearningAdminPage() {
               >
                 <Table rowKey="labCode" size="small" columns={analyticsColumns}
                   dataSource={analytics?.labs ?? []} pagination={false} />
+              </DataSurface>
+            )
+          },
+          {
+            key: 'datasets',
+            label: '数据样例',
+            children: (
+              <DataSurface
+                title="样例数据集"
+                description="任务引用的数据来源、版本、许可与 PII 复核状态；真实脱敏样例按新版本登记。"
+                label="样例数据集"
+              >
+                <Table rowKey="code" size="small" columns={datasetColumns}
+                  dataSource={datasets} pagination={false} />
               </DataSurface>
             )
           }

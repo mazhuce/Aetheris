@@ -97,6 +97,12 @@ public class LearningAdminController {
         return adminService.decide(id, decision.approve(), user.uid(), user.username(), decision.note());
     }
 
+    @GetMapping("/datasets")
+    public List<LearningModels.DatasetManifestView> datasets(@RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
+        requireAdmin(user);
+        return repository.listDatasetManifests();
+    }
+
     @GetMapping("/analytics")
     public Map<String, Object> analytics(@RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
         requireAdmin(user);

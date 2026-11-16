@@ -49,6 +49,11 @@ public final class LearningModels {
                             List<DatasetInfo> datasets) {
     }
 
+    public record DatasetManifestView(String code, int version, String tableName, int rowCount,
+                                      String checksum, String license, String source, boolean piiReviewed,
+                                      String status, String note) {
+    }
+
     public record DatasetInfo(String code, int version, String tableName, int rowCount,
                               String license, String source, boolean piiReviewed) {
     }
