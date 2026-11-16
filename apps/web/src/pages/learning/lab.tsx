@@ -219,9 +219,9 @@ export default function LearningLabPage() {
               <Descriptions.Item label="数据表">
                 {lab.tableRefs.map((table) => <Tag key={table}>{table}</Tag>)}
               </Descriptions.Item>
-              {lab.datasetRef ? (
+              {lab.datasetRefs?.length ? (
                 <Descriptions.Item label="样例数据">
-                  <Tag>{lab.datasetRef}</Tag>
+                  {lab.datasetRefs.map((ref) => <Tag key={ref}>{ref}</Tag>)}
                 </Descriptions.Item>
               ) : null}
               <Descriptions.Item label="评分维度">

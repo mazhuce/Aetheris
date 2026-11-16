@@ -107,10 +107,10 @@ public class LearningRepository {
                 """, labMapper(), pathCode);
     }
 
-    public java.util.Optional<String> datasetRefOf(String labCode) {
-        return jdbc.query("SELECT dataset_ref FROM learning.lab WHERE code = ?",
-                rs -> rs.next() ? java.util.Optional.ofNullable(rs.getString(1)) : java.util.Optional.empty(),
-                labCode);
+    public java.util.List<String> datasetRefsOf(String labCode) {
+        String value = jdbc.query("SELECT dataset_refs::text FROM learning.lab WHERE code = ?",
+                rs -> rs.next() ? rs.getString(1) : null, labCode);
+        return value == null || value.isBlank() ? java.util.List.of() : com.aetheris.learning.support.Json.readStringList(value);
     }
 
     public Optional<LearningModels.LabRecord> findLab(String code) {

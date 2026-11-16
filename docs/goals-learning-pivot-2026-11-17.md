@@ -233,6 +233,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 验证：V12 迁移成功；6 条清单校验和已生成；learning/web 重建，healthy，web 200。
 - 未完成：真实样例数据本体、多表任务的 datasetRef、真实浏览器走查（缺测试账号）。
 
+### 2026-11-17 检查点 7：多表任务的样例数据引用
+
+- V13 补齐 `metric_dict / daily_arrival / table_asset` 三个治理类清单，确保已发布任务的表全部在册。
+- `dataset_ref` 迁移为 `dataset_refs`（JSONB 数组）：只有任务引用的全部表都在清单内才绑定；**53/53 已发布任务全部完成绑定**，多表任务如 `de-l1-04` 绑定 `orders_raw@1 + order_status_dict@1`。
+- 任务详情展示多个「样例数据」引用；后端编译、前端 tsc/lint 通过；learning/web 重建 healthy，web 200。
+- 未完成：真实脱敏样例数据本体与真实浏览器走查。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

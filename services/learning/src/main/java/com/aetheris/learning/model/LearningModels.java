@@ -45,7 +45,7 @@ public final class LearningModels {
                             String starterSql, int passScore, int estimatedMinutes, int version, String projectCode,
                             List<RubricItem> rubric, String sandboxSchema, boolean sandboxActive,
                             Integer bestScore, boolean passed, String lastStatus,
-                            List<String> relatedFeatures, List<LabKnowledge> knowledge, String datasetRef) {
+                            List<String> relatedFeatures, List<LabKnowledge> knowledge, List<String> datasetRefs) {
     }
 
     public record Step(String title, String detail) {
