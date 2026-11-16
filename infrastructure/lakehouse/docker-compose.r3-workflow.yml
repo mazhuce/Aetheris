@@ -5,7 +5,9 @@ services:
   workflow-service:
     # The local Maven build supplies the exact JAR under test; the fixed image
     # contributes only the already-cached Java 21 runtime and healthcheck.
-    image: aetheris-local/workflow:m5b-20260912
+    # Override AETHERIS_R3_WORKFLOW_IMAGE with an image built from this repo
+    # (aetheris-local-workflow:<tag>) when the cached tag is unavailable.
+    image: ${AETHERIS_R3_WORKFLOW_IMAGE:-aetheris-local/workflow:m5b-20260912}
     volumes:
       - type: bind
         source: ./services/workflow/target/workflow-service-0.1.0-SNAPSHOT.jar
