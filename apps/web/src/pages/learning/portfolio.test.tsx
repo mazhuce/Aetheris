@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '@/api/learning'
@@ -64,5 +64,30 @@ describe('learning portfolio page', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('求职证据加载失败')
     expect(screen.getByRole('button', { name: /重新加载/ })).toBeInTheDocument()
+  })
+  it('exports a markdown evidence bundle without secrets', async () => {
+    vi.mocked(api.getProgress).mockResolvedValue(progress)
+    vi.mocked(api.listProjects).mockResolvedValue(projects)
+    const create = vi.fn(() => 'blob:mock')
+    const revoke = vi.fn()
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: create })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revoke })
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    page()
+
+    fireEvent.click(await screen.findByRole('button', { name: /导出证据包/ }))
+
+    expect(create).toHaveBeenCalledTimes(1)
+    const blob = create.mock.calls[0][0] as Blob
+    const text = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
+    expect(text).toContain('# Aetheris 学习与求职证据包')
+    expect(text).toContain('不代表企业部署、第三方认证或雇佣承诺')
+    expect(text).not.toMatch(/password|token|cookie/i)
+    click.mockRestore()
   })
 })
