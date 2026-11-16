@@ -1,0 +1,33 @@
+-- V9 的 29 个任务缺少 lab_skill 关联，导致 learner_skill_progress 无法累计、
+-- 能力雷达为空。这里按模块语义补齐映射；后续新增任务必须同时写 lab_skill。
+INSERT INTO learning.lab_skill (lab_code, skill_code, weight) VALUES
+    ('de-l1-01', 'de-sql-basics', 1.0),
+    ('de-l1-02', 'de-sql-basics', 1.0),
+    ('de-l1-03', 'de-sql-basics', 1.0),
+    ('de-l1-04', 'de-join-dict', 1.0),
+    ('de-l1-05', 'de-aggregate', 1.0),
+    ('de-l1-06', 'de-aggregate', 1.0),
+    ('de-l1-07', 'de-aggregate', 1.0),
+    ('de-l2-01', 'de-dedup', 1.0),
+    ('de-l2-02', 'de-join-dict', 1.0),
+    ('de-l2-03', 'de-partition', 1.0),
+    ('de-l2-04', 'de-quality-check', 1.0),
+    ('de-l2-05', 'de-metric', 1.0),
+    ('de-l2-06', 'de-metric', 1.0),
+    ('de-l2-07', 'de-metric', 1.0),
+    ('dg-l1-01', 'dg-table-rules', 1.0),
+    ('dg-l1-02', 'dg-column-rules', 1.0),
+    ('dg-l1-03', 'dg-reconcile', 1.0),
+    ('dg-l2-01', 'dg-metadata', 1.0),
+    ('dg-l2-02', 'dg-lineage', 1.0),
+    ('dg-l2-03', 'dg-semantic', 1.0),
+    ('dg-l3-01', 'dg-standard', 1.0),
+    ('dg-l3-02', 'dg-classify', 1.0),
+    ('ops-l2-01', 'ops-task-def', 1.0),
+    ('ops-l2-02', 'ops-dependency', 1.0),
+    ('ops-l2-03', 'ops-retry-alert', 1.0),
+    ('ops-l3-01', 'ops-release', 1.0),
+    ('ops-l3-02', 'ops-acceptance', 1.0),
+    ('ops-l3-03', 'ops-troubleshoot', 1.0),
+    ('ops-l3-04', 'ops-audit', 1.0)
+ON CONFLICT (lab_code, skill_code) DO NOTHING;
