@@ -55,4 +55,18 @@ describe('ChatBI request ownership and cancellation', () => {
     expect(await screen.findByText('当前回答')).toBeInTheDocument()
     expect(screen.queryByText('旧回答')).not.toBeInTheDocument()
   })
+
+  it('aborts the in-flight question when the page unmounts', async () => {
+    vi.mocked(api.askChatBi).mockReturnValue(new Promise<api.ChatResult>(() => {}))
+    const view = page()
+
+    const input = screen.getByPlaceholderText('例如：2026年8月销售额最高的品类是哪个？')
+    fireEvent.change(input, { target: { value: '卸载前问题' } })
+    fireEvent.click(screen.getByRole('button', { name: /提问$/ }))
+    await waitFor(() => expect(api.askChatBi).toHaveBeenCalledTimes(1))
+
+    const signal = vi.mocked(api.askChatBi).mock.calls[0][1]
+    view.unmount()
+    expect(signal?.aborted).toBe(true)
+  })
 })
