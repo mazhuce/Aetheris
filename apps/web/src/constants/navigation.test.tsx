@@ -38,6 +38,38 @@ describe('navigation defaults', () => {
   })
 })
 
+describe('learner information architecture', () => {
+  it('viewer 只看到学习闭环入口，企业菜单折叠进平台管理', () => {
+    const modules = resolveNavigation('viewer', defaultNavigationConfig())
+
+    expect(modules[0].key).toBe('learning')
+    expect(modules.slice(0, -1).every((module) => ['learning', 'development', 'assets', 'ai'].includes(module.key))).toBe(true)
+    expect(modules.length).toBeLessThanOrEqual(6)
+
+    const platform = modules.find((module) => module.key === 'platform-management')
+    expect(platform).toBeDefined()
+    const labels = platform?.children.map((child) => child.label) ?? []
+    expect(labels).toEqual(expect.arrayContaining(['数据接入', '数据建模', '数据治理', '数据分析', '运维中心', '个人偏好']))
+  })
+
+  it('viewer 不再看到运营工具，admin 仍可见', () => {
+    const viewer = resolveNavigation('viewer', defaultNavigationConfig())
+    const admin = resolveNavigation('admin', defaultNavigationConfig())
+
+    expect(keysOf(viewer)).not.toContain('learning-admin')
+    expect(keysOf(viewer)).not.toContain('learning-mcp')
+    expect(keysOf(admin)).toEqual(expect.arrayContaining(['learning-admin', 'learning-mcp']))
+  })
+
+  it('学习者视图把数据开发显示为实训台，管理员视图保留原名', () => {
+    const viewer = resolveNavigation('viewer', defaultNavigationConfig())
+    const admin = resolveNavigation('admin', defaultNavigationConfig())
+
+    expect(viewer.find((module) => module.key === 'development')?.label).toBe('实训台')
+    expect(admin.find((module) => module.key === 'development')?.label).toBe('数据开发')
+  })
+})
+
 describe('navigation role gating', () => {
   it('viewer 看不到管理员专属入口，admin 能看到', () => {
     const viewer = resolveNavigation('viewer', defaultNavigationConfig())
@@ -100,7 +132,7 @@ describe('navigation overrides', () => {
     const config = defaultNavigationConfig()
     config.visibleModules = ['workbench']
 
-    const modules = resolveNavigation('viewer', config)
+    const modules = resolveNavigation('admin', config)
     expect(modules.some((module) => module.key === 'workbench')).toBe(true)
   })
 })

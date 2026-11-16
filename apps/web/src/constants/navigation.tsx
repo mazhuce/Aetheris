@@ -7,6 +7,7 @@ import {
   DatabaseOutlined,
   FolderOpenOutlined,
   PartitionOutlined,
+  AppstoreOutlined,
   ReadOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
@@ -41,6 +42,8 @@ export interface NavChild {
 export interface NavModule {
   key: string
   label: string
+  /** 学习者视图下的一级菜单名称；缺省沿用 label。 */
+  learnerLabel?: string
   icon: ReactNode
   /** 默认是否出现在顶栏；缺省为 true。 */
   defaultVisible?: boolean
@@ -54,8 +57,8 @@ export const navModules: NavModule[] = [
     icon: <ReadOutlined />,
     children: [
       { key: 'learning-home', label: '学习路径', path: '/learning', status: 'available' },
-      { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available' },
-      { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available' }
+      { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available', requiredRole: 'admin' },
+      { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available', requiredRole: 'admin' }
     ]
   },
   {
@@ -83,6 +86,7 @@ export const navModules: NavModule[] = [
   {
     key: 'development',
     label: '数据开发',
+    learnerLabel: '实训台',
     icon: <CodeOutlined />,
     children: [
       { key: 'development-sql', label: 'SQL开发', path: '/development/sql', status: 'available' },
@@ -153,6 +157,7 @@ export const navModules: NavModule[] = [
   {
     key: 'ai',
     label: '智能中心',
+    learnerLabel: '智能助手',
     icon: <RobotOutlined />,
     children: [
       { key: 'ai-assistant', label: '数据助手', path: '/ai/assistant', status: 'available' },
@@ -192,7 +197,7 @@ export const navModules: NavModule[] = [
       { key: 'admin-grants', label: '资源授权', path: '/admin/grants', status: 'available', requiredRole: 'admin' },
       { key: 'admin-settings', label: '系统配置', path: '/admin/settings', status: 'available', requiredRole: 'admin' },
       { key: 'system-preferences', label: '个人偏好', path: '/settings', status: 'available' },
-      { key: 'system-navigation', label: '菜单配置', path: '/settings/navigation', status: 'available' }
+      { key: 'system-navigation', label: '菜单配置', path: '/settings/navigation', status: 'available', requiredRole: 'admin' }
     ]
   }
 ]
@@ -226,6 +231,9 @@ function byOrder(keys: string[] | undefined) {
  * 2. 模块与二级项各自按配置顺序排序，未出现在顺序表里的保持原始相对次序。
  * 3. 过滤掉隐藏项、角色不可见项，以及没有任何可见二级项的模块。
  */
+/** 学习者视图保留的一级菜单；其余企业职能折叠进「平台管理」。 */
+const LEARNER_MODULE_KEYS = new Set(['learning', 'development', 'assets', 'ai'])
+
 export function resolveNavigation(role: UserRole, config: NavigationConfig): NavModule[] {
   const hiddenModules = new Set(config.hiddenModules)
   const hiddenItems = new Set(config.hiddenItems)
@@ -244,7 +252,7 @@ export function resolveNavigation(role: UserRole, config: NavigationConfig): Nav
   }
 
   const order = byOrder(config.moduleOrder)
-  return navModules
+  const modules = navModules
     .filter((module) => {
       if (hiddenModules.has(module.key)) return false
       if (module.defaultVisible === false && !config.visibleModules.includes(module.key)) return false
@@ -254,6 +262,34 @@ export function resolveNavigation(role: UserRole, config: NavigationConfig): Nav
     .sort((a, b) => order(a.key) - order(b.key))
     .map((module) => ({ ...module, children: visibleChildren(module.key) }))
     .filter((module) => module.children.length > 0)
+
+  if (role === 'admin') return modules
+
+  // 学习者视图：只保留学习闭环相关的一级菜单，企业职能收进「平台管理」，
+  // 避免十一个一级菜单把学习入口淹没。隐藏不等于禁用，直接 URL 仍可达。
+  const learnerModules = modules
+    .filter((module) => LEARNER_MODULE_KEYS.has(module.key))
+    .map((module) => (module.learnerLabel ? { ...module, label: module.learnerLabel } : module))
+  const enterpriseModules = modules.filter(
+    (module) => !LEARNER_MODULE_KEYS.has(module.key) && module.key !== 'admin'
+  )
+  if (enterpriseModules.length === 0) return learnerModules
+
+  const platform: NavModule = {
+    key: 'platform-management',
+    label: '平台管理',
+    icon: <AppstoreOutlined />,
+    children: [
+      ...enterpriseModules.map((module) => ({
+        key: `platform-${module.key}`,
+        label: module.label,
+        path: firstAvailablePath(module, role),
+        status: 'available' as NavStatus
+      })),
+      { key: 'platform-preferences', label: '个人偏好', path: '/settings', status: 'available' as NavStatus }
+    ]
+  }
+  return [...learnerModules, platform]
 }
 
 /** 按路径最长前缀匹配二级项（不依赖 URL 首段，兼容二级项改归属）。 */

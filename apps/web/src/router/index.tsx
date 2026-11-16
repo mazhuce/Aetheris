@@ -121,8 +121,22 @@ export const router = createBrowserRouter([
       { path: 'learning', element: <LearningCenterPage /> },
       { path: 'learning/labs/:code', element: <LearningLabPage /> },
       { path: 'learning/projects/:code', element: <LearningProjectPage /> },
-      { path: 'learning/admin', element: <LearningAdminPage /> },
-      { path: 'learning/mcp', element: <LearningMcpPage /> },
+      {
+        path: 'learning/admin',
+        element: (
+          <RequireRole role="admin">
+            <LearningAdminPage />
+          </RequireRole>
+        )
+      },
+      {
+        path: 'learning/mcp',
+        element: (
+          <RequireRole role="admin">
+            <LearningMcpPage />
+          </RequireRole>
+        )
+      },
 
       // 工作台
       { path: 'workbench', element: <Dashboard /> },
@@ -261,7 +275,14 @@ export const router = createBrowserRouter([
 
       // 系统与账户偏好（头部下拉进入，不进导航）
       { path: 'settings', element: <SettingsPage /> },
-      { path: 'settings/navigation', element: <NavigationConfigPage /> },
+      {
+        path: 'settings/navigation',
+        element: (
+          <RequireRole role="admin">
+            <NavigationConfigPage />
+          </RequireRole>
+        )
+      },
       { path: 'account', element: <AccountPage /> },
 
       // 一级模块根路径重定向；未交付模块不注册入口。
