@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '@/api/ai'
@@ -60,5 +60,21 @@ describe('data expert drawer', () => {
     fireEvent.click(screen.getByRole('button', { name: /重\s*试/ }))
     expect(await screen.findByText('重试成功后的回答')).toBeInTheDocument()
     await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(2))
+  })
+  it('locks duplicate submissions while the expert request is in flight', async () => {
+    let resolve!: (value: api.ChatResult) => void
+    vi.mocked(api.createConversation).mockResolvedValue({ id: 7, title: '新对话' })
+    vi.mocked(api.sendChat).mockReturnValue(new Promise<api.ChatResult>((done) => { resolve = done }))
+    vi.mocked(learning.getLab).mockRejectedValue(new Error('not a lab page'))
+    page()
+
+    fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: '重复提问' } })
+    const send = screen.getByRole('button', { name: /发\s*送/ })
+    fireEvent.click(send)
+    fireEvent.click(send)
+    await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(1))
+
+    await act(async () => resolve({ role: 'assistant', content: '一次回答' }))
+    expect(await screen.findByText('一次回答')).toBeInTheDocument()
   })
 })

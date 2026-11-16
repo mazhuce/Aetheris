@@ -112,4 +112,20 @@ describe('learning lab request state', () => {
     expect(await screen.findByText('规则导师回答')).toBeInTheDocument()
     expect(screen.getByText('规则导师（未配置大模型）')).toBeInTheDocument()
   })
+  it('shows grading hints when the submission does not pass', async () => {
+    vi.mocked(api.getLab).mockResolvedValue(baseLab)
+    vi.mocked(api.listSubmissions).mockResolvedValue([])
+    vi.mocked(api.submitLab).mockResolvedValue({
+      id: 2, labCode: 'l1-sales', attempt: 1, status: 'graded', score: 40, passed: false,
+      gradedAt: '2026-11-17T10:00:00Z',
+      result: { score: 40, passed: false, summary: '结果与标准答案不一致', items: [],
+        sampleColumns: [], sampleRows: [], hints: ['先确认过滤条件'] }
+    })
+    page()
+
+    fireEvent.click(await screen.findByRole('button', { name: /提交判分/ }))
+
+    expect(await screen.findByText(/得分 40 · 未通过/)).toBeInTheDocument()
+    expect(screen.getByText('先确认过滤条件')).toBeInTheDocument()
+  })
 })

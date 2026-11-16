@@ -68,7 +68,7 @@ describe('learning portfolio page', () => {
   it('exports a markdown evidence bundle without secrets', async () => {
     vi.mocked(api.getProgress).mockResolvedValue(progress)
     vi.mocked(api.listProjects).mockResolvedValue(projects)
-    const create = vi.fn(() => 'blob:mock')
+    const create = vi.fn((_blob: Blob) => 'blob:mock')
     const revoke = vi.fn()
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: create })
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revoke })
@@ -89,5 +89,16 @@ describe('learning portfolio page', () => {
     expect(text).toContain('不代表企业部署、第三方认证或雇佣承诺')
     expect(text).not.toMatch(/password|token|cookie/i)
     click.mockRestore()
+  })
+  it('shows explicit empty states before any learning activity', async () => {
+    vi.mocked(api.getProgress).mockResolvedValue({
+      completed: 0, total: 0, percent: 0, averageScore: 0, skills: [], credentials: []
+    })
+    vi.mocked(api.listProjects).mockResolvedValue([])
+    page()
+
+    expect(await screen.findByText('完成第一个任务后生成能力画像。')).toBeInTheDocument()
+    expect(screen.getByText('暂无项目。')).toBeInTheDocument()
+    expect(screen.getByText('暂无凭证。')).toBeInTheDocument()
   })
 })
