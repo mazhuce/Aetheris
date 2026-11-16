@@ -8,6 +8,7 @@ const ResponsiveGrid = WidthProvider(Responsive)
 interface DashboardCanvasProps {
   spec: DashboardSpec
   datasets: AnalyticsDataset[]
+  dashboardKey?: string | number
   editable?: boolean
   selectedWidgetId?: string
   onSelect?: (id: string) => void
@@ -20,6 +21,7 @@ interface DashboardCanvasProps {
 export default function DashboardCanvas({
   spec,
   datasets,
+  dashboardKey,
   editable = false,
   selectedWidgetId,
   onSelect,
@@ -83,7 +85,7 @@ export default function DashboardCanvas({
               )}
             </div>
             <div className="dashboard-widget-body">
-              <DashboardWidgetContent widget={widget} datasets={datasets} />
+              <DashboardWidgetContent widget={widget} datasets={datasets} dashboardKey={dashboardKey} />
             </div>
           </div>
         ))}

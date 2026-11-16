@@ -43,6 +43,9 @@ aetheris:
     # agent 的元数据检索与只读查询都下沉到 metadata 服务：凭据、JDBC 驱动与
     # validateReadOnlySql 守卫都在那边，复制过来等于复制一份安全边界。
     base-url: http://${METADATA_SERVICE_HOST:localhost}:${METADATA_SERVICE_PORT:8082}
+  auth:
+    # 会话与权限校验经签名客户端调 auth；缺少该地址会导致启动失败。
+    base-url: http://${AUTH_SERVICE_HOST:localhost}:${AUTH_SERVICE_PORT:8087}
   ai:
     budget:
       model-calls: 6

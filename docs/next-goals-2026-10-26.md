@@ -14,6 +14,14 @@
 - 已验证：`mvn` 共享协议扫描器 2/2；Quality 12/12；Ingestion 16/16；Governance 19/19；Workflow 2/2；前端 `tsc --noEmit`；质量规则页与分页 hook 6/6。证据与源码指纹见 `output/audit-pagination-n11-20261028/report.json`。这些是组件/服务聚焦证据，不是实际 PostgreSQL、大于 1000 条真实数据、浏览器或 W6 冻结证据。
 - 全量前端套件本轮仍有非 N11 的既有失败/超时，已保留原输出，不能通过重跑、改摘要或放宽规则消除；W3、W6 和整体验收保持未完成。
 
+### 2026-11-16 执行检查点：N19/N20 前端请求所有权已实现，组件级验证通过
+
+- N19：ChatBI 增加同步请求锁、AbortController 取消、卸载中止与 epoch 校验；Enter、示例按钮和连点只发出一次请求，取消或卸载后迟到回答不写回，只展示当前问题的回答。实现提交 `81200eb`。
+- N20：看板编辑、预览、发布三个视图统一进入加载态、403/404/503 可重试错误态与空态；请求携带 AbortSignal 并按 epoch 与看板对象隔离迟到响应；widget 查询缓存键加入看板对象，A→B 切换不复用旧对象数据。
+- 验证：`tsc --noEmit`、`eslint --max-warnings 0 src`、`vite build` 通过；聚焦测试 7/7（重复触发只发一次、取消、取消后旧回答不覆盖、卸载中止、403/503 重试、404 可重试、A→B 切换）。全量前端套件仍有 5 个与本项无关的超时（数据源与质量规则页），单独复跑全部通过，保留原输出且不当作整体通过。
+- 附带：`.env.example` 镜像标签与 compose 默认对齐，R3 workflow 覆盖镜像支持 `AETHERIS_R3_WORKFLOW_IMAGE` 覆盖（`0a92ff2`），不改变验收语义。
+- 未完成：真实浏览器 + 真实后端（固定免费替身）验收未执行；本机可用内存约 0.9 GB 且 Docker 未运行，按本稿资源约束未启动平台与 R1/R3。W3/W5 相关门禁保持未完成。
+
 ## 可直接交给 agent 的目标
 
 > 在用户明确启动或恢复本目标后，在 `C:\Users\yafei\RA1NL0VE\Aetheris` 继续完成当前可靠交付基线。先读取 `docs/next-goals-2026-10-26.md` 的交接状态、`docs/remediation/2026-10-18-audit-plan.md` 的最新补充和 `docs/reviews/2026-10-26-project-gap-review.md` 的历史发现，以执行时的实际工作区为准，保留已有有效成果、用户改动和全部失败证据。
