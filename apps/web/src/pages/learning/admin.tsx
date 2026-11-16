@@ -13,8 +13,8 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import {
   createLab, decideApproval, getAdminAnalytics, listAdminDatasets, listAdminLabs, listApprovals, publishLab,
-  reviewLab, unpublishLab, updateLab, type AdminOverview, type ApprovalView, type DatasetManifestView,
-  type LabAdminView, type LabAnalytics
+  reviewLab, unpublishLab, updateLab, verifyAdminDatasets, type AdminOverview, type ApprovalView,
+  type DatasetManifestView, type DatasetVerificationView, type LabAdminView, type LabAnalytics
 } from '@/api/learning'
 import { formatDateTime } from '@/utils/format'
 
@@ -37,6 +37,8 @@ export default function LearningAdminPage() {
   const [approvals, setApprovals] = useState<ApprovalView[]>([])
   const [analytics, setAnalytics] = useState<{ overview: AdminOverview; labs: LabAnalytics[] } | null>(null)
   const [datasets, setDatasets] = useState<DatasetManifestView[]>([])
+  const [verifications, setVerifications] = useState<Record<string, DatasetVerificationView>>({})
+  const [verifying, setVerifying] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<LabAdminView | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -62,6 +64,21 @@ export default function LearningAdminPage() {
   }, [message])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  const verifyDatasets = async () => {
+    setVerifying(true)
+    try {
+      const list = await verifyAdminDatasets()
+      setVerifications(Object.fromEntries(list.map((item) => [item.code, item])))
+      const drifted = list.filter((item) => !item.rowCountMatches || !item.checksumMatches)
+      if (drifted.length > 0) message.warning(`${drifted.length} 个数据集与清单不一致，请检查来源数据`)
+      else message.success('全部数据集与清单一致')
+    } catch {
+      message.error('数据集校验失败')
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   const openCreate = () => {
     setEditing(null)
@@ -237,6 +254,18 @@ export default function LearningAdminPage() {
     { title: '来源', dataIndex: 'source', width: 110 },
     { title: 'PII 复核', dataIndex: 'piiReviewed', width: 100, render: (value: boolean) => value ? <Tag color="green">已复核</Tag> : <Tag color="orange">未复核</Tag> },
     { title: '状态', dataIndex: 'status', width: 90 },
+    {
+      title: '一致性', key: 'verification', width: 140,
+      render: (_, row) => {
+        const result = verifications[row.code]
+        if (!result) return <Tag>未校验</Tag>
+        if (result.rowCountMatches && result.checksumMatches) return <Tag color="green">一致</Tag>
+        return <Tag color="red">
+          {!result.rowCountMatches && !result.checksumMatches ? '行数与校验和漂移'
+            : !result.rowCountMatches ? '行数漂移' : '校验和漂移'}
+        </Tag>
+      }
+    },
     { title: '备注', dataIndex: 'note', ellipsis: true }
   ]
 
@@ -314,6 +343,7 @@ export default function LearningAdminPage() {
                 title="样例数据集"
                 description="任务引用的数据来源、版本、许可与 PII 复核状态；真实脱敏样例按新版本登记。"
                 label="样例数据集"
+                extra={<Button loading={verifying} onClick={() => void verifyDatasets()}>校验一致性</Button>}
               >
                 <Table rowKey="code" size="small" columns={datasetColumns}
                   dataSource={datasets} pagination={false} />

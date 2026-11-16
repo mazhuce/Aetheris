@@ -120,6 +120,26 @@ public class LearningRepository {
                 rs.getString("note")));
     }
 
+    public java.util.List<LearningModels.DatasetVerificationView> verifyDatasetManifests() {
+        java.util.List<LearningModels.DatasetVerificationView> result = new java.util.ArrayList<>();
+        for (LearningModels.DatasetManifestView manifest : listDatasetManifests()) {
+            String table = manifest.tableName();
+            if (!table.matches("^teach\\.[a-z_][a-z0-9_]*$")) {
+                throw new IllegalStateException("非法教学表名：" + table);
+            }
+            java.util.Map<String, Object> actual = jdbc.queryForMap(
+                    "SELECT count(*) AS row_count, md5(string_agg(t::text, '|' ORDER BY t::text)) AS checksum FROM "
+                            + table + " t");
+            int rows = ((Number) actual.get("row_count")).intValue();
+            String checksum = (String) actual.get("checksum");
+            result.add(new LearningModels.DatasetVerificationView(
+                    manifest.code(), manifest.version(), rows, manifest.rowCount(),
+                    checksum, manifest.checksum(), rows == manifest.rowCount(),
+                    java.util.Objects.equals(checksum, manifest.checksum())));
+        }
+        return result;
+    }
+
     public java.util.List<LearningModels.DatasetInfo> datasetManifests(java.util.List<String> refs) {
         if (refs == null || refs.isEmpty()) return java.util.List.of();
         java.util.Map<String, LearningModels.DatasetInfo> byRef = new java.util.HashMap<>();

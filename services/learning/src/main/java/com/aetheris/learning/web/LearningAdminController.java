@@ -103,6 +103,13 @@ public class LearningAdminController {
         return repository.listDatasetManifests();
     }
 
+    @GetMapping("/datasets/verify")
+    public List<LearningModels.DatasetVerificationView> verifyDatasets(
+            @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
+        requireAdmin(user);
+        return repository.verifyDatasetManifests();
+    }
+
     @GetMapping("/analytics")
     public Map<String, Object> analytics(@RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
         requireAdmin(user);

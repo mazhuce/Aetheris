@@ -69,6 +69,17 @@ export interface RubricItem {
   weight: number
 }
 
+export interface DatasetVerificationView {
+  code: string
+  version: number
+  rowCount: number
+  expectedRowCount: number
+  checksum: string
+  expectedChecksum: string
+  rowCountMatches: boolean
+  checksumMatches: boolean
+}
+
 export interface DatasetManifestView extends DatasetInfo {
   checksum: string
   status: string
@@ -178,6 +189,9 @@ export interface HintView {
   message: string
   lastHint: boolean
 }
+
+export const verifyAdminDatasets = () =>
+  http.get<DatasetVerificationView[]>('/api/learning/admin/datasets/verify').then((res) => res.data)
 
 export const listAdminDatasets = () =>
   http.get<DatasetManifestView[]>('/api/learning/admin/datasets').then((res) => res.data)
