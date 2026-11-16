@@ -61,3 +61,8 @@ export function usePreferences(): PreferencesContextValue {
   if (!value) throw new Error('usePreferences must be used inside PreferencesProvider')
   return value
 }
+
+/** 只读默认首页；允许在 Provider 外使用，供路由守卫和单测回落到出厂值。 */
+export function useHomePath(): string {
+  return useContext(PreferencesContext)?.homePath ?? DEFAULT_PREFERENCES.homePath
+}

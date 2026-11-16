@@ -15,7 +15,7 @@ function renderAt(path: string) {
             </RequireRole>
           }
         />
-        <Route path="/workbench" element={<div>workbench-page</div>} />
+        <Route path="/learning" element={<div>learning-home-page</div>} />
       </Routes>
     </MemoryRouter>
   )
@@ -28,15 +28,15 @@ describe('RequireRole', () => {
     expect(screen.getByText('admin-content')).toBeInTheDocument()
   })
 
-  it('角色不匹配时重定向到 /workbench', () => {
+  it('角色不匹配时重定向到用户默认首页', () => {
     setAuthenticated({ id: 11, accessVersion: 0, permissionVersion: 0, username: 'alice', role: 'viewer' })
     renderAt('/system/users')
-    expect(screen.getByText('workbench-page')).toBeInTheDocument()
+    expect(screen.getByText('learning-home-page')).toBeInTheDocument()
     expect(screen.queryByText('admin-content')).not.toBeInTheDocument()
   })
 
-  it('未设置角色时重定向到 /workbench', () => {
+  it('未设置角色时重定向到用户默认首页', () => {
     renderAt('/system/users')
-    expect(screen.getByText('workbench-page')).toBeInTheDocument()
+    expect(screen.getByText('learning-home-page')).toBeInTheDocument()
   })
 })
