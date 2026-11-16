@@ -73,6 +73,7 @@ const WorkflowGraphPage = lazy(() => import('@/pages/development/workflows'))
 const SubscriptionPage = lazy(() => import('@/pages/services/subscriptions'))
 const ServiceAuthorizationPage = lazy(() => import('@/pages/services/authorization'))
 const LearningCenterPage = lazy(() => import('@/pages/learning'))
+const LearningPortfolioPage = lazy(() => import('@/pages/learning/portfolio'))
 const LearningLabPage = lazy(() => import('@/pages/learning/lab'))
 const LearningProjectPage = lazy(() => import('@/pages/learning/project'))
 const LearningAdminPage = lazy(() => import('@/pages/learning/admin'))
@@ -119,6 +120,7 @@ export const router = createBrowserRouter([
 
       // 学习中心
       { path: 'learning', element: <LearningCenterPage /> },
+      { path: 'learning/portfolio', element: <LearningPortfolioPage /> },
       { path: 'learning/labs/:code', element: <LearningLabPage /> },
       { path: 'learning/projects/:code', element: <LearningProjectPage /> },
       {

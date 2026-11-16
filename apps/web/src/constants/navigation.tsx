@@ -57,6 +57,7 @@ export const navModules: NavModule[] = [
     icon: <ReadOutlined />,
     children: [
       { key: 'learning-home', label: '学习路径', path: '/learning', status: 'available' },
+      { key: 'learning-portfolio', label: '我的求职', path: '/learning/portfolio', status: 'available' },
       { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available', requiredRole: 'admin' },
       { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available', requiredRole: 'admin' }
     ]
