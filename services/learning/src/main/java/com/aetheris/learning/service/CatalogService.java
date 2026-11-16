@@ -111,7 +111,8 @@ public class CatalogService {
                 attempt != null && attempt.passed(),
                 attempt == null ? "not_started" : attempt.status(),
                 lab.relatedFeatures(),
-                lab.knowledge());
+                lab.knowledge(),
+                repository.datasetRefOf(code).orElse(null));
     }
 
     public LearningModels.SandboxInfo startLab(String code, long uid, String username) {

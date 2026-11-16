@@ -219,6 +219,11 @@ export default function LearningLabPage() {
               <Descriptions.Item label="数据表">
                 {lab.tableRefs.map((table) => <Tag key={table}>{table}</Tag>)}
               </Descriptions.Item>
+              {lab.datasetRef ? (
+                <Descriptions.Item label="样例数据">
+                  <Tag>{lab.datasetRef}</Tag>
+                </Descriptions.Item>
+              ) : null}
               <Descriptions.Item label="评分维度">
                 {lab.rubric.map((item) => <Tag key={item.key}>{item.name} {item.weight}%</Tag>)}
               </Descriptions.Item>

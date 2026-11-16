@@ -107,6 +107,12 @@ public class LearningRepository {
                 """, labMapper(), pathCode);
     }
 
+    public java.util.Optional<String> datasetRefOf(String labCode) {
+        return jdbc.query("SELECT dataset_ref FROM learning.lab WHERE code = ?",
+                rs -> rs.next() ? java.util.Optional.ofNullable(rs.getString(1)) : java.util.Optional.empty(),
+                labCode);
+    }
+
     public Optional<LearningModels.LabRecord> findLab(String code) {
         return jdbc.query(labSelect() + " WHERE l.code = ?", labMapper(), code).stream().findFirst();
     }

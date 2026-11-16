@@ -225,6 +225,14 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 判分凭证：提交、评分与执行证据按 submission 绑定，重复提交计为新 attempt，未发现跨提交复用通道，本轮不改。
 - 部署：learning-service 已重建；未完成真实浏览器走查。
 
+### 2026-11-17 检查点 6：L09 真实样例扩展点第一步
+
+- 新增 `learning.dataset_manifest`：记录 code/version/table/row_count/checksum/license/source/PII 复核状态，已登记 6 个合成教学集并计算内容校验和。
+- `learning.lab` 新增 `dataset_ref`；**仅单表任务**自动绑定 `<table>@1`（27/53），多表任务保持 NULL，等待后续多引用设计。
+- 任务详情新增「样例数据」展示；真实脱敏样例后续按同一清单增加版本与绑定，不改任务编号。
+- 验证：V12 迁移成功；6 条清单校验和已生成；learning/web 重建，healthy，web 200。
+- 未完成：真实样例数据本体、多表任务的 datasetRef、真实浏览器走查（缺测试账号）。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

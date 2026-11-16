@@ -95,6 +95,8 @@ export interface LabDetail {
   relatedFeatures?: string[]
   /** 随任务讲解的知识点（SQL 基础、数仓环节概念等）。 */
   knowledge?: LabKnowledge[]
+  /** 任务绑定的样例数据集引用（如 teach.orders_raw@1）。 */
+  datasetRef?: string
 }
 
 export interface LabKnowledge {
