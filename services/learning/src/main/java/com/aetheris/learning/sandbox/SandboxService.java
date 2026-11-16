@@ -105,10 +105,13 @@ public class SandboxService {
     /** 重置只影响调用者自己的 schema，同时释放 Medium 槽位。 */
     public LearningModels.SandboxInfo reset(long uid, String username, String labCode, String tier) {
         String effectiveTier = "medium".equals(tier) ? "medium" : "light";
-        String schema = schemaOf(uid);
-        repository.findActiveSandbox(uid).ifPresent(row -> repository.markSandboxDropped(row.id()));
-        dropSchema(schema);
-        return ensure(uid, username, labCode, effectiveTier);
+        // 删除与重建必须作为一个整体，否则并发重置会互相删掉刚建好的 schema。
+        synchronized (mediumSlotLock) {
+            String schema = schemaOf(uid);
+            repository.findActiveSandbox(uid).ifPresent(row -> repository.markSandboxDropped(row.id()));
+            dropSchema(schema);
+            return ensure(uid, username, labCode, effectiveTier);
+        }
     }
 
     public int recycleExpired(int limit) {

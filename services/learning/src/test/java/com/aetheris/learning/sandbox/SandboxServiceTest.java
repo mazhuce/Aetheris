@@ -75,4 +75,44 @@ class SandboxServiceTest {
         verify(repository).insertSandbox(eq(9L), eq("learner"), eq("l1-valid-orders"), eq("sb_u9"),
                 eq("light"), any(Instant.class));
     }
+    @Test
+    void resetDropsPreviousSchemaAndCreatesFreshSandbox() {
+        Instant now = Instant.now();
+        var existing = new LearningModels.SandboxRow(3L, 9L, "l1-valid-orders", "sb_u9", "active", "light",
+                now.plusSeconds(3600), now.minusSeconds(60), null);
+        var created = new LearningModels.SandboxRow(4L, 9L, "l1-valid-orders", "sb_u9", "active", "light",
+                now.plusSeconds(3600), now, null);
+        when(repository.findActiveSandbox(9L))
+                .thenReturn(Optional.of(existing))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(created));
+
+        LearningModels.SandboxInfo info = service.reset(9L, "learner", "l1-valid-orders", "light");
+
+        assertThat(info.schemaName()).isEqualTo("sb_u9");
+        verify(repository).markSandboxDropped(3L);
+        verify(jdbcTemplate).execute(org.mockito.ArgumentMatchers.contains("DROP SCHEMA IF EXISTS sb_u9 CASCADE"));
+        verify(repository).insertSandbox(eq(9L), eq("learner"), eq("l1-valid-orders"), eq("sb_u9"),
+                eq("light"), any(Instant.class));
+    }
+
+    @Test
+    void expiredSandboxIsDroppedAndRecreatedOnNextUse() {
+        Instant now = Instant.now();
+        var expired = new LearningModels.SandboxRow(5L, 8L, "l1-valid-orders", "sb_u8", "active", "light",
+                now.minusSeconds(60), now.minusSeconds(7200), null);
+        var created = new LearningModels.SandboxRow(6L, 8L, "l1-valid-orders", "sb_u8", "active", "light",
+                now.plusSeconds(3600), now, null);
+        when(repository.findActiveSandbox(8L))
+                .thenReturn(Optional.of(expired))
+                .thenReturn(Optional.of(created));
+
+        LearningModels.SandboxInfo info = service.ensure(8L, "learner", "l1-valid-orders", "light");
+
+        assertThat(info.expiresAt()).isAfter(now);
+        verify(repository).markSandboxDropped(5L);
+        verify(jdbcTemplate).execute(org.mockito.ArgumentMatchers.contains("DROP SCHEMA IF EXISTS sb_u8 CASCADE"));
+        verify(repository).insertSandbox(eq(8L), eq("learner"), eq("l1-valid-orders"), eq("sb_u8"),
+                eq("light"), any(Instant.class));
+    }
 }
