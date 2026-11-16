@@ -84,3 +84,9 @@
 - 渐变、发光、玻璃效果、多套组件库并存。
 - 为填充页面而生成假指标、假图表或假活动记录。
 - 无文本替代的纯图标操作，以及无法通过键盘关闭的浮层。
+
+## 规范执行
+
+- 新增数据页面必须复用 `PageHeader → PageToolbar → DataSurface` 结构；`Card` 只用于设置页分区和浮层内容，不得作为数据页的表格容器。
+- 字号只能引用 `styles/tokens.css` 的 `--font-*` 令牌；确需例外时在同一行写明 `例外：<原因>`。
+- `npm run lint` 会执行 `scripts/check-web-conventions.mjs`，拦截裸 px 字号与硬编码 `fontSize`；CI 已接入该命令，新增页面在合并前即会被检查。
