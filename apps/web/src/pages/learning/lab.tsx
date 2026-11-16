@@ -16,6 +16,7 @@ import {
   type HintView, type LabDetail, type SubmissionView, type TutorMessage
 } from '@/api/learning'
 import { formatDateTime } from '@/utils/format'
+import { ErrorState } from '@/components/FeedbackState'
 
 export default function LearningLabPage() {
   const { code = '' } = useParams()
@@ -32,6 +33,7 @@ export default function LearningLabPage() {
   const [tutorLoading, setTutorLoading] = useState(false)
   const [tutorModel, setTutorModel] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string>()
   const [starting, setStarting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -39,11 +41,12 @@ export default function LearningLabPage() {
     setLoading(true)
     try {
       const [detail, history] = await Promise.all([getLab(code), listSubmissions(code)])
+      setLoadError(undefined)
       setLab(detail)
       setSubmissions(history)
       setSql((current) => (current.trim().length > 0 ? current : detail.starterSql ?? ''))
     } catch {
-      message.error('任务加载失败')
+      setLoadError('任务加载失败，请确认 learning-service 已启动。')
     } finally {
       setLoading(false)
     }
@@ -160,6 +163,9 @@ export default function LearningLabPage() {
 
   if (loading && !lab) {
     return <Skeleton active paragraph={{ rows: 12 }} />
+  }
+  if (loadError && !lab) {
+    return <ErrorState title="任务加载失败" description={loadError} onRetry={() => void refresh()} />
   }
   if (!lab) {
     return <Empty description="任务不存在或尚未发布" />

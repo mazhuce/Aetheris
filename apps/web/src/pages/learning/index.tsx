@@ -24,6 +24,7 @@ import {
   type ProjectView
 } from '@/api/learning'
 import { formatDateTime } from '@/utils/format'
+import { ErrorState } from '@/components/FeedbackState'
 
 const statusMeta: Record<string, { label: string; tone: 'success' | 'warning' | 'neutral' }> = {
   passed: { label: '已通过', tone: 'success' },
@@ -40,6 +41,7 @@ export default function LearningCenterPage() {
   const [progress, setProgress] = useState<ProgressView | null>(null)
   const [projects, setProjects] = useState<ProjectView[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string>()
   const [detailLoading, setDetailLoading] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -50,6 +52,7 @@ export default function LearningCenterPage() {
         getProgress(),
         listProjects()
       ])
+      setLoadError(undefined)
       setPaths(list)
       setProgress(progressData)
       setProjects(projectList)
@@ -58,6 +61,7 @@ export default function LearningCenterPage() {
         current && list.some((item) => item.code === current) ? current : list[0]?.code ?? ''
       )
     } catch {
+      setLoadError('学习数据加载失败，请确认 learning-service 已启动。')
       // 固定 key：开发模式下 StrictMode 会把 effect 跑两遍，
       // 不加 key 就会在顶部叠两条一模一样的红条。
       message.error({ content: '学习数据加载失败，请确认 learning-service 已启动', key: 'learning-load-error' })
@@ -94,6 +98,16 @@ export default function LearningCenterPage() {
     const labs = modules.flatMap((module) => module.labs)
     return labs.find((lab) => lab.status !== 'passed') ?? labs[0]
   }, [modules])
+
+  if (loadError && paths.length === 0) {
+    return (
+      <ErrorState
+        title="学习数据加载失败"
+        description={loadError}
+        onRetry={() => void refresh()}
+      />
+    )
+  }
 
   return (
     <>
