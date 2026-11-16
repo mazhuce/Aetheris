@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  App, Button, Card, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space,
+  App, Button, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space,
   Table, Tabs, Tag, Typography
 } from 'antd'
 import type { TableColumnsType } from 'antd'
@@ -9,6 +9,7 @@ import {
   PlusOutlined, ReloadOutlined, SendOutlined, StopOutlined, CloseOutlined, TeamOutlined, TrophyOutlined
 } from '@ant-design/icons'
 import PageHeader from '@/components/PageHeader'
+import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import {
   createLab, decideApproval, getAdminAnalytics, listAdminLabs, listApprovals, publishLab, reviewLab, unpublishLab,
@@ -249,32 +250,45 @@ export default function LearningAdminPage() {
             key: 'content',
             label: '内容库',
             children: (
-              <Card extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建任务</Button>}>
+              <DataSurface
+                title="任务内容库"
+                description="草稿、审核与发布状态一览；发布前必须通过内容审核，已发布任务需先下架再编辑。"
+                label="任务内容库"
+                extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建任务</Button>}
+              >
                 <Table rowKey="code" size="small" loading={loading} columns={labColumns} dataSource={labs}
                   pagination={{ pageSize: 10 }} scroll={{ x: 1200 }} />
-              </Card>
+              </DataSurface>
             )
           },
           {
             key: 'approvals',
             label: `审批（${pending}）`,
             children: (
-              <Card>
+              <DataSurface
+                title="发布审批"
+                description="MCP 只能发起审批，不能直接写内容；审批通过后才可发布。"
+                label="发布审批"
+              >
                 {approvals.length === 0 ? <Empty description="暂无审批单" /> : (
                   <Table rowKey="id" size="small" columns={approvalColumns} dataSource={approvals}
                     pagination={{ pageSize: 10 }} scroll={{ x: 1100 }} />
                 )}
-              </Card>
+              </DataSurface>
             )
           },
           {
             key: 'analytics',
             label: '运营分析',
             children: (
-              <Card>
+              <DataSurface
+                title="运营分析"
+                description="基于真实提交的任务通过率、学员规模与主要失败类型。"
+                label="运营分析"
+              >
                 <Table rowKey="labCode" size="small" columns={analyticsColumns}
                   dataSource={analytics?.labs ?? []} pagination={false} />
-              </Card>
+              </DataSurface>
             )
           }
         ]}
