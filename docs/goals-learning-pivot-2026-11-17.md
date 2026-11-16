@@ -304,6 +304,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 验证：等价 SQL 校验 9/9 数据集行数与校验和全部匹配；后端编译、前端 tsc/lint/build 通过；learning/web 重建 healthy，web 200。
 - 未完成：真实样例数据本体、真实浏览器走查。
 
+### 2026-11-17 检查点 17：样例清单支持多版本
+
+- 修正清单表主键：由 `code` 升级为 `(code, version)`，同一数据集可登记后续真实脱敏版本而不覆盖旧版本。
+- 实测：同一 `teach.orders_raw` 可新增 v2；重复 `(code, version)` 被唯一约束拒绝；探针数据已清理。
+- 运营页表格行键改为 `code@version`；tsc/lint 通过；learning/web 重建 healthy，web 200。
+- 未完成：真实样例数据本体、真实浏览器走查。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。

@@ -345,7 +345,7 @@ export default function LearningAdminPage() {
                 label="样例数据集"
                 extra={<Button loading={verifying} onClick={() => void verifyDatasets()}>校验一致性</Button>}
               >
-                <Table rowKey="code" size="small" columns={datasetColumns}
+                <Table rowKey={(row) => `${row.code}@${row.version}`} size="small" columns={datasetColumns}
                   dataSource={datasets} pagination={false} />
               </DataSurface>
             )
