@@ -6,6 +6,7 @@ import {
   DashboardOutlined,
   DatabaseOutlined,
   FolderOpenOutlined,
+  IdcardOutlined,
   PartitionOutlined,
   AppstoreOutlined,
   ReadOutlined,
@@ -57,7 +58,6 @@ export const navModules: NavModule[] = [
     icon: <ReadOutlined />,
     children: [
       { key: 'learning-home', label: '学习路径', path: '/learning', status: 'available' },
-      { key: 'learning-portfolio', label: '我的求职', path: '/learning/portfolio', status: 'available' },
       { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available', requiredRole: 'admin' },
       { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available', requiredRole: 'admin' }
     ]
@@ -169,6 +169,14 @@ export const navModules: NavModule[] = [
     ]
   },
   {
+    key: 'career',
+    label: '我的求职',
+    icon: <IdcardOutlined />,
+    children: [
+      { key: 'learning-portfolio', label: '求职证据', path: '/learning/portfolio', status: 'available' }
+    ]
+  },
+  {
     key: 'operations',
     label: '运维中心',
     icon: <CloudServerOutlined />,
@@ -233,7 +241,7 @@ function byOrder(keys: string[] | undefined) {
  * 3. 过滤掉隐藏项、角色不可见项，以及没有任何可见二级项的模块。
  */
 /** 学习者视图保留的一级菜单；其余企业职能折叠进「平台管理」。 */
-const LEARNER_MODULE_KEYS = new Set(['learning', 'development', 'assets', 'ai'])
+const LEARNER_MODULE_KEYS = new Set(['learning', 'development', 'assets', 'ai', 'career'])
 
 export function resolveNavigation(role: UserRole, config: NavigationConfig): NavModule[] {
   const hiddenModules = new Set(config.hiddenModules)

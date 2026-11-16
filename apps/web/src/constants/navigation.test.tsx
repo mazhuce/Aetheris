@@ -43,8 +43,11 @@ describe('learner information architecture', () => {
     const modules = resolveNavigation('viewer', defaultNavigationConfig())
 
     expect(modules[0].key).toBe('learning')
-    expect(modules.slice(0, -1).every((module) => ['learning', 'development', 'assets', 'ai'].includes(module.key))).toBe(true)
+    expect(modules.slice(0, -1).every((module) => ['learning', 'development', 'assets', 'ai', 'career'].includes(module.key))).toBe(true)
     expect(modules.length).toBeLessThanOrEqual(6)
+
+    const career = modules.find((module) => module.key === 'career')
+    expect(career?.children.map((child) => child.path)).toContain('/learning/portfolio')
 
     const platform = modules.find((module) => module.key === 'platform-management')
     expect(platform).toBeDefined()
