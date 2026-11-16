@@ -2,9 +2,11 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '@/api/ai'
+import * as learning from '@/api/learning'
 import ExpertDrawer from './ExpertDrawer'
 
 vi.mock('@/api/ai', () => ({ createConversation: vi.fn(), sendChat: vi.fn() }))
+vi.mock('@/api/learning', () => ({ getLab: vi.fn() }))
 
 function page() {
   return render(
@@ -22,6 +24,11 @@ describe('data expert drawer', () => {
   it('sends expert mode with learning context and renders the reply', async () => {
     vi.mocked(api.createConversation).mockResolvedValue({ id: 5, title: '新对话' })
     vi.mocked(api.sendChat).mockResolvedValue({ role: 'assistant', content: '先检查分区条件。' })
+    vi.mocked(learning.getLab).mockResolvedValue({
+      code: 'l1-sales', title: '销售查询', level: 'L1', difficulty: 'easy', taskType: 'SQL',
+      steps: [], tableRefs: [], passScore: 60, estimatedMinutes: 15, version: 1, rubric: [],
+      sandboxActive: false, passed: false, lastStatus: 'graded', objective: '只输出有效订单的金额'
+    })
     page()
 
     fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: '这条 SQL 为什么慢' } })
@@ -32,7 +39,7 @@ describe('data expert drawer', () => {
       5,
       expect.any(Array),
       false,
-      { expert: true, context: expect.stringContaining('/learning/labs/l1-sales') }
+      { expert: true, context: expect.stringContaining('任务验收标准：只输出有效订单的金额') }
     )
   })
 

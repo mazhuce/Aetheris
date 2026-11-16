@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createConversation, sendChat, type ChatMessage } from '@/api/ai'
+import { getLab } from '@/api/learning'
 
 interface ExpertDrawerProps {
   open: boolean
@@ -24,6 +25,22 @@ function contextOf(pathname: string): string {
   if (project) return `当前页面：学习项目 ${project}（${pathname}）`
   if (pathname.startsWith('/learning')) return '当前页面：学习中心'
   return `当前页面：${pathname}`
+}
+
+async function buildContext(pathname: string): Promise<string> {
+  const base = contextOf(pathname)
+  const labCode = pathname.match(/^\/learning\/labs\/([^/]+)/)?.[1]
+  if (!labCode) return base
+  try {
+    const lab = await getLab(labCode)
+    const parts = [base]
+    if (lab.objective) parts.push(`任务验收标准：${lab.objective}`)
+    if (lab.lastStatus && lab.lastStatus !== 'passed') parts.push(`最近一次提交状态：${lab.lastStatus}`)
+    if (typeof lab.bestScore === 'number') parts.push(`当前最佳得分：${lab.bestScore}`)
+    return parts.join('；')
+  } catch {
+    return base
+  }
 }
 
 export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
@@ -57,7 +74,7 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
       }
       const reply = await sendChat(id, next, dataMode, {
         expert: true,
-        context: contextOf(location.pathname)
+        context: await buildContext(location.pathname)
       })
       show([...next, { role: 'assistant', content: reply.content }])
     } catch (error) {
