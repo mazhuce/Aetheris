@@ -3,6 +3,9 @@ package com.aetheris.learning.grading;
 import com.aetheris.learning.config.LearningProperties;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -21,6 +24,7 @@ import java.util.regex.Pattern;
 public class SqlSandboxExecutor {
 
     private static final Pattern SAFE_SCHEMA = Pattern.compile("^sb_u[0-9]{1,18}$");
+    private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_ROWS = 5000;
     private static final int MAX_CELL_CHARS = 200;
 
@@ -115,6 +119,7 @@ public class SqlSandboxExecutor {
                     setup.execute("SET LOCAL statement_timeout = " + timeout);
                     setup.execute("SET LOCAL search_path TO " + schema);
                 }
+                ensureSandboxRelations(connection, schema, sql);
                 int updated;
                 try (Statement statement = connection.createStatement()) {
                     updated = statement.executeUpdate(sql);
@@ -129,6 +134,38 @@ public class SqlSandboxExecutor {
             }
         } catch (SQLException failure) {
             throw new SqlExecutionException("无法建立沙箱连接", failure.getSQLState());
+        }
+    }
+
+    /**
+     * 静态守卫会剥离引号标识符，/^UPDATE "teach"."orders_raw"/ 可能绕过关键字检查。
+     * 执行前用 EXPLAIN 解析真实执行计划，要求所有被引用的关系都属于学员 schema。
+     */
+    private void ensureSandboxRelations(Connection connection, String schema, String sql) throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("EXPLAIN (VERBOSE, FORMAT JSON, COSTS FALSE) " + sql)) {
+            if (!resultSet.next()) return;
+            JsonNode plan = JSON.readTree(resultSet.getString(1));
+            ensureSandboxNode(plan, schema);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException malformed) {
+            throw new SqlExecutionException("无法校验写任务执行计划", "42601");
+        }
+    }
+
+    private void ensureSandboxNode(JsonNode node, String schema) {
+        if (node == null) return;
+        if (node.isObject()) {
+            JsonNode relation = node.get("Relation Name");
+            JsonNode relationSchema = node.get("Schema");
+            if (relation != null && relation.isTextual()) {
+                String actual = relationSchema == null ? "" : relationSchema.asText("");
+                if (!schema.equals(actual)) {
+                    throw new SqlExecutionException("写任务只能操作沙箱内的表", "42501");
+                }
+            }
+            node.fields().forEachRemaining(entry -> ensureSandboxNode(entry.getValue(), schema));
+        } else if (node.isArray()) {
+            for (JsonNode child : node) ensureSandboxNode(child, schema);
         }
     }
 
