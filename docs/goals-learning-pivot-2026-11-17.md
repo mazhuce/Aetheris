@@ -661,7 +661,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 ### 15.3 合并回主干影响说明
 
-- 分支关系：`main` = `49416ff`；`sim` = `d5d2f24`，gitee/GitHub 的 sim 均已同步。
+- 分支关系：`main` = `49416ff`；`sim` 已包含全部学习改造提交（最新见 `git log main..sim`），gitee/GitHub 的 sim 均已同步。
 - 相对 main：**65 个提交、229 个文件、+20692/−496**，包含 sim 原有的 learning/mcp 服务与 V1–V9 迁移。
 - 本次学习目标化改造新增：V10–V24 迁移（含策略格式归一、写任务、固定文案任务归档与恢复、写任务扩容）、学习事件表、样例清单/登记/校验、专家抽屉、求职证据页、学习者 IA 与回滚开关。
 - 合并注意：
