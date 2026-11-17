@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help init dev test smoke observability-smoke backend-build frontend-build build up down logs clean backup restore
+.PHONY: help init dev test smoke learning-smoke observability-smoke backend-build frontend-build build up down logs clean backup restore
 
 MAVEN := mvn -f pom.xml -s scripts/maven-mirror-settings.xml
 
@@ -9,6 +9,7 @@ help:
 	@echo "make dev     启动本地开发环境"
 	@echo "make test    运行全部后端与前端测试和类型检查"
 	@echo "make smoke   对已启动环境运行跨服务冒烟测试"
+	@echo "make learning-smoke 学习者浏览器冒烟（需测试账号）"
 	@echo "make backend-build  构建全部后端模块"
 	@echo "make frontend-build 构建前端"
 	@echo "make build   构建镜像"
@@ -33,6 +34,9 @@ test:
 
 smoke:
 	bash scripts/smoke-test.sh
+
+learning-smoke:
+	node scripts/learning-smoke.mjs
 
 observability-smoke:
 	pwsh -NoProfile -File scripts/observability-smoke.ps1

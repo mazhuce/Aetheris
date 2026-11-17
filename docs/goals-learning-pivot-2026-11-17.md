@@ -467,6 +467,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 真实库口径核对（7 天）：`expert_fallback_used` 1、`expert_question_asked` 1、`lab_reset` 1、`portfolio_exported` 2、`sandbox_expired_recovered` 1。
 - 验证：admin 测试 4/4；lint 通过。仅测试/文档改动。
 - 未完成：模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 32：可重复学习者烟测与 ai-agent 回归
+
+- 新增 `scripts/learning-smoke.mjs`（Makefile 目标 `make learning-smoke`）：真实 Chromium 只读检查登录、6 个一级入口、学习中心、求职证据、专家抽屉；凭据仅从环境变量或 gitignored 文件读取，不打印。
+- 实测输出：`ok=true`，6 项检查全部通过，控制台错误 0。
+- ai-agent 全量单测 **64/64** 通过，确认专家模式接口变更无回归。
+- 未完成：模型在线回答、真实样例、写沙箱待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
@@ -534,6 +540,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 ```
 
 数据集漂移校验：登录内容运营 → 学习中心 → 内容运营 → 数据样例 → 「校验一致性」；或执行第 16 检查点中的等价 SQL。
+
+学习者浏览器冒烟（只读，不提交/导出）：`node scripts/learning-smoke.mjs`（或 `make learning-smoke`）。凭据取自 `AETHERIS_E2E_USERNAME/AETHERIS_E2E_PASSWORD` 或 gitignored 的 `configs/security/private/e2e-learner.env`。
 
 回滚开关（构建期，修改后需重建 web）：
 
