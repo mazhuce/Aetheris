@@ -128,4 +128,13 @@ describe('learning lab request state', () => {
     expect(await screen.findByText(/得分 40 · 未通过/)).toBeInTheDocument()
     expect(screen.getByText('先确认过滤条件')).toBeInTheDocument()
   })
+  it('marks write tasks and shows the reset warning', async () => {
+    vi.mocked(api.getLab).mockResolvedValue({ ...baseLab, code: 'de-l2-08', taskType: 'SQL_WRITE', title: '写任务示例' })
+    vi.mocked(api.listSubmissions).mockResolvedValue([])
+    page()
+
+    expect(await screen.findByText('写任务示例')).toBeInTheDocument()
+    expect(screen.getByText('写任务')).toBeInTheDocument()
+    expect(screen.getByText(/写任务：只允许单条 INSERT \/ UPDATE \/ DELETE/)).toBeInTheDocument()
+  })
 })
