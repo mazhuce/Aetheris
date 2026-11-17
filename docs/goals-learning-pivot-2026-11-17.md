@@ -177,7 +177,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 
 ## 8. 上线与度量
 
-**埋点事件**：已实现 `expert_question_asked`、`expert_fallback_used`、`portfolio_exported` 三类客户端事件（`learning.learning_event`，白名单 + 2KB 上限 + JSON 校验），运营分析页展示近 7 天计数；`learner_first_lab_passed`、`lab_reset`、`sandbox_expired_recovered` 暂由 `submission` 与沙箱数据推导，未单独埋点。属性：pathCode/labCode/payload。
+**埋点事件**：客户端事件 `expert_question_asked`、`expert_fallback_used`、`portfolio_exported` 经上报接口落库（白名单 + 2KB 上限 + JSON 校验）；服务端派生 `learner_first_lab_passed`（首个通过且去重）、`lab_reset`、`sandbox_expired_recovered` 直接写入 `learning.learning_event`；运营分析页展示近 7 天计数。属性：pathCode/labCode/payload。
 **灰度/回滚**：sim 部署；`AETHERIS_LEARNER_IA_ENABLED`、`AETHERIS_EXPERT_DRAWER_ENABLED` 两开关独立回滚；迁移只增不改。
 **文档**：本稿检查点 + frontend-style 规范 + 菜单配置说明同步更新。
 
@@ -375,6 +375,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 浏览器实测落库：`expert_question_asked` 1 条、`expert_fallback_used` 1 条、`portfolio_exported` 2 条；控制台错误 0。
 - 测试：前端 10/10、后端事件测试 2/2；learning/web 重建 healthy。
 - 未完成：`learner_first_lab_passed` 等其余事件暂由既有数据推导；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 27：服务端派生事件与沙箱重建缺陷修复
+
+- 新增服务端派生事件：首个任务通过（按学员去重）、沙箱重置、过期恢复，均写入 `learning.learning_event`。
+- 真实浏览器触发"重置沙箱"时发现并修复严重缺陷：`sandbox_instance.schema_name` 全表唯一导致重置/过期恢复后无法重建沙箱；V16 改为仅 active 行唯一（部分唯一索引）。修复后重置成功创建新 active 沙箱并记录 `lab_reset`。
+- 浏览器实测事件：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1；控制台错误 0。
+- 测试：`SandboxServiceTest` 6/6、`LearningEventRepositoryTest` 3/3；learning 已重建 healthy。
+- 未完成：首个通过事件的真实浏览器复验（需新学员首个通过）；模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 24：数据集登记后端校验回归
 
 - 新增 `DatasetManifestRepositoryTest` 5 项：编码与表名一致性、teach schema 限制、缺失表/许可拒绝、行数与校验和计算后写入、漂移标记。
@@ -397,6 +404,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 浏览器实测落库：`expert_question_asked` 1 条、`expert_fallback_used` 1 条、`portfolio_exported` 2 条；控制台错误 0。
 - 测试：前端 10/10、后端事件测试 2/2；learning/web 重建 healthy。
 - 未完成：`learner_first_lab_passed` 等其余事件暂由既有数据推导；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 27：服务端派生事件与沙箱重建缺陷修复
+
+- 新增服务端派生事件：首个任务通过（按学员去重）、沙箱重置、过期恢复，均写入 `learning.learning_event`。
+- 真实浏览器触发"重置沙箱"时发现并修复严重缺陷：`sandbox_instance.schema_name` 全表唯一导致重置/过期恢复后无法重建沙箱；V16 改为仅 active 行唯一（部分唯一索引）。修复后重置成功创建新 active 沙箱并记录 `lab_reset`。
+- 浏览器实测事件：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1；控制台错误 0。
+- 测试：`SandboxServiceTest` 6/6、`LearningEventRepositoryTest` 3/3；learning 已重建 healthy。
+- 未完成：首个通过事件的真实浏览器复验（需新学员首个通过）；模型在线回答、真实样例、写沙箱待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

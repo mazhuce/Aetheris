@@ -855,6 +855,13 @@ public class LearningRepository {
                 rs.getDouble("avg_score"), topFailures.get(rs.getString("code"))));
     }
 
+    public int countPassedLabs(long uid) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(DISTINCT lab_code) FROM learning.submission WHERE learner_uid = ? AND passed = true",
+                Integer.class, uid);
+        return count == null ? 0 : count;
+    }
+
     public void insertLearningEvent(long uid, String event, String pathCode, String labCode, String payloadJson) {
         jdbc.update("""
                 INSERT INTO learning.learning_event (learner_uid, event, path_code, lab_code, payload)

@@ -46,4 +46,10 @@ class LearningEventRepositoryTest {
         assertThat(summary).hasSize(1);
         assertThat(summary.get(0)).containsEntry("event", "portfolio_exported").containsEntry("count", 2);
     }
+    @Test
+    void countsPassedLabsForTheFirstPassEvent() {
+        when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(5L))).thenReturn(1);
+
+        assertThat(repository.countPassedLabs(5L)).isEqualTo(1);
+    }
 }

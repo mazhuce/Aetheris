@@ -17,6 +17,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,6 +75,8 @@ class SandboxServiceTest {
         assertThat(info.tier()).isEqualTo("light");
         verify(repository).insertSandbox(eq(9L), eq("learner"), eq("l1-valid-orders"), eq("sb_u9"),
                 eq("light"), any(Instant.class));
+        verify(repository, org.mockito.Mockito.never()).insertLearningEvent(eq(9L),
+                eq("sandbox_expired_recovered"), any(), any(), any());
     }
     @Test
     void resetDropsPreviousSchemaAndCreatesFreshSandbox() {
@@ -91,6 +94,7 @@ class SandboxServiceTest {
 
         assertThat(info.schemaName()).isEqualTo("sb_u9");
         verify(repository).markSandboxDropped(3L);
+        verify(repository).insertLearningEvent(eq(9L), eq("lab_reset"), isNull(), eq("l1-valid-orders"), isNull());
         verify(jdbcTemplate).execute(org.mockito.ArgumentMatchers.contains("DROP SCHEMA IF EXISTS sb_u9 CASCADE"));
         verify(repository).insertSandbox(eq(9L), eq("learner"), eq("l1-valid-orders"), eq("sb_u9"),
                 eq("light"), any(Instant.class));
@@ -111,6 +115,8 @@ class SandboxServiceTest {
 
         assertThat(info.expiresAt()).isAfter(now);
         verify(repository).markSandboxDropped(5L);
+        verify(repository).insertLearningEvent(eq(8L), eq("sandbox_expired_recovered"), isNull(),
+                eq("l1-valid-orders"), isNull());
         verify(jdbcTemplate).execute(org.mockito.ArgumentMatchers.contains("DROP SCHEMA IF EXISTS sb_u8 CASCADE"));
         verify(repository).insertSandbox(eq(8L), eq("learner"), eq("l1-valid-orders"), eq("sb_u8"),
                 eq("light"), any(Instant.class));

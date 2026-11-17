@@ -72,6 +72,11 @@ public class SubmissionService {
             repository.completeSubmission(submissionId, graded.score(), graded.passed());
             progressService.recordAttempt(uid, labCode, graded.score(), graded.passed());
             String pathCode = repository.pathOfLab(labCode);
+            if (graded.passed() && repository.countPassedLabs(uid) == 1) {
+                repository.insertLearningEvent(uid, "learner_first_lab_passed",
+                        pathCode.isBlank() ? null : pathCode, labCode,
+                        com.aetheris.learning.support.Json.write(java.util.Map.of("score", graded.score())));
+            }
             if (!pathCode.isBlank()) {
                 repository.findPath(pathCode).ifPresent(path ->
                         progressService.issueIfEligible(uid, pathCode, path.title()));

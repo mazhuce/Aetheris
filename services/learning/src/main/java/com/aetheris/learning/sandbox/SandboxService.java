@@ -80,6 +80,7 @@ public class SandboxService {
             if (active.isPresent()) {
                 dropSchema(active.get().schemaName());
                 repository.markSandboxDropped(active.get().id());
+                repository.insertLearningEvent(uid, "sandbox_expired_recovered", null, labCode, null);
             }
             if ("medium".equals(effectiveTier)) {
                 requireMediumSlot(uid, null);
@@ -113,7 +114,9 @@ public class SandboxService {
             String schema = schemaOf(uid);
             repository.findActiveSandbox(uid).ifPresent(row -> repository.markSandboxDropped(row.id()));
             dropSchema(schema);
-            return ensure(uid, username, labCode, effectiveTier);
+            LearningModels.SandboxInfo info = ensure(uid, username, labCode, effectiveTier);
+            repository.insertLearningEvent(uid, "lab_reset", null, labCode, null);
+            return info;
         }
     }
 
