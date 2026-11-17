@@ -190,6 +190,16 @@ export interface HintView {
   lastHint: boolean
 }
 
+export const registerAdminDataset = (input: {
+  code: string
+  version: number
+  tableName: string
+  license: string
+  source: string
+  piiReviewed: boolean
+  note?: string
+}) => http.post<DatasetManifestView>('/api/learning/admin/datasets', input).then((res) => res.data)
+
 export const verifyAdminDatasets = () =>
   http.get<DatasetVerificationView[]>('/api/learning/admin/datasets/verify').then((res) => res.data)
 

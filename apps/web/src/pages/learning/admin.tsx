@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   App, Button, Col, Empty, Form, Input, InputNumber, Modal, Popconfirm, Row, Select, Space,
-  Table, Tabs, Tag, Typography
+  Switch, Table, Tabs, Tag, Typography
 } from 'antd'
 import type { TableColumnsType } from 'antd'
 import {
@@ -13,8 +13,8 @@ import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import {
   createLab, decideApproval, getAdminAnalytics, listAdminDatasets, listAdminLabs, listApprovals, publishLab,
-  reviewLab, unpublishLab, updateLab, verifyAdminDatasets, type AdminOverview, type ApprovalView,
-  type DatasetManifestView, type DatasetVerificationView, type LabAdminView, type LabAnalytics
+  registerAdminDataset, reviewLab, unpublishLab, updateLab, verifyAdminDatasets, type AdminOverview,
+  type ApprovalView, type DatasetManifestView, type DatasetVerificationView, type LabAdminView, type LabAnalytics
 } from '@/api/learning'
 import { formatDateTime } from '@/utils/format'
 
@@ -39,6 +39,9 @@ export default function LearningAdminPage() {
   const [datasets, setDatasets] = useState<DatasetManifestView[]>([])
   const [verifications, setVerifications] = useState<Record<string, DatasetVerificationView>>({})
   const [verifying, setVerifying] = useState(false)
+  const [registerOpen, setRegisterOpen] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [datasetForm] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<LabAdminView | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -77,6 +80,28 @@ export default function LearningAdminPage() {
       message.error('数据集校验失败')
     } finally {
       setVerifying(false)
+    }
+  }
+
+  const openRegister = () => {
+    datasetForm.resetFields()
+    datasetForm.setFieldsValue({ version: 1, license: 'internal-training', source: 'real-desensitized', piiReviewed: false })
+    setRegisterOpen(true)
+  }
+
+  const submitRegister = async () => {
+    const values = await datasetForm.validateFields()
+    setRegistering(true)
+    try {
+      await registerAdminDataset({ ...values, code: values.tableName })
+      message.success('数据集版本已登记')
+      setRegisterOpen(false)
+      setDatasets(await listAdminDatasets())
+    } catch (error) {
+      const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+      message.error(detail || '数据集登记失败')
+    } finally {
+      setRegistering(false)
     }
   }
 
@@ -343,7 +368,12 @@ export default function LearningAdminPage() {
                 title="样例数据集"
                 description="任务引用的数据来源、版本、许可与 PII 复核状态；真实脱敏样例按新版本登记。"
                 label="样例数据集"
-                extra={<Button loading={verifying} onClick={() => void verifyDatasets()}>校验一致性</Button>}
+                extra={(
+                  <Space size={8}>
+                    <Button loading={verifying} onClick={() => void verifyDatasets()}>校验一致性</Button>
+                    <Button type="primary" onClick={openRegister}>登记新版本</Button>
+                  </Space>
+                )}
               >
                 <Table rowKey={(row) => `${row.code}@${row.version}`} size="small" columns={datasetColumns}
                   dataSource={datasets} pagination={false} />
@@ -352,6 +382,28 @@ export default function LearningAdminPage() {
           }
         ]}
       />
+
+      <Modal
+        title="登记数据集版本"
+        open={registerOpen}
+        onCancel={() => setRegisterOpen(false)}
+        onOk={() => void submitRegister()}
+        confirmLoading={registering}
+        okText="登记"
+      >
+        <Form form={datasetForm} layout="vertical">
+          <Form.Item name="tableName" label="教学表名" rules={[{ required: true, message: '请输入 teach schema 下的表名' }]}>
+            <Input placeholder="teach.orders_raw" />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={8}><Form.Item name="version" label="版本"><InputNumber min={1} style={{ width: '100%' }} /></Form.Item></Col>
+            <Col span={8}><Form.Item name="license" label="许可" rules={[{ required: true }]}><Input /></Form.Item></Col>
+            <Col span={8}><Form.Item name="source" label="来源" rules={[{ required: true }]}><Input /></Form.Item></Col>
+          </Row>
+          <Form.Item name="piiReviewed" label="PII 已复核" valuePropName="checked"><Switch /></Form.Item>
+          <Form.Item name="note" label="备注"><Input.TextArea rows={2} /></Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         title={editing ? `编辑任务 ${editing.code}` : '新建任务'}

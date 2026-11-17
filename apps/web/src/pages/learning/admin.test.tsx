@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { App as AntdApp } from 'antd'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -13,6 +13,7 @@ vi.mock('@/api/learning', () => ({
   listAdminLabs: vi.fn(),
   listApprovals: vi.fn(),
   publishLab: vi.fn(),
+  registerAdminDataset: vi.fn(),
   reviewLab: vi.fn(),
   unpublishLab: vi.fn(),
   updateLab: vi.fn(),
@@ -76,5 +77,23 @@ describe('learning admin dataset audit', () => {
     fireEvent.click(await screen.findByRole('button', { name: /校验一致性/ }))
 
     expect(await screen.findByText('校验和漂移')).toBeInTheDocument()
+  })
+  it('registers a new dataset version from the admin dialog', async () => {
+    vi.mocked(api.registerAdminDataset).mockResolvedValue({ ...dataset, version: 2 })
+    page()
+    await openDatasetsTab()
+
+    fireEvent.click(await screen.findByRole('button', { name: /登记新版本/ }))
+    fireEvent.change(screen.getByPlaceholderText('teach.orders_raw'), { target: { value: 'teach.orders_raw' } })
+    fireEvent.click(screen.getByRole('button', { name: /^登\s*记$/ }))
+
+    await waitFor(() => expect(api.registerAdminDataset).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'teach.orders_raw',
+      tableName: 'teach.orders_raw',
+      version: 1,
+      license: 'internal-training',
+      source: 'real-desensitized',
+      piiReviewed: false
+    })))
   })
 })

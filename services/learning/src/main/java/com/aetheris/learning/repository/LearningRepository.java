@@ -120,6 +120,35 @@ public class LearningRepository {
                 rs.getString("note")));
     }
 
+    public LearningModels.DatasetManifestView registerDatasetManifest(String code, int version, String tableName,
+                                                                     String license, String source,
+                                                                     boolean piiReviewed, String note) {
+        if (code == null || !code.equals(tableName)) {
+            throw new IllegalArgumentException("数据集编码必须与教学表名一致");
+        }
+        if (version < 1) throw new IllegalArgumentException("版本号必须为正整数");
+        if (!tableName.matches("^teach\\.[a-z_][a-z0-9_]*$")) {
+            throw new IllegalArgumentException("仅允许登记 teach schema 下的教学表");
+        }
+        if (license == null || license.isBlank() || source == null || source.isBlank()) {
+            throw new IllegalArgumentException("许可与来源不能为空");
+        }
+        Boolean exists = jdbc.queryForObject("SELECT to_regclass(?) IS NOT NULL", Boolean.class, tableName);
+        if (!Boolean.TRUE.equals(exists)) throw new IllegalArgumentException("教学表不存在：" + tableName);
+        java.util.Map<String, Object> stats = jdbc.queryForMap(
+                "SELECT count(*) AS row_count, md5(string_agg(t::text, '|' ORDER BY t::text)) AS checksum FROM "
+                        + tableName + " t");
+        int rows = ((Number) stats.get("row_count")).intValue();
+        String checksum = (String) stats.get("checksum");
+        jdbc.update("""
+                INSERT INTO learning.dataset_manifest (code, version, table_name, row_count, checksum,
+                    license, source, pii_reviewed, status, note)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'published', ?)
+                """, code, version, tableName, rows, checksum, license, source, piiReviewed, note);
+        return new LearningModels.DatasetManifestView(code, version, tableName, rows, checksum,
+                license, source, piiReviewed, "published", note);
+    }
+
     public java.util.List<LearningModels.DatasetVerificationView> verifyDatasetManifests() {
         java.util.List<LearningModels.DatasetVerificationView> result = new java.util.ArrayList<>();
         for (LearningModels.DatasetManifestView manifest : listDatasetManifests()) {

@@ -352,6 +352,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
   - 本轮控制台错误 0。
 - 证据：`artifacts/learning-pivot-20261117/` 新增 `lab-hint.png`、`lab-tutor.png`、`acceptance2.json`、`portfolio-export-sample.md`。
 - 未完成：管理端浏览器验收（需 admin 账号）、模型在线回答（未配置密钥）、真实样例数据本体。
+### 2026-11-17 检查点 23：真实样例版本可由管理员登记
+
+- 新增 `POST /api/learning/admin/datasets`（内容管理员限定）：登记教学表的新版本，服务端自动计算行数与内容校验和；校验编码必须等于表名、表必须存在于 `teach` schema、版本为正整数、许可与来源必填。
+- 内容运营「数据样例」页新增「登记新版本」表单（表名/版本/许可/来源/PII/备注），提交后自动刷新列表。
+- 验证：组件测试 3/3；后端编译、tsc/lint/build 通过；learning/web 重建 healthy，web 200。
+- 未完成：真实样例数据本体、管理端浏览器验收、模型在线回答。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

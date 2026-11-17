@@ -103,6 +103,19 @@ public class LearningAdminController {
         return repository.listDatasetManifests();
     }
 
+    public record DatasetRegisterRequest(String code, Integer version, String tableName, String license,
+                                         String source, Boolean piiReviewed, String note) {
+    }
+
+    @PostMapping("/datasets")
+    public LearningModels.DatasetManifestView registerDataset(@RequestBody DatasetRegisterRequest request,
+                                                              @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
+        requireAdmin(user);
+        if (request.version() == null) throw new IllegalArgumentException("版本号不能为空");
+        return repository.registerDatasetManifest(request.code(), request.version(), request.tableName(),
+                request.license(), request.source(), Boolean.TRUE.equals(request.piiReviewed()), request.note());
+    }
+
     @GetMapping("/datasets/verify")
     public List<LearningModels.DatasetVerificationView> verifyDatasets(
             @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
