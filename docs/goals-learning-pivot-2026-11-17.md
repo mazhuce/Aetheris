@@ -382,6 +382,11 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 浏览器实测事件：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1；控制台错误 0。
 - 测试：`SandboxServiceTest` 6/6、`LearningEventRepositoryTest` 3/3；learning 已重建 healthy。
 - 未完成：首个通过事件的真实浏览器复验（需新学员首个通过）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 28：首个通过事件分支回归
+
+- 新增 `SubmissionFirstPassEventTest` 2 项：首次通过写入 `learner_first_lab_passed`；后续通过不重复写入。
+- learning 全量单测 **41/41** 通过。仅测试改动。
+- 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 24：数据集登记后端校验回归
 
 - 新增 `DatasetManifestRepositoryTest` 5 项：编码与表名一致性、teach schema 限制、缺失表/许可拒绝、行数与校验和计算后写入、漂移标记。
@@ -411,6 +416,11 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 浏览器实测事件：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1；控制台错误 0。
 - 测试：`SandboxServiceTest` 6/6、`LearningEventRepositoryTest` 3/3；learning 已重建 healthy。
 - 未完成：首个通过事件的真实浏览器复验（需新学员首个通过）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 28：首个通过事件分支回归
+
+- 新增 `SubmissionFirstPassEventTest` 2 项：首次通过写入 `learner_first_lab_passed`；后续通过不重复写入。
+- learning 全量单测 **41/41** 通过。仅测试改动。
+- 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
