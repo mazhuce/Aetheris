@@ -1,0 +1,27 @@
+{
+  "loggedIn": true,
+  "nav": [
+    "学习中心",
+    "数据接入",
+    "数据开发",
+    "数据建模",
+    "数据治理",
+    "数据资产",
+    "数据分析",
+    "智能中心",
+    "我的求职",
+    "运维中心",
+    "系统管理"
+  ],
+  "hasCreateButton": true,
+  "adminPageReady": true,
+  "adminTabs": [
+    "内容库",
+    "审批（0）",
+    "运营分析",
+    "数据样例"
+  ],
+  "datasetTabReady": true,
+  "verificationShown": true,
+  "consoleErrors": []
+}
