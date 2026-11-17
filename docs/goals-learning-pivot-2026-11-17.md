@@ -509,7 +509,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 | L06 学习适配 | 已完成（审计级） | `1d65336`；MCP 只读审计；导师预算 4/4；learning 单测 31/31 | 真实 PG 撤权/大规模场景 |
 | L07 取舍表 | 已完成 | `4ddfd77` 第 12 节 | — |
 | L08 验收与证据 | 进行中 | 本稿检查点 1–31；`artifacts/learning-pivot-20261117/` | 在线模型、真实样例 |
-| L09 真实样例扩展点 | 第一切片完成 | `2d6e689`、`7115c54`、`ef69395`、`3ffe693`、`5fa17db`、`f884a7c`；清单 9 条、53/53 绑定、漂移校验 | 真实脱敏样例数据本体 |
+| L09 真实样例扩展点 | 已完成（除真实数据本体） | `2d6e689`、`7115c54`、`ef69395`、`3ffe693`、`5fa17db`、`f884a7c`、`0a8b9fd`、`ed51ac3`；清单 9 条、53/53 绑定、漂移校验、图形化登记 | 真实脱敏样例数据本体 |
 
 **未关闭的关键依赖**：DeepSeek 密钥（在线回答）、真实样例数据的来源与许可（L09 后续）、写任务沙箱（产品决策）。
 
@@ -540,6 +540,6 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 - `VITE_LEARNER_IA=false`：退回企业全量一级菜单（默认开启学习者 IA）。
 - `VITE_EXPERT_DRAWER=false`：左上角图标恢复为返回首页（默认为专家抽屉）。
 
-服务端可调参数：`AETHERIS_LEARNING_MAX_HINTS`（每任务提示额度，默认 6）、`AETHERIS_LEARNING_MAX_CHATS`（每任务 AI 导师提问上限，默认 20）。
+服务端可调参数：`AETHERIS_LEARNING_MAX_HINTS`（每任务提示额度，默认 6）、`AETHERIS_LEARNING_MAX_CHATS`（每任务 AI 导师提问上限，默认 20）、`AETHERIS_LEARNING_ADMIN_USERS`（内容管理员用户名列表，默认 admin）。
 
-证据位置：本稿检查点 1–20；前端测试位于 `apps/web/src/**/*.test.ts(x)`；后端测试位于 `services/learning/src/test/java/**`。
+证据位置：本稿检查点 1–31；前端测试位于 `apps/web/src/**/*.test.ts(x)`；后端测试位于 `services/learning/src/test/java/**`。
