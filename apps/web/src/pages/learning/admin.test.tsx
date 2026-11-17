@@ -96,4 +96,19 @@ describe('learning admin dataset audit', () => {
       piiReviewed: false
     })))
   })
+  it('shows the 7-day learning event counts in the analytics tab', async () => {
+    vi.mocked(api.getAdminAnalytics).mockResolvedValue({
+      overview,
+      labs: [],
+      events: [{ event: 'portfolio_exported', count: 2 }, { event: 'lab_reset', count: 1 }],
+      summary: {}
+    })
+    page()
+
+    fireEvent.click(await screen.findByText('运营分析'))
+
+    expect(await screen.findByText('portfolio_exported')).toBeInTheDocument()
+    expect(screen.getByText('lab_reset')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
 })
