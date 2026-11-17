@@ -31,7 +31,8 @@ public class SandboxService {
     private static final List<String> TEMPLATE_TABLES = List.of(
             "orders_raw", "order_status_dict", "shop_dim", "users", "payments", "refunds",
             "metric_dict", "daily_arrival", "table_asset", "lineage_edge",
-            "job_definition", "acceptance_gate", "task_run_log", "audit_log");
+            "job_definition", "acceptance_gate", "task_run_log", "audit_log",
+            "daily_shop_gmv");
 
     private final LearningRepository repository;
     private final JdbcTemplate jdbcTemplate;
