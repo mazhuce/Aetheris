@@ -1,6 +1,7 @@
 package com.aetheris.learning.web;
 
 import com.aetheris.learning.model.LearningModels;
+import com.aetheris.learning.repository.LearningRepository;
 import com.aetheris.learning.security.CurrentUser;
 import com.aetheris.learning.service.CatalogService;
 import com.aetheris.learning.service.ProgressService;
@@ -22,13 +23,16 @@ public class LearningController {
     private final SubmissionService submissionService;
     private final ProgressService progressService;
     private final TutorService tutorService;
+    private final LearningRepository repository;
 
     public LearningController(CatalogService catalogService, SubmissionService submissionService,
-                              ProgressService progressService, TutorService tutorService) {
+                              ProgressService progressService, TutorService tutorService,
+                              LearningRepository repository) {
         this.catalogService = catalogService;
         this.submissionService = submissionService;
         this.progressService = progressService;
         this.tutorService = tutorService;
+        this.repository = repository;
     }
 
     public record SubmitRequest(@NotBlank @Size(max = 20000) String sql, @Size(max = 2000) String notes) {
@@ -113,6 +117,34 @@ public class LearningController {
     public List<LearningModels.TutorMessageView> tutorHistory(@PathVariable String code,
                                                               @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
         return tutorService.history(user.uid(), code);
+    }
+
+    public record LearningEventRequest(String event, String pathCode, String labCode, String payload) {
+    }
+
+    private static final java.util.Set<String> ALLOWED_EVENTS = java.util.Set.of(
+            "expert_question_asked", "expert_fallback_used", "portfolio_exported",
+            "lab_reset", "sandbox_expired_recovered");
+
+    @PostMapping("/events")
+    public org.springframework.http.ResponseEntity<Void> event(@RequestBody LearningEventRequest request,
+                                                              @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
+        if (request.event() == null || !ALLOWED_EVENTS.contains(request.event())) {
+            throw new IllegalArgumentException("不支持的事件");
+        }
+        if (request.payload() != null && request.payload().length() > 2048) {
+            throw new IllegalArgumentException("事件内容过长");
+        }
+        if (request.payload() != null && !request.payload().isBlank()) {
+            com.aetheris.learning.support.Json.readTree(request.payload());
+        }
+        repository.insertLearningEvent(user.uid(), request.event(),
+                blankToNull(request.pathCode()), blankToNull(request.labCode()), request.payload());
+        return org.springframework.http.ResponseEntity.accepted().build();
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     @GetMapping("/progress")

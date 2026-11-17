@@ -190,6 +190,17 @@ export interface HintView {
   lastHint: boolean
 }
 
+export interface LearningEventSummary {
+  event: string
+  count: number
+}
+
+/** 低敏学习事件上报；失败不阻塞用户操作。 */
+export const trackLearningEvent = (
+  event: string,
+  extra?: { pathCode?: string; labCode?: string; payload?: string }
+) => http.post('/api/learning/events', { event, ...extra }).catch(() => undefined)
+
 export const registerAdminDataset = (input: {
   code: string
   version: number
@@ -360,6 +371,6 @@ export const decideApproval = (id: number, approve: boolean, note?: string) =>
   ).then((res) => res.data)
 
 export const getAdminAnalytics = () =>
-  http.get<{ overview: AdminOverview; labs: LabAnalytics[]; summary: Record<string, unknown> }>(
+  http.get<{ overview: AdminOverview; labs: LabAnalytics[]; events?: LearningEventSummary[]; summary: Record<string, unknown> }>(
     '/api/learning/admin/analytics'
   ).then((res) => res.data)

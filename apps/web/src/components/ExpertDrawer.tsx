@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { createConversation, sendChat, type ChatMessage } from '@/api/ai'
-import { getLab } from '@/api/learning'
+import { getLab, trackLearningEvent } from '@/api/learning'
 
 interface ExpertDrawerProps {
   open: boolean
@@ -65,6 +65,8 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
     sendingRef.current = true
     setSending(true)
     setFailure(null)
+    const labCode = location.pathname.match(/^\/learning\/labs\/([^/]+)/)?.[1]
+    void trackLearningEvent('expert_question_asked', { labCode })
     try {
       let id = conversationId.current
       if (id === null) {
@@ -86,6 +88,10 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
             ? '模型服务未配置密钥或暂不可用。'
             : '专家服务暂时不可用，请稍后重试。'
       )
+      void trackLearningEvent('expert_fallback_used', {
+        labCode,
+        payload: JSON.stringify({ status: status ?? 0 })
+      })
     } finally {
       sendingRef.current = false
       setSending(false)

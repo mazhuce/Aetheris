@@ -855,6 +855,24 @@ public class LearningRepository {
                 rs.getDouble("avg_score"), topFailures.get(rs.getString("code"))));
     }
 
+    public void insertLearningEvent(long uid, String event, String pathCode, String labCode, String payloadJson) {
+        jdbc.update("""
+                INSERT INTO learning.learning_event (learner_uid, event, path_code, lab_code, payload)
+                VALUES (?, ?, ?, ?, CAST(? AS jsonb))
+                """, uid, event, pathCode, labCode, payloadJson);
+    }
+
+    public java.util.List<java.util.Map<String, Object>> learningEventSummary(int days) {
+        return jdbc.query("""
+                SELECT event, count(*) AS count
+                  FROM learning.learning_event
+                 WHERE created_at > now() - make_interval(days => ?)
+                 GROUP BY event
+                 ORDER BY count DESC, event
+                """, (rs, index) -> java.util.Map.of("event", rs.getString("event"),
+                "count", rs.getInt("count")), days);
+    }
+
     public Map<String, Object> learningOpsOverview() {
         Map<String, Object> overview = new java.util.LinkedHashMap<>(adminOverview());
         overview.put("pendingApprovals", countPendingApprovals());

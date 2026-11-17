@@ -177,7 +177,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 
 ## 8. 上线与度量
 
-**埋点事件**：`learner_first_lab_passed`、`expert_question_asked`、`expert_fallback_used`、`portfolio_exported`、`lab_reset`、`sandbox_expired_recovered`。属性：pathCode/labCode/role/hasKey。对账：与 `learning.submissions` 计数一致。
+**埋点事件**：已实现 `expert_question_asked`、`expert_fallback_used`、`portfolio_exported` 三类客户端事件（`learning.learning_event`，白名单 + 2KB 上限 + JSON 校验），运营分析页展示近 7 天计数；`learner_first_lab_passed`、`lab_reset`、`sandbox_expired_recovered` 暂由 `submission` 与沙箱数据推导，未单独埋点。属性：pathCode/labCode/payload。
 **灰度/回滚**：sim 部署；`AETHERIS_LEARNER_IA_ENABLED`、`AETHERIS_EXPERT_DRAWER_ENABLED` 两开关独立回滚；迁移只增不改。
 **文档**：本稿检查点 + frontend-style 规范 + 菜单配置说明同步更新。
 
@@ -368,6 +368,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
   - 本轮控制台错误 0。
 - 证据：`artifacts/learning-pivot-20261117/` 新增 `admin-learning-home.png`、`admin-content-ops.png`、`admin-dataset-audit.png`、`acceptance-admin.json`。
 - 未完成：模型在线回答、真实样例数据本体、写任务沙箱决策。
+### 2026-11-17 检查点 26：学习事件埋点上线
+
+- 新增 `learning.learning_event` 与 `POST /api/learning/events`：仅允许低敏事件（专家提问、离线兜底、证据导出等），2KB 上限与 JSON 校验。
+- 专家抽屉在提问与离线兜底时上报；求职证据导出时上报；运营分析新增「学习事件（近 7 天）」表。
+- 浏览器实测落库：`expert_question_asked` 1 条、`expert_fallback_used` 1 条、`portfolio_exported` 2 条；控制台错误 0。
+- 测试：前端 10/10、后端事件测试 2/2；learning/web 重建 healthy。
+- 未完成：`learner_first_lab_passed` 等其余事件暂由既有数据推导；模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 24：数据集登记后端校验回归
 
 - 新增 `DatasetManifestRepositoryTest` 5 项：编码与表名一致性、teach schema 限制、缺失表/许可拒绝、行数与校验和计算后写入、漂移标记。
@@ -383,6 +390,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
   - 本轮控制台错误 0。
 - 证据：`artifacts/learning-pivot-20261117/` 新增 `admin-learning-home.png`、`admin-content-ops.png`、`admin-dataset-audit.png`、`acceptance-admin.json`。
 - 未完成：模型在线回答、真实样例数据本体、写任务沙箱决策。
+### 2026-11-17 检查点 26：学习事件埋点上线
+
+- 新增 `learning.learning_event` 与 `POST /api/learning/events`：仅允许低敏事件（专家提问、离线兜底、证据导出等），2KB 上限与 JSON 校验。
+- 专家抽屉在提问与离线兜底时上报；求职证据导出时上报；运营分析新增「学习事件（近 7 天）」表。
+- 浏览器实测落库：`expert_question_asked` 1 条、`expert_fallback_used` 1 条、`portfolio_exported` 2 条；控制台错误 0。
+- 测试：前端 10/10、后端事件测试 2/2；learning/web 重建 healthy。
+- 未完成：`learner_first_lab_passed` 等其余事件暂由既有数据推导；模型在线回答、真实样例、写沙箱待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

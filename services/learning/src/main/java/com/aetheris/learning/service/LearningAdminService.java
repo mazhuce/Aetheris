@@ -118,6 +118,7 @@ public class LearningAdminService {
         int learners = repository.learningOpsOverview().get("learners") instanceof Number number
                 ? number.intValue() : 0;
         return Map.of("overview", repository.learningOpsOverview(), "labs", labs,
+                "events", repository.learningEventSummary(7),
                 "summary", Map.of("totalAttempts", attempts, "learners", learners,
                         "generatedAt", Instant.now().toString()));
     }

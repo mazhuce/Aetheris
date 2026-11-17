@@ -6,7 +6,7 @@ import * as learning from '@/api/learning'
 import ExpertDrawer from './ExpertDrawer'
 
 vi.mock('@/api/ai', () => ({ createConversation: vi.fn(), sendChat: vi.fn() }))
-vi.mock('@/api/learning', () => ({ getLab: vi.fn() }))
+vi.mock('@/api/learning', () => ({ getLab: vi.fn(), trackLearningEvent: vi.fn() }))
 
 function page() {
   return render(
@@ -41,6 +41,7 @@ describe('data expert drawer', () => {
       false,
       { expert: true, context: expect.stringContaining('任务验收标准：只输出有效订单的金额') }
     )
+    expect(learning.trackLearningEvent).toHaveBeenCalledWith('expert_question_asked', expect.any(Object))
   })
 
   it('shows an offline hint without faking a model answer when the model is unavailable', async () => {
@@ -52,6 +53,7 @@ describe('data expert drawer', () => {
     fireEvent.click(screen.getByRole('button', { name: /发\s*送/ }))
 
     expect(await screen.findByText('离线提示（非模型回答）')).toBeInTheDocument()
+    expect(learning.trackLearningEvent).toHaveBeenCalledWith('expert_fallback_used', expect.any(Object))
     expect(screen.getByText(/模型服务未配置密钥或暂不可用/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /重\s*试/ })).toBeInTheDocument()
     await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(1))

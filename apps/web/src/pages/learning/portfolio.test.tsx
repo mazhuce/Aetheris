@@ -8,7 +8,8 @@ vi.mock('@/api/learning', () => ({
   getProgress: vi.fn(),
   listProjects: vi.fn(),
   listLearningPaths: vi.fn(),
-  getLearningPath: vi.fn()
+  getLearningPath: vi.fn(),
+  trackLearningEvent: vi.fn()
 }))
 vi.mock('@/hooks/useAuthSession', () => ({
   useAuthSession: () => ({ status: 'authenticated', user: { username: 'alice', role: 'viewer' } })
@@ -117,6 +118,7 @@ describe('learning portfolio page', () => {
     expect(text).toContain('# Aetheris 学习与求职证据包')
     expect(text).toContain('不代表企业部署、第三方认证或雇佣承诺')
     expect(text).toContain('| 数据分析师入门 | 支付成功率日报 | L1 | 90 |')
+    expect(api.trackLearningEvent).toHaveBeenCalledWith('portfolio_exported', expect.any(Object))
     expect(text).not.toMatch(/password|token|cookie/i)
     click.mockRestore()
   })

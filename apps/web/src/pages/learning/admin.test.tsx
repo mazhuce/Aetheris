@@ -49,7 +49,7 @@ describe('learning admin dataset audit', () => {
     vi.mocked(api.listAdminLabs).mockResolvedValue([])
     vi.mocked(api.listApprovals).mockResolvedValue([])
     vi.mocked(api.listAdminDatasets).mockResolvedValue([dataset])
-    vi.mocked(api.getAdminAnalytics).mockResolvedValue({ overview, labs: [], summary: {} })
+    vi.mocked(api.getAdminAnalytics).mockResolvedValue({ overview, labs: [], events: [], summary: {} })
   })
 
   it('verifies datasets against their manifests', async () => {

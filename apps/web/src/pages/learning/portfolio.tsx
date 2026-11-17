@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader'
 import DataSurface from '@/components/DataSurface'
 import StatCard from '@/components/StatCard'
 import { ErrorState, LoadingState } from '@/components/FeedbackState'
-import { getLearningPath, getProgress, listLearningPaths, listProjects, type LearningPathSummary, type ProgressView, type ProjectView } from '@/api/learning'
+import { getLearningPath, getProgress, listLearningPaths, listProjects, trackLearningEvent, type LearningPathSummary, type ProgressView, type ProjectView } from '@/api/learning'
 import { useAuthSession } from '@/hooks/useAuthSession'
 import { buildPortfolioMarkdown, type LabEvidence } from './portfolioExport'
 
@@ -57,6 +57,9 @@ export default function LearningPortfolioPage() {
     if (!progress) return
     const username = session.status === 'authenticated' ? session.user.username : undefined
     const markdown = buildPortfolioMarkdown({ progress, projects, labEvidence, username })
+    void trackLearningEvent('portfolio_exported', {
+      payload: JSON.stringify({ labs: labEvidence.length, credentials: progress.credentials.length })
+    })
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')

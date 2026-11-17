@@ -35,7 +35,7 @@ export default function LearningAdminPage() {
   const { message, modal } = App.useApp()
   const [labs, setLabs] = useState<LabAdminView[]>([])
   const [approvals, setApprovals] = useState<ApprovalView[]>([])
-  const [analytics, setAnalytics] = useState<{ overview: AdminOverview; labs: LabAnalytics[] } | null>(null)
+  const [analytics, setAnalytics] = useState<{ overview: AdminOverview; labs: LabAnalytics[]; events?: { event: string; count: number }[] } | null>(null)
   const [datasets, setDatasets] = useState<DatasetManifestView[]>([])
   const [verifications, setVerifications] = useState<Record<string, DatasetVerificationView>>({})
   const [verifying, setVerifying] = useState(false)
@@ -270,6 +270,11 @@ export default function LearningAdminPage() {
     { title: '主要失败类型', dataIndex: 'topFailure', width: 160, render: (value?: string) => value ?? '—' }
   ]
 
+  const eventColumns: TableColumnsType<{ event: string; count: number }> = [
+    { title: '事件', dataIndex: 'event' },
+    { title: '次数', dataIndex: 'count', width: 100 }
+  ]
+
   const datasetColumns: TableColumnsType<DatasetManifestView> = [
     { title: '数据集', dataIndex: 'code' },
     { title: '版本', dataIndex: 'version', width: 70 },
@@ -350,14 +355,25 @@ export default function LearningAdminPage() {
             key: 'analytics',
             label: '运营分析',
             children: (
-              <DataSurface
-                title="运营分析"
-                description="基于真实提交的任务通过率、学员规模与主要失败类型。"
-                label="运营分析"
-              >
-                <Table rowKey="labCode" size="small" columns={analyticsColumns}
-                  dataSource={analytics?.labs ?? []} pagination={false} />
-              </DataSurface>
+              <>
+                <DataSurface
+                  title="学习事件（近 7 天）"
+                  description="专家提问、离线兜底与证据导出等低敏事件计数。"
+                  label="学习事件"
+                >
+                  <Table rowKey="event" size="small" columns={eventColumns}
+                    dataSource={analytics?.events ?? []} pagination={false}
+                    locale={{ emptyText: '近 7 天暂无事件。' }} />
+                </DataSurface>
+                <DataSurface
+                  title="运营分析"
+                  description="基于真实提交的任务通过率、学员规模与主要失败类型。"
+                  label="运营分析"
+                >
+                  <Table rowKey="labCode" size="small" columns={analyticsColumns}
+                    dataSource={analytics?.labs ?? []} pagination={false} />
+                </DataSurface>
+              </>
             )
           },
           {
