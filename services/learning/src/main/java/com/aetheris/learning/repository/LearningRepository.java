@@ -191,6 +191,12 @@ public class LearningRepository {
         return value == null || value.isBlank() ? java.util.List.of() : com.aetheris.learning.support.Json.readStringList(value);
     }
 
+    /** 兼容历史数据：static_policy 可能被存成 JSON 字符串，需要再解析一层。 */
+    static com.fasterxml.jackson.databind.JsonNode readPolicy(String value) {
+        com.fasterxml.jackson.databind.JsonNode node = Json.readTree(value);
+        return node.isTextual() ? Json.readTree(node.asText()) : node;
+    }
+
     public Optional<LearningModels.LabRecord> findLab(String code) {
         return jdbc.query(labSelect() + " WHERE l.code = ?", labMapper(), code).stream().findFirst();
     }
@@ -228,7 +234,7 @@ public class LearningRepository {
                 }),
                 Json.readStringList(rs.getString("table_refs")),
                 rs.getString("starter_sql"), rs.getString("expected_sql"),
-                Json.readTree(rs.getString("static_policy")),
+                readPolicy(rs.getString("static_policy")),
                 Json.readList(rs.getString("rubric"), new TypeReference<List<LearningModels.RubricItem>>() {
                 }),
                 rs.getInt("pass_score"), rs.getInt("estimated_minutes"), rs.getString("status"),

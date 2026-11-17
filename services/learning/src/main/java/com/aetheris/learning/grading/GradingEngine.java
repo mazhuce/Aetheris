@@ -2,6 +2,7 @@ package com.aetheris.learning.grading;
 
 import com.aetheris.learning.config.LearningProperties;
 import com.aetheris.learning.model.LearningModels;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -16,8 +17,12 @@ import java.util.Map;
 @Component
 public class GradingEngine {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(GradingEngine.class);
+
     private final SqlSandboxExecutor executor;
     private final LearningProperties properties;
+    private final java.util.concurrent.ConcurrentHashMap<String, Object> sandboxLocks =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public GradingEngine(SqlSandboxExecutor executor, LearningProperties properties) {
         this.executor = executor;
@@ -43,41 +48,64 @@ public class GradingEngine {
         String resultDetail = "未执行结果比对。";
         QueryResult learnerResult = null;
 
+        boolean writeMode = lab.staticPolicy().path("allowWrite").asBoolean(false);
         if (safetyPassed) {
-            QueryResult expected;
-            try {
-                expected = executor.execute(sandboxSchema, lab.expectedSql(), timeoutMs);
-            } catch (RuntimeException failure) {
-                throw new IllegalStateException("教学答案执行失败，请联系管理员：" + failure.getMessage(), failure);
-            }
-            try {
-                learnerResult = executor.execute(sandboxSchema, learnerSql, timeoutMs);
-                if (learnerResult.truncated()) {
-                    resultDetail = "结果集超过 " + 5000 + " 行，请先聚合或过滤后再提交。";
-                } else if (learnerResult.columns().size() != expected.columns().size()) {
-                    resultDetail = "列数不一致：期望 " + expected.columns().size() + " 列，实际 "
-                            + learnerResult.columns().size() + " 列。";
-                } else if (!learnerResult.checksum().equals(expected.checksum())) {
-                    resultDetail = "结果与标准答案不一致：期望 " + expected.rowCount() + " 行，实际 "
-                            + learnerResult.rowCount() + " 行。请检查过滤条件、去重逻辑与聚合口径。";
-                } else {
-                    resultPassed = true;
-                    resultDetail = "结果完全一致：" + learnerResult.rowCount() + " 行，校验和 "
-                            + learnerResult.checksum().substring(0, 12) + "。";
+            if (writeMode) {
+                WriteOutcome outcome = gradeWrite(lab, sandboxSchema, learnerSql, timeoutMs);
+                learnerResult = outcome.learner();
+                resultPassed = outcome.passed();
+                resultDetail = outcome.detail();
+                evidence.put("writeMode", true);
+                if (outcome.expected() != null) {
+                    evidence.put("expectedRows", outcome.expected().rowCount());
+                    evidence.put("expectedChecksum", outcome.expected().checksum());
                 }
-                evidence.put("learnerRows", learnerResult.rowCount());
-                evidence.put("expectedRows", expected.rowCount());
-                evidence.put("learnerChecksum", learnerResult.checksum());
-                evidence.put("expectedChecksum", expected.checksum());
-                evidence.put("durationMs", learnerResult.durationMs());
-            } catch (SqlSandboxExecutor.SqlExecutionException failure) {
-                resultDetail = "SQL 执行失败：" + failure.getMessage();
-                hints.add("先单独执行 WHERE 条件，确认能返回数据，再逐步加入聚合或窗口函数。");
-                evidence.put("sqlState", failure.sqlState());
+                if (learnerResult != null) {
+                    evidence.put("learnerRows", learnerResult.rowCount());
+                    evidence.put("learnerChecksum", learnerResult.checksum());
+                    evidence.put("durationMs", learnerResult.durationMs());
+                }
+                if (!resultPassed) {
+                    hints.add("写任务判分后目标表会重置为教学初始数据；请检查 WHERE 条件与目标值是否覆盖了正确的行。");
+                }
+            } else {
+                QueryResult expected;
+                try {
+                    expected = executor.execute(sandboxSchema, lab.expectedSql(), timeoutMs);
+                } catch (RuntimeException failure) {
+                    throw new IllegalStateException("教学答案执行失败，请联系管理员：" + failure.getMessage(), failure);
+                }
+                try {
+                    learnerResult = executor.execute(sandboxSchema, learnerSql, timeoutMs);
+                    if (learnerResult.truncated()) {
+                        resultDetail = "结果集超过 " + 5000 + " 行，请先聚合或过滤后再提交。";
+                    } else if (learnerResult.columns().size() != expected.columns().size()) {
+                        resultDetail = "列数不一致：期望 " + expected.columns().size() + " 列，实际 "
+                                + learnerResult.columns().size() + " 列。";
+                    } else if (!learnerResult.checksum().equals(expected.checksum())) {
+                        resultDetail = "结果与标准答案不一致：期望 " + expected.rowCount() + " 行，实际 "
+                                + learnerResult.rowCount() + " 行。请检查过滤条件、去重逻辑与聚合口径。";
+                    } else {
+                        resultPassed = true;
+                        resultDetail = "结果完全一致：" + learnerResult.rowCount() + " 行，校验和 "
+                                + learnerResult.checksum().substring(0, 12) + "。";
+                    }
+                    evidence.put("learnerRows", learnerResult.rowCount());
+                    evidence.put("expectedRows", expected.rowCount());
+                    evidence.put("learnerChecksum", learnerResult.checksum());
+                    evidence.put("expectedChecksum", expected.checksum());
+                    evidence.put("durationMs", learnerResult.durationMs());
+                } catch (SqlSandboxExecutor.SqlExecutionException failure) {
+                    resultDetail = "SQL 执行失败：" + failure.getMessage();
+                    hints.add("先单独执行 WHERE 条件，确认能返回数据，再逐步加入聚合或窗口函数。");
+                    evidence.put("sqlState", failure.sqlState());
+                }
             }
         } else {
             resultDetail = "存在安全或语法问题，已跳过结果比对。";
-            hints.add("只允许单条只读 SELECT / WITH 语句，且不能包含任何写操作关键字。");
+            hints.add(writeMode
+                    ? "写任务只允许单条 INSERT / UPDATE / DELETE，且不能显式引用 teach schema。"
+                    : "只允许单条只读 SELECT / WITH 语句，且不能包含任何写操作关键字。");
         }
 
         if (!structurePassed) {
@@ -119,6 +147,59 @@ public class GradingEngine {
                 : learnerResult.sample(properties.getGrading().getSampleRows());
         return new LearningModels.GradedSubmission(score, passed, summary, items, evidence, columns, sample,
                 hints.stream().distinct().limit(4).toList());
+    }
+
+    private record WriteOutcome(QueryResult learner, QueryResult expected, boolean passed, String detail) {
+    }
+
+    private WriteOutcome gradeWrite(LearningModels.LabRecord lab, String schema, String learnerSql, int timeoutMs) {
+        JsonNode policy = lab.staticPolicy();
+        String table = policy.path("targetTable").asText("");
+        String stateQuery = policy.path("stateQuery").asText("");
+        if (table.isBlank() || stateQuery.isBlank()) {
+            throw new IllegalStateException("写任务缺少 targetTable/stateQuery 定义");
+        }
+        synchronized (sandboxLocks.computeIfAbsent(schema, key -> new Object())) {
+            QueryResult learner = null;
+            String failureDetail = null;
+            try {
+                executor.executeUpdate(schema, learnerSql, timeoutMs);
+                learner = executor.execute(schema, stateQuery, timeoutMs);
+            } catch (SqlSandboxExecutor.SqlExecutionException failure) {
+                failureDetail = "SQL 执行失败：" + failure.getMessage();
+            }
+            QueryResult expected;
+            try {
+                executor.resetTable(schema, table);
+                executor.executeUpdate(schema, lab.expectedSql(), timeoutMs);
+                expected = executor.execute(schema, stateQuery, timeoutMs);
+            } catch (RuntimeException failure) {
+                throw new IllegalStateException("教学答案执行失败，请联系管理员：" + failure.getMessage(), failure);
+            } finally {
+                try {
+                    executor.resetTable(schema, table);
+                } catch (RuntimeException cleanup) {
+                    LOG.warn("写任务目标表重置失败 schema={} table={}", schema, table);
+                }
+            }
+            if (learner == null) {
+                return new WriteOutcome(null, expected, false, failureDetail);
+            }
+            if (learner.truncated()) {
+                return new WriteOutcome(learner, expected, false, "最终表状态超过 5000 行，请先缩小操作范围。");
+            }
+            if (learner.columns().size() != expected.columns().size()) {
+                return new WriteOutcome(learner, expected, false, "列数不一致：期望 " + expected.columns().size()
+                        + " 列，实际 " + learner.columns().size() + " 列。");
+            }
+            if (!learner.checksum().equals(expected.checksum())) {
+                return new WriteOutcome(learner, expected, false, "最终表状态与标准答案不一致：期望 "
+                        + expected.rowCount() + " 行，实际 " + learner.rowCount()
+                        + " 行。请检查 WHERE 条件与目标值。");
+            }
+            return new WriteOutcome(learner, expected, true, "最终表状态一致：" + learner.rowCount()
+                    + " 行，校验和 " + learner.checksum().substring(0, 12) + "。");
+        }
     }
 
     private static int weightedScore(LearningModels.LabRecord lab, boolean safety, boolean structure, boolean result,

@@ -186,6 +186,7 @@ export default function LearningLabPage() {
           <Space wrap>
             <Tag>{lab.level}</Tag>
             <Tag>{lab.difficulty}</Tag>
+            {lab.taskType === 'SQL_WRITE' && <Tag color="orange">写任务</Tag>}
             <Tag>{lab.estimatedMinutes} 分钟</Tag>
             <Tag>通过线 {lab.passScore}</Tag>
             {lab.sandboxActive
@@ -268,14 +269,16 @@ export default function LearningLabPage() {
         <Col span={14}>
           <DataSurface
             title="SQL 工作区"
-            extra={<span className="learn-panel-note">只读沙箱 · 单条语句</span>}
+            extra={<span className="learn-panel-note">{lab.taskType === 'SQL_WRITE' ? '写沙箱 · 单条语句' : '只读沙箱 · 单条语句'}</span>}
             label="SQL 工作区"
           >
             <Alert
-              type="info"
+              type={lab.taskType === 'SQL_WRITE' ? 'warning' : 'info'}
               showIcon
               style={{ marginBottom: 12 }}
-              message="在沙箱 schema 中直接查询 orders_raw / order_status_dict，不要写 schema 前缀；提交后由服务端在独立只读事务中执行并比对标准结果。"
+              message={lab.taskType === 'SQL_WRITE'
+                ? '写任务：只允许单条 INSERT / UPDATE / DELETE，且不要写 schema 前缀；判分后目标表会重置为教学初始数据。'
+                : '在沙箱 schema 中直接查询 orders_raw / order_status_dict，不要写 schema 前缀；提交后由服务端在独立只读事务中执行并比对标准结果。'}
             />
             <Input.TextArea
               value={sql}

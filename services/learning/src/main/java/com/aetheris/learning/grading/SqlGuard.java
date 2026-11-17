@@ -18,6 +18,8 @@ public final class SqlGuard {
     private static final Pattern QUALIFIED_STAR = Pattern.compile("\\bselect\\s+[a-z_][a-z0-9_]*\\s*\\.\\s*\\*",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern READ_HEAD = Pattern.compile("^\\s*(select|with)\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern WRITE_HEAD = Pattern.compile("^\\s*(insert|update|delete)\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TEACH_REF = Pattern.compile("\\bteach\\s*\\.", Pattern.CASE_INSENSITIVE);
     /** 学员只能访问自己的沙箱与 teach 教学数据；显式平台 schema 一律拒绝。 */
     private static final Pattern PLATFORM_SCHEMA = Pattern.compile(
             "\\b(learning|mcp|metadata|quality|auth|system|workflow|ingestion|governance|serving|ai)\\s*\\.",
@@ -59,9 +61,13 @@ public final class SqlGuard {
         String stripped = stripLiteralsAndComments(sql);
         String normalized = stripped.toLowerCase(Locale.ROOT);
 
-        boolean readOnly = READ_HEAD.matcher(stripped).find();
-        safety.add(new Check("read_only", "只读查询", readOnly,
-                readOnly ? "只读查询校验通过。" : "只允许 SELECT 或 WITH 开头的只读查询。"));
+        boolean writeMode = policy.path("allowWrite").asBoolean(false);
+        boolean headOk = (writeMode ? WRITE_HEAD : READ_HEAD).matcher(stripped).find();
+        safety.add(new Check(writeMode ? "write_operation" : "read_only",
+                writeMode ? "写操作" : "只读查询", headOk,
+                headOk ? (writeMode ? "写语句校验通过。" : "只读查询校验通过。")
+                        : (writeMode ? "只允许 INSERT / UPDATE / DELETE 开头的写语句。"
+                        : "只允许 SELECT 或 WITH 开头的只读查询。")));
 
         int semicolons = countSemicolons(stripped);
         boolean single = semicolons == 0 || (semicolons == 1 && stripped.trim().endsWith(";"));
@@ -81,6 +87,12 @@ public final class SqlGuard {
         }
         safety.add(new Check("no_write_keywords", "禁止写操作关键字", forbidden.isEmpty(),
                 forbidden.isEmpty() ? "未发现写操作关键字。" : "包含禁止的关键字：" + String.join(", ", forbidden) + "。"));
+
+        if (writeMode) {
+            boolean teachReference = TEACH_REF.matcher(normalized).find();
+            safety.add(new Check("sandbox_write_only", "仅写沙箱", !teachReference,
+                    teachReference ? "写任务禁止显式引用 teach schema，请直接使用表名。" : "沙箱写入范围校验通过。"));
+        }
 
         boolean platformSchema = PLATFORM_SCHEMA.matcher(normalized).find();
         safety.add(new Check("sandbox_only", "仅限沙箱与教学数据", !platformSchema,

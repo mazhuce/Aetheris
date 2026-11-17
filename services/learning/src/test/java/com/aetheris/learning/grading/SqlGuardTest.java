@@ -102,4 +102,45 @@ class SqlGuardTest {
         assertThat(evaluation.safetyPassed()).isFalse();
         assertThat(evaluation.failures()).isNotEmpty();
     }
+    private static final String WRITE_POLICY = """
+            {"allowWrite":true,
+             "forbiddenKeywords":["insert","delete","create","drop","alter","truncate","grant","copy"],
+             "requiredColumns":["update","where","is_deleted"]}
+            """;
+
+    @Test
+    void acceptsSingleUpdateInWriteMode() {
+        var evaluation = SqlGuard.evaluate("""
+                UPDATE orders_raw SET quantity = 0
+                 WHERE quantity < 0 AND is_deleted = false
+                """, Json.readTree(WRITE_POLICY));
+        assertThat(evaluation.safetyPassed()).isTrue();
+        assertThat(evaluation.structurePassed()).isTrue();
+    }
+
+    @Test
+    void rejectsExplicitTeachReferenceInWriteMode() {
+        var evaluation = SqlGuard.evaluate("""
+                UPDATE teach.orders_raw SET quantity = 0
+                 WHERE quantity < 0 AND is_deleted = false
+                """, Json.readTree(WRITE_POLICY));
+        assertThat(evaluation.safetyPassed()).isFalse();
+        assertThat(evaluation.failures()).anyMatch(message -> message.contains("teach"));
+    }
+
+    @Test
+    void rejectsReadOnlyStatementInWriteMode() {
+        var evaluation = SqlGuard.evaluate("SELECT order_id FROM orders_raw WHERE is_deleted = false",
+                Json.readTree(WRITE_POLICY));
+        assertThat(evaluation.safetyPassed()).isFalse();
+    }
+
+    @Test
+    void rejectsMultipleWriteStatements() {
+        var evaluation = SqlGuard.evaluate("""
+                UPDATE orders_raw SET quantity = 0 WHERE quantity < 0 AND is_deleted = false;
+                UPDATE orders_raw SET quantity = 1 WHERE order_id = 1;
+                """, Json.readTree(WRITE_POLICY));
+        assertThat(evaluation.safetyPassed()).isFalse();
+    }
 }

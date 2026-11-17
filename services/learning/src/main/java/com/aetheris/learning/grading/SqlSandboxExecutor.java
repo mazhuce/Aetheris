@@ -96,6 +96,60 @@ public class SqlSandboxExecutor {
         }
     }
 
+    /** 写任务：仅在学员 schema 内执行单条写语句，search_path 不含 teach。 */
+    public int executeUpdate(String schema, String sql, int statementTimeoutMs) {
+        if (schema == null || !SAFE_SCHEMA.matcher(schema).matches()) {
+            throw new SqlExecutionException("沙箱标识非法", "22023");
+        }
+        if (sql == null || sql.isBlank()) {
+            throw new SqlExecutionException("SQL 为空", "42601");
+        }
+        if (sql.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > properties.getGrading().getMaxSqlBytes()) {
+            throw new SqlExecutionException("SQL 超出允许长度", "54000");
+        }
+        int timeout = statementTimeoutMs > 0 ? statementTimeoutMs : properties.getGrading().getStatementTimeoutMs();
+        try (Connection connection = dataSource.getConnection()) {
+            connection.setAutoCommit(false);
+            try {
+                try (Statement setup = connection.createStatement()) {
+                    setup.execute("SET LOCAL statement_timeout = " + timeout);
+                    setup.execute("SET LOCAL search_path TO " + schema);
+                }
+                int updated;
+                try (Statement statement = connection.createStatement()) {
+                    updated = statement.executeUpdate(sql);
+                }
+                connection.commit();
+                return updated;
+            } catch (SQLException failure) {
+                rollbackQuietly(connection);
+                throw translate(failure);
+            } finally {
+                restoreAutoCommit(connection);
+            }
+        } catch (SQLException failure) {
+            throw new SqlExecutionException("无法建立沙箱连接", failure.getSQLState());
+        }
+    }
+
+    /** 将写任务的目标表恢复为教学初始数据；表名由任务定义提供，需通过白名单校验。 */
+    public void resetTable(String schema, String table) {
+        if (schema == null || !SAFE_SCHEMA.matcher(schema).matches()) {
+            throw new SqlExecutionException("沙箱标识非法", "22023");
+        }
+        if (table == null || !table.matches("^[a-z_][a-z0-9_]*$")) {
+            throw new SqlExecutionException("目标表名非法", "22023");
+        }
+        try (Connection connection = dataSource.getConnection()) {
+            try (Statement statement = connection.createStatement()) {
+                statement.execute("DROP TABLE IF EXISTS " + schema + "." + table);
+                statement.execute("CREATE TABLE " + schema + "." + table + " AS TABLE teach." + table);
+            }
+        } catch (SQLException failure) {
+            throw translate(failure);
+        }
+    }
+
     private static String normalize(Object value) throws SQLException {
         if (value == null) return null;
         String text;
