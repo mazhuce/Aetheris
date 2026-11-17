@@ -387,6 +387,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 新增 `SubmissionFirstPassEventTest` 2 项：首次通过写入 `learner_first_lab_passed`；后续通过不重复写入。
 - learning 全量单测 **41/41** 通过。仅测试改动。
 - 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 30：事件接口完整性与校验修复
+
+- 客户端事件白名单收紧为 `expert_question_asked / expert_fallback_used / portfolio_exported`；`lab_reset`、`sandbox_expired_recovered`、`learner_first_lab_passed` 只能由服务端派生写入，禁止 HTTP 伪造。
+- 修复非法 JSON 被静默吞掉的问题：payload 使用严格解析，非法 JSON 返回 400（原先会在写库时变成 500）。
+- 测试：`LearningEventControllerTest` 3/3；learning 全量 **44/44**；learning-service 重建 healthy。
+- 未完成：模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 29：过期沙箱恢复真实库验证
 
 - 将测试学员的 active 沙箱 expires_at 置为过去，随后通过浏览器点击"开始实验"触发恢复：
@@ -395,6 +401,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
   - 控制台无错误。
 - 事件余额：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1、`sandbox_expired_recovered` 1。
 - 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 30：事件接口完整性与校验修复
+
+- 客户端事件白名单收紧为 `expert_question_asked / expert_fallback_used / portfolio_exported`；`lab_reset`、`sandbox_expired_recovered`、`learner_first_lab_passed` 只能由服务端派生写入，禁止 HTTP 伪造。
+- 修复非法 JSON 被静默吞掉的问题：payload 使用严格解析，非法 JSON 返回 400（原先会在写库时变成 500）。
+- 测试：`LearningEventControllerTest` 3/3；learning 全量 **44/44**；learning-service 重建 healthy。
+- 未完成：模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 24：数据集登记后端校验回归
 
 - 新增 `DatasetManifestRepositoryTest` 5 项：编码与表名一致性、teach schema 限制、缺失表/许可拒绝、行数与校验和计算后写入、漂移标记。
@@ -429,6 +441,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 新增 `SubmissionFirstPassEventTest` 2 项：首次通过写入 `learner_first_lab_passed`；后续通过不重复写入。
 - learning 全量单测 **41/41** 通过。仅测试改动。
 - 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 30：事件接口完整性与校验修复
+
+- 客户端事件白名单收紧为 `expert_question_asked / expert_fallback_used / portfolio_exported`；`lab_reset`、`sandbox_expired_recovered`、`learner_first_lab_passed` 只能由服务端派生写入，禁止 HTTP 伪造。
+- 修复非法 JSON 被静默吞掉的问题：payload 使用严格解析，非法 JSON 返回 400（原先会在写库时变成 500）。
+- 测试：`LearningEventControllerTest` 3/3；learning 全量 **44/44**；learning-service 重建 healthy。
+- 未完成：模型在线回答、真实样例、写沙箱待外部输入。
 ### 2026-11-17 检查点 29：过期沙箱恢复真实库验证
 
 - 将测试学员的 active 沙箱 expires_at 置为过去，随后通过浏览器点击"开始实验"触发恢复：
@@ -437,6 +455,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
   - 控制台无错误。
 - 事件余额：`expert_question_asked` 1、`expert_fallback_used` 1、`portfolio_exported` 2、`lab_reset` 1、`sandbox_expired_recovered` 1。
 - 未完成：首个通过事件的真实浏览器复验（需新学员）；模型在线回答、真实样例、写沙箱待外部输入。
+### 2026-11-17 检查点 30：事件接口完整性与校验修复
+
+- 客户端事件白名单收紧为 `expert_question_asked / expert_fallback_used / portfolio_exported`；`lab_reset`、`sandbox_expired_recovered`、`learner_first_lab_passed` 只能由服务端派生写入，禁止 HTTP 伪造。
+- 修复非法 JSON 被静默吞掉的问题：payload 使用严格解析，非法 JSON 返回 400（原先会在写库时变成 500）。
+- 测试：`LearningEventControllerTest` 3/3；learning 全量 **44/44**；learning-service 重建 healthy。
+- 未完成：模型在线回答、真实样例、写沙箱待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

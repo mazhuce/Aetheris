@@ -122,21 +122,28 @@ public class LearningController {
     public record LearningEventRequest(String event, String pathCode, String labCode, String payload) {
     }
 
-    private static final java.util.Set<String> ALLOWED_EVENTS = java.util.Set.of(
-            "expert_question_asked", "expert_fallback_used", "portfolio_exported",
-            "lab_reset", "sandbox_expired_recovered");
+    /** 仅允许客户端上报自身动作；lab_reset 等服务端派生事件不得由 HTTP 伪造。 */
+    private static final com.fasterxml.jackson.databind.ObjectMapper EVENT_JSON =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    private static final java.util.Set<String> CLIENT_EVENTS = java.util.Set.of(
+            "expert_question_asked", "expert_fallback_used", "portfolio_exported");
 
     @PostMapping("/events")
     public org.springframework.http.ResponseEntity<Void> event(@RequestBody LearningEventRequest request,
                                                               @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
-        if (request.event() == null || !ALLOWED_EVENTS.contains(request.event())) {
+        if (request.event() == null || !CLIENT_EVENTS.contains(request.event())) {
             throw new IllegalArgumentException("不支持的事件");
         }
         if (request.payload() != null && request.payload().length() > 2048) {
             throw new IllegalArgumentException("事件内容过长");
         }
         if (request.payload() != null && !request.payload().isBlank()) {
-            com.aetheris.learning.support.Json.readTree(request.payload());
+            try {
+                EVENT_JSON.readTree(request.payload());
+            } catch (com.fasterxml.jackson.core.JsonProcessingException malformed) {
+                throw new IllegalArgumentException("事件内容必须是合法 JSON");
+            }
         }
         repository.insertLearningEvent(user.uid(), request.event(),
                 blankToNull(request.pathCode()), blankToNull(request.labCode()), request.payload());
