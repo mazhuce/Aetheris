@@ -1,0 +1,17 @@
+{
+  "loggedIn": true,
+  "nav": [],
+  "learningHeading": false,
+  "portfolio": {
+    "hasTitle": true,
+    "hasExport": true
+  },
+  "pathCount": 4,
+  "labCode": "de-l1-01",
+  "submitted": true,
+  "gradeText": "得分 100 · 已通过",
+  "expertOpened": true,
+  "expertReplied": true,
+  "expertMode": "offline",
+  "consoleErrors": []
+}
