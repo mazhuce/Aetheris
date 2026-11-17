@@ -482,6 +482,11 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 真实浏览器验收：`de-l2-08` 提交 UPDATE → **得分 100 · 已通过**；证据 `learnerChecksum == expectedChecksum`（26 行）；`teach.orders_raw` 未变；沙箱目标表已重置为初始值。
 - 测试：learning 全量 **52/52**（含 SqlGuard 14、GradingEngineWriteTest 2、LearningRepositoryPolicyTest 2）。
 - 未完成：模型在线回答与真实样例数据待外部输入。
+### 2026-11-17 检查点 34：写沙箱安全负例与重启恢复
+
+- 浏览器负例：提交 `UPDATE teach.orders_raw ...` → 得分 0；静态检查明确「写任务禁止显式引用 teach schema」；`teach.orders_raw` 数据未变。
+- 机器重启后 Docker Desktop 与 16 个容器恢复；`node scripts/learning-smoke.mjs` 返回 `ok=true`，6 项检查通过、控制台错误 0。
+- 未完成：模型在线回答与真实样例数据待外部输入。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
