@@ -31,6 +31,7 @@
 | learning-path-remembered.png | 刷新后保持所选岗位路径 |
 | learning-filter-passed.png | 任务列表「已通过」筛选 |
 | learning-fresh-empty-state.png | 新学员空态（0/40、0 凭证） |
+| learner-first-journey.png | 首次任务旅程：开始实验 → 沙箱就绪 → 提交 100 分 |
 | next-lab-button.png / lab-prev-next-navigation.png | 通过后下一题 / 上一题与「第 N / M 题」 |
 | de-l2-08-dataset-refs.png | 写任务页展示数据集来源与许可 |
 | de-l2-05-multi-datasets.png | 多表任务页同时展示 orders_raw 与 shop_dim 数据集 |
