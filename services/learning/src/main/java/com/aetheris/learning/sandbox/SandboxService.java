@@ -32,7 +32,7 @@ public class SandboxService {
             "orders_raw", "order_status_dict", "shop_dim", "users", "payments", "refunds",
             "metric_dict", "daily_arrival", "table_asset", "lineage_edge",
             "job_definition", "acceptance_gate", "task_run_log", "audit_log",
-            "daily_shop_gmv");
+            "daily_shop_gmv", "online_shoppers");
 
     private final LearningRepository repository;
     private final JdbcTemplate jdbcTemplate;

@@ -1,0 +1,14 @@
+Dataset: Online Shoppers Purchasing Intention Dataset
+Source: UCI Machine Learning Repository, dataset id 468
+        https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset
+        DOI: https://doi.org/10.24432/C5F88Q
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+         https://creativecommons.org/licenses/by/4.0/
+Citation: Sakar, C. & Kastro, Y. (2018). Online Shoppers Purchasing Intention Dataset.
+          UCI Machine Learning Repository. DOI 10.24432/C5F88Q.
+Retrieved: 2026-11-18
+Modifications: column names converted to snake_case; no values changed;
+               file re-encoded as UTF-8 without BOM.
+Rows: 12330, columns: 18. No direct identifiers (PII) are present in the dataset.
+
+This attribution file must accompany redistributions of online_shoppers.csv.
