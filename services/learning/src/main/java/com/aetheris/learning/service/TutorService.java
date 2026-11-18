@@ -110,11 +110,24 @@ public class TutorService {
                 .map(item -> "「" + item.name() + "」：" + item.detail())
                 .findFirst()
                 .orElse("最近一次评分未通过，但没有返回具体评分项。");
+        String summary = last.summary() == null ? "" : last.summary();
+        String prefix = "当前 AI 导师不可用，先用规则导师回答。";
+        if (summary.contains("SQL 执行失败")) {
+            return prefix + "这次是数据库执行报错，先排查：表名/字段拼写、GROUP BY 是否完整、字符串是否用单引号。"
+                    + failure + " 修正后先提交一版能跑通的查询。";
+        }
+        if (summary.contains("安全或语法问题")) {
+            return prefix + "提交被安全检查拦下了：检查是否写了 teach. 前缀、是否包含多条语句、读任务里是否用了写关键字。"
+                    + failure + " 调整后重新提交。";
+        }
         String focus = question.contains("去重") ? "去重时先确认按什么键唯一、按什么时间保留最新。"
                 : question.contains("口径") || question.contains("指标") ? "先把过滤条件写成注释，再逐条翻译成 WHERE。"
+                : question.contains("窗口") || question.contains("排名") ? "窗口函数在 GROUP BY 之后计算；先在子查询里聚合，再加 RANK/SUM OVER。"
+                : question.contains("JOIN") || question.contains("关联") || question.contains("连接") ? "关联前先确认连接键与基数，避免一对多放大行数。"
+                : question.contains("排序") || question.contains("顺序") ? "核对 ORDER BY 的列与方向，注意 NULL 的默认位置。"
+                : question.contains("update") || question.contains("insert") || question.contains("写入") ? "写任务先用 SELECT 核对目标行，再执行单条写语句；判分比对最终表状态。"
                 : "先缩小到最小可运行查询，再逐步加聚合或窗口函数。";
-        return "当前 AI 导师不可用，先用规则导师回答。" + failure + " " + focus
-                + " 需要更细的提示可以点击“获取提示”。";
+        return prefix + failure + " " + focus + " 需要更细的提示可以点击“获取提示”。";
     }
 
     public LearningModels.HintView hint(long uid, String labCode) {

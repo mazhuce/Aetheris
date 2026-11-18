@@ -99,4 +99,39 @@ class TutorServiceTest {
         assertThat(chat.reply()).contains("AI 导师对话已达到上限");
         verify(aiTutorClient, never()).complete(anyString(), anyString());
     }
+
+    @Test
+    void ruleFallbackExplainsExecutionErrors() {
+        when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(new LearningModels.GradingView(
+                0, false, "任务未通过，得分 0。SQL 执行失败：column \"foo\" does not exist",
+                List.of(), List.of(), List.of(), List.of()));
+
+        LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "为什么提交报错？");
+
+        assertThat(chat.fallback()).isTrue();
+        assertThat(chat.reply()).contains("数据库执行报错");
+    }
+
+    @Test
+    void ruleFallbackExplainsSafetyBlocks() {
+        when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(new LearningModels.GradingView(
+                0, false, "任务未通过，得分 0。存在安全或语法问题，已跳过结果比对。",
+                List.of(), List.of(), List.of(), List.of()));
+
+        LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "为什么被拒绝？");
+
+        assertThat(chat.reply()).contains("安全检查");
+    }
+
+    @Test
+    void ruleFallbackCoversWindowQuestions() {
+        when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(new LearningModels.GradingView(
+                50, false, "任务未通过，得分 50。",
+                List.of(new LearningModels.GradingItemView("rows", "结果行数", 40, false, "行数不一致")),
+                List.of(), List.of(), List.of()));
+
+        LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "窗口函数怎么加排名？");
+
+        assertThat(chat.reply()).contains("窗口函数在 GROUP BY 之后计算");
+    }
 }
