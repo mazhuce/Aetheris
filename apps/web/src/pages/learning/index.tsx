@@ -71,10 +71,10 @@ export default function LearningCenterPage() {
         current && list.some((item) => item.code === current) ? current : list[0]?.code ?? ''
       )
     } catch {
-      setLoadError('学习数据加载失败，请确认 learning-service 已启动。')
+      setLoadError('学习数据加载失败，请稍后重试。')
       // 固定 key：开发模式下 StrictMode 会把 effect 跑两遍，
       // 不加 key 就会在顶部叠两条一模一样的红条。
-      message.error({ content: '学习数据加载失败，请确认 learning-service 已启动', key: 'learning-load-error' })
+      message.error({ content: '学习数据加载失败，请稍后重试', key: 'learning-load-error' })
     } finally {
       setLoading(false)
     }

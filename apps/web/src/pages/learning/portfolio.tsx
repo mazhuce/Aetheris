@@ -41,7 +41,7 @@ export default function LearningPortfolioPage() {
         )
       ))
     } catch {
-      if (!signal?.aborted) setError('求职证据加载失败，请确认 learning-service 已启动。')
+      if (!signal?.aborted) setError('求职证据加载失败，请稍后重试。')
     } finally {
       if (!signal?.aborted) setLoading(false)
     }
