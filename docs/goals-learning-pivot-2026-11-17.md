@@ -763,6 +763,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 浏览器真实触发并核对 `learning_event` 增量：专家提问 `expert_question_asked` +1、离线兜底 `expert_fallback_used` +1、证据包导出 `portfolio_exported` +1，导出文件真实下载成功，无控制台错误。
 - 当前真实库共 5 类事件在库；`learner_first_lab_passed` 已于检查点 52 用临时学员完成真实触发验证（记录随验收账号清理）。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
+### 2026-11-18 检查点 78：外部依赖复探测与主干同步
+
+- 在线 AI 复探测：专家 503「模型账户余额不足」、导师规则降级（`fallback=true / model=rule-based`），DeepSeek 账户仍未充值，无需代码调整。
+- 主干同步：`origin/main` 无新提交（sim 仍为其 fast-forward 超集），无需合并。
+- §16.3 已记录最近探测时间（2026-11-18 06:59 UTC）。
+- 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
@@ -930,7 +936,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 | 项 | 阻塞 | 到位后的动作 |
 | --- | --- | --- |
-| 专家/导师在线回答 | DeepSeek 账户余额不足（HTTP 402）；Key 已配置且双入口接线 | 充值后运行 `node scripts/ai-online-acceptance.mjs`，两入口均 `ok=true` 即验收通过 |
+| 专家/导师在线回答 | DeepSeek 账户余额不足（HTTP 402）；Key 已配置且双入口接线；2026-11-18 06:59 UTC 复探测仍为 402 | 充值后运行 `node scripts/ai-online-acceptance.mjs`，两入口均 `ok=true` 即验收通过 |
 | 真实脱敏样例数据 | 来源与许可待定 | 按 §11 runbook：导入工具校验 → 登记 → 漂移校验 → 判分回归 |
 | 新学员首个通过事件 | 已关闭（检查点 52） | 临时学员提交首题后事件落库，验收完已清理 |
 
