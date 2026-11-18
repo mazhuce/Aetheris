@@ -86,7 +86,7 @@ function Deferred({ children }: { children: ReactNode }) {
 /** 一级模块根路径 → 默认二级页（运行时按当前角色解析，避免加载期固化角色）。 */
 function ModuleRedirect({ moduleKey }: { moduleKey: string }) {
   const module = navModules.find((item) => item.key === moduleKey)
-  if (!module) return <Navigate to="/workbench" replace />
+  if (!module) return <Navigate to="/learning/overview" replace />
   return <Navigate to={firstAvailablePath(module, getCurrentRole())} replace />
 }
 
@@ -119,6 +119,7 @@ export const router = createBrowserRouter([
       { index: true, element: <HomeRedirect /> },
 
       // 学习中心
+      { path: 'learning/overview', element: <Dashboard /> },
       { path: 'learning', element: <LearningCenterPage /> },
       { path: 'learning/portfolio', element: <LearningPortfolioPage /> },
       { path: 'learning/labs/:code', element: <LearningLabPage /> },
@@ -140,8 +141,8 @@ export const router = createBrowserRouter([
         )
       },
 
-      // 工作台
-      { path: 'workbench', element: <Dashboard /> },
+      // 工作台（数据概览已并入学习中心）
+      { path: 'workbench', element: <Navigate to="/learning/overview" replace /> },
       { path: 'workbench/todos', element: <TodosPage /> },
 
       // 数据接入
@@ -294,7 +295,7 @@ export const router = createBrowserRouter([
         .map((module) => ({ path: module.key, element: <ModuleRedirect moduleKey={module.key} /> })),
 
       // 旧路由兼容重定向
-      { path: 'dashboard', element: <Navigate to="/workbench" replace /> },
+      { path: 'dashboard', element: <Navigate to="/learning/overview" replace /> },
       { path: 'metadata/datasource', element: <Navigate to="/integration/sources" replace /> },
       { path: 'metadata/tables', element: <Navigate to="/governance/metadata" replace /> },
       { path: 'metadata/warehouse', element: <Navigate to="/modeling/physical-models" replace /> },
@@ -317,7 +318,7 @@ export const router = createBrowserRouter([
       { path: 'services/authorization', element: <Navigate to="/assets/authorization" replace /> },
 
       // 未知路径兜底
-      { path: '*', element: <Navigate to="/workbench" replace /> }
+      { path: '*', element: <HomeRedirect /> }
     ]
   }
 ])

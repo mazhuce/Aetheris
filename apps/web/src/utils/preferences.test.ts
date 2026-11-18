@@ -16,6 +16,7 @@ describe('system preferences', () => {
 
   it('uses the existing dark experience by default', () => {
     expect(readPreferences()).toEqual(DEFAULT_PREFERENCES)
+    expect(DEFAULT_PREFERENCES.homePath).toBe('/learning/overview')
   })
 
   it('persists valid preferences', () => {

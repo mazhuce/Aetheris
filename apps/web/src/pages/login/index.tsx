@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { login, logout } from '@/api/auth'
 import { logoutIntent } from '@/auth/authState'
 import { useAuthSession } from '@/hooks/useAuthSession'
+import { useHomePath } from '@/contexts/PreferencesContext'
 import BrandMark from '@/components/BrandMark'
 
 interface LoginForm {
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const location = useLocation()
+  const homePath = useHomePath()
   const [loading, setLoading] = useState(false)
   const [retryingLogout, setRetryingLogout] = useState(false)
   useAuthSession()
@@ -34,7 +36,7 @@ export default function LoginPage() {
     try {
       await login(values.username, values.password)
       message.success('登录成功').then(() => undefined, () => undefined)
-      await navigate('/workbench', { replace: true })
+      await navigate(homePath, { replace: true })
     } catch (error) {
       // 原实现把所有异常都报成「用户名或密码错误」，导致网络故障、服务未启动、
       // 账号被锁定等情况全部显示为凭据错误，排查时被误导。这里按实际状态码区分。

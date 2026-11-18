@@ -18,7 +18,20 @@ describe('navigation defaults', () => {
 
     const workbench = navModules.find((module) => module.key === 'workbench')
     expect(workbench?.defaultVisible).toBe(false)
-    expect(workbench?.children.map((child) => child.path)).toContain('/workbench')
+    expect(workbench?.children.map((child) => child.path)).toContain('/workbench/todos')
+  })
+
+  it('数据概览是学习中心的第一个二级项', () => {
+    const learning = navModules.find((module) => module.key === 'learning')
+    expect(learning?.children[0]?.path).toBe('/learning/overview')
+    expect(learning?.children[0]?.label).toBe('数据概览')
+  })
+
+  it('旧的本地菜单顺序会把数据概览补到学习中心首位', () => {
+    const legacy = defaultNavigationConfig()
+    legacy.itemOrder.learning = ['learning-home', 'learning-admin', 'learning-mcp']
+    const normalized = normalizeNavigationConfig(legacy)
+    expect(normalized.itemOrder.learning[0]).toBe('learning-overview')
   })
 
   it('二级项 key 与路径全局唯一，避免菜单配置改归属时互相覆盖', () => {

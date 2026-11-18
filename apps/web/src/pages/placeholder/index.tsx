@@ -17,7 +17,7 @@ export default function Placeholder() {
   const child = matched?.child
 
   const description = child?.description ?? '该能力正在规划中，将按阶段逐步开放。'
-  const backPath = module ? firstAvailablePath(module, role) : '/learning'
+  const backPath = module ? firstAvailablePath(module, role) : '/learning/overview'
 
   return (
     <>
@@ -31,7 +31,7 @@ export default function Placeholder() {
         description={description}
         action={(
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(backPath)}>
-            返回{module?.label ?? '工作台'}
+            返回{module?.label ?? '数据概览'}
           </Button>
         )}
       />

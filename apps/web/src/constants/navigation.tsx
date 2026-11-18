@@ -57,6 +57,7 @@ export const navModules: NavModule[] = [
     label: '学习中心',
     icon: <ReadOutlined />,
     children: [
+      { key: 'learning-overview', label: '数据概览', path: '/learning/overview', status: 'available' },
       { key: 'learning-home', label: '学习路径', path: '/learning', status: 'available' },
       { key: 'learning-admin', label: '内容运营', path: '/learning/admin', status: 'available', requiredRole: 'admin' },
       { key: 'learning-mcp', label: 'MCP 调试台', path: '/learning/mcp', status: 'available', requiredRole: 'admin' }
@@ -68,7 +69,6 @@ export const navModules: NavModule[] = [
     icon: <DashboardOutlined />,
     defaultVisible: false,
     children: [
-      { key: 'workbench-overview', label: '数据概览', path: '/workbench', status: 'available' },
       { key: 'workbench-todos', label: '我的待办', path: '/workbench/todos', status: 'available' },
       { key: 'workbench-recent', label: '最近访问', path: '/workbench/recent', status: 'available' }
     ]
@@ -423,6 +423,13 @@ export function normalizeNavigationConfig(value: unknown): NavigationConfig {
       ...module.children.map((child) => child.key).filter((key) => !incoming.includes(key))
     ]
   }
+
+  // 数据概览并入学习中心后固定为首个二级项；旧本地配置没有这个 key，
+  // 按通用规则补位会落到末尾，这里显式前移。
+  itemOrder.learning = [
+    'learning-overview',
+    ...(itemOrder.learning ?? []).filter((key) => key !== 'learning-overview')
+  ]
 
   const itemModule: Record<string, string> = {}
   if (raw.itemModule && typeof raw.itemModule === 'object') {

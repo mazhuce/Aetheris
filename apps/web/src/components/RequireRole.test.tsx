@@ -15,7 +15,7 @@ function renderAt(path: string) {
             </RequireRole>
           }
         />
-        <Route path="/learning" element={<div>learning-home-page</div>} />
+        <Route path="/learning/overview" element={<div>learning-home-page</div>} />
       </Routes>
     </MemoryRouter>
   )

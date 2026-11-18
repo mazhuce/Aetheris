@@ -16,8 +16,7 @@ import { isItemVisible, isModuleVisible, navModules } from '@/constants/navigati
 import type { ColorMode } from '@/utils/preferences'
 
 const HOME_OPTIONS = [
-  { value: '/learning', label: '学习路径' },
-  { value: '/workbench', label: '数据概览' },
+  { value: '/learning/overview', label: '数据概览' },
   { value: '/operations/overview', label: '运行概览' },
   { value: '/workbench/todos', label: '我的待办' },
   { value: '/workbench/recent', label: '最近访问' }

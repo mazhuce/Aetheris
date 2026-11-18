@@ -22,7 +22,7 @@ export default function RouteErrorBoundary() {
         <p>{message}</p>
         <div className="route-error-actions">
           <button type="button" onClick={() => window.location.reload()}>重新加载</button>
-          <button type="button" className="secondary" onClick={() => navigate('/workbench')}>返回工作台</button>
+          <button type="button" className="secondary" onClick={() => navigate('/learning/overview')}>返回数据概览</button>
         </div>
       </div>
     </main>

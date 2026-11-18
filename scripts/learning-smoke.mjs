@@ -122,6 +122,13 @@ async function runOnce(attempt) {
     checks.learnerNavigation = expected.every((label) => labels.includes(label)) && !labels.includes('内容运营')
     checks.navigationLabels = labels
 
+    checks.homeOverview = await waitFor(async () => (await evalJs('location.pathname')) === '/learning/overview', 20000, 300)
+    checks.overviewFirst = await waitFor(async () =>
+      (await evalJs(`document.querySelector('.subnav-tabs .subnav-item')?.textContent?.trim()`)) === '数据概览', 20000, 400)
+
+    await gotoReady(`${origin}/workbench`, 1200)
+    checks.legacyWorkbenchRedirect = await waitFor(async () => (await evalJs('location.pathname')) === '/learning/overview', 20000, 300)
+
     await gotoReady(`${origin}/learning`)
     checks.learningCenter = await waitFor(async () => (await evalJs('document.body.innerText')).includes('学习路径'), 20000, 400)
 
