@@ -702,6 +702,14 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 结果：全部正常渲染，无权限提示、无加载失败文案、无控制台错误；资产目录显示合规空态、SQL 开发要求选择数据源（只读守卫）。
 - 证据：`learner-entry-development-sql.png`、`learner-entry-assets-catalog.png`、`learner-entry-ai-assistant.png`。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
+### 2026-11-18 检查点 67：运行时总验收门
+
+- 提交前运行时三件套串联：
+  1. 全量判分回归 **40/40**（`learning-grading-regression.mjs`）；
+  2. 学习者浏览器冒烟 `ok=true / attempt=1`（`learning-smoke.mjs`，含自愈重试）；
+  3. 可观测性冒烟 **12 服务 + Prometheus**（`observability-smoke.ps1`）。
+- 建议每次课程或学习端改动后按此顺序执行；与单测（learning 61、ai-agent 66、前端 348）共同构成验收证据。
+- 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
