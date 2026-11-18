@@ -9,6 +9,7 @@
 | --- | --- |
 | learning-center.png | 学习者学习中心（路径、统计、能力雷达） |
 | career-portfolio.png | 求职证据页 |
+| portfolio-all-credentials.png | 全部 4 张路径结业凭证与 38/38 进度（检查点 44） |
 | expert-drawer.png | 左上角「数据开发专家」抽屉（离线兜底） |
 | lab-graded.png | 任务提交判分结果（100 分通过） |
 | lab-hint.png | 分级提示 |
