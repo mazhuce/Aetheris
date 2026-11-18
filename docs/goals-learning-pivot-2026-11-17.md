@@ -739,7 +739,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 ### 2026-11-18 检查点 73：数据集引用与排序号审计
 
 - 核对任务 `table_refs/dataset_refs` 与标准答案实际引用的表：发现 `de-l2-03`、`de-l2-05` 重复声明 `orders_raw`，且缺少实际 JOIN 的 `order_status_dict` / `shop_dim`；V34 修复引用并补齐样例清单绑定。
-- 复验：仅 `de-l2-07` 声明 `refunds` 而答案未直接引用（有意保留，用于解释两种口径的差异来源）；全量判分回归 40/40、冒烟 `ok=true / attempt=1`。
+- 复验：仅 `de-l2-07` 声明 `refunds` 而答案未直接引用（有意保留，用于解释两种口径的差异来源）；全量判分回归 40/40、冒烟 `ok=true / attempt=1`；浏览器确认 `de-l2-05` 展示 orders_raw + shop_dim、`de-l2-03` 展示 orders_raw + order_status_dict（证据 `de-l2-05-multi-datasets.png`）。
 - 排序号审计：4 条发布路径的模块与任务编号连续；历史 `m-l2-warehouse` 模块（非发布路径）编号从 4 开始，不影响学习路径展示。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 

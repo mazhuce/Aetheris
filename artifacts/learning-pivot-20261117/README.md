@@ -32,6 +32,7 @@
 | learning-fresh-empty-state.png | 新学员空态（0/40、0 凭证） |
 | next-lab-button.png / lab-prev-next-navigation.png | 通过后下一题 / 上一题与「第 N / M 题」 |
 | de-l2-08-dataset-refs.png | 写任务页展示数据集来源与许可 |
+| de-l2-05-multi-datasets.png | 多表任务页同时展示 orders_raw 与 shop_dim 数据集 |
 | aligned-lab-text.png | 修订后的任务描述渲染（金额 > 500、一行三列） |
 | learner-entry-development-sql.png | 学习者实训台（SQL 开发） |
 | learner-entry-assets-catalog.png | 学习者数据资产（合规空态） |
