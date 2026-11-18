@@ -799,7 +799,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | 样例数据清单 / 多版本 / 任务绑定 / 运营审计 / 漂移校验 / 图形化登记 | 已验收 | V12–V16；检查点 25/27；repository 5+3 项测试 |
 | 学习事件（3 客户端 + 3 服务端派生） | 已验收 | 检查点 26–31/52；6 类事件均真实触发（`learner_first_lab_passed` 用临时学员验证，验收后已清理） |
 | 后端回归 | 已验收 | learning 全量 55/55 |
-| 前端全量测试 | 已验收 | 69 文件 / 347 用例全绿（检查点 48/50/54/55） |
+| 前端全量测试 | 已验收 | 69 文件 / 348 用例全绿（检查点 48/50/54/55/63） |
 | 全量任务判分回归（40 任务标准答案） | 已验收 | 检查点 43/45；40/40 100 分 |
 | 部署 | 已验收 | 16 容器 healthy；web 200；sim-20261116 镜像 |
 
@@ -840,7 +840,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | --- | --- | --- |
 | 后端学习测试 | 61/61 | `mvn -pl services/learning -am test` |
 | ai-agent 测试 | 66/66 | `mvn -pl services/ai-agent -am test` |
-| 前端全量测试 | 69 文件 / 347 用例全绿 | `npm test`；检查点 48/50/54/55 |
+| 前端全量测试 | 69 文件 / 348 用例全绿 | `npm test`；检查点 48/50/54/55/63 |
 | 全量任务判分回归 | 40/40 全部 100 分 | `node scripts/learning-grading-regression.mjs` |
 | 学习者浏览器冒烟 | `ok=true` | `node scripts/learning-smoke.mjs` |
 | 证据包导出 | 6739 字节、40/40、4 张路径凭证、无敏感字段 | 检查点 46；`portfolio-export-40-labs.md` |
