@@ -39,6 +39,8 @@
 | learner-entry-development-sql.png | 学习者实训台（SQL 开发） |
 | learner-entry-assets-catalog.png | 学习者数据资产（合规空态） |
 | learner-entry-ai-assistant.png | 学习者智能助手 |
+| topnav-brand-expert.png | 左上角专家入口态（4 秒） |
+| topnav-brand-logo.png | 左上角品牌图标态（1 秒闪动） |
 
 ## 管理端
 

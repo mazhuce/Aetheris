@@ -189,8 +189,8 @@ services:
       AETHERIS_LEARNING_SANDBOX_TTL_HOURS: ${AETHERIS_LEARNING_SANDBOX_TTL_HOURS:-24}
       AETHERIS_LEARNING_ADMIN_USERS: ${AETHERIS_LEARNING_ADMIN_USERS:-admin}
       AETHERIS_AI_BASE_URL: ${AETHERIS_AI_BASE_URL:-${DEEPSEEK_BASE_URL:-https://api.deepseek.com}}
-      # 未单独配置导师 Key 时复用专家 Key，避免同一账户要配置两次。
-      AETHERIS_AI_API_KEY: ${AETHERIS_AI_API_KEY:-${DEEPSEEK_API_KEY:-}}
+      # 未单独配置导师 Key 时复用项目专用 Key，最后才回落到 DEEPSEEK_API_KEY。
+      AETHERIS_AI_API_KEY: ${AETHERIS_AI_API_KEY:-${AETHERIS_LLM_API_KEY:-${DEEPSEEK_API_KEY:-}}}
       AETHERIS_AI_MODEL: ${AETHERIS_AI_MODEL:-deepseek-chat}
       # 仅供本地演示；生产必须配置 aetheris.security.* v2 密钥安装。
       AETHERIS_LEARNING_DEV_MODE: ${AETHERIS_LEARNING_DEV_MODE:-false}
@@ -394,7 +394,8 @@ services:
       DB_NAME: ${DB_NAME:-aetheris}
       DB_USER: ${DB_USER:-aetheris}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # 项目专用变量优先：宿主 shell 里残留的 DEEPSEEK_API_KEY 不应覆盖项目配置。
+      DEEPSEEK_API_KEY: ${AETHERIS_LLM_API_KEY:-${DEEPSEEK_API_KEY:-}}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
       # agent 的元数据检索与只读查询下沉到 metadata 服务；

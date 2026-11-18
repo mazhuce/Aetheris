@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Avatar, Button, Dropdown } from 'antd'
-import { DownOutlined, PlusOutlined, UserOutlined } from '@ant-design/icons'
+import { DownOutlined, PlusOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { firstAvailablePath } from '@/constants/navigation'
 import { useNavigation } from '@/contexts/NavigationContext'
@@ -21,7 +21,7 @@ export default function TopNav() {
   const location = useLocation()
   const navigate = useNavigate()
   const session = useAuthSession()
-  const { homePath } = usePreferences()
+  const { homePath, reduceMotion } = usePreferences()
   const { modules, role, findModule } = useNavigation()
   const username = session.status === 'authenticated' ? session.user.username : '用户'
 
@@ -29,6 +29,23 @@ export default function TopNav() {
   const itemRefs = useRef<(HTMLSpanElement | null)[]>([])
   const [overflowAt, setOverflowAt] = useState(modules.length)
   const [expertOpen, setExpertOpen] = useState(false)
+  // 左上角每 5 秒循环：4 秒展示专家入口，1 秒回到品牌图标并做一次提醒式闪动。
+  const [expertPulse, setExpertPulse] = useState(true)
+  useEffect(() => {
+    if (!EXPERT_DRAWER_ENABLED || reduceMotion) return
+    let showLogo: ReturnType<typeof setTimeout> | undefined
+    let restart: ReturnType<typeof setTimeout> | undefined
+    const cycle = () => {
+      setExpertPulse(true)
+      showLogo = setTimeout(() => setExpertPulse(false), 4000)
+      restart = setTimeout(cycle, 5000)
+    }
+    cycle()
+    return () => {
+      if (showLogo) clearTimeout(showLogo)
+      if (restart) clearTimeout(restart)
+    }
+  }, [reduceMotion])
 
   const activeKey = useMemo(() => findModule(location.pathname)?.key, [findModule, location.pathname])
 
@@ -98,12 +115,14 @@ export default function TopNav() {
         {EXPERT_DRAWER_ENABLED ? (
           <button
             type="button"
-            className="topnav-logo"
+            className="topnav-logo topnav-logo--expert"
             aria-label="打开数据开发专家"
             title="打开数据开发专家"
             onClick={() => setExpertOpen(true)}
           >
-            <BrandMark />
+            {expertPulse
+              ? <span className="topnav-expert-mark" aria-hidden="true"><RobotOutlined /></span>
+              : <BrandMark />}
           </button>
         ) : (
           <Link to={homePath} className="topnav-logo" aria-label="返回默认首页">

@@ -35,6 +35,38 @@
 
 .topnav-brand {
   flex: 0 0 auto;
+  gap: var(--space-4);
+}
+
+.topnav-expert-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--accent-border);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-size: var(--font-page);
+}
+
+.topnav-logo--expert .brand-mark {
+  animation: topnav-logo-blink 1s ease-in-out;
+}
+
+@keyframes topnav-logo-blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topnav-logo--expert .brand-mark {
+    animation: none;
+  }
 }
 
 .topnav-logo {

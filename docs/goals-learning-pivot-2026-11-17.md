@@ -1,7 +1,7 @@
 # Aetheris 学习目标化转型：2–3 天执行目标（2026-11-17）
 
 版本：2026-11-17 规划版。适用：用户明确启动后，在 `C:\Users\yafei\RA1NL0VE\Aetheris-sim`（sim 分支）执行。
-**执行状态（2026-11-18）**：检查点 1–81 已交付；4 条路径 / 40 个可判分任务、全量判分回归 40/40、前端 348/348、Flyway v34、16 容器 healthy。仅剩外部依赖：DeepSeek 账户余额（在线回答）与真实脱敏样例数据；完成度审计见 §16。
+**执行状态（2026-11-18）**：检查点 1–92 已交付；4 条路径 / 40 个可判分任务、全量判分回归 40/40、前端 348/348、Flyway v34、16 容器 healthy；在线 AI 已通过阿里云 Token Plan 验收。仅剩外部依赖：真实脱敏样例数据；完成度审计见 §16。
 依据：现有代码盘点（见各工作包"现状"）、[全项目复核 N01–N23](reviews/2026-10-26-project-gap-review.md)、[上一版执行目标](next-goals-2026-10-26.md)、[前端设计规范](frontend-style.md)。
 
 **战略定位（用户指令，属战略下注，证据级别 D）**：把平台从"企业数据中台操作台"逐步转向"面向求职者的数据开发实训与证据平台"。企业能力不删除，收进管理员/高级视图；学习者看到的默认界面以"学会 → 练会 → 证明会"为主线。
@@ -847,6 +847,20 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 实测（当前环境）：脚本 exit 0，容器健康计数 16，冒烟 `ok=true / attempt=1`。用于本机 Docker 会话间停止/崩溃后的快速恢复。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
+### 2026-11-18 检查点 91：阿里云 Token Plan 在线 AI 接入
+
+- 用户提供阿里云 Token Plan（中国版）API Key；官方端点 `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`，模型 ID 由 `deepseekv4.1flash1017` 更正为 **`deepseek-v4.1-flash-1017`**（Token Plan 模型列表确认）。
+- Key 写入 gitignored `.env`（`AETHERIS_LLM_API_KEY` 与 `DEEPSEEK_API_KEY`）；compose 改为项目专用变量优先：`${AETHERIS_LLM_API_KEY:-${DEEPSEEK_API_KEY:-}}`，避免宿主 shell 残留旧 Key 覆盖（此前容器内 Key 长度 35 导致 401）。
+- 在线验收通过：专家 200（模型 deepseek-v4.1-flash-1017，真实回答）；导师 200 且 `fallback=false`，不再降级规则。
+- 未完成：真实脱敏样例数据（L09 数据本体）。
+
+### 2026-11-18 检查点 92：左上角品牌轮播与页头间距
+
+- 左上角每 5 秒循环：**4 秒展示「数据开发专家」入口徽标（机器人，32px）**，**1 秒回到 Aetheris 品牌图标并做一次闪动**（`topnav-logo-blink`，尊重 `reduceMotion` 与系统 reduced-motion）。
+- 页头间距：`.topnav-brand` 增加 `gap: var(--space-4)`（12px），图标与「Aetheris」字标不再贴近。
+- 验证：type-check/lint（规范守卫 235 文件）通过；浏览器实测两种状态切换、间距 **12px**、点击仍打开专家抽屉、无控制台错误；截图 `topnav-brand-expert.png`、`topnav-brand-logo.png`。
+- 未完成：真实脱敏样例数据（L09 数据本体）。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。
@@ -954,7 +968,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | --- | --- | --- |
 | 学员默认 IA（6 个一级入口） | 已验收 | 检查点 21 浏览器截图；导航测试 15/15 |
 | 管理端 IA 与企业菜单保留 | 已验收 | 检查点 25 浏览器验收 |
-| 左上角数据开发专家（离线兜底、任务上下文） | 已验收（在线待 Key） | 检查点 21/22；组件测试 2/2 |
+| 左上角数据开发专家（在线回答、任务上下文） | 已验收 | 检查点 21/22/91；组件测试 2/2；Token Plan 在线验收 |
 | 真实任务提交与判分 | 已验收 | 检查点 21/54：得分 100 · 已通过，通过后直达下一题 |
 | 沙箱重置与过期恢复 | 已验收 | 检查点 27/29；SandboxServiceTest 6/6 |
 | 提示、AI 导师规则兜底 | 已验收 | 检查点 22/51；TutorServiceTest 7/7 |
@@ -1011,6 +1025,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | 证据包导出 | 6739 字节、40/40、4 张路径凭证、无敏感字段 | 检查点 46；`portfolio-export-40-labs.md` |
 | 数据集覆盖 | 15 张表 / 79 个引用，0 缺口 | 检查点 46 |
 | 课程文本一致性 | 40 个任务的 objective/steps/知识点与标准答案逐条对齐 | 检查点 49/56–59/72–74/83 |
+| 在线 AI 回答 | 专家与导师均返回模型应答（deepseek-v4.1-flash-1017，Token Plan） | 检查点 91；`ai-online-acceptance.mjs` ok=true |
 | 迁移版本 | Flyway v34 | 检查点 59/73 |
 | 部署 | 16 个标准命名容器 healthy、web 200 | 检查点 85/87 |
 | 运行时门 / 备份 / 证据 | 回归 40/40、冒烟、观测 12 服务；V34 备份可恢复；34 份证据索引 | 检查点 65/67/75/80/87 |
@@ -1019,7 +1034,6 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 | 项 | 阻塞 | 到位后的动作 |
 | --- | --- | --- |
-| 专家/导师在线回答 | DeepSeek 账户余额不足（HTTP 402）；Key 已配置且双入口接线；2026-11-18 06:59 UTC 复探测仍为 402 | 充值后运行 `node scripts/ai-online-acceptance.mjs`，两入口均 `ok=true` 即验收通过 |
 | 真实脱敏样例数据 | 来源与许可待定 | 按 §11 runbook：导入工具校验 → 登记 → 漂移校验 → 判分回归 |
 | 新学员首个通过事件 | 已关闭（检查点 52） | 临时学员提交首题后事件落库，验收完已清理 |
 
