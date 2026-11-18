@@ -490,10 +490,11 @@ public class LearningRepository {
                 rs.getString("title"), instant(rs, "issued_at")), uid);
     }
 
-    public boolean hasCredential(long uid, String type) {
+    public boolean hasCredential(long uid, String type, String pathCode) {
         Integer count = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM learning.credential WHERE learner_uid = ? AND type = ?
-                """, Integer.class, uid, type);
+                SELECT COUNT(*) FROM learning.credential
+                 WHERE learner_uid = ? AND type = ? AND evidence->>'pathCode' = ?
+                """, Integer.class, uid, type, pathCode);
         return count != null && count > 0;
     }
 

@@ -556,6 +556,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 首跑结果：**38/38 全部 100 分通过**（de-basic 15、dg-basic 8、da-basic 6、ops-basic 9，含 3 个写任务），无失败项。
 - 该回归已固化为可重复命令：`node scripts/learning-grading-regression.mjs`（Makefile 目标 `learning-regression`；`--reset` 可强制重建沙箱）。
 - 未完成：模型在线回答、真实脱敏样例数据、新学员首个通过事件复验。
+### 2026-11-18 检查点 44：结业凭证按路径发放（缺陷修复）
+
+- 发现缺陷：凭证去重只按 `PATH_COMPLETION` 类型全局判断，学员拿到第一条路径凭证后，完成其它路径不再发证（真实库只剩 1 张，而学员已通过全部 38 个任务）。
+- 修复：去重改为「学员 + 类型 + 路径」维度（`evidence->>'pathCode'`）；V25 增加部分唯一索引 `uq_credential_path_completion` 防止并发重复发证。
+- 验证：`ProgressServiceTest` 新增 3 例（每路径一张、同路径不重复、未全过不发）；learning 测试 55/55；全量判分回归 38/38 后补发至 **4 张路径凭证**（平均 100 分）。
+- 浏览器：求职证据页显示完成进度 38/38、已获凭证 4 项、项目交付 24 项，能力清单全部按真实得分统计；证据 `portfolio-all-credentials.png`。
+- 未完成：模型在线回答、真实脱敏样例数据、新学员首个通过事件复验。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
@@ -679,9 +686,9 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 - 分支关系：`main` = `49416ff`；`sim` 已包含全部学习改造提交（最新见 `git log main..sim`），gitee/GitHub 的 sim 均已同步。
 - 相对 main：**65 个提交、229 个文件、+20692/−496**，包含 sim 原有的 learning/mcp 服务与 V1–V9 迁移。
-- 本次学习目标化改造新增：V10–V24 迁移（含策略格式归一、写任务、固定文案任务归档与恢复、写任务扩容）、学习事件表、样例清单/登记/校验、专家抽屉、求职证据页、学习者 IA 与回滚开关。
+- 本次学习目标化改造新增：V10–V25 迁移（含策略格式归一、写任务、固定文案任务归档与恢复、写任务扩容、凭证路径唯一）、学习事件表、样例清单/登记/校验、专家抽屉、求职证据页、学习者 IA 与回滚开关。
 - 合并注意：
-  1. 迁移为增量（V10–V24），但 V14 改主键、V16 改唯一索引、V24 放宽清单 checksum 约束，合并前需在目标库预演并备份；
+  1. 迁移为增量（V10–V25），但 V14 改主键、V16 改唯一索引、V24 放宽清单 checksum 约束、V25 新增凭证唯一索引，合并前需在目标库预演并备份；
   2. 需要重建 learning/web 镜像；`.env` 需保留 `COMPOSE_FILE` 与安全安装（本机已配，未入库）；
   3. `learner-e2e` 测试账号与密码仅在本机（`configs/security/private`，gitignored），不在仓库中；
   4. `artifacts/learning-pivot-20261117/` 为验收证据，合并时一并保留。

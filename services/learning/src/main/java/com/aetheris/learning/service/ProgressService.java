@@ -62,9 +62,9 @@ public class ProgressService {
         }
     }
 
-    /** 路径内全部任务通过后发放一次结业凭证；重复调用不会重复发证。 */
+    /** 路径内全部任务通过后发放一次结业凭证；同一路径重复调用不会重复发证。 */
     public void issueIfEligible(long uid, String pathCode, String pathTitle) {
-        if (repository.hasCredential(uid, "PATH_COMPLETION")) return;
+        if (repository.hasCredential(uid, "PATH_COMPLETION", pathCode)) return;
         var attempts = repository.bestAttempts(uid, pathCode);
         List<LearningModels.LabRecord> labs = repository.listLabs(pathCode);
         if (labs.isEmpty()) return;
