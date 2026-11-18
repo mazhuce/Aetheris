@@ -156,6 +156,12 @@ class ChatControllerTest {
         assertEquals(HttpStatus.BAD_GATEWAY, statusFor(LlmException.Kind.UNAVAILABLE));
     }
 
+    @Test
+    @DisplayName("账户余额不足返回 503，提示充值而不是笼统失败")
+    void mapsInsufficientBalanceToServiceUnavailable() {
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, statusFor(LlmException.Kind.BALANCE));
+    }
+
     private HttpStatus statusFor(LlmException.Kind kind) {
         ChatService chatService = mock(ChatService.class);
         when(chatService.findOwned(any(), any(ChatOwner.class))).thenReturn(new ChatConversation());

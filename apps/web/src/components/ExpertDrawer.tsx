@@ -80,12 +80,14 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
       })
       show([...next, { role: 'assistant', content: reply.content }])
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status
+      const response = (error as { response?: { status?: number; data?: { content?: unknown } } })?.response
+      const status = response?.status
+      const serverMessage = typeof response?.data?.content === 'string' ? response.data.content : ''
       setFailure(
         status === 429
           ? '请求过于频繁，请稍后再试。'
           : status === 503
-            ? '模型服务未配置密钥或暂不可用。'
+            ? (serverMessage.includes('余额') ? serverMessage : '模型服务未配置密钥或暂不可用。')
             : '专家服务暂时不可用，请稍后重试。'
       )
       void trackLearningEvent('expert_fallback_used', {

@@ -63,6 +63,19 @@ describe('data expert drawer', () => {
     expect(await screen.findByText('重试成功后的回答')).toBeInTheDocument()
     await waitFor(() => expect(api.sendChat).toHaveBeenCalledTimes(2))
   })
+  it('surfaces the model balance warning instead of a generic outage', async () => {
+    vi.mocked(api.createConversation).mockResolvedValue({ id: 8, title: '新对话' })
+    vi.mocked(api.sendChat).mockRejectedValue({
+      response: { status: 503, data: { content: '模型账户余额不足，请充值后重试' } }
+    })
+    page()
+
+    fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value: '现在还能用吗' } })
+    fireEvent.click(screen.getByRole('button', { name: /发\s*送/ }))
+
+    expect(await screen.findByText(/模型账户余额不足/)).toBeInTheDocument()
+    expect(screen.queryByText(/模型服务未配置密钥或暂不可用/)).not.toBeInTheDocument()
+  })
   it('locks duplicate submissions while the expert request is in flight', async () => {
     let resolve!: (value: api.ChatResult) => void
     vi.mocked(api.createConversation).mockResolvedValue({ id: 7, title: '新对话' })

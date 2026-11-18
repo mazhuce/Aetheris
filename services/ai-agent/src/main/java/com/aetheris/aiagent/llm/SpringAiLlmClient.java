@@ -194,6 +194,9 @@ public class SpringAiLlmClient implements LlmClient {
     /** 按异常链里的关键字粗分类；provider 的错误码体系不稳定，不做精确映射。 */
     private LlmException.Kind classify(RuntimeException error) {
         String text = describeChain(error).toLowerCase();
+        if (text.contains("402") || text.contains("insufficient balance") || text.contains("insufficient_balance")) {
+            return LlmException.Kind.BALANCE;
+        }
         if (text.contains("429") || text.contains("rate limit") || text.contains("too many requests")) {
             return LlmException.Kind.RATE_LIMITED;
         }
@@ -223,6 +226,7 @@ public class SpringAiLlmClient implements LlmClient {
         return switch (kind) {
             case NOT_CONFIGURED -> "AI 服务未配置访问密钥";
             case RATE_LIMITED -> "AI 服务调用过于频繁，请稍后重试";
+            case BALANCE -> "模型账户余额不足，请充值后重试";
             case UNAVAILABLE -> "AI 服务暂时不可用，请稍后重试";
             case UNKNOWN -> "AI 服务调用失败，请稍后重试";
         };

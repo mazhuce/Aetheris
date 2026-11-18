@@ -72,6 +72,21 @@ class SpringAiLlmClientTest {
     }
 
     @Test
+    @DisplayName("账户余额不足被识别为 BALANCE，并提示充值")
+    void classifiesInsufficientBalance() {
+        ChatModel chatModel = mock(ChatModel.class);
+        when(chatModel.call(any(Prompt.class))).thenThrow(
+                new RuntimeException("402 Payment Required: {\"error\":{\"message\":\"Insufficient Balance\"}}"));
+        SpringAiLlmClient client = new SpringAiLlmClient(chatModel, "deepseek-chat", "sk-test", List.of());
+
+        LlmException error = assertThrows(LlmException.class,
+                () -> client.chat(List.of(LlmMessage.user("你好"))));
+
+        assertEquals(LlmException.Kind.BALANCE, error.kind());
+        org.junit.jupiter.api.Assertions.assertTrue(error.getMessage().contains("余额"));
+    }
+
+    @Test
     @DisplayName("未知失败归入 UNKNOWN，且不外泄 provider 原文")
     void classifiesUnknownWithoutLeakingDetails() {
         ChatModel chatModel = mock(ChatModel.class);

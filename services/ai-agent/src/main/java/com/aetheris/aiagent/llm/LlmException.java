@@ -25,6 +25,8 @@ public class LlmException extends RuntimeException {
         NOT_CONFIGURED,
         /** provider 侧限流。 */
         RATE_LIMITED,
+        /** provider 账户余额不足（HTTP 402）。 */
+        BALANCE,
         /** 网络超时或不可达。 */
         UNAVAILABLE,
         /** 其他未分类失败。 */

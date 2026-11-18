@@ -627,6 +627,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 测试：`CatalogServiceTest` 2 例（下一题/最后一题），learning **61/61**；lab 页 8/8；type-check、lint 通过。
 - 浏览器实测：`da-l2-04` 通过 → 按钮「下一题：用户价值分层：CASE 与平均消费」→ 跳转 `da-l3-01` → 最后题通过 → 「返回学习路径」→ 回到 `/learning`，无控制台错误；证据 `next-lab-button.png`。
 - learning/web 镜像已重建；未完成：模型在线回答、真实脱敏样例数据。
+### 2026-11-18 检查点 55：余额不足的可操作提示
+
+- ai-agent 新增 `BALANCE` 失败分类：provider 返回 402/Insufficient Balance 时不再归入 UNKNOWN，改为 503 + 「模型账户余额不足，请充值后重试」。
+- 专家抽屉识别服务端余额提示并原样展示，不再显示笼统的「服务暂不可用」；未配置密钥的 503 文案保持不变。
+- 测试：ai-agent **66/66**（余额分类与状态映射）、抽屉 4/4、type-check/lint 通过。
+- 真实 402 实测：专家接口返回 503 + 余额文案；导师仍 `fallback=true / model=rule-based` 自动降级，学习闭环不受影响。
+- ai-agent/web 镜像已重建；未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

@@ -163,7 +163,7 @@ public class ChatController {
 
     private HttpStatus statusOf(LlmException error) {
         return switch (error.kind()) {
-            case NOT_CONFIGURED -> HttpStatus.SERVICE_UNAVAILABLE;
+            case NOT_CONFIGURED, BALANCE -> HttpStatus.SERVICE_UNAVAILABLE;
             case RATE_LIMITED -> HttpStatus.TOO_MANY_REQUESTS;
             case UNAVAILABLE, UNKNOWN -> HttpStatus.BAD_GATEWAY;
         };
