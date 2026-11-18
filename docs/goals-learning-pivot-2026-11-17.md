@@ -935,6 +935,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 可观测性冒烟（容器内探测 12 个服务的指标端点 + Prometheus ready）：`pwsh -NoProfile -File scripts/observability-smoke.ps1`。
 
+一键恢复（Docker 会话间停止/崩溃后）：`bash scripts/ensure-stack.sh`（等待引擎 → 拉起 16 容器 → 冒烟）。
+
 回滚开关（构建期，修改后需重建 web）：
 
 - `VITE_LEARNER_IA=false`：退回企业全量一级菜单（默认开启学习者 IA）。
