@@ -76,7 +76,8 @@ describe('learning lab request state', () => {
         code: 'teach.orders_raw', version: 1, tableName: 'teach.orders_raw', rowCount: 26,
         license: 'internal-training', source: 'synthetic', piiReviewed: true
       }],
-      nextLabCode: 'l1-sales-2', nextLabTitle: '热销品类'
+      nextLabCode: 'l1-sales-2', nextLabTitle: '热销品类',
+      prevLabCode: 'l1-sales-0', prevLabTitle: '基础查询', labPosition: 2, labTotal: 3
     })
     vi.mocked(api.listSubmissions).mockResolvedValue([])
     vi.mocked(api.submitLab).mockResolvedValue({
@@ -93,6 +94,8 @@ describe('learning lab request state', () => {
     expect(await screen.findByText(/得分 86 · 已通过/)).toBeInTheDocument()
     expect(screen.getByText('结果与标准答案一致')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /下一题：热销品类/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /上一题：基础查询/ })).toBeInTheDocument()
+    expect(screen.getByText('第 2 / 3 题')).toBeInTheDocument()
   })
   it('offers a path return when the last lab passes', async () => {
     vi.mocked(api.getLab).mockResolvedValue({ ...baseLab, passed: false })

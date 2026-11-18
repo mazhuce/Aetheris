@@ -669,6 +669,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - `scripts/observability-smoke.ps1` 原按宿主机端口检查 8081–8089，但服务端口仅在容器网络内，必然失败；改为容器内探测 12 个服务的 `/actuator/prometheus`（要求出现 `jvm_` 指标）并保留 Prometheus ready 检查。
 - 验证：index/portfolio 测试 8/8、type-check、lint 通过；可观测性冒烟 **12 服务 + Prometheus 全部通过**；web 镜像已重建；前端全量测试复跑 **347/347**。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
+### 2026-11-18 检查点 61：任务位置与上一题导航
+
+- `LabDetail` 新增 `prevLabCode/prevLabTitle/labPosition/labTotal`：按同路径模块与任务顺序计算前后题与位置。
+- 任务页标签区显示「第 N / M 题」；通过后操作区同时提供「上一题」「下一题」「返回学习路径」。
+- 测试：`CatalogServiceTest` 断言位置与前后题（learning **61/61**）、lab 页 8/8、type-check/lint 通过。
+- 浏览器实测：`da-l3-01` 显示「第 8 / 8 题」→ 提交通过 → 「上一题：品类贡献排名…」→ 跳转 `da-l2-04` 显示「第 7 / 8 题」，无控制台错误；证据 `lab-prev-next-navigation.png`。
+- learning/web 镜像已重建；未完成：模型在线回答、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 

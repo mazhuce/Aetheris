@@ -129,6 +129,12 @@ export interface LabDetail {
   /** 同路径的下一题；已是最后一题时为空。 */
   nextLabCode?: string
   nextLabTitle?: string
+  /** 同路径的上一题；已是第一题时为空。 */
+  prevLabCode?: string
+  prevLabTitle?: string
+  /** 当前任务在同路径中的位置（1-based）与总数。 */
+  labPosition?: number
+  labTotal?: number
 }
 
 export interface LabKnowledge {

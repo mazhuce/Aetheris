@@ -102,7 +102,17 @@ public class CatalogService {
         String pathCode = repository.pathOfLab(code);
         LearningRepository.AttemptRow attempt = repository.bestAttempts(uid, pathCode).get(code);
         java.util.List<String> datasetRefs = repository.datasetRefsOf(code);
-        LearningModels.LabRecord next = pathCode.isBlank() ? null : nextLabIn(pathCode, code);
+        java.util.List<LearningModels.LabRecord> siblings = pathCode.isBlank()
+                ? java.util.List.of() : repository.listLabs(pathCode);
+        int index = -1;
+        for (int i = 0; i < siblings.size(); i++) {
+            if (siblings.get(i).code().equals(code)) {
+                index = i;
+                break;
+            }
+        }
+        LearningModels.LabRecord prev = index > 0 ? siblings.get(index - 1) : null;
+        LearningModels.LabRecord next = index >= 0 && index + 1 < siblings.size() ? siblings.get(index + 1) : null;
         return new LearningModels.LabDetail(lab.code(), lab.title(), lab.level(), lab.difficulty(), lab.taskType(),
                 lab.summary(), lab.scenario(), lab.objective(), lab.steps(), lab.tableRefs(), lab.starterSql(),
                 lab.passScore(), lab.estimatedMinutes(), lab.version(),
@@ -118,18 +128,11 @@ public class CatalogService {
                 datasetRefs,
                 repository.datasetManifests(datasetRefs),
                 next == null ? null : next.code(),
-                next == null ? null : next.title());
-    }
-
-    /** 同一路径内按模块与任务顺序取下一题；已是最后一题时返回 null。 */
-    private LearningModels.LabRecord nextLabIn(String pathCode, String code) {
-        java.util.List<LearningModels.LabRecord> labs = repository.listLabs(pathCode);
-        for (int i = 0; i < labs.size(); i++) {
-            if (labs.get(i).code().equals(code)) {
-                return i + 1 < labs.size() ? labs.get(i + 1) : null;
-            }
-        }
-        return null;
+                next == null ? null : next.title(),
+                prev == null ? null : prev.code(),
+                prev == null ? null : prev.title(),
+                index + 1,
+                siblings.size());
     }
 
     public LearningModels.SandboxInfo startLab(String code, long uid, String username) {

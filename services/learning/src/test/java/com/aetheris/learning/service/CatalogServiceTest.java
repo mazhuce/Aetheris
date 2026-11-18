@@ -62,6 +62,9 @@ class CatalogServiceTest {
 
         assertThat(detail.nextLabCode()).isEqualTo("da-2");
         assertThat(detail.nextLabTitle()).isEqualTo("第二题");
+        assertThat(detail.prevLabCode()).isNull();
+        assertThat(detail.labPosition()).isEqualTo(1);
+        assertThat(detail.labTotal()).isEqualTo(2);
     }
 
     @Test
@@ -75,5 +78,9 @@ class CatalogServiceTest {
 
         assertThat(detail.nextLabCode()).isNull();
         assertThat(detail.nextLabTitle()).isNull();
+        assertThat(detail.prevLabCode()).isEqualTo("da-1");
+        assertThat(detail.prevLabTitle()).isEqualTo("第一题");
+        assertThat(detail.labPosition()).isEqualTo(2);
+        assertThat(detail.labTotal()).isEqualTo(2);
     }
 }

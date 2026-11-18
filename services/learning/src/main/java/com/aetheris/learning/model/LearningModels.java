@@ -46,7 +46,8 @@ public final class LearningModels {
                             List<RubricItem> rubric, String sandboxSchema, boolean sandboxActive,
                             Integer bestScore, boolean passed, String lastStatus,
                             List<String> relatedFeatures, List<LabKnowledge> knowledge, List<String> datasetRefs,
-                            List<DatasetInfo> datasets, String nextLabCode, String nextLabTitle) {
+                            List<DatasetInfo> datasets, String nextLabCode, String nextLabTitle,
+                            String prevLabCode, String prevLabTitle, int labPosition, int labTotal) {
     }
 
     public record DatasetVerificationView(String code, int version, int rowCount, int expectedRowCount,

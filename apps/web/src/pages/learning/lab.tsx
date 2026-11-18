@@ -199,6 +199,7 @@ export default function LearningLabPage() {
             {lab.taskType === 'SQL_WRITE' && <Tag color="orange">写任务</Tag>}
             <Tag>{lab.estimatedMinutes} 分钟</Tag>
             <Tag>通过线 {lab.passScore}</Tag>
+            {lab.labPosition ? <Tag color="blue">第 {lab.labPosition} / {lab.labTotal} 题</Tag> : null}
             {lab.sandboxActive
               ? <StatusBadge tone="success" dot={false}>沙箱 {lab.sandboxSchema}</StatusBadge>
               : <StatusBadge tone="warning" dot={false}>沙箱未创建</StatusBadge>}
@@ -342,6 +343,11 @@ export default function LearningLabPage() {
                 />
                 {result.result.passed && (
                   <Space>
+                    {lab.prevLabCode && (
+                      <Button onClick={() => navigate(`/learning/labs/${lab.prevLabCode}`)}>
+                        上一题：{lab.prevLabTitle}
+                      </Button>
+                    )}
                     {lab.nextLabCode ? (
                       <Button type="primary" onClick={() => navigate(`/learning/labs/${lab.nextLabCode}`)}>
                         下一题：{lab.nextLabTitle}
