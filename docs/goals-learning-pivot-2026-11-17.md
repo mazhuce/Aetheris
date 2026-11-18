@@ -661,7 +661,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 
 - 系统化扫描 40 个任务文本中的拉丁标识符，对照教学表列名与标准答案，发现残留旧引用。
 - V32 清理：`de-l2-01`/`de-l2-03` 的 `update_time`→`updated_at`；`de-l1-03` 场景去掉不存在的「11 月 1 日」（答案为全表口径）并标注教学样本表；`da-l2-01` 步骤明确 `prev_gmv` 别名；`de-l2-04` 知识点去掉泛化英文列名；`dg-l1-02`/`dg-l3-02` 场景标注 `ods_users` 对应教学表 `users`。
-- 验证：全量判分回归 **40/40**、learning-smoke `ok=true`。
+- 验证：全量判分回归 **40/40**、learning-smoke `ok=true`；浏览器抽查 `de-l1-02`（金额 > 500）与 `de-l1-03`（一行三列）修订文本渲染正确，证据 `aligned-lab-text.png`。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
@@ -813,14 +813,15 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 | 项 | 结果 | 命令 / 证据 |
 | --- | --- | --- |
-| 后端学习测试 | 55/55 | `mvn -pl services/learning -am test` |
-| 前端全量测试 | 69 文件 / 345 用例全绿 | `npm test`；检查点 48/50 |
+| 后端学习测试 | 61/61 | `mvn -pl services/learning -am test` |
+| ai-agent 测试 | 66/66 | `mvn -pl services/ai-agent -am test` |
+| 前端全量测试 | 69 文件 / 347 用例全绿 | `npm test`；检查点 48/50/54/55 |
 | 全量任务判分回归 | 40/40 全部 100 分 | `node scripts/learning-grading-regression.mjs` |
 | 学习者浏览器冒烟 | `ok=true` | `node scripts/learning-smoke.mjs` |
 | 证据包导出 | 6739 字节、40/40、4 张路径凭证、无敏感字段 | 检查点 46；`portfolio-export-40-labs.md` |
 | 数据集覆盖 | 15 张表 / 79 个引用，0 缺口 | 检查点 46 |
-| 课程数据完整性 | 排序/权重/通过线/技能/数据集引用全部通过 | 检查点 49 |
-| 迁移版本 | Flyway v27 | 检查点 49 |
+| 课程文本一致性 | 40 个任务的 objective/steps/知识点与标准答案逐条对齐 | 检查点 49/56–59 |
+| 迁移版本 | Flyway v32 | 检查点 59 |
 | 部署 | 16 容器 healthy、web 200 | 各轮收尾 |
 
 ### 16.3 未闭合项（仅外部依赖或待验）
