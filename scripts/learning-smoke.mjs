@@ -40,7 +40,7 @@ async function waitFor(fn, timeout = 25000, interval = 300) {
   return false
 }
 
-async function main() {
+async function runOnce(attempt) {
   const credentials = readCredentials()
   if (!fs.existsSync(chromePath)) throw new Error(`Chrome 不存在：${chromePath}`)
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'aetheris-smoke-'))
@@ -137,7 +137,21 @@ async function main() {
   }
 
   const failures = Object.entries(checks).filter(([, value]) => value === false).map(([key]) => key)
-  const report = { ok: failures.length === 0, failures, checks, consoleErrors: consoleErrors.slice(0, 10) }
+  return { ok: failures.length === 0, failures, checks, consoleErrors: consoleErrors.slice(0, 10), attempt }
+}
+
+// 本机浏览器启动与首屏加载偶发失败（近几轮出现过 3 次），失败后换新实例重试一次。
+async function main() {
+  let report = { ok: false, failures: ['not-run'], attempt: 0 }
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      report = await runOnce(attempt)
+    } catch (error) {
+      report = { ok: false, failures: ['exception'], attempt, error: String(error?.message ?? error).slice(0, 200) }
+    }
+    if (report.ok) break
+    if (attempt < 2) await sleep(1500)
+  }
   console.log(JSON.stringify(report, null, 2))
   if (!report.ok) process.exit(1)
 }
