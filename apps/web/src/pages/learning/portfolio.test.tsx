@@ -37,6 +37,15 @@ const projects: api.ProjectView[] = [
     deliverables: ['结业看板', '口径说明'],
     labCount: 4,
     passedLabs: 2
+  },
+  {
+    code: 'proj-idle',
+    title: '未参与项目',
+    summary: '尚未开始',
+    level: 'L2',
+    deliverables: ['未交付物'],
+    labCount: 2,
+    passedLabs: 0
   }
 ]
 
@@ -81,6 +90,8 @@ describe('learning portfolio page', () => {
     expect(await screen.findByText('支付成功率日报')).toBeInTheDocument()
     expect(screen.getByText('3/8')).toBeInTheDocument()
     expect(screen.getByText('订单分析项目')).toBeInTheDocument()
+    expect(screen.queryByText('未参与项目')).not.toBeInTheDocument()
+    expect(screen.getByText('0/1')).toBeInTheDocument()
     expect(screen.getByText('SQL 数据分析入门')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /导出证据包/ })).toBeEnabled()
   })
@@ -131,7 +142,7 @@ describe('learning portfolio page', () => {
 
     expect(await screen.findByText('完成第一个任务后生成能力画像。')).toBeInTheDocument()
     expect(screen.getByText('暂无已完成任务。')).toBeInTheDocument()
-    expect(screen.getByText('暂无项目。')).toBeInTheDocument()
+    expect(screen.getByText('还没有已参与的项目。')).toBeInTheDocument()
     expect(screen.getByText('暂无凭证。')).toBeInTheDocument()
   })
 })

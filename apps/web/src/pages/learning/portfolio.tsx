@@ -53,10 +53,13 @@ export default function LearningPortfolioPage() {
     return () => controller.abort()
   }, [refresh])
 
+  const activeProjects = projects.filter((project) => project.passedLabs > 0)
+  const completedProjects = activeProjects.filter((project) => project.labCount > 0 && project.passedLabs >= project.labCount).length
+
   const exportMarkdown = () => {
     if (!progress) return
     const username = session.status === 'authenticated' ? session.user.username : undefined
-    const markdown = buildPortfolioMarkdown({ progress, projects, labEvidence, username })
+    const markdown = buildPortfolioMarkdown({ progress, projects: activeProjects, labEvidence, username })
     void trackLearningEvent('portfolio_exported', {
       payload: JSON.stringify({ labs: labEvidence.length, credentials: progress.credentials.length })
     })
@@ -144,7 +147,7 @@ export default function LearningPortfolioPage() {
             <Col span={6}><StatCard title="完成进度" value={`${progress.completed}/${progress.total}`} icon={<CheckCircleOutlined />} /></Col>
             <Col span={6}><StatCard title="平均得分" value={`${progress.averageScore} 分`} icon={<TrophyOutlined />} tone="green" /></Col>
             <Col span={6}><StatCard title="已获凭证" value={`${progress.credentials.length} 项`} icon={<SafetyCertificateOutlined />} tone="orange" /></Col>
-            <Col span={6}><StatCard title="项目交付" value={`${projects.reduce((sum, item) => sum + item.deliverables.length, 0)} 项`} icon={<ProjectOutlined />} /></Col>
+            <Col span={6}><StatCard title="已完成项目" value={`${completedProjects}/${activeProjects.length}`} icon={<ProjectOutlined />} /></Col>
           </Row>
 
           <DataSurface title="能力清单" description="由真实提交与判分累计，按能力维度汇总最佳成绩。" label="能力清单">
@@ -169,14 +172,14 @@ export default function LearningPortfolioPage() {
             />
           </DataSurface>
 
-          <DataSurface title="项目与交付物" description="端到端项目的完成度与可展示交付物。" label="项目与交付物">
+          <DataSurface title="项目与交付物" description="你已参与项目的完成度与可展示交付物。" label="项目与交付物">
             <Table
               rowKey="code"
               size="small"
               columns={projectColumns}
-              dataSource={projects}
+              dataSource={activeProjects}
               pagination={false}
-              locale={{ emptyText: '暂无项目。' }}
+              locale={{ emptyText: '还没有已参与的项目。' }}
             />
           </DataSurface>
 

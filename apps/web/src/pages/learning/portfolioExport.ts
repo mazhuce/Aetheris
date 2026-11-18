@@ -48,7 +48,7 @@ export function buildPortfolioMarkdown({
   }
   lines.push('', '## 项目与交付物', '')
   if (projects.length === 0) {
-    lines.push('- （暂无项目）')
+    lines.push('- （暂无已参与项目）')
   } else {
     for (const project of projects) {
       lines.push(`### ${project.title}（${project.level}）`)

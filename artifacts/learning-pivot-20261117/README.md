@@ -53,4 +53,6 @@
 | 文件 | 含义 |
 | --- | --- |
 | portfolio-export-40-labs.md | 完整证据包（40 任务、4 凭证、免责声明） |
+| portfolio-export-active-projects.md | 证据包（仅含已参与项目，检查点 82） |
+| portfolio-active-projects.png | 求职证据页仅展示已参与项目（已完成项目 1/1） |
 | portfolio-export-sample.md | 早期样例（单凭证时期，仅作历史对照） |
