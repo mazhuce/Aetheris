@@ -53,16 +53,36 @@ if (!login.ok) throw new Error(`登录失败：${login.status}`)
 const cookie = login.headers.getSetCookie().map((entry) => entry.split(';')[0]).join('; ')
 
 const failures = []
+async function submitOnce(lab) {
+  const response = await fetch(`${origin}/api/learning/labs/${lab.code}/submit`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ sql: lab.expected_sql, notes: 'full grading regression' })
+  })
+  const text = await response.text()
+  try {
+    return { response, body: JSON.parse(text) }
+  } catch {
+    // 服务刚重启时网关可能返回非 JSON 的瞬时错误，交给调用方重试。
+    return { response, body: null, nonJson: text.slice(0, 120) }
+  }
+}
+
 for (const lab of labs) {
   try {
     if (shouldReset) {
       await fetch(`${origin}/api/learning/labs/${lab.code}/reset`, { method: 'POST', headers: { cookie } })
     }
-    const response = await fetch(`${origin}/api/learning/labs/${lab.code}/submit`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', cookie },
-      body: JSON.stringify({ sql: lab.expected_sql, notes: 'full grading regression' })
-    })
-    const body = await response.json()
+    let attempt = await submitOnce(lab)
+    if (!attempt.body) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      attempt = await submitOnce(lab)
+    }
+    if (!attempt.body) {
+      failures.push({ code: lab.code, status: attempt.response.status, error: 'non-JSON response: ' + attempt.nonJson })
+      console.log(`FAIL ${lab.code} non-JSON status=${attempt.response.status}`)
+      continue
+    }
+    const { response, body } = attempt
     const passed = response.status === 200 && body.passed === true && body.score >= lab.pass_score
     if (!passed) {
       failures.push({ code: lab.code, status: response.status, score: body.score, passed: body.passed,
