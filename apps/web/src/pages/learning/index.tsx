@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { App, Button, Col, Empty, Progress, Row, Segmented, Skeleton, Space, Tag } from 'antd'
+import { App, Button, Col, Empty, Progress, Row, Segmented, Skeleton, Space, Tag, Typography } from 'antd'
 import {
   CheckCircleOutlined,
   PlayCircleOutlined,
@@ -47,6 +47,7 @@ export default function LearningCenterPage() {
   const navigate = useNavigate()
   const [paths, setPaths] = useState<LearningPathSummary[]>([])
   const [activePathCode, setActivePathCode] = useState(readStoredPathCode)
+  const [labFilter, setLabFilter] = useState<'all' | 'todo' | 'passed'>('all')
   const [detail, setDetail] = useState<LearningPathDetail | null>(null)
   const [progress, setProgress] = useState<ProgressView | null>(null)
   const [projects, setProjects] = useState<ProjectView[]>([])
@@ -88,6 +89,16 @@ export default function LearningCenterPage() {
   const activeCode = activePath?.code ?? ''
   const skills = progress?.skills ?? []
   const modules = detail?.modules ?? []
+  const visibleModules = useMemo(() => {
+    if (labFilter === 'all') return modules
+    return modules
+      .map((module) => ({
+        ...module,
+        labs: module.labs.filter((lab) => (labFilter === 'passed' ? lab.status === 'passed' : lab.status !== 'passed'))
+      }))
+      .filter((module) => module.labs.length > 0)
+  }, [modules, labFilter])
+  const visibleLabCount = visibleModules.reduce((sum, module) => sum + module.labs.length, 0)
 
   // 路径详情跟随选中的路径；StrictMode 下用固定 key 防重复提示。
   useEffect(() => {
@@ -221,8 +232,24 @@ export default function LearningCenterPage() {
                   </div>
                 </div>
 
+                <Space style={{ marginBottom: 12 }} size={8} wrap>
+                  <Segmented
+                    size="small"
+                    value={labFilter}
+                    onChange={(value) => setLabFilter(value as 'all' | 'todo' | 'passed')}
+                    options={[
+                      { value: 'all', label: '全部' },
+                      { value: 'todo', label: '未完成' },
+                      { value: 'passed', label: '已通过' }
+                    ]}
+                  />
+                  <Typography.Text type="secondary">共 {visibleLabCount} 个任务</Typography.Text>
+                </Space>
+
                 <div className="learn-modules">
-                  {modules.map((module) => (
+                  {visibleModules.length === 0 ? (
+                    <Empty description="没有符合筛选的任务" />
+                  ) : visibleModules.map((module) => (
                     <section className="learn-module" key={module.code} aria-label={module.title}>
                       <header className="learn-module-head">
                         <h3>{module.title}</h3>

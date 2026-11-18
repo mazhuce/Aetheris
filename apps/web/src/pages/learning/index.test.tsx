@@ -93,4 +93,33 @@ describe('learning center request state', () => {
     fireEvent.click(screen.getByText('数据分析师入门 · L1-L2'))
     await waitFor(() => expect(localStorage.getItem('aetheris.learning.activePath')).toBe('da-basic'))
   })
+  it('filters labs by progress state', async () => {
+    vi.mocked(api.listLearningPaths).mockResolvedValue([
+      { code: 'de-basic', title: '数据开发工程师入门', level: 'L1-L2', version: 1, estimatedHours: 52,
+        labCount: 2, completedLabs: 1, progressPercent: 50 }
+    ])
+    vi.mocked(api.getProgress).mockResolvedValue({ completed: 1, total: 2, percent: 50, averageScore: 100, skills: [], credentials: [] })
+    vi.mocked(api.listProjects).mockResolvedValue([])
+    vi.mocked(api.getLearningPath).mockResolvedValue({
+      code: 'de-basic', title: '数据开发工程师入门', description: '', level: 'L1-L2', estimatedHours: 52, skills: [],
+      modules: [{
+        code: 'de-m1', title: 'L1 · 基础', level: 'L1', labs: [
+          { code: 'de-1', title: '任务甲（已通过）', level: 'L1', difficulty: 'easy', estimatedMinutes: 15, orderNo: 1, status: 'passed', bestScore: 100, passed: true },
+          { code: 'de-2', title: '任务乙（未开始）', level: 'L1', difficulty: 'easy', estimatedMinutes: 15, orderNo: 2, status: 'not_started', passed: false }
+        ]
+      }]
+    })
+    page()
+
+    expect(await screen.findByText('任务甲（已通过）')).toBeInTheDocument()
+    expect(screen.getByText('任务乙（未开始）')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('未完成'))
+    await waitFor(() => expect(screen.queryByText('任务甲（已通过）')).not.toBeInTheDocument())
+    expect(screen.getByText('任务乙（未开始）')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('已通过'))
+    await waitFor(() => expect(screen.queryByText('任务乙（未开始）')).not.toBeInTheDocument())
+    expect(screen.getByText('任务甲（已通过）')).toBeInTheDocument()
+  })
 })
