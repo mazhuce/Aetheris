@@ -54,6 +54,16 @@ describe('learning lab request state', () => {
     fireEvent.click(screen.getByRole('button', { name: /重新加载/ }))
     await waitFor(() => expect(api.getLab).toHaveBeenCalledTimes(2))
   })
+  it('explains a missing lab from the service message', async () => {
+    const missing = Object.assign(new Error('bad request'), {
+      response: { status: 400, data: { message: '实验任务不存在：not-a-lab' } }
+    })
+    vi.mocked(api.getLab).mockRejectedValue(missing)
+    vi.mocked(api.listSubmissions).mockRejectedValue(missing)
+    page()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('任务不存在或已下线')
+  })
   it('shows the graded result after submitting the starter SQL', async () => {
     vi.mocked(api.getLab).mockResolvedValue({
       code: 'l1-sales', title: '销售查询', level: 'L1', difficulty: 'easy', taskType: 'SQL',

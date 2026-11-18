@@ -18,6 +18,16 @@ import {
 import { formatDateTime } from '@/utils/format'
 import { ErrorState } from '@/components/FeedbackState'
 
+function labLoadError(error: unknown): string {
+  const response = (error as { response?: { status?: number; data?: { message?: string } } })?.response
+  const status = response?.status
+  const message = response?.data?.message ?? ''
+  if (status === 404 || message.includes('不存在')) return '任务不存在或已下线，请返回学习路径重新选择。'
+  if (status === 403) return '没有访问此任务的权限（403），请检查当前账号。'
+  if (status === 503) return '学习服务暂时不可用（503），请稍后重试。'
+  return '任务加载失败，请稍后重试。'
+}
+
 export default function LearningLabPage() {
   const { code = '' } = useParams()
   const navigate = useNavigate()
@@ -45,8 +55,8 @@ export default function LearningLabPage() {
       setLab(detail)
       setSubmissions(history)
       setSql((current) => (current.trim().length > 0 ? current : detail.starterSql ?? ''))
-    } catch {
-      setLoadError('任务加载失败，请确认 learning-service 已启动。')
+    } catch (error) {
+      setLoadError(labLoadError(error))
     } finally {
       setLoading(false)
     }
