@@ -612,6 +612,14 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 空态（浏览器）：学习中心 0/40、平均 0 分、0 项凭证、继续学习可用；能力雷达按技能树显示 0 分（设计行为）；证据 `learning-fresh-empty-state.png`。
 - 首个通过（API）：提交 `da-l1-01` 标准答案 → 100 分通过；`learning_event` 新增 `learner_first_lab_passed | da-basic | da-l1-01 | {"score":100}`，该长期待验项关闭。
 - 未完成：模型在线回答、真实脱敏样例数据。
+### 2026-11-18 检查点 53：在线 AI 验收与接线修复
+
+- 新增 `scripts/ai-online-acceptance.mjs`：未配置 Key 时明确退出码 2 且不发起模型调用；已配置时分别验证「数据开发专家」与「AI 导师」返回模型回答。
+- 事实核对：`DEEPSEEK_API_KEY` 已存在于 `.env`；在线调用失败的根因是 **DeepSeek 账户余额不足（HTTP 402 Insufficient Balance）**，不是缺少密钥。
+- 接线修复：learning 导师复用 `DEEPSEEK_API_KEY`（compose 嵌套默认），同一账户无需配置两次；实测导师与专家均已拿到 Key。
+- 缺陷修复：模型调用失败时响应未把 `model` 标记为 `rule-based`（出现「deepseek-chat + fallback=true」矛盾）；已修复并新增测试，learning **59/59**。
+- 当前实测：导师 `fallback=true / model=rule-based`（余额不足自动降级）；专家返回 502「AI 服务调用失败」（前端显示服务暂不可用）。余额恢复后重跑脚本应全部 `ok=true`。
+- 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
@@ -694,6 +702,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 全量判分回归（每题提交标准答案，必须 100 分）：`node scripts/learning-grading-regression.mjs`；改造课程后应先跑一遍再推送。
 
+在线 AI 验收（需 DeepSeek 账户可用）：`node scripts/ai-online-acceptance.mjs`；退出码 2 表示未配置 Key，1 表示调用失败（如余额不足），0 表示专家与导师均返回模型回答。
+
 回滚开关（构建期，修改后需重建 web）：
 
 - `VITE_LEARNER_IA=false`：退回企业全量一级菜单（默认开启学习者 IA）。
@@ -774,7 +784,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 | 项 | 阻塞 | 到位后的动作 |
 | --- | --- | --- |
-| 专家/导师在线回答 | DeepSeek 密钥未配置 | 配 `AETHERIS_AI_API_KEY` 后重跑在线回答验收 |
+| 专家/导师在线回答 | DeepSeek 账户余额不足（HTTP 402）；Key 已配置且双入口接线 | 充值后运行 `node scripts/ai-online-acceptance.mjs`，两入口均 `ok=true` 即验收通过 |
 | 真实脱敏样例数据 | 来源与许可待定 | 按 §11 runbook：导入工具校验 → 登记 → 漂移校验 → 判分回归 |
 | 新学员首个通过事件 | 已关闭（检查点 52） | 临时学员提交首题后事件落库，验收完已清理 |
 

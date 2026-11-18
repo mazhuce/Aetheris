@@ -134,4 +134,17 @@ class TutorServiceTest {
 
         assertThat(chat.reply()).contains("窗口函数在 GROUP BY 之后计算");
     }
+
+    @Test
+    void marksTheReplyAsRuleBasedWhenTheModelCallFails() {
+        when(aiTutorClient.enabled()).thenReturn(true);
+        when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(null);
+        when(aiTutorClient.complete(anyString(), anyString())).thenReturn(Optional.empty());
+
+        LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "怎么开始？");
+
+        assertThat(chat.fallback()).isTrue();
+        assertThat(chat.model()).isEqualTo("rule-based");
+        verify(repository).insertTutorMessage(eq(1L), eq("l3-rfm"), eq("assistant"), anyString(), eq("rule-based"));
+    }
 }

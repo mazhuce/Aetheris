@@ -61,6 +61,7 @@ public class TutorService {
             reply = "本任务的 AI 导师对话已达到上限（" + quota + " 条），已切换为规则导师。"
                     + ruleReply(lab, last, question);
         } else {
+            model = "rule-based";
             reply = ruleReply(lab, last, question);
         }
         repository.insertTutorMessage(uid, labCode, "assistant", reply, model);
