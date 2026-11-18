@@ -667,7 +667,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 
 - 学习中心与求职证据页的错误提示由「请确认 learning-service 已启动」改为「请稍后重试」——不再把网络波动或权限问题误报为服务未启动（lab 页此前已统一）。
 - `scripts/observability-smoke.ps1` 原按宿主机端口检查 8081–8089，但服务端口仅在容器网络内，必然失败；改为容器内探测 12 个服务的 `/actuator/prometheus`（要求出现 `jvm_` 指标）并保留 Prometheus ready 检查。
-- 验证：index/portfolio 测试 8/8、type-check、lint 通过；可观测性冒烟 **12 服务 + Prometheus 全部通过**；web 镜像已重建。
+- 验证：index/portfolio 测试 8/8、type-check、lint 通过；可观测性冒烟 **12 服务 + Prometheus 全部通过**；web 镜像已重建；前端全量测试复跑 **347/347**。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
@@ -752,6 +752,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 全量判分回归（每题提交标准答案，必须 100 分）：`node scripts/learning-grading-regression.mjs`；改造课程后应先跑一遍再推送。
 
 在线 AI 验收（需 DeepSeek 账户可用）：`node scripts/ai-online-acceptance.mjs`；退出码 2 表示未配置 Key，1 表示调用失败（如余额不足），0 表示专家与导师均返回模型回答。
+
+可观测性冒烟（容器内探测 12 个服务的指标端点 + Prometheus ready）：`pwsh -NoProfile -File scripts/observability-smoke.ps1`。
 
 回滚开关（构建期，修改后需重建 web）：
 
