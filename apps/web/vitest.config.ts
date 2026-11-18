@@ -13,7 +13,10 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    testTimeout: 15_000,
+    testTimeout: 30_000,
+    // 本机 Docker 常驻占用内存，默认按 CPU 数并发会出现资源饥饿与 15s 超时；
+    // 固定 4 个 worker 保证全量测试稳定（约 5 分钟）。
+    maxWorkers: 4,
     css: false
   }
 })
