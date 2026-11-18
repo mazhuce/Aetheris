@@ -99,8 +99,10 @@ public class CatalogService {
         }
         LearningModels.SandboxInfo sandbox = repository.findActiveSandbox(uid)
                 .map(LearningModels.SandboxRow::toInfo).orElse(null);
-        LearningRepository.AttemptRow attempt = repository.bestAttempts(uid, repository.pathOfLab(code)).get(code);
+        String pathCode = repository.pathOfLab(code);
+        LearningRepository.AttemptRow attempt = repository.bestAttempts(uid, pathCode).get(code);
         java.util.List<String> datasetRefs = repository.datasetRefsOf(code);
+        LearningModels.LabRecord next = pathCode.isBlank() ? null : nextLabIn(pathCode, code);
         return new LearningModels.LabDetail(lab.code(), lab.title(), lab.level(), lab.difficulty(), lab.taskType(),
                 lab.summary(), lab.scenario(), lab.objective(), lab.steps(), lab.tableRefs(), lab.starterSql(),
                 lab.passScore(), lab.estimatedMinutes(), lab.version(),
@@ -114,7 +116,20 @@ public class CatalogService {
                 lab.relatedFeatures(),
                 lab.knowledge(),
                 datasetRefs,
-                repository.datasetManifests(datasetRefs));
+                repository.datasetManifests(datasetRefs),
+                next == null ? null : next.code(),
+                next == null ? null : next.title());
+    }
+
+    /** 同一路径内按模块与任务顺序取下一题；已是最后一题时返回 null。 */
+    private LearningModels.LabRecord nextLabIn(String pathCode, String code) {
+        java.util.List<LearningModels.LabRecord> labs = repository.listLabs(pathCode);
+        for (int i = 0; i < labs.size(); i++) {
+            if (labs.get(i).code().equals(code)) {
+                return i + 1 < labs.size() ? labs.get(i + 1) : null;
+            }
+        }
+        return null;
     }
 
     public LearningModels.SandboxInfo startLab(String code, long uid, String username) {

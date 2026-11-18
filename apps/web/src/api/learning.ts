@@ -126,6 +126,9 @@ export interface LabDetail {
   datasetRefs?: string[]
   /** 样例数据集清单（许可、来源、行数、PII 复核）。 */
   datasets?: DatasetInfo[]
+  /** 同路径的下一题；已是最后一题时为空。 */
+  nextLabCode?: string
+  nextLabTitle?: string
 }
 
 export interface LabKnowledge {

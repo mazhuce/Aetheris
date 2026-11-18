@@ -75,7 +75,8 @@ describe('learning lab request state', () => {
       datasets: [{
         code: 'teach.orders_raw', version: 1, tableName: 'teach.orders_raw', rowCount: 26,
         license: 'internal-training', source: 'synthetic', piiReviewed: true
-      }]
+      }],
+      nextLabCode: 'l1-sales-2', nextLabTitle: '热销品类'
     })
     vi.mocked(api.listSubmissions).mockResolvedValue([])
     vi.mocked(api.submitLab).mockResolvedValue({
@@ -91,6 +92,22 @@ describe('learning lab request state', () => {
 
     expect(await screen.findByText(/得分 86 · 已通过/)).toBeInTheDocument()
     expect(screen.getByText('结果与标准答案一致')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /下一题：热销品类/ })).toBeInTheDocument()
+  })
+  it('offers a path return when the last lab passes', async () => {
+    vi.mocked(api.getLab).mockResolvedValue({ ...baseLab, passed: false })
+    vi.mocked(api.listSubmissions).mockResolvedValue([])
+    vi.mocked(api.submitLab).mockResolvedValue({
+      id: 2, labCode: 'l1-sales', attempt: 1, status: 'graded', score: 100, passed: true,
+      gradedAt: '2026-11-17T10:05:00Z',
+      result: { score: 100, passed: true, summary: '结果与标准答案一致', items: [],
+        sampleColumns: [], sampleRows: [], hints: [] }
+    })
+    page()
+
+    fireEvent.click(await screen.findByRole('button', { name: /提交判分/ }))
+
+    expect(await screen.findByRole('button', { name: '返回学习路径' })).toBeInTheDocument()
   })
   it('renders the rule hint returned by the service', async () => {
     vi.mocked(api.getLab).mockResolvedValue(baseLab)

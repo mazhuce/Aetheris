@@ -340,6 +340,17 @@ export default function LearningLabPage() {
                     </List.Item>
                   )}
                 />
+                {result.result.passed && (
+                  <Space>
+                    {lab.nextLabCode ? (
+                      <Button type="primary" onClick={() => navigate(`/learning/labs/${lab.nextLabCode}`)}>
+                        下一题：{lab.nextLabTitle}
+                      </Button>
+                    ) : (
+                      <Button type="primary" onClick={() => navigate('/learning')}>返回学习路径</Button>
+                    )}
+                  </Space>
+                )}
                 {result.result.sampleRows.length > 0 && (
                   <>
                     <Typography.Text strong>你的结果样例</Typography.Text>
