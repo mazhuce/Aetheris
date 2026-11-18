@@ -71,4 +71,26 @@ describe('learning center request state', () => {
     fireEvent.click(screen.getByText('数据开发工程师入门 · L1-L2'))
     await waitFor(() => expect(api.getLearningPath).toHaveBeenCalledWith('de-basic'))
   })
+  it('remembers the last selected path across visits', async () => {
+    localStorage.setItem('aetheris.learning.activePath', 'de-basic')
+    vi.mocked(api.listLearningPaths).mockResolvedValue([
+      { code: 'da-basic', title: '数据分析师入门', level: 'L1-L2', version: 1, estimatedHours: 36,
+        labCount: 8, completedLabs: 0, progressPercent: 0 },
+      { code: 'de-basic', title: '数据开发工程师入门', level: 'L1-L2', version: 1, estimatedHours: 52,
+        labCount: 15, completedLabs: 0, progressPercent: 0 }
+    ])
+    vi.mocked(api.getProgress).mockResolvedValue({ completed: 0, total: 23, percent: 0, averageScore: 0, skills: [], credentials: [] })
+    vi.mocked(api.listProjects).mockResolvedValue([])
+    vi.mocked(api.getLearningPath).mockImplementation(async (code: string) => ({
+      code, title: code === 'da-basic' ? '数据分析师入门' : '数据开发工程师入门',
+      description: '', level: 'L1-L2', estimatedHours: 36, modules: [], skills: []
+    }))
+    page()
+
+    await screen.findByText('数据开发工程师入门')
+    await waitFor(() => expect(api.getLearningPath).toHaveBeenCalledWith('de-basic'))
+
+    fireEvent.click(screen.getByText('数据分析师入门 · L1-L2'))
+    await waitFor(() => expect(localStorage.getItem('aetheris.learning.activePath')).toBe('da-basic'))
+  })
 })

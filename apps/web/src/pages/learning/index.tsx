@@ -32,11 +32,21 @@ const statusMeta: Record<string, { label: string; tone: 'success' | 'warning' | 
   not_started: { label: '未开始', tone: 'neutral' }
 }
 
+const ACTIVE_PATH_STORAGE_KEY = 'aetheris.learning.activePath'
+
+function readStoredPathCode(): string {
+  try {
+    return localStorage.getItem(ACTIVE_PATH_STORAGE_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
 export default function LearningCenterPage() {
   const { message } = App.useApp()
   const navigate = useNavigate()
   const [paths, setPaths] = useState<LearningPathSummary[]>([])
-  const [activePathCode, setActivePathCode] = useState('')
+  const [activePathCode, setActivePathCode] = useState(readStoredPathCode)
   const [detail, setDetail] = useState<LearningPathDetail | null>(null)
   const [progress, setProgress] = useState<ProgressView | null>(null)
   const [projects, setProjects] = useState<ProjectView[]>([])
@@ -92,6 +102,16 @@ export default function LearningCenterPage() {
       .finally(() => { if (active) setDetailLoading(false) })
     return () => { active = false }
   }, [activeCode, message])
+
+  // 记住岗位路径选择：进入任务再返回时保持同一路径，而不是回落到第一条。
+  useEffect(() => {
+    if (!activeCode) return
+    try {
+      localStorage.setItem(ACTIVE_PATH_STORAGE_KEY, activeCode)
+    } catch {
+      // 隐私模式禁止写入时忽略。
+    }
+  }, [activeCode])
 
   /** 继续学习：跳到第一个还没通过的任务，全部通过时回到第一个任务复习。 */
   const nextLab = useMemo(() => {
