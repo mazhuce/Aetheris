@@ -12,8 +12,12 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const api = process.env.AETHERIS_API_ORIGIN ?? 'http://127.0.0.1:8080'
 
-function containerEnv(container, key) {
-  const result = spawnSync('docker', ['exec', container, 'printenv', key], { encoding: 'utf8' })
+function containerEnv(nameFragment, key) {
+  // Docker 异常重启后容器名可能带旧的 ID 前缀，按名称过滤解析实际容器 ID。
+  const found = spawnSync('docker', ['ps', '--filter', `name=${nameFragment}`, '--format', '{{.ID}}'], { encoding: 'utf8' })
+  const id = (found.stdout ?? '').trim().split('\n')[0]
+  if (!id) return ''
+  const result = spawnSync('docker', ['exec', id, 'printenv', key], { encoding: 'utf8' })
   return result.status === 0 ? result.stdout.trim() : ''
 }
 

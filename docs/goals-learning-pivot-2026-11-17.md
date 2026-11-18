@@ -813,6 +813,13 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 未自动处理（宿主策略拦截删除类命令）：31 个停止的 `aetheris` 命名旧容器（约 0.7GB），可由用户手动 `docker ps -a --filter status=exited` 检视后删除；其它项目镜像与卷未触碰。
 - 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
 
+### 2026-11-18 检查点 86：容器名异常与在线验收脚本健壮性
+
+- 现象：Docker 异常重启后容器名带旧 ID 前缀（如 `38edd93d9985_aetheris-learning-service-1`），在线验收脚本按精确名 `docker exec` 误报 `tutorKeyConfigured=false`；核实容器内 Key 实际在位。
+- 修复：脚本改为 `docker ps --filter name=...` 解析实际容器 ID 再读取环境变量；复跑 `expertKeyConfigured=true / tutorKeyConfigured=true`，专家 503「余额不足」、导师规则降级（真实状态）。
+- 未强制重建容器（引擎刚恢复，避免二次风险）；下次正常 `compose up` 会恢复标准容器名。
+- 未完成：模型在线回答（待账户余额）、真实脱敏样例数据。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。
