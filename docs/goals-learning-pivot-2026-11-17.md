@@ -550,6 +550,12 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 证据：`error-state-unknown-lab.png`、`role-guard-learning-admin.png`；lab 页测试 7/7、type-check、lint（规范守卫 235 文件）通过。
 - 学习事件核对：真实库已有 5 类事件；`learner_first_lab_passed` 缺真实记录（历史学员在事件功能上线前已通过任务，首次条件不会再触发），逻辑由 `SubmissionFirstPassEventTest` 覆盖；真实库复验需新建学员，本轮创建账号被宿主策略拦截，记为待验。
 - 未完成：模型在线回答、真实脱敏样例数据、新学员首个通过事件复验。
+### 2026-11-18 检查点 43：全量任务判分回归
+
+- 新增 `scripts/learning-grading-regression.mjs`：从库读取每个已发布路径任务的标准答案，经网关逐题提交并断言达到通过线；这是验收工具，学员端不暴露答案。
+- 首跑结果：**38/38 全部 100 分通过**（de-basic 15、dg-basic 8、da-basic 6、ops-basic 9，含 3 个写任务），无失败项。
+- 该回归已固化为可重复命令：`node scripts/learning-grading-regression.mjs`（Makefile 目标 `learning-regression`；`--reset` 可强制重建沙箱）。
+- 未完成：模型在线回答、真实脱敏样例数据、新学员首个通过事件复验。
 
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
@@ -630,6 +636,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 
 学习者浏览器冒烟（只读，不提交/导出）：`node scripts/learning-smoke.mjs`（或 `make learning-smoke`）。凭据取自 `AETHERIS_E2E_USERNAME/AETHERIS_E2E_PASSWORD` 或 gitignored 的 `configs/security/private/e2e-learner.env`。
 
+全量判分回归（每题提交标准答案，必须 100 分）：`node scripts/learning-grading-regression.mjs`；改造课程后应先跑一遍再推送。
+
 回滚开关（构建期，修改后需重建 web）：
 
 - `VITE_LEARNER_IA=false`：退回企业全量一级菜单（默认开启学习者 IA）。
@@ -657,6 +665,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | 样例数据清单 / 多版本 / 任务绑定 / 运营审计 / 漂移校验 / 图形化登记 | 已验收 | V12–V16；检查点 25/27；repository 5+3 项测试 |
 | 学习事件（3 客户端 + 3 服务端派生） | 已验收 | 检查点 26–31；真实库计数与运营页渲染 |
 | 后端回归 | 已验收 | learning 全量 52/52 |
+| 全量任务判分回归（38 任务标准答案） | 已验收 | 检查点 43；38/38 100 分 |
 | 部署 | 已验收 | 16 容器 healthy；web 200；sim-20261116 镜像 |
 
 ### 15.2 剩余外部依赖
