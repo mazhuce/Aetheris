@@ -356,7 +356,7 @@ export function flattenNavigation(modules: NavModule[]): FlatNavItem[] {
  * ------------------------------------------------------------------ */
 
 export interface NavigationConfig {
-  version: 1
+  version: 1 | 2
   /** 显式隐藏的一级菜单。 */
   hiddenModules: string[]
   /** 显式打开的默认隐藏模块（例如把工作台放回顶栏）。 */
@@ -375,7 +375,7 @@ export const NAVIGATION_CONFIG_KEY = 'aetheris-navigation-config'
 
 export function defaultNavigationConfig(): NavigationConfig {
   return {
-    version: 1,
+    version: 2,
     hiddenModules: [],
     visibleModules: [],
     hiddenItems: [],
@@ -414,6 +414,7 @@ export function normalizeNavigationConfig(value: unknown): NavigationConfig {
     ...base.moduleOrder.filter((key) => !moduleOrder.includes(key))
   ]
 
+  const rawVersion = typeof raw.version === 'number' ? raw.version : 1
   const itemOrder: Record<string, string[]> = {}
   for (const module of navModules) {
     const incoming = Array.isArray(raw.itemOrder?.[module.key]) ? raw.itemOrder![module.key] : []
@@ -424,12 +425,14 @@ export function normalizeNavigationConfig(value: unknown): NavigationConfig {
     ]
   }
 
-  // 数据概览并入学习中心后固定为首个二级项；旧本地配置没有这个 key，
-  // 按通用规则补位会落到末尾，这里显式前移。
-  itemOrder.learning = [
-    'learning-overview',
-    ...(itemOrder.learning ?? []).filter((key) => key !== 'learning-overview')
-  ]
+  // 版本 1 → 2：数据概览并入学习中心时做一次性迁移，把它补到首位；
+  // 之后保存的版本 2 配置尊重用户自己的排序。
+  if (rawVersion < 2) {
+    itemOrder.learning = [
+      'learning-overview',
+      ...(itemOrder.learning ?? []).filter((key) => key !== 'learning-overview')
+    ]
+  }
 
   const itemModule: Record<string, string> = {}
   if (raw.itemModule && typeof raw.itemModule === 'object') {
@@ -439,7 +442,7 @@ export function normalizeNavigationConfig(value: unknown): NavigationConfig {
   }
 
   return {
-    version: 1,
+    version: 2,
     hiddenModules: stringArray(raw.hiddenModules).filter((key) => knownModules.has(key)),
     visibleModules: stringArray(raw.visibleModules).filter((key) => knownModules.has(key)),
     hiddenItems: stringArray(raw.hiddenItems),

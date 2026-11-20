@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -129,11 +130,33 @@ public class LearningController {
     private static final java.util.Set<String> CLIENT_EVENTS = java.util.Set.of(
             "expert_question_asked", "expert_fallback_used", "portfolio_exported");
 
+    /** 单实例限流：每学员每分钟最多上报 60 条客户端事件。 */
+    private static final int EVENT_LIMIT_PER_MINUTE = 60;
+    private final java.util.concurrent.ConcurrentHashMap<Long, java.util.ArrayDeque<Long>> eventWindows =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private boolean allowEvent(long uid) {
+        long now = System.currentTimeMillis();
+        java.util.ArrayDeque<Long> window = eventWindows.computeIfAbsent(uid, key -> new java.util.ArrayDeque<>());
+        synchronized (window) {
+            while (!window.isEmpty() && now - window.peekFirst() > 60_000) window.pollFirst();
+            if (window.size() >= EVENT_LIMIT_PER_MINUTE) return false;
+            window.addLast(now);
+            return true;
+        }
+    }
+
     @PostMapping("/events")
     public org.springframework.http.ResponseEntity<Void> event(@RequestBody LearningEventRequest request,
                                                               @RequestAttribute(CurrentUser.ATTRIBUTE) CurrentUser user) {
         if (request.event() == null || !CLIENT_EVENTS.contains(request.event())) {
             throw new IllegalArgumentException("不支持的事件");
+        }
+        if (!isCode(request.pathCode()) || !isCode(request.labCode())) {
+            throw new IllegalArgumentException("事件关联的路径或任务标识非法");
+        }
+        if (!allowEvent(user.uid())) {
+            throw new ResponseStatusException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS, "事件上报过于频繁");
         }
         if (request.payload() != null && request.payload().length() > 2048) {
             throw new IllegalArgumentException("事件内容过长");
@@ -148,6 +171,10 @@ public class LearningController {
         repository.insertLearningEvent(user.uid(), request.event(),
                 blankToNull(request.pathCode()), blankToNull(request.labCode()), request.payload());
         return org.springframework.http.ResponseEntity.accepted().build();
+    }
+
+    private static boolean isCode(String value) {
+        return value == null || value.isBlank() || value.matches("[A-Za-z0-9._-]{1,64}");
     }
 
     private static String blankToNull(String value) {

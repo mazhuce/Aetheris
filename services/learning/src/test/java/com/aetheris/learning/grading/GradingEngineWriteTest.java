@@ -13,6 +13,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,7 +54,7 @@ class GradingEngineWriteTest {
 
         assertThat(graded.passed()).isTrue();
         assertThat(graded.summary()).contains("最终表状态一致");
-        verify(executor, times(2)).executeUpdate(eq("sb_u1"), anyString(), anyInt());
+        verify(executor, times(2)).executeUpdate(eq("sb_u1"), anyString(), anyInt(), eq("orders_raw"));
         verify(executor, times(2)).execute(eq("sb_u1"), anyString(), anyInt());
         verify(executor, times(2)).resetTable("sb_u1", "orders_raw");
     }
@@ -70,5 +71,15 @@ class GradingEngineWriteTest {
         assertThat(graded.passed()).isFalse();
         assertThat(graded.summary()).contains("最终表状态与标准答案不一致");
         verify(executor, times(2)).resetTable("sb_u1", "orders_raw");
+    }
+
+    @Test
+    void skipsExecutionWhenStructureChecksFail() {
+        LearningModels.GradedSubmission graded = engine.grade(lab, "sb_u1",
+                "UPDATE orders_raw SET quantity = 0");
+
+        assertThat(graded.passed()).isFalse();
+        assertThat(graded.summary()).contains("结构规范未通过");
+        verify(executor, never()).executeUpdate(anyString(), anyString(), anyInt(), anyString());
     }
 }

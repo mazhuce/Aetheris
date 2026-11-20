@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -52,6 +53,40 @@ class GradingEngineTest {
         assertThat(graded.score()).isEqualTo(100);
         assertThat(graded.passed()).isTrue();
         assertThat(graded.items()).allMatch(LearningModels.GradingItemView::passed);
+    }
+
+    @Test
+    void rejectsEmptyExpectedResultInsteadOfVacuousPass() {
+        var empty = QueryResult.of(List.of("order_id", "order_status"), List.of(), 5, false);
+        when(executor.execute(org.mockito.ArgumentMatchers.eq("sb_u1"), org.mockito.ArgumentMatchers.eq(lab.expectedSql()), org.mockito.ArgumentMatchers.anyInt())).thenReturn(empty);
+
+        assertThatThrownBy(() -> engine.grade(lab, "sb_u1", LEARNER_SQL))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("标准答案结果为空");
+    }
+
+    @Test
+    void orderedResultFlagRejectsReversedRows() {
+        var orderedLab = new LearningModels.LabRecord(1L, "l1-valid-orders", "m-l1-sql", "有效订单", "L1", "easy", "SQL",
+                "summary", "scenario", "objective", List.of(), List.of("teach.orders_raw"), "SELECT 1",
+                "SELECT order_id, order_status FROM orders_raw WHERE is_deleted = false AND order_status = 'paid'",
+                Json.readTree("""
+                        {"forbiddenKeywords":["insert","update","delete","drop","alter","truncate"],
+                         "requiredColumns":["is_deleted","order_status"],"disallowSelectStar":true,"orderedResult":true}
+                        """),
+                List.of(new LearningModels.RubricItem("result", "结果正确性", 100)),
+                70, 20, "published", 1, 1, "light", List.of(), List.of());
+        var expected = QueryResult.of(List.of("order_id", "order_status"),
+                List.of(List.of("1001", "paid"), List.of("1002", "paid")), 5, false);
+        var reversed = QueryResult.of(List.of("order_id", "order_status"),
+                List.of(List.of("1002", "paid"), List.of("1001", "paid")), 5, false);
+        when(executor.execute(org.mockito.ArgumentMatchers.eq("sb_u1"), org.mockito.ArgumentMatchers.eq(orderedLab.expectedSql()), org.mockito.ArgumentMatchers.anyInt())).thenReturn(expected);
+        when(executor.execute(org.mockito.ArgumentMatchers.eq("sb_u1"), org.mockito.ArgumentMatchers.eq(LEARNER_SQL), org.mockito.ArgumentMatchers.anyInt())).thenReturn(reversed);
+
+        var graded = engine.grade(orderedLab, "sb_u1", LEARNER_SQL);
+
+        assertThat(graded.passed()).isFalse();
+        assertThat(graded.evidence()).containsEntry("orderedResult", true);
     }
 
     @Test

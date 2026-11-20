@@ -27,11 +27,20 @@ describe('navigation defaults', () => {
     expect(learning?.children[0]?.label).toBe('数据概览')
   })
 
-  it('旧的本地菜单顺序会把数据概览补到学习中心首位', () => {
+  it('版本 1 的本地菜单顺序一次性迁移，把数据概览补到学习中心首位', () => {
     const legacy = defaultNavigationConfig()
+    legacy.version = 1
     legacy.itemOrder.learning = ['learning-home', 'learning-admin', 'learning-mcp']
     const normalized = normalizeNavigationConfig(legacy)
+    expect(normalized.version).toBe(2)
     expect(normalized.itemOrder.learning[0]).toBe('learning-overview')
+  })
+
+  it('版本 2 的配置尊重用户自己的二级排序', () => {
+    const current = defaultNavigationConfig()
+    current.itemOrder.learning = ['learning-home', 'learning-overview']
+    const normalized = normalizeNavigationConfig(current)
+    expect(normalized.itemOrder.learning.slice(0, 2)).toEqual(['learning-home', 'learning-overview'])
   })
 
   it('二级项 key 与路径全局唯一，避免菜单配置改归属时互相覆盖', () => {

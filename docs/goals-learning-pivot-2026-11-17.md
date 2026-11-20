@@ -1,7 +1,7 @@
 # Aetheris 学习目标化转型：2–3 天执行目标（2026-11-17）
 
 版本：2026-11-17 规划版。适用：用户明确启动后，在 `C:\Users\yafei\RA1NL0VE\Aetheris-sim`（sim 分支）执行。
-**执行状态（2026-11-18）**：检查点 1–95 已交付；4 条路径 / 41 个可判分任务、全量判分回归 41/41、前端 350/350、Flyway v35、16 容器 healthy；在线 AI 已通过阿里云 Token Plan 验收；真实开放样例（UCI，CC BY 4.0）已落地；数据概览已并入学习中心并设为默认首页。完成度审计见 §16。
+**执行状态（2026-11-20）**：检查点 1–96 已交付；4 条路径 / 41 个可判分任务、全量判分回归 41/41、前端 352/352、Flyway v36、16 容器 healthy；在线 AI 已通过阿里云 Token Plan 验收；真实开放样例（UCI，CC BY 4.0）已落地；数据概览为默认首页；严格评审的 P0/P1/P2 问题已整改。完成度审计见 §16。
 依据：现有代码盘点（见各工作包"现状"）、[全项目复核 N01–N23](reviews/2026-10-26-project-gap-review.md)、[上一版执行目标](next-goals-2026-10-26.md)、[前端设计规范](frontend-style.md)。
 
 **战略定位（用户指令，属战略下注，证据级别 D）**：把平台从"企业数据中台操作台"逐步转向"面向求职者的数据开发实训与证据平台"。企业能力不删除，收进管理员/高级视图；学习者看到的默认界面以"学会 → 练会 → 证明会"为主线。
@@ -885,6 +885,16 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 - 兼容：`/workbench` 与 `/dashboard` 重定向到新页面；旧本地菜单顺序自动把「数据概览」补到学习中心首位；旧 homePath（`/learning`、`/workbench`）回落新默认；学习路径仍在 `/learning`。
 - 验证：type-check/lint 通过；前端 69 文件 / 350 用例全绿；学习冒烟新增 `homeOverview`、`overviewFirst`、`legacyWorkbenchRedirect` 检查全部通过，无控制台错误；web 镜像已重建。
 
+### 2026-11-20 检查点 96：严格评审问题整改（P0/P1/P2）
+
+- **P0 沙箱越权**：V36 新增 `aetheris_sandbox`（NOLOGIN，非超级用户）最小权限角色；执行器在事务内 `SET LOCAL ROLE`；读路径也用 EXPLAIN 白名单（仅本沙箱与 teach）；SqlGuard 保留双引号标识符内容，并补充 `pg_catalog`/`information_schema` 与 pg_shadow 等系统表拦截。
+  实测：角色读 `learning`/`pg_shadow` 被拒；学员 API 提交 `pg_shadow`、`"learning"."submission"`、引号 `pg_read_file` 均返回 0 分且无 sampleRows，事件记为 `SAFETY_BLOCKED`。
+- **P1 写执行与空通过**：写任务结构检查不通过不再执行；EXPLAIN 强制 ModifyTable 目标=targetTable；期望结果为空时 fail-closed。导入工具改为 docker cp + 单事务 COPY + advisory lock，失败自动回滚；演练表实测失败后原数据不变、无清单残留。
+- **P1 dev-mode**：忽略 `X-Aetheris-Dev-User`，仅使用配置的固定演示用户；存在安全 registry 时启动即失败（实测 IllegalStateException）。
+- **P2**：attempt 唯一索引 + 插入重试；凭证 `ON CONFLICT DO NOTHING`；导师配额 advisory lock（超额不写历史）；事件长度校验 + 60 次/分钟限流；`orderedResult` 开关（da-l2-05 启用，反序答案判 0、正序 100）；导航配置版本 2 一次性迁移，不再永久强制排序。
+- 说明：其余任务的排序仍按多重集比较（避免并列值导致不稳定判分），后续可按任务内容逐步启用 `orderedResult`。
+- **验证**：learning 单测 67/67；前端 69 文件 / 352 用例；判分回归 41/41；学习冒烟通过；learning 与 web 镜像已重建。
+
 ## 11. 预留：学习者真实数据范例（L09，按需启动）
 
 现状锚点：`teach.orders_raw` 为合成教学数据（`V2__teaching_dataset.sql`，刻意保留 6 类脏数据），沙箱通过 CTAS 复制，不直接写源表。
@@ -900,7 +910,7 @@ Day1=L01+L02+L07；Day2=L03+L04+L06a；Day3=L05+L06b+L08。每片独立可回滚
 工具链路验证状态（2026-11-18 检查点 93/94）：dry-run、apply、失败回滚已实测；首个真实样例（UCI，CC BY 4.0）已导入为 `teach.online_shoppers` 并绑定 `da-l2-05`。种子命令：`node scripts/seed-online-shoppers.mjs`（幂等）。以下 runbook 保留给后续自有脱敏数据。
 
 1. 脱敏：按列白名单导出，手机号/姓名/地址等替换为假值；导出与脱敏脚本不入库，产物只落本机。
-2. 落表：CSV 经 `scripts/import-teaching-sample.mjs` 校验（≤5 万行、≤20MB、列名匹配、版本未被占用）后加 `--apply` 导入；工具自动备份到 `teach_import_backup` 并在失败时回滚。手工等价步骤为 `psql \copy`。
+2. 落表：CSV 经 `scripts/import-teaching-sample.mjs` 校验（≤5 万行、≤20MB、列名匹配、版本未被占用）后加 `--apply` 导入；工具先备份到 `teach_import_backup`，再用单事务 COPY + advisory lock 导入并登记清单，失败自动回滚。
 
    CSV 表头必须与目标表列名一致（UTF-8 无 BOM、日期 ISO、数值不带千分位），例如 `teach.daily_shop_gmv`：
    `dt,shop_id,gmv,order_cnt`。
@@ -1005,7 +1015,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | 真实开放样例（UCI，CC BY 4.0）与第 41 题 | 已验收 | 检查点 94；12,330 行、清单/许可/漂移、da-l2-05 判分 100 |
 | 学习事件（3 客户端 + 3 服务端派生） | 已验收 | 检查点 26–31/52；6 类事件均真实触发（`learner_first_lab_passed` 用临时学员验证，验收后已清理） |
 | 后端回归 | 已验收 | learning 全量 61/61 |
-| 前端全量测试 | 已验收 | 69 文件 / 350 用例全绿（检查点 48/50/54/55/63/95） |
+| 前端全量测试 | 已验收 | 69 文件 / 352 用例全绿（检查点 48/50/54/55/63/95/96） |
 | 全量任务判分回归（41 任务标准答案） | 已验收 | 检查点 43/45/94；41/41 100 分 |
 | 部署 | 已验收 | 16 容器 healthy；web 200；sim-20261116 镜像 |
 
@@ -1046,7 +1056,7 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | --- | --- | --- |
 | 后端学习测试 | 61/61 | `mvn -pl services/learning -am test` |
 | ai-agent 测试 | 66/66 | `mvn -pl services/ai-agent -am test` |
-| 前端全量测试 | 69 文件 / 350 用例全绿 | `npm test`；检查点 48/50/54/55/63/95 |
+| 前端全量测试 | 69 文件 / 352 用例全绿 | `npm test`；检查点 48/50/54/55/63/95/96 |
 | 全量任务判分回归 | 41/41 全部 100 分 | `node scripts/learning-grading-regression.mjs` |
 | 学习者浏览器冒烟 | `ok=true` | `node scripts/learning-smoke.mjs` |
 | 证据包导出 | 6739 字节、40/40、4 张路径凭证、无敏感字段 | 检查点 46；`portfolio-export-40-labs.md` |
@@ -1055,7 +1065,8 @@ docker exec aetheris-postgres-1 psql -U aetheris -d aetheris \
 | 在线 AI 回答 | 专家与导师均返回模型应答（deepseek-v4.1-flash-1017，Token Plan） | 检查点 91；`ai-online-acceptance.mjs` ok=true |
 | 样例导入工具 apply/回滚 | dry-run、apply（200 行、checksum 登记）、坏行自动恢复、清理后基线 15 条 | 检查点 93；`teach.import_rehearsal` 演练 |
 | 真实样例落地 | 12,330 行、checksum `0810e1dd…`、清单 CC BY 4.0；da-l2-05 正例 100 | 检查点 94；`seed-online-shoppers.mjs` |
-| 迁移版本 | Flyway v35 | 检查点 59/73/94 |
+| 安全整改（沙箱越权/写执行/空通过） | 最小权限角色 + 计划白名单 + 越权探针拦截；事务导入失败回滚 | 检查点 96；`aetheris_sandbox`、V36 |
+| 迁移版本 | Flyway v36 | 检查点 59/73/94/96 |
 | 部署 | 16 个标准命名容器 healthy、web 200 | 检查点 85/87 |
 | 运行时门 / 备份 / 证据 | 回归 40/40、冒烟、观测 12 服务；V34 备份可恢复；34 份证据索引 | 检查点 65/67/75/80/87 |
 

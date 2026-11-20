@@ -32,5 +32,8 @@ if [ "$healthy" -lt 16 ]; then
   exit 1
 fi
 
+echo "== seed sample dataset (idempotent) =="
+node scripts/seed-online-shoppers.mjs
+
 echo "== learner smoke =="
 node scripts/learning-smoke.mjs

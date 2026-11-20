@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -30,9 +31,13 @@ public class CurrentUserFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(CurrentUserFilter.class);
     private final LearningProperties properties;
 
-    public CurrentUserFilter(LearningProperties properties) {
+    public CurrentUserFilter(LearningProperties properties, Environment environment) {
         this.properties = properties;
         if (properties.isDevMode()) {
+            String registry = environment.getProperty("aetheris.security.registry-file", "");
+            if (registry != null && !registry.isBlank()) {
+                throw new IllegalStateException("learning dev-mode 与安全证明 registry 互斥，请关闭 dev-mode");
+            }
             log.warn("learning dev-mode is enabled: requests without a verified user proof use the configured demo learner");
         }
     }
@@ -58,9 +63,8 @@ public class CurrentUserFilter extends OncePerRequestFilter {
             return;
         }
         if (properties.isDevMode()) {
-            String demo = request.getHeader("X-Aetheris-Dev-User");
-            String username = demo == null || demo.isBlank() ? properties.getDevUser() : demo.trim();
-            if (!username.matches("[A-Za-z0-9._-]{1,64}")) {
+            String username = properties.getDevUser();
+            if (username == null || !username.matches("[A-Za-z0-9._-]{1,64}")) {
                 reject(response, 400, "非法的演示用户");
                 return;
             }

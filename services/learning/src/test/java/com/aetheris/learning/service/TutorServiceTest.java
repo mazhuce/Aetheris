@@ -12,6 +12,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +44,7 @@ class TutorServiceTest {
                 List.of(), List.of());
         when(repository.findLab("l3-rfm")).thenReturn(Optional.of(lab));
         when(repository.latestSubmissionSql(anyLong(), anyString())).thenReturn(Optional.of("SELECT order_id FROM orders_raw"));
+        when(repository.claimTutorQuota(anyLong(), anyString(), anyString(), anyInt())).thenReturn(true);
         when(aiTutorClient.enabled()).thenReturn(false);
     }
 
@@ -56,7 +58,7 @@ class TutorServiceTest {
         assertThat(chat.fallback()).isTrue();
         assertThat(chat.model()).isEqualTo("rule-based");
         assertThat(chat.reply()).contains("已经通过");
-        verify(repository).insertTutorMessage(eq(1L), eq("l3-rfm"), eq("user"), anyString(), isNull());
+        verify(repository).claimTutorQuota(eq(1L), eq("l3-rfm"), eq("还能怎么优化？"), anyInt());
         verify(repository).insertTutorMessage(eq(1L), eq("l3-rfm"), eq("assistant"), anyString(), eq("rule-based"));
     }
 
@@ -81,6 +83,7 @@ class TutorServiceTest {
     void rejectsOversizedQuestion() {
         assertThatThrownBy(() -> tutorService.chat(1L, "l3-rfm", "x".repeat(2001)))
                 .isInstanceOf(IllegalArgumentException.class);
+        verify(repository, never()).claimTutorQuota(anyLong(), anyString(), anyString(), anyInt());
         verify(repository, never()).insertTutorMessage(anyLong(), anyString(), anyString(), anyString(), any());
     }
     @Test
@@ -89,7 +92,7 @@ class TutorServiceTest {
         LearningProperties properties = new LearningProperties();
         properties.getTutor().setMaxChatsPerLab(2);
         tutorService = new TutorService(repository, submissionService, aiTutorClient, properties);
-        when(repository.countTutorUserMessages(1L, "l3-rfm")).thenReturn(2);
+        when(repository.claimTutorQuota(eq(1L), eq("l3-rfm"), anyString(), eq(2))).thenReturn(false);
         when(submissionService.lastResult(1L, "l3-rfm")).thenReturn(null);
 
         LearningModels.TutorChatView chat = tutorService.chat(1L, "l3-rfm", "再给点提示");

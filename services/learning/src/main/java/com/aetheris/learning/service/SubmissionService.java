@@ -50,8 +50,18 @@ public class SubmissionService {
                     + properties.getGrading().getMaxSqlBytes() + " 字节以内");
         }
         LearningModels.SandboxInfo sandbox = sandboxService.ensure(uid, username, labCode);
-        int attempt = repository.nextAttempt(uid, labCode);
-        long submissionId = repository.insertSubmission(uid, username, labCode, lab.version(), attempt, sql, notes);
+        int attempt = 0;
+        long submissionId = 0;
+        for (int tries = 1; ; tries++) {
+            attempt = repository.nextAttempt(uid, labCode);
+            try {
+                submissionId = repository.insertSubmission(uid, username, labCode, lab.version(), attempt, sql, notes);
+                break;
+            } catch (org.springframework.dao.DuplicateKeyException duplicate) {
+                // 并发提交可能拿到同一个 attempt，唯一索引兜底后重试一次取新编号。
+                if (tries >= 3) throw duplicate;
+            }
+        }
         try {
             LearningModels.GradedSubmission graded = gradingEngine.grade(lab, sandbox.schemaName(), sql);
             long resultId = repository.insertGradingResult(submissionId, graded.score(), graded.passed(),
@@ -114,11 +124,11 @@ public class SubmissionService {
     }
 
     private static String processEventType(LearningModels.GradedSubmission graded) {
-        boolean safety = graded.items().stream()
-                .filter(item -> "safety".equals(item.key())).allMatch(LearningModels.GradingItemView::passed);
+        Object safety = graded.evidence().get("safetyPassed");
+        boolean safetyPassed = !(safety instanceof Boolean flag) || flag;
         boolean result = graded.items().stream()
                 .filter(item -> "result".equals(item.key())).allMatch(LearningModels.GradingItemView::passed);
-        if (!safety) return "SAFETY_BLOCKED";
+        if (!safetyPassed) return "SAFETY_BLOCKED";
         if (graded.evidence().containsKey("sqlState")) return "SQL_ERROR";
         if (!result) return "RESULT_MISMATCH";
         return "PASSED";

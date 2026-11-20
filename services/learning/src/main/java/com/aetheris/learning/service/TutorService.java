@@ -40,10 +40,8 @@ public class TutorService {
         if (question.length() > 2000) {
             throw new IllegalArgumentException("单次提问不能超过 2000 字");
         }
-        int used = repository.countTutorUserMessages(uid, labCode);
         int quota = Math.max(1, properties.getTutor().getMaxChatsPerLab());
-        boolean quotaExceeded = used >= quota;
-        repository.insertTutorMessage(uid, labCode, "user", question, null);
+        boolean quotaExceeded = !repository.claimTutorQuota(uid, labCode, question, quota);
         LearningModels.GradingView last = submissionService.lastResult(uid, labCode);
         String lastSql = repository.latestSubmissionSql(uid, labCode).orElse("");
         String model = aiTutorClient.enabled() ? properties.getAi().getModel() : "rule-based";

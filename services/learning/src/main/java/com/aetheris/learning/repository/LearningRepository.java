@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -361,7 +362,7 @@ public class LearningRepository {
 
     public int nextAttempt(long uid, String labCode) {
         Integer current = jdbc.queryForObject("""
-                SELECT COUNT(*) FROM learning.submission WHERE learner_uid = ? AND lab_code = ?
+                SELECT COALESCE(MAX(attempt), 0) FROM learning.submission WHERE learner_uid = ? AND lab_code = ?
                 """, Integer.class, uid, labCode);
         return (current == null ? 0 : current) + 1;
     }
@@ -501,6 +502,7 @@ public class LearningRepository {
     public void insertCredential(long uid, String type, String title, String evidenceJson) {
         jdbc.update("""
                 INSERT INTO learning.credential (learner_uid, type, title, evidence) VALUES (?, ?, ?, ?::jsonb)
+                ON CONFLICT DO NOTHING
                 """, uid, type, title, evidenceJson);
     }
 
@@ -806,6 +808,23 @@ public class LearningRepository {
                 INSERT INTO learning.tutor_message (learner_uid, lab_code, role, content, model)
                 VALUES (?, ?, ?, ?, ?)
                 """, uid, labCode, role, content, model);
+    }
+
+    /**
+     * 原子占用一次导师提问额度：advisory lock 串行化同一学员同一任务，
+     * 额度用尽时不写入历史，避免并发竞态与无界增长。
+     */
+    @Transactional
+    public boolean claimTutorQuota(long uid, String labCode, String question, int quota) {
+        jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                Object.class, "tutor:" + uid + ":" + labCode);
+        Integer used = jdbc.queryForObject("""
+                SELECT COUNT(*) FROM learning.tutor_message
+                 WHERE learner_uid = ? AND lab_code = ? AND role = 'user'
+                """, Integer.class, uid, labCode);
+        if (used != null && used >= quota) return false;
+        insertTutorMessage(uid, labCode, "user", question, null);
+        return true;
     }
 
     public List<LearningModels.TutorMessageView> listTutorMessages(long uid, String labCode, int limit) {

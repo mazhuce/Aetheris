@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// 真实样例数据导入工具（L09 预留）：校验 CSV → 备份 → 导入 teach 表 → 登记清单。
-// 默认 dry-run；确认无误后加 --apply。导入与校验通过 docker exec psql 执行。
-// 已验证：合成 CSV 的 dry-run 校验通过；apply 会写入教学表，需在授权的执行环境运行。
+// 真实样例数据导入工具（L09 预留）：校验 CSV → 备份 → 单事务 COPY 导入 → 登记清单。
+// 默认 dry-run；确认无误后加 --apply。备份独立提交，导入本体在事务内完成，失败自动回滚。
 // 用法：
 //   node scripts/import-teaching-sample.mjs --csv sample.csv --table teach.orders_raw \
 //     --version 2 --license internal-training --source desensitized --pii-reviewed [--apply] [--note "..."]
@@ -142,18 +141,29 @@ if (!args.apply) {
 const stamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
 const backupTable = `teach_import_backup.${table.split('.')[1]}_${stamp}`
 const columnList = records[0].map((column) => column.trim()).join(', ')
-let imported = false
+const remoteCsv = `/tmp/aetheris-sample-${stamp}.csv`
 try {
+  // 备份单独提交，保留可回滚的历史副本；导入本体在单事务内完成。
   psql(`CREATE SCHEMA IF NOT EXISTS teach_import_backup`)
   psql(`CREATE TABLE ${backupTable} AS TABLE ${table}`)
-  psql(`TRUNCATE TABLE ${table}`)
-  psql(`\\copy ${table} (${columnList}) FROM STDIN WITH (FORMAT csv, HEADER true)`, { input: fs.readFileSync(csvPath, 'utf8') })
-  imported = true
+  const copied = spawnSync('docker', ['cp', csvPath, `${container}:${remoteCsv}`], { encoding: 'utf8' })
+  if (copied.status !== 0) {
+    throw new Error(`复制 CSV 到容器失败：${(copied.stderr || '').trim().slice(0, 300)}`)
+  }
+  psql(`BEGIN;
+SET LOCAL lock_timeout = '60000';
+SELECT pg_advisory_xact_lock(hashtext('aetheris.teach_import'));
+TRUNCATE TABLE ${table};
+COPY ${table} (${columnList}) FROM '${remoteCsv}' WITH (FORMAT csv, HEADER true);
+INSERT INTO learning.dataset_manifest (code, version, table_name, row_count, checksum, license, source, pii_reviewed, status, note)
+SELECT ${quote(table)}, ${version}, ${quote(table)}, count(*),
+       md5(string_agg(t::text, '|' ORDER BY t::text)),
+       ${quote(args.license)}, ${quote(args.source)}, true, 'published', ${args.note ? quote(args.note) : 'NULL'}
+  FROM ${table} t;
+COMMIT;`)
   const stats = psql(`SELECT count(*) || '|' || coalesce(md5(string_agg(t::text, '|' ORDER BY t::text)), '') FROM ${table} t`).split('|')
   const rowCount = Number.parseInt(stats[0], 10)
   const checksum = stats[1] || null
-  psql(`INSERT INTO learning.dataset_manifest (code, version, table_name, row_count, checksum, license, source, pii_reviewed, status, note)
-        VALUES ('${table}', ${version}, '${table}', ${rowCount}, ${checksum ? quote(checksum) : 'NULL'}, ${quote(args.license)}, ${quote(args.source)}, true, 'published', ${args.note ? quote(args.note) : 'NULL'})`)
   console.log(JSON.stringify({
     ...summary,
     ok: true,
@@ -163,24 +173,13 @@ try {
     next: ['内容运营 → 数据样例 → 校验一致性', '对绑定该表的任务各跑一次标准答案与错误答案', `回滚：TRUNCATE ${table}; INSERT INTO ${table} SELECT * FROM ${backupTable};`]
   }, null, 2))
 } catch (error) {
-  if (imported || psqlSupportsRollback(backupTable, table)) {
-    try {
-      psql(`TRUNCATE TABLE ${table}`)
-      psql(`INSERT INTO ${table} SELECT * FROM ${backupTable}`)
-      console.error(JSON.stringify({ ...summary, ok: false, error: String(error).slice(0, 400), restoredFrom: backupTable }, null, 2))
-    } catch (restoreError) {
-      console.error(JSON.stringify({ ...summary, ok: false, error: String(error).slice(0, 400), restoreError: String(restoreError).slice(0, 300), backupTable }, null, 2))
-    }
-  } else {
-    console.error(JSON.stringify({ ...summary, ok: false, error: String(error).slice(0, 400) }, null, 2))
-  }
+  console.error(JSON.stringify({
+    ...summary,
+    ok: false,
+    error: String(error).slice(0, 400),
+    rollback: '导入事务已回滚，原数据未改变'
+  }, null, 2))
   process.exit(1)
-}
-
-function psqlSupportsRollback(backup, target) {
-  try {
-    return psql(`SELECT to_regclass('${backup}') IS NOT NULL`) === 't'
-  } catch {
-    return false
-  }
+} finally {
+  spawnSync('docker', ['exec', container, 'rm', '-f', remoteCsv])
 }

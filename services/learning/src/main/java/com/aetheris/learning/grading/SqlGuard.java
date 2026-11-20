@@ -20,9 +20,15 @@ public final class SqlGuard {
     private static final Pattern READ_HEAD = Pattern.compile("^\\s*(select|with)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern WRITE_HEAD = Pattern.compile("^\\s*(insert|update|delete)\\b", Pattern.CASE_INSENSITIVE);
     private static final Pattern TEACH_REF = Pattern.compile("\\bteach\\s*\\.", Pattern.CASE_INSENSITIVE);
-    /** 学员只能访问自己的沙箱与 teach 教学数据；显式平台 schema 一律拒绝。 */
+    /** 学员只能访问自己的沙箱与 teach 教学数据；显式平台/系统 schema 一律拒绝。 */
     private static final Pattern PLATFORM_SCHEMA = Pattern.compile(
-            "\\b(learning|mcp|metadata|quality|auth|system|workflow|ingestion|governance|serving|ai)\\s*\\.",
+            "\\b(learning|mcp|metadata|quality|auth|system|workflow|ingestion|governance|serving|ai"
+                    + "|pg_catalog|information_schema|pg_toast)\\s*\\.",
+            Pattern.CASE_INSENSITIVE);
+    /** pg_catalog 在 search_path 中隐式可见，必须按关系名拦截敏感系统表。 */
+    private static final Pattern SYSTEM_RELATION = Pattern.compile(
+            "\\b(pg_shadow|pg_authid|pg_roles|pg_user|pg_settings|pg_stat_activity|pg_stat_statements"
+                    + "|pg_largeobject|pg_largeobject_metadata)\\b",
             Pattern.CASE_INSENSITIVE);
     private static final Pattern DANGEROUS_FUNCTION = Pattern.compile(
             "\\b(pg_read_file|pg_read_binary_file|pg_ls_dir|lo_import|lo_export|dblink|copy)\\b",
@@ -98,6 +104,10 @@ public final class SqlGuard {
         safety.add(new Check("sandbox_only", "仅限沙箱与教学数据", !platformSchema,
                 platformSchema ? "只能查询当前沙箱与 teach 教学数据，禁止显式引用平台 schema。" : "数据范围校验通过。"));
 
+        boolean systemRelation = SYSTEM_RELATION.matcher(normalized).find();
+        safety.add(new Check("no_system_relation", "禁止系统表", !systemRelation,
+                systemRelation ? "禁止访问系统表（pg_shadow/pg_authid 等）。" : "系统表校验通过。"));
+
         boolean dangerousFunction = DANGEROUS_FUNCTION.matcher(normalized).find();
         safety.add(new Check("no_dangerous_function", "禁止文件与外部访问函数", !dangerousFunction,
                 dangerousFunction ? "包含禁止的文件或外部访问函数。" : "函数使用校验通过。"));
@@ -140,7 +150,7 @@ public final class SqlGuard {
         return new Evaluation(safety, structure, stripped);
     }
 
-    /** 去掉字符串字面量、标识符引号、行注释与块注释，保留其余字符用于结构判断。 */
+    /** 去掉字符串字面量、行注释与块注释；双引号是标识符而不是字面量，必须保留内容。 */
     static String stripLiteralsAndComments(String sql) {
         StringBuilder out = new StringBuilder(sql.length());
         int i = 0;
@@ -148,13 +158,14 @@ public final class SqlGuard {
             char c = sql.charAt(i);
             if (c == '\'' || c == '"') {
                 char quote = c;
+                boolean identifier = quote == '"';
                 out.append(' ');
                 i++;
                 while (i < sql.length()) {
                     char current = sql.charAt(i);
                     if (current == quote) {
                         if (i + 1 < sql.length() && sql.charAt(i + 1) == quote) {
-                            out.append(' ');
+                            out.append(identifier ? quote : ' ');
                             i += 2;
                             continue;
                         }
@@ -162,7 +173,7 @@ public final class SqlGuard {
                         i++;
                         break;
                     }
-                    out.append(' ');
+                    out.append(identifier ? current : ' ');
                     i++;
                 }
                 continue;

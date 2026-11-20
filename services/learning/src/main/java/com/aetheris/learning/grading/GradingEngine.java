@@ -44,12 +44,18 @@ public class GradingEngine {
 
         boolean safetyPassed = evaluation.safetyPassed();
         boolean structurePassed = evaluation.structurePassed();
+        evidence.put("safetyPassed", safetyPassed);
+        evidence.put("structurePassed", structurePassed);
         boolean resultPassed = false;
         String resultDetail = "未执行结果比对。";
         QueryResult learnerResult = null;
 
         boolean writeMode = lab.staticPolicy().path("allowWrite").asBoolean(false);
-        if (safetyPassed) {
+        boolean orderedResult = lab.staticPolicy().path("orderedResult").asBoolean(false);
+        if (orderedResult && !writeMode) {
+            evidence.put("orderedResult", true);
+        }
+        if (safetyPassed && (!writeMode || structurePassed)) {
             if (writeMode) {
                 WriteOutcome outcome = gradeWrite(lab, sandboxSchema, learnerSql, timeoutMs);
                 learnerResult = outcome.learner();
@@ -75,25 +81,32 @@ public class GradingEngine {
                 } catch (RuntimeException failure) {
                     throw new IllegalStateException("教学答案执行失败，请联系管理员：" + failure.getMessage(), failure);
                 }
+                if (expected.rowCount() == 0) {
+                    throw new IllegalStateException("标准答案结果为空，教学数据可能缺失，任务暂不可判分：" + lab.code());
+                }
                 try {
                     learnerResult = executor.execute(sandboxSchema, learnerSql, timeoutMs);
+                    String learnerChecksum = orderedResult
+                            ? QueryResult.checksum(learnerResult.rows(), true) : learnerResult.checksum();
+                    String expectedChecksum = orderedResult
+                            ? QueryResult.checksum(expected.rows(), true) : expected.checksum();
                     if (learnerResult.truncated()) {
                         resultDetail = "结果集超过 " + 5000 + " 行，请先聚合或过滤后再提交。";
                     } else if (learnerResult.columns().size() != expected.columns().size()) {
                         resultDetail = "列数不一致：期望 " + expected.columns().size() + " 列，实际 "
                                 + learnerResult.columns().size() + " 列。";
-                    } else if (!learnerResult.checksum().equals(expected.checksum())) {
+                    } else if (!learnerChecksum.equals(expectedChecksum)) {
                         resultDetail = "结果与标准答案不一致：期望 " + expected.rowCount() + " 行，实际 "
                                 + learnerResult.rowCount() + " 行。请检查过滤条件、去重逻辑与聚合口径。";
                     } else {
                         resultPassed = true;
                         resultDetail = "结果完全一致：" + learnerResult.rowCount() + " 行，校验和 "
-                                + learnerResult.checksum().substring(0, 12) + "。";
+                                + learnerChecksum.substring(0, 12) + "。";
                     }
                     evidence.put("learnerRows", learnerResult.rowCount());
                     evidence.put("expectedRows", expected.rowCount());
-                    evidence.put("learnerChecksum", learnerResult.checksum());
-                    evidence.put("expectedChecksum", expected.checksum());
+                    evidence.put("learnerChecksum", learnerChecksum);
+                    evidence.put("expectedChecksum", expectedChecksum);
                     evidence.put("durationMs", learnerResult.durationMs());
                 } catch (SqlSandboxExecutor.SqlExecutionException failure) {
                     resultDetail = "SQL 执行失败：" + failure.getMessage();
@@ -101,6 +114,9 @@ public class GradingEngine {
                     evidence.put("sqlState", failure.sqlState());
                 }
             }
+        } else if (safetyPassed) {
+            resultDetail = "结构规范未通过，已跳过执行。";
+            hints.add("写任务的结构规范不通过时不会执行，请先满足目标表与写法要求。");
         } else {
             resultDetail = "存在安全或语法问题，已跳过结果比对。";
             hints.add(writeMode
@@ -163,7 +179,7 @@ public class GradingEngine {
             QueryResult learner = null;
             String failureDetail = null;
             try {
-                executor.executeUpdate(schema, learnerSql, timeoutMs);
+                executor.executeUpdate(schema, learnerSql, timeoutMs, table);
                 learner = executor.execute(schema, stateQuery, timeoutMs);
             } catch (SqlSandboxExecutor.SqlExecutionException failure) {
                 failureDetail = "SQL 执行失败：" + failure.getMessage();
@@ -171,7 +187,7 @@ public class GradingEngine {
             QueryResult expected;
             try {
                 executor.resetTable(schema, table);
-                executor.executeUpdate(schema, lab.expectedSql(), timeoutMs);
+                executor.executeUpdate(schema, lab.expectedSql(), timeoutMs, table);
                 expected = executor.execute(schema, stateQuery, timeoutMs);
             } catch (RuntimeException failure) {
                 throw new IllegalStateException("教学答案执行失败，请联系管理员：" + failure.getMessage(), failure);
@@ -181,6 +197,9 @@ public class GradingEngine {
                 } catch (RuntimeException cleanup) {
                     LOG.warn("写任务目标表重置失败 schema={} table={}", schema, table);
                 }
+            }
+            if (expected.rowCount() == 0) {
+                throw new IllegalStateException("标准答案结果为空，教学数据可能缺失，任务暂不可判分：" + lab.code());
             }
             if (learner == null) {
                 return new WriteOutcome(null, expected, false, failureDetail);

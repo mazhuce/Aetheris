@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
 public class SqlSandboxExecutor {
 
     private static final Pattern SAFE_SCHEMA = Pattern.compile("^sb_u[0-9]{1,18}$");
+    private static final Pattern SAFE_ROLE = Pattern.compile("^[a-z_][a-z0-9_]{0,62}$");
+    private static final Pattern SAFE_TABLE = Pattern.compile("^[a-z_][a-z0-9_]{0,62}$");
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_ROWS = 5000;
     private static final int MAX_CELL_CHARS = 200;
@@ -60,7 +62,9 @@ public class SqlSandboxExecutor {
                     setup.execute("SET TRANSACTION READ ONLY");
                     setup.execute("SET LOCAL statement_timeout = " + timeout);
                     setup.execute("SET LOCAL search_path TO " + schema + ", teach, public");
+                    setup.execute("SET LOCAL ROLE " + sandboxRole());
                 }
+                ensureReadRelations(connection, schema, sql);
                 List<String> columns = new ArrayList<>();
                 List<List<String>> rows = new ArrayList<>();
                 boolean truncated = false;
@@ -100,10 +104,13 @@ public class SqlSandboxExecutor {
         }
     }
 
-    /** 写任务：仅在学员 schema 内执行单条写语句，search_path 不含 teach。 */
-    public int executeUpdate(String schema, String sql, int statementTimeoutMs) {
+    /** 写任务：仅在学员 schema 内执行单条写语句，且只能命中任务声明的目标表。 */
+    public int executeUpdate(String schema, String sql, int statementTimeoutMs, String targetTable) {
         if (schema == null || !SAFE_SCHEMA.matcher(schema).matches()) {
             throw new SqlExecutionException("沙箱标识非法", "22023");
+        }
+        if (targetTable == null || !SAFE_TABLE.matcher(targetTable).matches()) {
+            throw new SqlExecutionException("写任务目标表未配置", "22023");
         }
         if (sql == null || sql.isBlank()) {
             throw new SqlExecutionException("SQL 为空", "42601");
@@ -118,8 +125,9 @@ public class SqlSandboxExecutor {
                 try (Statement setup = connection.createStatement()) {
                     setup.execute("SET LOCAL statement_timeout = " + timeout);
                     setup.execute("SET LOCAL search_path TO " + schema);
+                    setup.execute("SET LOCAL ROLE " + sandboxRole());
                 }
-                ensureSandboxRelations(connection, schema, sql);
+                ensureWriteRelations(connection, schema, targetTable, sql);
                 int updated;
                 try (Statement statement = connection.createStatement()) {
                     updated = statement.executeUpdate(sql);
@@ -137,35 +145,87 @@ public class SqlSandboxExecutor {
         }
     }
 
-    /**
-     * 静态守卫会剥离引号标识符，/^UPDATE "teach"."orders_raw"/ 可能绕过关键字检查。
-     * 执行前用 EXPLAIN 解析真实执行计划，要求所有被引用的关系都属于学员 schema。
-     */
-    private void ensureSandboxRelations(Connection connection, String schema, String sql) throws SQLException {
-        try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("EXPLAIN (VERBOSE, FORMAT JSON, COSTS FALSE) " + sql)) {
-            if (!resultSet.next()) return;
-            JsonNode plan = JSON.readTree(resultSet.getString(1));
-            ensureSandboxNode(plan, schema);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException malformed) {
-            throw new SqlExecutionException("无法校验写任务执行计划", "42601");
+    private String sandboxRole() {
+        String role = properties.getSandbox().getDbRole();
+        if (role == null || !SAFE_ROLE.matcher(role).matches()) {
+            throw new SqlExecutionException("沙箱执行角色配置非法", "22023");
         }
+        return role;
     }
 
-    private void ensureSandboxNode(JsonNode node, String schema) {
+    /**
+     * 读路径同样校验真实执行计划：只允许本沙箱与 teach 教学表，
+     * 显式 schema（learning/pg_catalog 等）由数据库角色与计划双重拦截。
+     */
+    private void ensureReadRelations(Connection connection, String schema, String sql) throws SQLException {
+        ensureReadNode(explainPlan(connection, sql), schema);
+    }
+
+    private void ensureReadNode(JsonNode node, String schema) {
         if (node == null) return;
         if (node.isObject()) {
             JsonNode relation = node.get("Relation Name");
-            JsonNode relationSchema = node.get("Schema");
             if (relation != null && relation.isTextual()) {
+                JsonNode relationSchema = node.get("Schema");
+                String actual = relationSchema == null ? "" : relationSchema.asText("");
+                if (!schema.equals(actual) && !"teach".equals(actual)) {
+                    throw new SqlExecutionException("只能查询当前沙箱与 teach 教学数据", "42501");
+                }
+            }
+            node.fields().forEachRemaining(entry -> ensureReadNode(entry.getValue(), schema));
+        } else if (node.isArray()) {
+            for (JsonNode child : node) ensureReadNode(child, schema);
+        }
+    }
+
+    /**
+     * 静态守卫会保留双引号标识符内容，但执行计划才是最终事实：
+     * 所有关系必须属于本沙箱，ModifyTable 目标必须等于任务声明的目标表。
+     */
+    private void ensureWriteRelations(Connection connection, String schema, String targetTable, String sql)
+            throws SQLException {
+        JsonNode plan = explainPlan(connection, sql);
+        boolean[] targetSeen = {false};
+        ensureWriteNode(plan, schema, targetTable, targetSeen);
+        if (!targetSeen[0]) {
+            throw new SqlExecutionException("写语句未命中任务目标表：" + targetTable, "42501");
+        }
+    }
+
+    private void ensureWriteNode(JsonNode node, String schema, String targetTable, boolean[] targetSeen) {
+        if (node == null) return;
+        if (node.isObject()) {
+            JsonNode relation = node.get("Relation Name");
+            if (relation != null && relation.isTextual()) {
+                JsonNode relationSchema = node.get("Schema");
                 String actual = relationSchema == null ? "" : relationSchema.asText("");
                 if (!schema.equals(actual)) {
                     throw new SqlExecutionException("写任务只能操作沙箱内的表", "42501");
                 }
+                if ("ModifyTable".equals(node.path("Node Type").asText())) {
+                    if (!targetTable.equals(relation.asText())) {
+                        throw new SqlExecutionException("写任务只能修改目标表：" + targetTable, "42501");
+                    }
+                    targetSeen[0] = true;
+                }
             }
-            node.fields().forEachRemaining(entry -> ensureSandboxNode(entry.getValue(), schema));
+            node.fields().forEachRemaining(entry -> ensureWriteNode(entry.getValue(), schema, targetTable, targetSeen));
         } else if (node.isArray()) {
-            for (JsonNode child : node) ensureSandboxNode(child, schema);
+            for (JsonNode child : node) ensureWriteNode(child, schema, targetTable, targetSeen);
+        }
+    }
+
+    private JsonNode explainPlan(Connection connection, String sql) throws SQLException {
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery("EXPLAIN (VERBOSE, FORMAT JSON, COSTS FALSE) " + sql)) {
+            if (!resultSet.next()) {
+                throw new SqlExecutionException("无法解析 SQL 执行计划", "42601");
+            }
+            try {
+                return JSON.readTree(resultSet.getString(1));
+            } catch (com.fasterxml.jackson.core.JsonProcessingException malformed) {
+                throw new SqlExecutionException("无法解析 SQL 执行计划", "42601");
+            }
         }
     }
 

@@ -81,6 +81,30 @@ class SqlGuardTest {
     }
 
     @Test
+    void rejectsQuotedPlatformSchemaAccess() {
+        var evaluation = SqlGuard.evaluate("""
+                SELECT uid, lab_code FROM "learning"."submission"
+                """, Json.readTree(POLICY));
+        assertThat(evaluation.safetyPassed()).isFalse();
+    }
+
+    @Test
+    void rejectsSystemCatalogAndSystemRelations() {
+        assertThat(SqlGuard.evaluate("SELECT usename, passwd FROM pg_shadow", Json.readTree(POLICY))
+                .safetyPassed()).isFalse();
+        assertThat(SqlGuard.evaluate("SELECT usename FROM \"pg_catalog\".\"pg_shadow\"", Json.readTree(POLICY))
+                .safetyPassed()).isFalse();
+        assertThat(SqlGuard.evaluate("SELECT table_name FROM information_schema.tables", Json.readTree(POLICY))
+                .safetyPassed()).isFalse();
+    }
+
+    @Test
+    void rejectsQuotedFileFunction() {
+        var evaluation = SqlGuard.evaluate("SELECT \"pg_read_file\"('/etc/passwd')", Json.readTree(POLICY));
+        assertThat(evaluation.safetyPassed()).isFalse();
+    }
+
+    @Test
     void rejectsFileAccessFunctions() {
         var evaluation = SqlGuard.evaluate("SELECT pg_read_file('/etc/passwd')", Json.readTree(POLICY));
         assertThat(evaluation.safetyPassed()).isFalse();

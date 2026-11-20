@@ -152,6 +152,14 @@ public class SandboxService {
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + schema + "." + table
                     + " AS TABLE teach." + table);
         }
+        // 学员 SQL 以最小权限角色执行：只授予本 schema，默认权限覆盖后续重置出的表。
+        String role = properties.getSandbox().getDbRole();
+        if (role == null || !role.matches("^[a-z_][a-z0-9_]{0,62}$")) {
+            throw new IllegalStateException("沙箱执行角色配置非法");
+        }
+        jdbcTemplate.execute("GRANT USAGE ON SCHEMA " + schema + " TO " + role);
+        jdbcTemplate.execute("GRANT ALL ON ALL TABLES IN SCHEMA " + schema + " TO " + role);
+        jdbcTemplate.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA " + schema + " GRANT ALL ON TABLES TO " + role);
     }
 
     private void dropSchema(String schema) {

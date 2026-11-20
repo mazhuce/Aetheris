@@ -17,6 +17,11 @@ public record QueryResult(List<String> columns, List<List<String>> rows, int row
     }
 
     public static String checksum(List<List<String>> rows) {
+        return checksum(rows, false);
+    }
+
+    /** ordered=true 时保留结果行序；仅用于任务显式声明 orderedResult 的场景。 */
+    public static String checksum(List<List<String>> rows, boolean ordered) {
         List<String> lines = new ArrayList<>(rows.size());
         for (List<String> row : rows) {
             StringBuilder line = new StringBuilder();
@@ -31,7 +36,7 @@ public record QueryResult(List<String> columns, List<List<String>> rows, int row
             }
             lines.add(line.toString());
         }
-        Collections.sort(lines);
+        if (!ordered) Collections.sort(lines);
         return sha256(String.join("\n", lines));
     }
 

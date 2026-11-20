@@ -40,6 +40,11 @@ describe('system preferences', () => {
     expect(readPreferences()).toEqual(DEFAULT_PREFERENCES)
   })
 
+  it('旧的学习路径默认首页迁移为数据概览', () => {
+    localStorage.setItem(PREFERENCES_KEY, JSON.stringify({ homePath: '/learning' }))
+    expect(readPreferences().homePath).toBe('/learning/overview')
+  })
+
   it('applies appearance and motion preferences to the document', () => {
     applyPreferences({ colorMode: 'light', reduceMotion: true, homePath: '/workbench' })
 

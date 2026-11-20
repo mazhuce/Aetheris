@@ -37,6 +37,8 @@ public class LearningProperties {
         private int maxActivePerUser = 3;
         private int mediumConcurrency = 2;
         private int mediumStatementTimeoutMs = 60000;
+        /** 学员 SQL 的执行角色：仅能访问本沙箱 schema 与 teach 只读表。 */
+        private String dbRole = "aetheris_sandbox";
 
         public int getTtlHours() { return ttlHours; }
         public void setTtlHours(int ttlHours) { this.ttlHours = ttlHours; }
@@ -50,6 +52,8 @@ public class LearningProperties {
         public void setMediumStatementTimeoutMs(int mediumStatementTimeoutMs) {
             this.mediumStatementTimeoutMs = mediumStatementTimeoutMs;
         }
+        public String getDbRole() { return dbRole; }
+        public void setDbRole(String dbRole) { this.dbRole = dbRole; }
     }
 
     public static class Grading {
