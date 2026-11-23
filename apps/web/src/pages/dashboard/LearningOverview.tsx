@@ -14,7 +14,6 @@ import {
 } from '@/api/learning'
 import DataSurface from '@/components/DataSurface'
 import { LoadingState } from '@/components/FeedbackState'
-import LearningJourneyArt from './LearningJourneyArt'
 
 const ACTIVE_PATH_STORAGE_KEY = 'aetheris.learning.activePath'
 
@@ -90,13 +89,13 @@ export default function LearningOverview() {
                     ? `${activeSummary.completedLabs}/${activeSummary.labCount} 题 · 进度 ${activeSummary.progressPercent}%`
                     : '前往学习中心开始第一题'}
                 </small>
+                <Progress
+                  className="learning-overview-progress"
+                  percent={activeSummary?.progressPercent ?? 0}
+                  showInfo={false}
+                  size="small"
+                />
               </div>
-              <Progress
-                className="learning-overview-progress"
-                percent={activeSummary?.progressPercent ?? 0}
-                showInfo={false}
-                size="small"
-              />
               {nextLab ? (
                 <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => navigate(`/learning/labs/${nextLab.code}`)}>
                   继续学习
@@ -107,7 +106,6 @@ export default function LearningOverview() {
             </div>
             {nextLab && <p className="learning-overview-hint">下一题：{nextLab.title}</p>}
           </div>
-          <figure className="learning-overview-art"><LearningJourneyArt /></figure>
         </div>
       )}
     </DataSurface>

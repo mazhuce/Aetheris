@@ -43,7 +43,7 @@
 | topnav-brand-logo.png | 左上角品牌图标态（1 秒闪动） |
 | sample-data/online_shoppers.csv | UCI 真实样例（CC BY 4.0，12,330 行，snake_case） |
 | sample-data/LICENSE.txt | 数据集归因与修改说明 |
-| home-learning-overview.png | 学习者首页：我的学习区块与学习旅程插图 |
+| home-learning-overview.png | 学习者首页：我的学习区块 |
 
 ## 管理端
 

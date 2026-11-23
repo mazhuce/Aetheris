@@ -300,10 +300,7 @@
 }
 
 .learning-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.52fr);
-  gap: var(--space-5);
-  align-items: center;
+  min-width: 0;
 }
 
 .learning-overview-metrics {
@@ -343,6 +340,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-4);
   margin-top: var(--space-4);
 }
@@ -350,7 +348,9 @@
 .learning-overview-current {
   display: grid;
   gap: 2px;
-  min-width: 180px;
+  min-width: 200px;
+  flex: 1 1 320px;
+  max-width: 520px;
 }
 
 .learning-overview-current strong {
@@ -358,27 +358,11 @@
 }
 
 .learning-overview-progress {
-  flex: 1 1 180px;
-  min-width: 140px;
-  margin: 0;
+  margin: var(--space-2) 0 0;
 }
 
 .learning-overview-hint {
   margin: var(--space-2) 0 0;
-}
-
-.learning-overview-art {
-  margin: 0;
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-subtle);
-}
-
-.learning-overview-art svg {
-  display: block;
-  width: 100%;
-  height: auto;
 }
 
 .dashboard-grid > .data-surface,

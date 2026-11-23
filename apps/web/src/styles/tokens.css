@@ -23,8 +23,6 @@
   --accent-hover: #ffffff;
   --accent-subtle: rgba(255, 255, 255, 0.08);
   --accent-border: rgba(255, 255, 255, 0.22);
-  /* 插图专用：Notion 风格黄色线稿，仅用于学习场景装饰。 */
-  --illustration-accent: #d9a441;
   --action-primary-bg: #f0f0f2;
   --action-primary-hover: #ffffff;
   --action-primary-active: #d9dade;
@@ -192,7 +190,6 @@
   --accent-hover: #08090a;
   --accent-subtle: rgba(15, 23, 42, 0.07);
   --accent-border: rgba(15, 23, 42, 0.20);
-  --illustration-accent: #b07d1a;
   --action-primary-bg: #202226;
   --action-primary-hover: #08090a;
   --action-primary-active: #383b41;
