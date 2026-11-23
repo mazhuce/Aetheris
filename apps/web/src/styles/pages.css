@@ -2175,6 +2175,8 @@
 .learn-project-meta {
   color: var(--text-tertiary);
   font-size: var(--font-meta);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
 }
 
 /* 任务详情 / AI 导师 */

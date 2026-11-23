@@ -351,7 +351,7 @@ export default function LearningCenterPage() {
             {projects.map((project) => {
               const percent = project.labCount === 0 ? 0 : Math.round((project.passedLabs / project.labCount) * 100)
               return (
-                <Col span={8} key={project.code}>
+                <Col xs={24} lg={12} xl={8} key={project.code}>
                   {/* 用 div + role 而不是 button：进度条在 antd 里渲染成 div，
                       button 只允许行内内容，套 div 属于无效 HTML。 */}
                   <div

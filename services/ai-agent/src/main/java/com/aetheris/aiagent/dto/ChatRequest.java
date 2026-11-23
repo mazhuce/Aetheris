@@ -32,7 +32,7 @@ public record ChatRequest(
         return Boolean.TRUE.equals(dataMode);
     }
 
-    /** 专家模式：固定「数据开发专家」人格，并携带页面学习上下文。 */
+    /** 专家模式：固定「平台服务专家」人格，并携带页面学习上下文。 */
     public boolean isExpert() {
         return "expert".equalsIgnoreCase(mode);
     }

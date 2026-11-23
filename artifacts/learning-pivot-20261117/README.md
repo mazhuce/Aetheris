@@ -44,6 +44,7 @@
 | sample-data/online_shoppers.csv | UCI 真实样例（CC BY 4.0，12,330 行，snake_case） |
 | sample-data/LICENSE.txt | 数据集归因与修改说明 |
 | home-learning-overview.png | 学习者首页：我的学习区块 |
+| learning-projects.png | 学习路径页：5 条路径与 8 个已绑定任务的端到端项目 |
 
 ## 管理端
 

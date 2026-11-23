@@ -14,8 +14,9 @@ interface ExpertDrawerProps {
 
 const EXAMPLES = [
   '这条 SQL 为什么执行很慢？',
-  'ODS、DWD、DWS 应该怎么选？',
-  '我的任务判分失败，下一步该查什么？'
+  '血缘分析该从哪张表开始查？',
+  '任务延迟告警了，先看哪几个指标？',
+  '注册转化率的口径怎么定？'
 ]
 
 function contextOf(pathname: string): string {
@@ -28,7 +29,9 @@ function contextOf(pathname: string): string {
 }
 
 async function buildContext(pathname: string): Promise<string> {
-  const base = contextOf(pathname)
+  const activePath = localStorage.getItem('aetheris.learning.activePath')
+  const pathHint = activePath && pathname.startsWith('/learning') ? `；当前学习路径：${activePath}` : ''
+  const base = `${contextOf(pathname)}${pathHint}`
   const labCode = pathname.match(/^\/learning\/labs\/([^/]+)/)?.[1]
   if (!labCode) return base
   try {
@@ -116,7 +119,7 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
 
   return (
     <Drawer
-      title="数据开发专家"
+      title="平台服务专家"
       placement="right"
       width={440}
       open={open}
@@ -125,7 +128,7 @@ export default function ExpertDrawer({ open, onClose }: ExpertDrawerProps) {
     >
       <div className="expert-drawer-body">
         <p className="expert-drawer-lead">
-          面向学习者的数据开发顾问：可以问 SQL、数仓分层、建模、质量与报错原因。回答不替代平台判分和执行结果。
+          覆盖数据开发、治理、运维与分析的学习顾问：可以问 SQL、数仓、血缘、任务排障与指标口径。回答不替代平台判分和执行结果。
         </p>
 
         {messages.length === 0 && (

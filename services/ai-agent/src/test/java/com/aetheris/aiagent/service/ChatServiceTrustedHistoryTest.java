@@ -51,7 +51,7 @@ class ChatServiceTrustedHistoryTest {
         service.chat(owner,conversation,List.of(new ChatMessageDto("user","为什么这条 SQL 报错")),false,true,"route=/learning/labs/l1-sales");
         ArgumentCaptor<String> prompt=ArgumentCaptor.forClass(String.class);
         verify(model).chat(any(),prompt.capture());
-        assertTrue(prompt.getValue().contains("数据开发专家"));
+        assertTrue(prompt.getValue().contains("平台服务专家"));
         assertTrue(prompt.getValue().contains("/learning/labs/l1-sales"));
     }
 }

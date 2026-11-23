@@ -116,8 +116,8 @@ export default function TopNav() {
           <button
             type="button"
             className="topnav-logo topnav-logo--expert"
-            aria-label="打开数据开发专家"
-            title="打开数据开发专家"
+            aria-label="打开平台服务专家"
+            title="打开平台服务专家"
             onClick={() => setExpertOpen(true)}
           >
             {expertPulse

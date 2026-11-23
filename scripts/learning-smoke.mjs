@@ -145,12 +145,21 @@ async function runOnce(attempt) {
 
     await gotoReady(`${origin}/learning`)
     checks.learningCenter = await waitFor(async () => (await evalJs('document.body.innerText')).includes('学习路径'), 20000, 400)
+    checks.projectsBound = await waitFor(async () => {
+      const text = await evalJs('document.body.innerText')
+      return text.includes('端到端项目') && !text.includes('0/0 个任务通过')
+    }, 20000, 400)
+    try {
+      await evalJs(`document.querySelector('.learn-project')?.scrollIntoView({ block: 'center' })`)
+      await sleep(800)
+      await capture('learning-projects.png')
+    } catch { /* 截图失败不影响冒烟结论 */ }
 
     await gotoReady(`${origin}/learning/portfolio`)
     checks.careerPortfolio = await waitFor(async () => (await evalJs('document.body.innerText')).includes('完成进度'), 20000, 400)
 
-    checks.expertDrawer = await evalJs(`(() => { const button = document.querySelector('button[aria-label="打开数据开发专家"]'); if (!button) return false; button.click(); return true })()`)
-      && await waitFor(async () => (await evalJs('document.body.innerText')).includes('数据开发专家'), 8000)
+    checks.expertDrawer = await evalJs(`(() => { const button = document.querySelector('button[aria-label="打开平台服务专家"]'); if (!button) return false; button.click(); return true })()`)
+      && await waitFor(async () => (await evalJs('document.body.innerText')).includes('平台服务专家'), 8000)
   } finally {
     try { await send('Target.closeTarget', { targetId }, undefined) } catch { /* ignore */ }
     ws.close()

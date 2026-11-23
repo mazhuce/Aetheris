@@ -37,7 +37,7 @@ export function listMessages(conversationId: number): Promise<ChatMessage[]> {
 }
 
 export interface ChatSendOptions {
-  /** 固定「数据开发专家」人格；后端使用专用系统提示。 */
+  /** 固定「平台服务专家」人格；后端使用专用系统提示。 */
   expert?: boolean
   /** 当前页面/任务上下文，最多 600 字符，由后端附加到系统提示。 */
   context?: string
