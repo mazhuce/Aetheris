@@ -101,6 +101,18 @@
     grid-template-columns: 1fr;
   }
 
+  .learning-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .learning-overview-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .learning-overview-art {
+    display: none;
+  }
+
   .dashboard-side-stack {
     grid-column: 1;
     grid-row: auto;
@@ -282,6 +294,10 @@
 @media (max-width: 560px) {
   .route-stage {
     padding: var(--space-4);
+  }
+
+  .learning-overview-metrics {
+    grid-template-columns: 1fr;
   }
 
   .topnav-item {

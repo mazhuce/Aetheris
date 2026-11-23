@@ -15,6 +15,7 @@ import DataSurface from '@/components/DataSurface'
 import StatusBadge from '@/components/StatusBadge'
 import { EmptyState, ErrorState, LoadingState } from '@/components/FeedbackState'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import LearningOverview from './LearningOverview'
 
 export default function Dashboard() {
   const [serviceRows, setServiceRows] = useState<ServiceStatus[]>([])
@@ -85,7 +86,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard-v3">
       <PageHeader
-        description="汇总展示平台连接、核心服务与数据目录的运行状态。"
+        description="查看学习进度与下一步，同时掌握平台连接和核心服务的运行状态。"
         meta={(
           <StatusBadge tone={!healthChecked ? 'neutral' : healthError ? 'danger' : allHealthy ? 'success' : 'warning'}>
             {!healthChecked ? '正在检测服务' : healthError ? '健康中心暂不可用' : allHealthy ? '核心服务运行正常' : `${attentionItems.length} 项需要关注`}
@@ -93,6 +94,8 @@ export default function Dashboard() {
         )}
         extra={<Button icon={<ReloadOutlined />} onClick={() => void refresh()}>刷新状态</Button>}
       />
+
+      <LearningOverview />
 
       <section className="metric-grid" aria-label="平台关键指标">
         {metrics.map((metric) => (

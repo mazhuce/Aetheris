@@ -102,6 +102,11 @@ async function runOnce(attempt) {
     await navReady()
     await sleep(settle)
   }
+  async function capture(file) {
+    await sleep(600)
+    const shot = await send('Page.captureScreenshot', { format: 'png' })
+    fs.writeFileSync(path.join(root, 'artifacts', 'learning-pivot-20261117', file), Buffer.from(shot.data, 'base64'))
+  }
 
   const checks = {}
   try {
@@ -125,6 +130,15 @@ async function runOnce(attempt) {
     checks.homeOverview = await waitFor(async () => (await evalJs('location.pathname')) === '/learning/overview', 20000, 300)
     checks.overviewFirst = await waitFor(async () =>
       (await evalJs(`document.querySelector('.subnav-tabs .subnav-item')?.textContent?.trim()`)) === '数据概览', 20000, 400)
+    checks.learningOverview = await waitFor(async () =>
+      (await evalJs('document.body.innerText')).includes('已完成任务'), 20000, 400)
+    try {
+      await sleep(1200)
+      await capture('home-learning-overview.png')
+      checks.homeScreenshot = true
+    } catch {
+      checks.homeScreenshot = false
+    }
 
     await gotoReady(`${origin}/workbench`, 1200)
     checks.legacyWorkbenchRedirect = await waitFor(async () => (await evalJs('location.pathname')) === '/learning/overview', 20000, 300)

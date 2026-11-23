@@ -295,6 +295,92 @@
   align-items: stretch;
 }
 
+.learning-overview-panel {
+  min-width: 0;
+}
+
+.learning-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.52fr);
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.learning-overview-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.learning-overview-metric {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.learning-overview-metric span,
+.learning-overview-current span {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learning-overview-metric strong {
+  font-size: var(--font-title);
+  font-variant-numeric: tabular-nums;
+}
+
+.learning-overview-metric small,
+.learning-overview-current small,
+.learning-overview-hint {
+  color: var(--text-tertiary);
+  font-size: var(--font-meta);
+}
+
+.learning-overview-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.learning-overview-current {
+  display: grid;
+  gap: 2px;
+  min-width: 180px;
+}
+
+.learning-overview-current strong {
+  font-size: var(--font-section);
+}
+
+.learning-overview-progress {
+  flex: 1 1 180px;
+  min-width: 140px;
+  margin: 0;
+}
+
+.learning-overview-hint {
+  margin: var(--space-2) 0 0;
+}
+
+.learning-overview-art {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.learning-overview-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .dashboard-grid > .data-surface,
 .dashboard-side-stack > .data-surface {
   min-width: 0;
